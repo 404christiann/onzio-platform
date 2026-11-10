@@ -1,3 +1,27 @@
+## 2026-11-10 - ADMIN-RE-15 Sponsors, one list
+
+- **Status:** `in_progress`, PR open. **Carries a migration**
+  (`20261110150000_sponsors_one_list.sql`) that merges rows, so it needs
+  `GATE-MIGRATE` with Christian's explicit OK, from his Mac, before the merge.
+  No change to `lib/club-context.ts`.
+- **What it adds:** each sponsor is one row with Homepage and Footer switches
+  and an optional website; a logo uploaded twice (once per place) becomes one
+  row. On the new admin, `/admin/sponsors` is the one-list page (design
+  `cd-sponsors-final`): limits 10 and 6 with the full place greyed, Move left /
+  right in the ⋯ menu, "Their website", the blurry-logo note, one Save. The
+  Footer switch shows only where the club's footer shows sponsors (from the
+  site definition). Diverse City's classic Sponsors page keeps working on the
+  same rows. Sponsors with a website are links on the public site (nobody has
+  one at merge). Names stop at 60 (database CHECK).
+- **Visitors see at merge:** the same logos in the same order.
+- **Open:** Christian's read-only counts check (sent to the orchestrator);
+  the backfill may change once its numbers are back.
+- **Verification:** database, unit, contract and browser tests; full suites on
+  the PR head, with the tested commit, are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** counts back, bot review, then `GATE-MIGRATE` from
+  Christian's Mac, then merge.
+
 ## 2026-11-10 - ADMIN-RE-24b The new home on the new admin
 
 - **Status:** `in_progress`, PR open. PR 24b of `ADMIN-RE-24` (24a, #124, is

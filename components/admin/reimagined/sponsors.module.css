@@ -656,6 +656,19 @@
   object-fit: contain;
 }
 
+.chipName {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  color: rgb(255 255 255 / 0.85);
+  overflow-wrap: anywhere;
+}
+
 .chipsEmpty {
   padding: 0 6px;
   font-size: 13px;
@@ -665,17 +678,29 @@
 /* ---------- Leave dialog ---------- */
 
 .backdrop {
-  background: rgb(10 12 20 / 0.45);
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(0 0 0 / 0.35);
 }
 
 .leaveDialog {
+  position: fixed;
+  z-index: 61;
+  top: 50%;
+  left: 50%;
   display: grid;
-  width: min(420px, calc(100vw - 32px));
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   gap: 12px;
   padding: 20px;
+  transform: translate(-50%, -50%);
   border-radius: 16px;
-  background: hsl(var(--popover));
-  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.25);
 }
 
 .dialogTitle {

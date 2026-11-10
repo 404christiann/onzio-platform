@@ -848,7 +848,11 @@ function Preview({ drafts, footerShown }: { drafts: readonly SponsorDraft[]; foo
       {list.length ? (
         list.map((sponsor) => (
           <span key={sponsor.key} className={styles.chip} title={sponsor.name}>
-            <ResilientNativeImage src={sponsor.logo_url} alt={sponsor.name} hideOnError />
+            <ResilientNativeImage
+              src={sponsor.logo_url}
+              alt={sponsor.name}
+              fallback={<span className={styles.chipName}>{sponsor.name.trim() || "Sponsor"}</span>}
+            />
           </span>
         ))
       ) : (

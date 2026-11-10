@@ -8,10 +8,10 @@ describe("admin data request contract", () => {
   it("accepts a tenant-free validated content mutation", () => {
     expect(
       adminDataRequestSchema.safeParse({
-        // site_branding has its own strict schema since ADMIN-RE-14 (it names real
-        // columns only); this checks the generic color and URL rules on a table
-        // that still uses them.
-        table: "site_sponsor_logos",
+        // site_branding (ADMIN-RE-14) and site_sponsor_logos (ADMIN-RE-15) have
+        // their own strict schemas (they name real columns only); this checks
+        // the generic color and URL rules on a table that still uses them.
+        table: "shop_purchase_details",
         operation: "update",
         payload: {
           primary_color: "#aabbcc",

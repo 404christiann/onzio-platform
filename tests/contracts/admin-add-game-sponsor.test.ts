@@ -20,7 +20,8 @@ const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf
 const page = source("app/admin/(protected)/add-game/page.tsx");
 const form = source("components/admin/reimagined/AddGame.tsx");
 const loader = source("lib/admin-add-game-data.ts");
-const sponsorsPage = source("app/admin/(protected)/sponsors/page.tsx");
+// ADMIN-RE-15 moved the Sponsors pages' file cleanup to one module both pages use.
+const sponsorsPage = source("lib/sponsor-storage.ts");
 
 const ASSET = "22222222-2222-4222-8222-222222222222";
 const OTHER_ASSET = "33333333-3333-4333-8333-333333333333";
@@ -200,6 +201,9 @@ describe("Add a game form (ADMIN-RE-07b)", () => {
 
 describe("Sponsors page keeps a logo a game still shows", () => {
   it("checks the games before deleting a sponsor logo file", () => {
+    for (const page of ["app/admin/(protected)/sponsors/page.tsx", "components/admin/reimagined/Sponsors.tsx"]) {
+      expect(source(page), page).toContain("deleteUnusedSponsorStorageUrls(");
+    }
     expect(sponsorsPage).toContain('.from("matches")');
     expect(sponsorsPage).toContain('.eq("sponsor_logo_url", url);');
     expect(sponsorsPage).toContain("if (!games.error && (games.count ?? 0) === 0) unusedUrls.push(url);");

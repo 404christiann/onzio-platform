@@ -99,8 +99,10 @@ async function shot(page: Page, name: string, width: number) {
 // The Sponsors page sits on the Website tab (ADMIN-RE-24).
 async function openSponsors(page: Page) {
   await page.goto("/admin/website");
+  // Click once the tab page is interactive; a busy machine can hydrate slowly.
+  await page.waitForLoadState("networkidle");
   await main(page).locator('a[href="/admin/sponsors"]').click();
-  await expect(page).toHaveURL(/\/admin\/sponsors$/);
+  await expect(page).toHaveURL(/\/admin\/sponsors$/, { timeout: 15_000 });
   await expect(main(page).getByRole("heading", { level: 1, name: "Sponsors" })).toBeVisible();
 }
 
@@ -250,6 +252,8 @@ for (const width of [390, 1440]) {
         await expect(cards(page)).toHaveCount(5);
         // A logo file that is gone shows a quiet note, not a broken picture.
         await expect(cards(page).nth(1).getByText("Can’t show this logo")).toBeVisible();
+        // The preview names it instead of leaving a gap.
+        await expect(page.getByTestId("sponsors-preview-homepage").getByText("Jo’s", { exact: true })).toBeVisible();
         await expectNoSideScroll(page, width);
         // The name box holds 60 characters and says so near the end.
         await expect(cards(page).nth(4).getByText("60 of 60")).toBeVisible();
@@ -296,6 +300,7 @@ for (const width of [390, 1440]) {
           { name: "Homepage only", homepage: true, footer: false },
         ]);
         await page.goto("/admin/sponsors");
+        await page.waitForLoadState("networkidle");
         await expect(page.getByRole("heading", { name: "Sponsors" })).toBeVisible();
         await expect(page.getByTestId("sponsor-card")).toHaveCount(0);
         // Alpha's academy footer shows no sponsors, so only the carousel is edited here.
@@ -304,12 +309,16 @@ for (const width of [390, 1440]) {
         await expect(page.getByPlaceholder("Sponsor 1 name")).toHaveAttribute("maxlength", "60");
         await page.getByRole("button", { name: "Remove sponsor logo 1" }).click();
         await page.getByRole("button", { name: /Save Carousel Logos/ }).click();
-        await expect(page.getByPlaceholder("Sponsor 1 name")).toHaveValue("Homepage only", { timeout: 30_000 });
         // Shown in the footer too, so the row stays with Homepage off.
-        expect((await saved()).map((row) => [row.name, row.show_on_homepage, row.show_in_footer])).toEqual([
-          ["Both places", false, true],
-          ["Homepage only", true, false],
-        ]);
+        await expect
+          .poll(async () => (await saved()).map((row) => [row.name, row.show_on_homepage, row.show_in_footer]), { timeout: 30_000 })
+          .toEqual([
+            ["Both places", false, true],
+            ["Homepage only", true, false],
+          ]);
+        await expect(page.getByRole("button", { name: /Save Carousel Logos/ })).toBeDisabled();
+        await expect(page.getByPlaceholder("Sponsor 1 name")).toHaveValue("Homepage only");
+        await expect(page.getByPlaceholder("Sponsor 2 name")).toHaveCount(0);
         await expectNoSideScroll(page, width);
         await shot(page, "sponsors-classic", width);
       } finally {
