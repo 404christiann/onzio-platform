@@ -1,0 +1,341 @@
+"use client";
+
+import { AdminModal } from "@/components/admin/AdminModal";
+import { useEffect, useState } from "react";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
+import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminPageToolbar,
+  AdminPanel,
+} from "@/components/admin/AdminPage";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { DBSeason } from "@/lib/db-types";
+import { createClient } from "@/lib/admin-client";
+import { cn } from "@/lib/utils";
+import { nextSeasonAfter } from "@/lib/season-label";
+
+type SeasonDeleteState = { deletable: boolean; reason: string; matchCount: number; statRowCount: number };
+
+function rowHasNonZeroStats(row: Record<string, unknown>): boolean {
+  return Object.entries(row).some(([key, value]) =>
+    key !== "player_id" && key !== "season_id" && Number(value ?? 0) !== 0
+  );
+}
+
+async function getSeasonDeleteState(
+  supabase: ReturnType<typeof createClient>,
+  seasonId: string,
+): Promise<SeasonDeleteState> {
+  const [matchesResult, fieldResult, gkResult] = await Promise.all([
+    supabase.from("matches").select("id", { count: "exact", head: true }).eq("season_id", seasonId),
+    supabase.from("player_season_stats")
+      .select("player_id, season_id, goals, assists, tackles, offsides, fouls, fouls_suffered, starts, yellow, red, mins")
+      .eq("season_id", seasonId),
+    supabase.from("goalkeeper_season_stats")
+      .select("player_id, season_id, goals_against, saves, clean_sheets, starts, yellow, red, mins")
+      .eq("season_id", seasonId),
+  ]);
+
+  const queryError = matchesResult.error ?? fieldResult.error ?? gkResult.error;
+  if (queryError) throw new Error(queryError.message);
+  const matchCount = matchesResult.count ?? 0;
+  const statRowCount = (fieldResult.data ?? []).length + (gkResult.data ?? []).length;
+  if (matchCount > 0) {
+    return { deletable: false, reason: "This season has matches and cannot be deleted.", matchCount, statRowCount };
+  }
+  if (((fieldResult.data ?? []) as Record<string, unknown>[]).some(rowHasNonZeroStats)) {
+    return { deletable: false, reason: "This season has field player stats and cannot be deleted.", matchCount, statRowCount };
+  }
+  if (((gkResult.data ?? []) as Record<string, unknown>[]).some(rowHasNonZeroStats)) {
+    return { deletable: false, reason: "This season has goalkeeper stats and cannot be deleted.", matchCount, statRowCount };
+  }
+  return { deletable: true, reason: "No matches or recorded stats. This season can be deleted.", matchCount, statRowCount };
+}
+
+export default function ClassicSeasonsPage() {
+  const [seasons, setSeasons] = useState<DBSeason[]>([]);
+  const [deleteStates, setDeleteStates] = useState<Record<string, SeasonDeleteState>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false);
+
+  async function load() {
+    try {
+      const supabase = createClient();
+      const { data, error: seasonsError } = await supabase
+        .from("seasons")
+        .select("*")
+        .order("start_year", { ascending: false });
+
+      if (seasonsError) {
+        setError(seasonsError.message);
+        setLoading(false);
+        return;
+      }
+
+      const rows = (data ?? []) as DBSeason[];
+      setSeasons(rows);
+      try {
+        const states = await Promise.all(
+          rows.map(async (season) => [season.id, await getSeasonDeleteState(supabase, season.id)] as const)
+        );
+        setDeleteStates(Object.fromEntries(states));
+      } catch (guardError) {
+        setError(guardError instanceof Error ? guardError.message : "Failed to check season usage");
+        setDeleteStates({});
+      }
+    } catch (loadError: unknown) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load seasons");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function flash() {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  }
+
+  async function handleSetActive(seasonId: string) {
+    setSaving(true);
+    setError(null);
+    const supabase = createClient();
+    // Deactivate all first; this order is required by the single-active partial unique index.
+    const { error: deactivateError } = await supabase
+      .from("seasons")
+      .update({ active: false })
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+    if (deactivateError) {
+      setError(deactivateError.message);
+      setSaving(false);
+      return;
+    }
+
+    const { error: activateError } = await supabase
+      .from("seasons")
+      .update({ active: true })
+      .eq("id", seasonId);
+    if (activateError) {
+      setError(activateError.message);
+      setSaving(false);
+      return;
+    }
+
+    await load();
+    flash();
+    setSaving(false);
+  }
+
+  async function handleCreateNextSeason() {
+    if (seasons.length === 0) return;
+    setSaving(true);
+    setError(null);
+    const supabase = createClient();
+    const next = nextSeasonAfter(seasons[0]);
+
+    const { data: newSeason, error: seasonError } = await supabase
+      .from("seasons")
+      .insert([{ label: next.label, start_year: next.start_year, end_year: next.end_year, active: false }])
+      .select()
+      .single();
+    if (seasonError || !newSeason) {
+      setError(seasonError?.message ?? "Failed to create season");
+      setSaving(false);
+      return;
+    }
+
+    const { data: players, error: playersError } = await supabase
+      .from("players")
+      .select("id, position")
+      .eq("active", true);
+    if (playersError) {
+      setError(`Season created, but players could not be loaded for stat seeding: ${playersError.message}`);
+      await load();
+      setSaving(false);
+      return;
+    }
+
+    const fieldPlayers = (players ?? []).filter((player: { id: string; position: string }) => player.position !== "Goalkeeper");
+    const goalkeepers = (players ?? []).filter((player: { id: string; position: string }) => player.position === "Goalkeeper");
+    const [fieldSeedResult, goalkeeperSeedResult] = await Promise.all([
+      fieldPlayers.length > 0
+        ? supabase.from("player_season_stats").insert(fieldPlayers.map((player: { id: string }) => ({
+            player_id: player.id,
+            season_id: newSeason.id,
+            goals: 0, assists: 0, tackles: 0, starts: 0,
+            yellow: 0, red: 0, mins: 0, offsides: 0, fouls: 0, fouls_suffered: 0,
+          })))
+        : Promise.resolve({ error: null }),
+      goalkeepers.length > 0
+        ? supabase.from("goalkeeper_season_stats").insert(goalkeepers.map((player: { id: string }) => ({
+            player_id: player.id,
+            season_id: newSeason.id,
+            goals_against: 0, saves: 0, clean_sheets: 0,
+            starts: 0, yellow: 0, red: 0, mins: 0,
+          })))
+        : Promise.resolve({ error: null }),
+    ]);
+
+    const seedError = fieldSeedResult.error ?? goalkeeperSeedResult.error;
+    if (seedError) {
+      setError(`Season created, but some player stats were not seeded: ${seedError.message}`);
+    } else {
+      flash();
+    }
+    await load();
+    setSaving(false);
+  }
+
+  async function handleDelete(seasonId: string) {
+    setSaving(true);
+    setError(null);
+    const supabase = createClient();
+    try {
+      const guard = await getSeasonDeleteState(supabase, seasonId);
+      if (!guard.deletable) {
+        setError(guard.reason);
+        return;
+      }
+
+      const { error: fieldDeleteError } = await supabase.from("player_season_stats").delete().eq("season_id", seasonId);
+      if (fieldDeleteError) throw new Error(fieldDeleteError.message);
+      const { error: goalkeeperDeleteError } = await supabase.from("goalkeeper_season_stats").delete().eq("season_id", seasonId);
+      if (goalkeeperDeleteError) throw new Error(goalkeeperDeleteError.message);
+      const { error: seasonDeleteError } = await supabase.from("seasons").delete().eq("id", seasonId);
+      if (seasonDeleteError) throw new Error(seasonDeleteError.message);
+      await load();
+      flash();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete season");
+    } finally {
+      setConfirmDeleteId(null);
+      setSaving(false);
+    }
+  }
+
+  const activeSeason = seasons.find((season) => season.active);
+  const nextLabel = seasons.length > 0 ? nextSeasonAfter(seasons[0]).label : "";
+
+  return (
+    <AdminPage className="max-w-4xl">
+      <AdminSaveFeedback
+        saving={saving}
+        saved={saved}
+        savingLabel="Updating seasons…"
+        successLabel="Season changes saved"
+      />
+      <AdminModal open={showCreateConfirm} onClose={() => setShowCreateConfirm(false)}
+          aria-labelledby="create-season-title"
+          backdropClassName="fixed inset-0 z-[200] bg-background/80 backdrop-blur-sm"
+          className="fixed left-1/2 top-1/2 z-[201] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl">
+            <h2 id="create-season-title" className="font-body font-semibold text-foreground mb-2" style={{ fontSize: "1.4rem" }}>Create {nextLabel} Season?</h2>
+            <p className="font-body text-sm leading-relaxed mb-1 text-muted-foreground">This will:</p>
+            <ul className="font-body text-sm mb-5 space-y-1 text-muted-foreground">
+              <li>• Create the <strong className="text-foreground">{nextLabel}</strong> season</li>
+              <li>• Seed zero stats for all active players</li>
+              <li>• Keep the current season active until you change it</li>
+            </ul>
+            <p className="font-body text-xs mb-6 text-muted-foreground">A new season remains removable until matches or recorded stats are added.</p>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex-1 rounded-xl bg-primary px-5 py-2.5 font-body text-xs font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">{saving && <AdminLoadingDots className="mr-2" />}{saving ? "Creating…" : "Create Season"}</button>
+              <button onClick={() => setShowCreateConfirm(false)} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex-1 px-5 py-2.5 rounded-xl font-body font-semibold text-xs bg-secondary text-muted-foreground">Cancel</button>
+            </div>
+      </AdminModal>
+
+      <AdminPageHeader
+        title="Seasons"
+        description="Create seasons, choose what is active, and protect historical records."
+        actions={(
+          <button onClick={() => setShowCreateConfirm(true)} disabled={loading || saving || seasons.length === 0} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">Create Next Season</button>
+        )}
+      />
+
+      <AdminPageToolbar>
+        <div className="flex flex-row flex-wrap items-center gap-x-8 gap-y-2">
+          <div><p className="font-body text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><div className="font-body font-semibold text-foreground" style={{ fontSize: "1.25rem" }}>{loading ? <Skeleton className="my-1 h-6 w-28" /> : activeSeason?.label ?? "Not set"}</div></div>
+          <div><p className="font-body text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><div className="font-body font-semibold text-foreground" style={{ fontSize: "1.25rem" }}>{loading ? <Skeleton className="my-1 h-6 w-8" /> : seasons.length}</div></div>
+        </div>
+        <p className="font-body text-xs text-muted-foreground sm:max-w-sm sm:text-right">The active season is what Roster, Schedule and Match Stats read. Changing it changes each of those pages. Standings is one league table that does not change with the season.</p>
+      </AdminPageToolbar>
+
+      {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
+
+      {loading ? (
+        <AdminSkeletonRegion className="space-y-3" label="Loading seasons">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="flex flex-col gap-4 rounded-2xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 space-y-2">
+                <Skeleton className="h-6 w-44" />
+                <Skeleton className="h-4 w-64 max-w-full" />
+                <Skeleton className="h-3 w-52 max-w-full" />
+              </div>
+              <div className="flex gap-3"><Skeleton className="h-10 w-28" /><Skeleton className="h-10 w-20" /></div>
+            </div>
+          ))}
+        </AdminSkeletonRegion>
+      ) : error && seasons.length === 0 ? null : seasons.length === 0 ? (
+        <AdminPanel><p className="font-body text-muted-foreground">No seasons have been set up yet. Contact Onzio to create your first season.</p></AdminPanel>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {seasons.map((season) => {
+            const deleteState = deleteStates[season.id];
+            const canDelete = deleteState?.deletable === true;
+            return (
+              <div
+                key={season.id}
+                className={cn(
+                  "flex flex-col gap-4 px-5 py-4 rounded-2xl border sm:flex-row sm:items-center sm:justify-between",
+                  season.active
+                    ? "border-primary/30 bg-accent/50"
+                    : "border-border bg-card transition-colors hover:border-muted-foreground/40",
+                )}
+              >
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-body font-semibold text-foreground" style={{ fontSize: "1.25rem" }}>{season.label} Season</p>
+                    {season.active && <span className="font-body text-xs px-3 py-1 rounded-full border border-success/30 bg-success/10 text-success">Active</span>}
+                  </div>
+                  <p className="font-body text-sm text-muted-foreground">
+                    {season.start_year} – {season.end_year}
+                    {deleteState && (
+                      <span className="text-muted-foreground"> · {deleteState.matchCount} {deleteState.matchCount === 1 ? "match" : "matches"} · {deleteState.statRowCount} player stat {deleteState.statRowCount === 1 ? "row" : "rows"}</span>
+                    )}
+                  </p>
+                  {!season.active && deleteState && (
+                    <p className={cn("font-body text-xs mt-1", canDelete ? "text-success" : "text-muted-foreground")}>{deleteState.reason}</p>
+                  )}
+                </div>
+
+                {!season.active && (
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <button onClick={() => handleSetActive(season.id)} disabled={saving} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring px-4 py-2 rounded-xl font-body font-semibold border border-success/20 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "0.85rem" }}>Set Active</button>
+                    <button
+                      onClick={() => confirmDeleteId === season.id ? handleDelete(season.id) : setConfirmDeleteId(season.id)}
+                      disabled={saving || !canDelete}
+                      title={deleteState?.reason ?? "Checking whether this season can be deleted."}
+                      className={cn(
+                        "min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring px-4 py-2 rounded-xl font-body font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+                        confirmDeleteId === season.id
+                          ? "border-destructive/50 bg-destructive/20 text-destructive hover:bg-destructive/30"
+                          : "border-border bg-transparent text-muted-foreground hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive/80",
+                      )}
+                      style={{ fontSize: "0.85rem" }}
+                    >{confirmDeleteId === season.id ? "Confirm Delete" : "Delete"}</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </AdminPage>
+  );
+}

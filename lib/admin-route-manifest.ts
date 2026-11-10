@@ -723,6 +723,11 @@ export function getVisibleAdminHomeJobs(
  * page ("All scores are in" → Add a game). It follows the job as its page
  * ships. The caller decides whether to show the link.
  */
+/** The path of a route that every owner and administrator has (no template or billing rule). */
+export function getAdminRouteHref(id: AdminRouteId): `/admin${string}` {
+  return ROUTE_BY_ID.get(id)?.href ?? "/admin";
+}
+
 export function getAdminHomeJobHref(id: AdminHomeJobId): `/admin${string}` {
   const job = ADMIN_HOME_JOBS.find((candidate) => candidate.id === id);
   const route = job ? ROUTE_BY_ID.get(job.routeId) : undefined;

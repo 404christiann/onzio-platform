@@ -1,5 +1,63 @@
 # Diverse City FC Status
 
+## 2026-11-09 - ADMIN-RE-11a: This season hub and season names
+
+**Agent/package:** Claude Code, `ADMIN-RE-11a`. Branch
+`claude/admin-re-11a-seasons-da321b` from `main` `600f5e7`. **Status:**
+`in_progress`, PR open for the review bot. UI only: no migration, no change to
+`lib/club-context.ts`, no hosted action.
+
+**Completed work:**
+
+- `/admin/seasons` is the "This season" hub for a club on `reimagined`: the
+  season the website shows, three cards (League table, Player totals, Games,
+  linked only to pages the club has), a quiet past-season switcher (a plain
+  label with one season), "Start next season", and the "<season> is ready ·
+  Show it" note. A club still on `classic` gets the old page, unchanged (moved
+  to `components/admin/ClassicSeasonsPage.tsx`).
+- "Start next season" opens a dialog with the name filled in. The name counts
+  characters (40 max, trimmed), refuses empty, too long and an existing name
+  (any capitals, readable error, also when the database says it first), then
+  asks "Show <season> on your website now?". "Yes, switch" turns the old season
+  off before the new one on, and puts the old one back if that fails. "Not yet"
+  leaves the ready note. The saved line uses the hold-aware label (decision 2).
+- `nextSeasonAfter` now alternates Spring and Fall (Spring 2026 gives Fall
+  2026, Fall 2026 gives Spring 2027) and falls back to the years for any other
+  name ("2026" gives "2027", "2025–26" gives "2026–27"). New: first-season
+  suggestion (the club's year), newest-first ordering (Fall before Spring of
+  one year), and the name checks.
+- Delete a season only when it is empty and not shown: checked on the page and
+  again just before deleting. First season from the hub, with its own empty
+  state. Starting a season still seeds a zero totals row for every active
+  player, as the old page did.
+- All writes go through `POST /api/admin/data`, never the browser client.
+- The dialog does not promise a fresh league table for the new season: that
+  is RE-11b. The League table card says "One table for every season".
+
+**Files changed:** `components/admin/reimagined/SeasonsHub.tsx`,
+`seasons.module.css`; `components/admin/ClassicSeasonsPage.tsx` (moved);
+`app/admin/(protected)/seasons/page.tsx`; `lib/admin-seasons-data.ts`,
+`lib/season-label.ts`; new `lib/__tests__/season-label.test.ts`,
+`lib/__tests__/admin-seasons-data.test.ts`,
+`tests/contracts/admin-reimagined-seasons.test.ts`,
+`tests/browser/admin-reimagined-seasons.spec.ts`;
+`tests/contracts/admin-platform-fixes-02.test.ts` (reads the moved classic
+page, same assertions); this file, `HANDOFF.md`.
+
+**Verification:** red first for the name logic (16 of 20 failing before the
+code). Break-ui worst cases (a 40-character unbroken name, non-Latin text, 40
+emoji, 16 seasons, one season, none) run in the browser spec at 390 and 1440,
+with screenshots in `test-results/admin-reimagined/seasons-*.png`; the check
+caught two clips (the ready note and the Show/Delete buttons) that are fixed.
+Full suites on the PR head, with the tested commit, are in the PR body.
+
+**Not verified:** nothing was run against production or any hosted project.
+Rose City is already on `reimagined`, so merging this deploys the hub to its
+live admin: the first click on Start, Show it or Delete there writes a real
+season row. Dark theme was not checked by eye.
+
+**Exact next step:** the bot reviews and merges. Christian opens "This season"
+on Rose City and tries Start next season with a name he likes.
 ## 2026-11-09 - ADMIN-RE-20: Payments and plan on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-20`. Branch

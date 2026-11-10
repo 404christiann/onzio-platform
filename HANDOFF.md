@@ -1,3 +1,19 @@
+## 2026-11-09 - ADMIN-RE-11a This season hub and season names
+
+- **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.
+  Rose City is already on the new admin, so merging shows it there.
+- **What it adds:** `/admin/seasons` is the "This season" hub for a `reimagined`
+  club (a `classic` club keeps the old page): the shown season, three cards,
+  past-season switcher, "Start next season" with a suggested name (Spring then
+  Fall, or the next years), a name counter and a plain duplicate error, then
+  "Show <season> on your website now?" and a "ready · Show it" note. A season
+  can be deleted only when empty; the first season starts from the hub.
+- **Verification:** unit, contract and browser tests (390 and 1440); full
+  suites on the PR head, with the tested commit, are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** the bot merges. RE-11b (league table per season) and
+  RE-11c are migrations and go through the production migration gate one at a
+  time.
 ## 2026-11-09 - ADMIN-RE-20 Payments and plan
 
 - **Status:** `in_progress`, PR open. No migration, no Stripe change, no new
