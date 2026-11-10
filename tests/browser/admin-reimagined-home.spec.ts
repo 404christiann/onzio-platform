@@ -98,6 +98,8 @@ function main(page: Page) {
 }
 
 async function jobIds(page: Page) {
+  // The home streams in after its placeholder; wait for the real tiles.
+  await expect(main(page).locator("[data-job]").first()).toBeVisible();
   return main(page).locator("[data-job]").evaluateAll((links) => links.map((link) => link.getAttribute("data-job")));
 }
 

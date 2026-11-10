@@ -79,8 +79,9 @@ async function shot(page: Page, name: string, width: number) {
   await page.setViewportSize({ width, height: 900 });
 }
 
+// ADMIN-RE-24: Your club is on the Club tab's page (it was a More row).
 async function openYourClub(page: Page) {
-  await page.goto("/admin");
+  await page.goto("/admin/club");
   await main(page).locator('a[href="/admin/your-club"]').click();
   await expect(page).toHaveURL(/\/admin\/your-club$/);
   await expect(main(page).getByRole("heading", { level: 1, name: "Your club" })).toBeVisible();
@@ -122,7 +123,7 @@ for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
     });
 
-    test("opens from More, shows every card on an academy site, and saves everything at once", async ({ page }) => {
+    test("opens from the Club tab, shows every card on an academy site, and saves everything at once", async ({ page }) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       const before = await snapshot();
