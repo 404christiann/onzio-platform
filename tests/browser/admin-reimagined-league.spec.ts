@@ -131,6 +131,37 @@ for (const width of [390, 1440]) {
       expect(await ourRow(seasonId)).toEqual({ played: 0, wins: 0, goal_difference: 0, points: 0 });
     });
 
+    test("our row is read-only here, and a page opened before a score was saved cannot put the old numbers back", async ({ page }) => {
+      const seasonId = await seedTable();
+      await page.goto("/admin/standings");
+      const ours = main(page).locator("tr", { has: page.locator('input[aria-label="Team name"][value="Alpha FC"]') });
+      await expect(ours.getByLabel("Games played")).toHaveValue("0");
+      for (const label of ["Games played", "Wins", "Draws", "Losses", "Goal difference", "Points"]) {
+        await expect(ours.getByLabel(label)).toHaveAttribute("readonly", "");
+      }
+      await expect(page.getByTestId("standings-auto-note")).toBeVisible();
+      // Another team's numbers stay typeable.
+      const rivals = main(page).locator("tr", { has: page.locator('input[aria-label="Team name"][value="Rivals FC"]') });
+      await expect(rivals.getByLabel("Games played")).not.toHaveAttribute("readonly", "");
+      await expectNoSideScroll(page, width);
+      await page.screenshot({ path: `${SHOTS}/league-our-row-read-only-${width}.png`, fullPage: true });
+
+      // A score is saved elsewhere while this page (showing zeros) stays open; then this page is saved.
+      const gameId = await addPastGame(seasonId);
+      await sql("update onzio.matches set rose_city_score=2, opponent_score=0 where id=$1", [gameId]);
+      expect(await ourRow(seasonId)).toEqual({ played: 1, wins: 1, goal_difference: 2, points: 3 });
+      await rivals.getByLabel("Games played").fill("5");
+      await page.getByRole("button", { name: "Save Standings" }).click();
+      await expect(page.getByText("Saved", { exact: false }).first()).toBeVisible();
+      expect(await ourRow(seasonId)).toEqual({ played: 1, wins: 1, goal_difference: 2, points: 3 });
+      await page.reload();
+      await expect(
+        main(page).locator("tr", { has: page.locator('input[aria-label="Team name"][value="Alpha FC"]') }).getByLabel("Games played"),
+      ).toHaveValue("1");
+      const [{ played }] = await sql<{ played: number }>("select played from onzio.league_standings where club_id=$1 and team_name='Rivals FC'", [ALPHA]);
+      expect(played).toBe(5);
+    });
+
     test("each season has its own table; starting a season copies the teams at zero", async ({ page }) => {
       const seasonId = await seedTable();
       await sql("update onzio.league_standings set played=4, points=7 where club_id=$1 and season_id=$2 and is_club", [ALPHA, seasonId]);

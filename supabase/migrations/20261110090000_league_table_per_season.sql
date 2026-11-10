@@ -17,6 +17,10 @@
 --      or deleting a game recomputes the club's own (is_club) row for that
 --      game's season from the club's saved games. In any other season nothing
 --      is recomputed and the hand-typed row stays as it is.
+--   8. In a season with standings_from_scores = true, a write to the club's own
+--      row cannot change its played / won / drawn / lost / goal difference /
+--      points: only the recompute can. A Standings page left open from before a
+--      score was saved therefore cannot put the old numbers back.
 --
 -- Backfill: every row goes to its club's shown (active) season, else the club's
 -- newest season. A club with table rows and no season at all stops the
@@ -40,7 +44,7 @@
 -- never touched.
 --
 -- Rollback (before any club starts a second season; nothing else reads the new
--- pieces): drop the triggers and functions below, then the unique and foreign
+-- pieces): drop the five triggers and their functions below, then the unique and foreign
 -- key constraints, team_name check and season_id column on league_standings, then
 -- matches.league_game and seasons.standings_from_scores. Old code ignores them.
 
@@ -214,6 +218,7 @@ begin
     return;
   end if;
 
+  perform set_config('onzio.league_refresh', 'on', true);
   update onzio.league_standings l
   set played = t.played,
       wins = t.wins,
@@ -240,6 +245,7 @@ begin
     and l.is_club
     and (l.played, l.wins, l.draws, l.losses, l.goal_difference, l.points)
       is distinct from (t.played, t.wins, t.draws, t.losses, t.goal_difference, t.wins * 3 + t.draws);
+  perform set_config('onzio.league_refresh', 'off', true);
 end;
 $$;
 
@@ -272,7 +278,45 @@ after insert or delete or update of season_id, league_game, rose_city_score, opp
 on onzio.matches
 for each row execute function onzio_private.refresh_league_row_after_game();
 
+-- 8. Our row's numbers in a season that works them out belong to the recompute.
+-- Anything else writing them (a Standings page saved from an old snapshot, the
+-- classic page, a script) keeps the stored numbers; every other column of the
+-- row, and every other row, is written as sent. The recompute marks its own
+-- transaction, so it is the one writer that gets through. Marking a different
+-- team as ours, or unmarking ours, passes through unchanged.
+create or replace function onzio_private.keep_computed_league_row()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(current_setting('onzio.league_refresh', true), 'off') <> 'on'
+     and old.is_club
+     and new.is_club
+     and exists (
+       select 1
+       from onzio.seasons s
+       where s.club_id = old.club_id and s.id = old.season_id and s.standings_from_scores
+     )
+  then
+    new.played := old.played;
+    new.wins := old.wins;
+    new.draws := old.draws;
+    new.losses := old.losses;
+    new.goal_difference := old.goal_difference;
+    new.points := old.points;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger keep_computed_league_row
+before update on onzio.league_standings
+for each row execute function onzio_private.keep_computed_league_row();
+
 revoke all on function onzio_private.default_league_standings_season() from public;
+revoke all on function onzio_private.keep_computed_league_row() from public;
 revoke all on function onzio_private.copy_league_standings_into_new_season() from public;
 revoke all on function onzio_private.refresh_club_league_row(uuid, uuid) from public;
 revoke all on function onzio_private.refresh_league_row_after_game() from public;

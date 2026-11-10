@@ -63,6 +63,14 @@ describe("what reads the table", () => {
     expect(source("lib/admin-seasons-data.ts")).toMatch(/from\("league_standings"\)[\s\S]*?\.eq\("season_id", viewed\.id\)/);
   });
 
+  it("shows our row's numbers read-only in a season that works them out, and never deletes a logo another season uses", () => {
+    const page = source("app/admin/(protected)/standings/page.tsx");
+    expect(page).toContain("readOnly={autoSeason && row.is_club}");
+    expect(page).toContain("standings-auto-note");
+    expect(page).toContain("logoUrlsNoLongerUsed(supabase, pendingDeleteUrls)");
+    expect(page).not.toMatch(/deleteStorageUrls\("standings", pendingDeleteUrls/);
+  });
+
   it("saves table rows into the season being edited", () => {
     const page = source("app/admin/(protected)/standings/page.tsx");
     expect(page).toContain("season_id: seasonId");
@@ -96,8 +104,9 @@ describe("the migration", () => {
     // "Keep typed, new seasons auto": existing seasons false, seasons created after true.
     expect(sql).toMatch(/add column standings_from_scores boolean not null default false;\s+alter table onzio\.seasons\s+alter column standings_from_scores set default true;/);
     expect(sql).toContain("s.standings_from_scores");
-    expect(sql.match(/security definer\s+set search_path = ''/g)?.length).toBe(4);
-    expect(sql.match(/revoke all on function onzio_private\./g)?.length).toBe(4);
+    expect(sql).toContain("create trigger keep_computed_league_row");
+    expect(sql.match(/security definer\s+set search_path = ''/g)?.length).toBe(5);
+    expect(sql.match(/revoke all on function onzio_private\./g)?.length).toBe(5);
     expect(sql).not.toMatch(/drop table|truncate|delete from/i);
   });
 

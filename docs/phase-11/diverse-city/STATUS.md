@@ -26,6 +26,15 @@ hosted project. No change to `lib/club-context.ts`.
   our row from its games; every existing season keeps its typed row, from the
   new or the classic admin. **No live league table changes at merge**: Diverse
   City, Lions and Rose City current seasons stay typed.
+- Bot review of `2dfce88`, two Mediums fixed: (1) a copied table shares team
+  logo files across seasons, so the Standings page now deletes a logo file only
+  when no league table row of the club still uses it
+  (`lib/standings-logo-cleanup.ts`; if the check fails, nothing is deleted);
+  (2) in a season with `standings_from_scores` true, a fifth trigger
+  (`keep_computed_league_row`) keeps the six computed numbers on our row against
+  any writer except the recompute, so a Standings page saved from an old
+  snapshot cannot put the old numbers back; the page shows them read-only with a
+  note. Typed seasons stay editable. Other columns and rows save as sent.
 - Four triggers, so every write path (Enter a score, `/admin/score`, the
   classic Games page, imports) is covered and atomic: a table row saved without
   a season goes to the shown season (admin code deployed before this change

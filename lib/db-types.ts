@@ -95,6 +95,8 @@ export type DBMatch = {
 
 export type DBSeason = {
   id: string;
+  /** True when the season's league table works out our row from saved scores (ADMIN-RE-11b). */
+  standings_from_scores?: boolean;
   label: string;
   start_year: number;
   end_year: number;

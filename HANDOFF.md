@@ -14,7 +14,11 @@
   City current seasons stay typed.
 - **Verification:** database tests (25 new), contract and unit tests, a browser
   spec at 390 and 1440; full suites and the tested commit are in the PR body.
-- **Exact next step:** the bot runs `GATE-MIGRATE` and merges. RE-11c is next.
+- **Bot review fixes:** a logo file shared by two seasons is no longer deleted when
+  one season drops it; in an automatic season our row's numbers are read-only on
+  the Standings page and a database guard stops a stale save from undoing them.
+- **Exact next step:** the bot runs `GATE-MIGRATE` (Christian's machine, the bot
+  cannot reach production) and merges. RE-11c is next.
 ## 2026-11-10 - ADMIN-RE-18 Who can sign in (the screen)
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no change to the

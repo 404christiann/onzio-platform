@@ -372,6 +372,67 @@ describe("seasons that keep their typed row, and seasons that work it out", () =
   });
 });
 
+describe("a Standings page saved from an old snapshot", () => {
+  const stale = (id: string) =>
+    db.query(
+      `insert into onzio.league_standings (id,club_id,season_id,team_name,is_club,sort_order,played,wins,draws,losses,goal_difference,points)
+       values ($1,$2,$3,'Renamed us',true,0,0,0,0,0,0,0)
+       on conflict (id) do update set team_name=excluded.team_name, is_club=excluded.is_club, sort_order=excluded.sort_order,
+         played=excluded.played, wins=excluded.wins, draws=excluded.draws, losses=excluded.losses,
+         goal_difference=excluded.goal_difference, points=excluded.points`,
+      [id, ALPHA, season],
+    );
+
+  it("cannot put the old numbers back on our row in a season that works them out, and still saves the rest", async () => {
+    const ours = await addTeam(ALPHA, season, "Our team", 0, true);
+    await addGame(ALPHA, season, 2, 0); // the score is saved after the page was opened
+    await stale(ours); // the page, still showing zeros, is saved
+    expect(await ourRow(ALPHA, season)).toEqual({ played: 1, wins: 1, draws: 0, losses: 0, goal_difference: 2, points: 3 });
+    expect((await db.query("select team_name from onzio.league_standings where id=$1", [ours])).rows[0].team_name).toBe("Renamed us");
+    // The next score still moves it.
+    await addGame(ALPHA, season, 0, 1);
+    expect(await ourRow(ALPHA, season)).toEqual({ played: 2, wins: 1, draws: 0, losses: 1, goal_difference: 1, points: 3 });
+  });
+
+  it("lets a season that is typed by hand change every number", async () => {
+    await db.query("update onzio.seasons set standings_from_scores=false where id=$1", [season]);
+    const ours = await addTeam(ALPHA, season, "Our team", 0, true);
+    await db.query("update onzio.league_standings set played=10, points=13 where id=$1", [ours]);
+    expect(await ourRow(ALPHA, season)).toMatchObject({ played: 10, points: 13 });
+    await stale(ours);
+    expect(await ourRow(ALPHA, season)).toEqual(ZERO);
+  });
+
+  it("lets another team's numbers be typed in a season that works out ours, and a newly marked team keep what was sent", async () => {
+    const ours = await addTeam(ALPHA, season, "Our team", 0, true);
+    const rival = await addTeam(ALPHA, season, "Rivals FC", 1);
+    await db.query("update onzio.league_standings set played=7, points=11 where id=$1", [rival]);
+    expect((await db.query("select played, points from onzio.league_standings where id=$1", [rival])).rows[0]).toEqual({ played: 7, points: 11 });
+    // Moving "our team" to the rival: the new row keeps its typed numbers until the next score; the old one is now an ordinary row.
+    await db.query("update onzio.league_standings set is_club=false where id=$1", [ours]);
+    await db.query("update onzio.league_standings set is_club=true where id=$1", [rival]);
+    expect((await db.query("select played, points from onzio.league_standings where id=$1", [rival])).rows[0]).toEqual({ played: 7, points: 11 });
+    await addGame(ALPHA, season, 1, 0);
+    expect(await ourRow(ALPHA, season)).toEqual({ played: 1, wins: 1, draws: 0, losses: 0, goal_difference: 1, points: 3 });
+  });
+});
+
+describe("a copied table shares its logo files", () => {
+  it("copies the logo address into the new season, so the same file is used by two seasons", async () => {
+    await db.query(
+      "insert into onzio.league_standings (club_id,season_id,team_name,logo_url,sort_order) values ($1,$2,'Rivals FC','https://example.test/storage/v1/object/public/standings/teams/rivals.png',0)",
+      [ALPHA, season],
+    );
+    const next = await addSeason(ALPHA, "RE-11b shared logo", 2070);
+    const urls = (await db.query(
+      "select count(*)::int as n from onzio.league_standings where club_id=$1 and logo_url=$2",
+      [ALPHA, "https://example.test/storage/v1/object/public/standings/teams/rivals.png"],
+    )).rows[0].n;
+    expect(urls).toBe(2);
+    expect(next).toBeTruthy();
+  });
+});
+
 describe("two scores saved at the same moment", () => {
   it("both count (the second waits for the first, then totals with it)", async () => {
     // Real committed data, removed in finally, so a second connection can see it.
@@ -415,6 +476,8 @@ describe("the migration on rows that were there before it", () => {
   // transaction.
   async function stepBack() {
     await db.query("drop trigger refresh_league_row_after_game on onzio.matches");
+    await db.query("drop trigger keep_computed_league_row on onzio.league_standings");
+    await db.query("drop function onzio_private.keep_computed_league_row()");
     await db.query("drop trigger copy_league_standings_into_new_season on onzio.seasons");
     await db.query("drop trigger default_league_standings_season on onzio.league_standings");
     await db.query("alter table onzio.league_standings drop constraint league_standings_team_name_length");
