@@ -15,6 +15,41 @@
   spec at 390 and 1440; full suites and the tested commit are in the PR body.
 - **Exact next step:** Christian sends the production check; the bot runs
   `GATE-MIGRATE` and merges. RE-11c is next.
+## 2026-11-10 - ADMIN-RE-18 Who can sign in (the screen)
+
+- **Status:** `in_progress`, PR open. UI only: no migration, no change to the
+  members route from #101. Rose City is already on the new admin, so merging
+  shows it there. **The screen sends email** ("Send the code again", "Send
+  sign-in code" in Add someone): say so in the release record.
+- **What it adds:** `/admin/members` is "Who can sign in" for a `reimagined`
+  club (a `classic` club keeps Team access): every owner, helpers with their
+  names, "Signed in Tue" or "Hasn't signed in yet" with "Send the code again",
+  Add someone (name required), "Add a name" for a person without one, and
+  Remove in one tap with an Undo for the server's ten-minute window. A rate
+  limit says "wait a minute"; an administrator who opens the address sees why
+  they cannot change it.
+- **Left out:** renaming someone who has a name; Undo after a page reload.
+- **Verification:** unit, contract and browser tests (390 and 1440), plus one
+  end-to-end run on the local stack (real codes to local Mailpit only); full
+  suites on the PR head, with the tested commit, are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** the bot merges. Christian opens Who can sign in on Rose
+  City.
+
+## 2026-11-09 - ADMIN-RE-14 Your club
+
+- **Status:** `in_progress` on branch `claude/admin-re-14-your-club-7788b6`
+  from `main` `600f5e7`, PR open. No migration. Nothing hosted touched.
+- **What it adds:** `/admin/your-club` for reimagined clubs (classic ones go to
+  `/admin/branding`): logo with "Fit your logo", email, phone, hours (200),
+  area, five social pages (2,048 each), footer line (160), live footer and
+  Contact previews, one Save. Only the cards the club's website has are shown
+  (Rose City-style sites: logo and social pages). The Your club More row now
+  opens it. Zod added for `site_social_links` and `site_branding` writes.
+- **Verification:** unit, contract and browser tests (390 and 1440); full
+  suites on the PR head in the PR body. Details in `STATUS.md`.
+- **Exact next step:** the bot merges. RE-13 later points website pages here.
+
 ## 2026-11-10 - ADMIN-RE-11a follow-up: the bot's Low notes on #116
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.
@@ -41,6 +76,7 @@
 - **Exact next step:** the bot merges. RE-11b (league table per season) and
   RE-11c are migrations and go through the production migration gate one at a
   time.
+
 ## 2026-11-09 - ADMIN-RE-20 Payments and plan
 
 - **Status:** `in_progress`, PR open. No migration, no Stripe change, no new
@@ -306,6 +342,7 @@
   have no More row in the plan, so in the reimagined admin they are reachable
   only by address until RE-13 and RE-06. Add rows, or accept the gap?
 - **Exact next step:** the bot merges; then RE-06 to RE-09.
+
 ## 2026-11-08 - ADMIN-RE-18 server half: who can sign in
 
 - **Status:** `in_progress` on branch `claude/friendly-pasteur-a348b7` from

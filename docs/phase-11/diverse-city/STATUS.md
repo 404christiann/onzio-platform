@@ -67,6 +67,182 @@ check above), dark theme, the public site in a browser.
 
 **Exact next step:** Christian runs the production check and sends the output;
 then the bot runs `GATE-MIGRATE` and merges. RE-11c is the next migration.
+## 2026-11-10 - ADMIN-RE-18 (screen): Who can sign in on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-18` (the screen; the server half is
+PR #101). Branch `claude/admin-re-18-signin-ui-655d14` from `main` `f44051e`,
+`main` `a6d820b` merged in. **Status:** `in_progress`, PR open for the review
+bot. UI only: no migration, no schema change, no change to the members route,
+no hosted action. Rose City is already on `reimagined`, so merging shows it
+there.
+
+**This screen sends email.** "Send the code again" and "Send sign-in code" in
+Add someone both send a real sign-in email through Supabase Auth (the same
+`signInWithOtp` path as #101). The release record should say so. Nothing in
+the tests below sent an email anywhere but the local Mailpit container.
+
+**Completed work:**
+
+- `/admin/members` for a club on `reimagined` shows "Who can sign in" (design
+  `cd-signin-final`, decisions 0010 and 0013). A club still on `classic` keeps
+  the Team access page, untouched (it is now `ClassicMembersPage` in the same
+  file).
+- Every owner is listed, you first ("You · owner", others "Owner"), with "Only
+  Onzio can change the owner" and no menu. Helpers show a name (their email
+  underneath), then either "Signed in Tue" (today, yesterday, a weekday for six
+  days, then "Oct 20", with the year only when it is not this year; days are
+  the club's own days) or "Hasn't signed in yet" with "Send the code again".
+  The `...` menu on every helper offers Send the code again and Remove access.
+- Add someone: "Their name" (required, 120 characters, counted from 100) and
+  "Their email" (254). The button stays muted until both are good; a repeat
+  ("That person can already sign in.") is caught before anything is sent. The
+  dialog says an email goes out.
+- A person with no name shows a quiet "Add a name" (owners and helpers; it
+  uses `set-name`, owner-only for someone else).
+- Remove is one tap with no question: the row goes and a toast says "Sam can't
+  sign in any more | Undo" for as long as the server's undo window (`undoUntil`
+  from the route, ten minutes). Undo puts the row back. After the window the
+  toast is gone; the server says "too late" if Undo is somehow still pressed,
+  and the screen says to use Add someone.
+- A row that was just sent a code says "Code sent" and hides its resend for a
+  minute (the Auth limit is one a minute). If the server still rate-limits, the
+  screen says "A code was sent to Sam a moment ago. Wait a minute, then send it
+  again." and changes nothing. Every code the route can return has a sentence;
+  a raw code never reaches the screen.
+- Owner-only stays owner-only: an administrator who opens the address sees
+  "Only a club owner can change who can sign in." and the screen asks the
+  server nothing. The route already refuses them; the More row is owner-only.
+
+**Left out on purpose:**
+
+- Renaming someone who already has a name (the design shows only "Add a name").
+- Undo after a reload: the toast lives on the page; the server window outlives
+  it by design, so a reload inside the ten minutes means re-adding.
+- The design's "Add someone" sent animation (the row slides in) and the
+  desktop toast beside the button: the toast stacks at the foot instead, and
+  rows simply appear.
+
+**Files changed:** `app/admin/(protected)/members/page.tsx` (chooses the screen
+by portal), `components/admin/reimagined/SignInPeople.tsx` (new),
+`components/admin/reimagined/sign-in.module.css` (new),
+`lib/admin-sign-in-view.ts` (new: words, initials, long-email shortening, add
+validation, error sentences), `lib/__tests__/admin-sign-in-view.test.ts` (new),
+`tests/contracts/admin-reimagined-sign-in.test.ts` (new),
+`tests/browser/admin-reimagined-sign-in.spec.ts` (new), this file, `HANDOFF.md`.
+No icon was added (mail, clock, check, more, lock, add and close were already in
+`components/admin/icons`). `lib/club-context.ts` is untouched.
+
+**Verification:** unit tests for the words and shapes; contract tests (route
+actions, owner-only, no Supabase client in the screen, only the members
+endpoint, break-ui CSS rules, the home menu row); browser tests at 390 and 1440
+wide on local Alpha (worst-case names and emails, no helpers, 60 helpers, never
+signed in, rate-limited and successful resend with the route answered by the
+test, add-someone validation, dark theme, an administrator, a classic club) and
+one real end-to-end run on the local stack: add (a real code to local Mailpit),
+resend straight away (real Auth rate limit), resend after the minute (a second
+real code), remove, undo, add a name. The spec refuses to run unless Supabase
+Auth's mail goes to the local Mailpit container. Full suites, with the tested
+commit, are in the PR body.
+
+**Not verified:** nothing was run against production or any hosted project, and
+no hosted email was sent. Not checked on a real phone or in Safari. Screen
+reader behavior was not tested beyond roles and labels.
+
+**Exact next step:** the bot reviews and merges. Christian opens "Who can sign
+in" on Rose City; the first Add someone or Send the code again there sends a
+real email.
+
+## 2026-11-09 - ADMIN-RE-14: Your club
+
+**Agent/package:** Claude Code, `ADMIN-RE-14`. Branch
+`claude/admin-re-14-your-club-7788b6` from `main` `600f5e7`. **Status:**
+`in_progress`, PR open for the review bot. No migration, no schema change.
+Nobody sees it on Rose City until the Your club row opens it, which it does
+as soon as this merges (Rose City is already on the new admin); Diverse City
+stays on the old Branding page until its own switch.
+
+**Completed work:**
+
+- New page `/admin/your-club` (design `cd-your-club`; decision 0006; group 3
+  decisions 10 and 11): logo with "Fit your logo", how people reach the club
+  (email, phone, hours with a 200 counter, area), the five social pages
+  (blank hides one), a footer line (160 counter), the website's footer and
+  Contact page following what is typed, and one Save in the page's own top
+  bar ("N changes not saved yet" then the hold-aware "Saved · on your
+  website" / "Saved · your website is paused"). "Home" asks "Save your
+  changes first?" when something is not saved; a browser reload or tab close
+  warns too. A club still on the old admin is sent to `/admin/branding`.
+- Only what the club's website has is asked (decision 0005), through
+  `codeSiteAdminFor`, the same rule the old Branding and Contact pages use:
+  the contact details need a Contact page, the footer line needs a footer
+  that prints one. So Diverse City (and Alpha) see four cards; a generic or
+  Rose City-style site sees the logo and social pages only.
+- Only what changed is written, in order: logo + footer line (one
+  `site_branding` row), social pages, contact details. If a later part
+  fails, the message says what was already saved and a retry redoes the
+  rest (a logo already uploaded is reused). Existing values that are over a
+  new limit never block an unrelated edit.
+- "Fit your logo": a square frame with zoom (1 to 4), drag and arrow keys,
+  and small previews for menu, footer and browser tab; "Use this fit" makes a
+  square PNG, "Use it as it is" keeps the chosen file. JPEG is refused up
+  front ("Choose a PNG or WebP picture.").
+- Zod on `/api/admin/data` for the two tables that had none:
+  `site_social_links` (href at most 2,048, the break-ui gap, label 40, id a
+  platform name) and `site_branding` (footer line at most 160, as the
+  database does). The old Branding page's writes still validate.
+- Manifest: new reimagined-only route `your-club`; the Your club More row
+  opens it (it opened `/admin/branding`). Branding is therefore no longer a
+  More row; the manifest test says so on purpose.
+- JPG copy gap (PR #88): verified, not redone. `tests/contracts/admin-platform-fixes-02.test.ts`
+  section 3 passes and the old Branding page has no JPG/JPEG wording.
+
+- Review bot Medium on #117, fixed: a saved `http://`, upper-case-scheme or
+  port social address no longer loads as an unsaved change or gets rewritten
+  to `https://` on an unrelated Save (`effectiveSocialHref`,
+  `draftFromSaved` in `lib/your-club.ts`; unit and browser round-trip tests).
+  Two Lows too: a cleared footer line previews the standard wording the
+  website prints, and the Fit your logo preview address is made and revoked
+  in one effect. Left as a follow-up: tie `club_logo_path` to the finalized
+  asset in the strict `site_branding` schema (the old Branding page also
+  trusts the string).
+
+**Differences from the design, on purpose:** the footer preview card sits
+above the questions on a phone but is not pinned there; "Live" shows the
+website's state (Live or Paused) rather than lighting up only after Save; the
+footer card is a simple stand-in, not the website's real footer component.
+The Contact page still edits email, phone, hours and area itself until
+ADMIN-RE-13 (the "These come from Your club" notice is that package).
+
+**Files changed:** new `app/admin/(protected)/your-club/page.tsx`,
+`components/admin/reimagined/{YourClub,FitLogo}.tsx`,
+`components/admin/reimagined/your-club.module.css`, `lib/your-club.ts`,
+`lib/admin-your-club-data.ts`, `lib/__tests__/your-club.test.ts`,
+`tests/contracts/admin-your-club.test.ts`,
+`tests/browser/admin-reimagined-your-club.spec.ts`; edited
+`lib/admin-data-contract.ts`, `lib/admin-route-manifest.ts`,
+`tests/contracts/admin-route-manifest.test.ts`; this file, `HANDOFF.md`,
+`docs/admin-portal-redesign-plan.md` (as-built note). `lib/club-context.ts`
+untouched (the contract test pins it).
+
+**Verification:** by hand under `scripts/with-local-db-lock.sh` in this
+worktree, on the PR head. The results table with the tested SHA is in the PR
+body. Browser checks (14: 7 at 390 and 7 at 1440, serial, Alpha) cover
+open-from-More, every card, edit then one Save then reload, Home prompt (keep,
+leave, save and continue), refused answers, the worst case (2,048-character
+address, 200-character hours, 160-character line, a 250-character email) with
+no sideways scroll, the logo flow through the real media chain, a site
+without Contact or footer line, and the classic redirect. Three tables are
+restored from a snapshot after each test.
+
+**Not verified:** a real phone's keyboard and touch (Chromium at 390 wide
+only); dark theme; the logo on Rose City's own legacy renderer (Alpha stands
+in); Safari. Nothing was run against production.
+
+**Exact next step:** the bot reviews and merges. Then Christian can try
+"Your club" on Rose City (logo and social pages) in his walk-through; every
+finding is an `ADMIN-RE-10x` or follow-up PR. RE-13 adds the "These come from
+Your club" shortcuts on the website pages.
+
 ## 2026-11-10 - ADMIN-RE-11a follow-up: the review bot's Low notes on #116
 
 **Agent/package:** Claude Code, `ADMIN-RE-11a` (follow-up). Branch
@@ -161,6 +337,7 @@ season row. Dark theme was not checked by eye.
 
 **Exact next step:** the bot reviews and merges. Christian opens "This season"
 on Rose City and tries Start next season with a name he likes.
+
 ## 2026-11-09 - ADMIN-RE-20: Payments and plan on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-20`. Branch
