@@ -59,11 +59,32 @@ suites on the PR head, with the tested commit, are in the PR body.
 
 **Agent/package:** Claude Code, `ADMIN-RE-15`. Branch
 `claude/infallible-kowalevski-82abdc` from `main` `1572f01e`. **Status:**
-`in_progress`, PR open for the review bot. **Carries a migration**
+`released` 2026-11-10 (PR #128, merge `779bd327`). **Carried a migration**
 (`20261110150000_sponsors_one_list.sql`, sorted after `main`'s newest,
-`20261110090000`, and the Rose City 2027 branch's `20261109210000`). It merges
-rows on a live table, so it needs `GATE-MIGRATE` with Christian's explicit OK,
-run from his Mac, before the merge. No change to `lib/club-context.ts`.
+`20261110090000`, and the Rose City 2027 branch's `20261109210000`), applied to
+production before the merge. No change to `lib/club-context.ts`.
+
+**Release record:** `GATE-MIGRATE` ran from Christian's Mac at his explicit
+request, following `docs/agents/review-bot-supabase.md`, on the reviewed head
+`4ae7da14` (onzio-coder: no High or Medium issues open; the runner table's
+tested revision was the same head). Before: the ledger had only this migration
+pending; a completed physical backup from the same day (a full logical dump
+could not run on that Mac, so a read-only local copy of the one table the
+migration changes was kept until the smoke checks passed, then deleted);
+Christian's read-only sponsor counts and the order check under the migration's
+rule (homepage moves 0, footer moves 0 for every club); the dry run listed only
+this migration. Applied with `supabase db push --linked --skip-vault` (CLI
+2.122.0). After: the ledger matches and a second dry run says up to date; the
+migration has its history row; sponsor rows match the expected counts below
+(Rose City and Diverse City merged as predicted, Lions unchanged); clubs
+unchanged; the generated types differ from the live schema only in generator
+formatting. #128 was merged at Christian's request, pinned to the migrated
+head. Deploy Ready; smoke checks passed: every verified production domain
+returns 200 with no `UNKNOWN_TENANT`, Diverse City `/programs`, `/roster` and
+`/shop` return 200, and Rose City's admin sign-in returns 200.
+`onzio-platform.vercel.app/` returns 404, consistent with the public-site hold.
+`hold` removed; the physical backup stays the recovery point. Visitors see the
+same sponsors in the same order on the homepage and in the footer.
 
 **Completed work:**
 
@@ -165,13 +186,16 @@ Found and fixed in the browser run: the leave dialog sat under Base UI's inert
 layer (its buttons could not be clicked); the preview left a gap for a logo
 file that failed to load (it now shows the name).
 
-**Blockers / decisions:** `GATE-MIGRATE` needs Christian's explicit OK and
-runs from his Mac. Decided here: rows without a file record are not merged by
-link (see the production check above).
+**Blockers / decisions:** none. Decided here: rows without a file record are
+not merged by link (see the production check above); one order per club keeps
+both places' orders.
 
-**Exact next step:** the bot reviews; then `GATE-MIGRATE` from Christian's
-Mac (expect Rose City 12 sponsor rows to become 7, Diverse City 4 to become 3,
-Lions unchanged at 6), then merge.
+**Exact next step:** none for RE-15. `placement` stays (nullable, unread)
+until both clubs accept the one-list page; dropping it, with the
+legacy-insert trigger, is a later migration. When the Rose City 2027 branch
+merges, set its `sponsors.showFooterPlacement` to `false` (its footer shows no
+sponsors) and expect small conflicts in the classic Sponsors page and
+`components/Footer.tsx` (PR #128 body).
 
 ## 2026-11-10 - Add a game asks "Which competition?" (Diverse City only)
 
