@@ -15,6 +15,7 @@ import {
   IconUpload,
 } from "@/components/admin/icons";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
+import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { Spinner } from "@/components/ui/spinner";
 import { createClient } from "@/lib/admin-client";
 import type { YourClubData } from "@/lib/admin-your-club-data";
@@ -142,8 +143,6 @@ function Editor({
   const [logoUrl, setLogoUrl] = useState(data.logoUrl);
   const [pendingLogo, setPendingLogo] = useState<{ file: File; url: string } | null>(null);
   const [fitting, setFitting] = useState<File | null>(null);
-  /** A logo address the browser could not load: shown as a quiet note, not a broken picture. */
-  const [brokenLogo, setBrokenLogo] = useState<string | null>(null);
   const [save, setSave] = useState<SaveState>("idle");
   const [errors, setErrors] = useState<Errors>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -364,8 +363,7 @@ function Editor({
     else router.push("/admin");
   }
 
-  const wantedLogo = pendingLogo?.url ?? logoUrl;
-  const previewLogo = wantedLogo && wantedLogo !== brokenLogo ? wantedLogo : "";
+  const previewLogo = pendingLogo?.url ?? logoUrl;
   const reachFilled = [draft.email, draft.phone].some((value) => value.trim() !== "");
   // The footer shows a page once its field holds a web address.
   const lit = SOCIAL_PLATFORMS.filter((platform) =>
@@ -455,10 +453,14 @@ function Editor({
             <div className={styles.logoRow}>
               <span className={styles.logoTile} data-testid="your-club-logo">
                 {previewLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- the saved logo or a local preview of the new one
-                  <img src={previewLogo} alt={`${clubName} logo`} onError={() => setBrokenLogo(previewLogo)} />
+                  // A logo file the browser cannot load shows a quiet note, not a broken picture.
+                  <ResilientNativeImage
+                    src={previewLogo}
+                    alt={`${clubName} logo`}
+                    fallback={<span className={styles.noLogo}>Can’t show it</span>}
+                  />
                 ) : (
-                  <span className={styles.noLogo}>{wantedLogo ? "Can’t show it" : "No logo"}</span>
+                  <span className={styles.noLogo}>No logo</span>
                 )}
               </span>
               <span className={styles.logoText}>
@@ -599,8 +601,7 @@ function Editor({
           <div className={styles.footerCard} data-testid="your-club-footer-preview">
             <span className={styles.footerBrand}>
               {previewLogo ? (
-                // eslint-disable-next-line @next/next/no-img-element -- the saved logo or a local preview of the new one
-                <img src={previewLogo} alt="" className={styles.footerCrest} onError={() => setBrokenLogo(previewLogo)} />
+                <ResilientNativeImage src={previewLogo} alt="" className={styles.footerCrest} hideOnError />
               ) : null}
               <span className={styles.footerName} title={clubName}>
                 {clubName}

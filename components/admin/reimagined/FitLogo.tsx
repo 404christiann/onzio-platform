@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { AdminModal } from "@/components/admin/AdminModal";
+import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { cropGeometry, MAX_LOGO_ZOOM, MIN_LOGO_ZOOM } from "@/lib/your-club";
 import styles from "./your-club.module.css";
 
@@ -36,8 +37,7 @@ function Picture({
 }) {
   const ratio = size / FRAME;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- a local preview of a file the owner just chose
-    <img
+    <ResilientNativeImage
       src={url}
       alt=""
       draggable={false}
