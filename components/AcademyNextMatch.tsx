@@ -9,10 +9,10 @@ import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { clubKickoffInstant, clubToday } from "@/lib/club-time";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
+import { nextMatchLabels } from "@/lib/next-match-labels";
 import {
   fetchActiveSeason,
   fetchContactProfile,
-  fetchLeagueStandings,
   fetchSchedule,
 } from "@/lib/queries";
 import { AcademyMatchLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
@@ -46,21 +46,13 @@ export default function AcademyNextMatch() {
   const [nextFixture, setNextFixture] = useState<Fixture | null>(null);
   const [loading, setLoading] = useState(true);
   const showLoading = useBoundedAcademyLoading(loading, club.id);
-  // Both of these were hardcoded club facts even though each already had an
-  // admin-editable home: the competition name is the standings section title
-  // the club edits at /admin/standings, and the fallback location is the
-  // service area it edits at /admin/contact. Neither is template chrome, so
-  // neither belongs in component source (DCFC-D007).
-  const [leagueLabel, setLeagueLabel] = useState("");
+  // The fallback location is the service area the club edits at
+  // /admin/contact. It is a club fact, not template chrome, so it does not
+  // belong in component source (DCFC-D007). The competition line is not read
+  // from here at all: ADMIN-RE-22 takes it from the game itself.
   const [serviceArea, setServiceArea] = useState("");
 
   useEffect(() => {
-    fetchLeagueStandings(club.id)
-      .then((content) => setLeagueLabel(content.settings.title.trim()))
-      .catch((error) => {
-        console.error("AcademyNextMatch standings settings:", error);
-        setLeagueLabel("");
-      });
     fetchContactProfile(club.id)
       .then((profile) => setServiceArea(profile?.serviceArea.trim() ?? ""))
       .catch((error) => {
@@ -98,18 +90,38 @@ export default function AcademyNextMatch() {
 
   if (showLoading) return <AcademyMatchLoadingSkeleton />;
 
-  const dateLabel = nextFixture ? formatMatchDate(nextFixture.date) : "Date and time TBA";
-  const timeLabel = nextFixture ? formatMatchTime(nextFixture.time) : "";
+  // ADMIN-RE-22: no game, no made-up opponent. The card says so and keeps the
+  // way to the full schedule.
+  if (!nextFixture) {
+    return (
+      <section className="bg-white px-6 py-12 lg:px-10 lg:py-12">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-8">
+            <h2 className="font-display text-[clamp(2.7rem,6vw,5.5rem)] font-black uppercase italic leading-none text-[#1E3653]">
+              Next Match
+            </h2>
+          </div>
+          <div className="flex flex-col justify-between gap-4 border-t border-[#1E3653]/15 pt-5 font-body text-sm text-[#51667E] sm:flex-row">
+            <span>No game coming up</span>
+            <Link href="/schedule" className="font-bold text-[#1E3653] hover:text-[#FF1616]">
+              Full Schedule
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const dateLabel = formatMatchDate(nextFixture.date);
+  const timeLabel = formatMatchTime(nextFixture.time);
   const dateTimeLabel = timeLabel ? `${dateLabel} – ${timeLabel}` : dateLabel;
-  const cityState = nextFixture
-    ? [nextFixture.city?.trim(), nextFixture.state?.trim()].filter(Boolean).join(", ")
-    : "";
-  const venueLabel = nextFixture?.venue?.trim() || (cityState ? "" : serviceArea);
-  const locationLabel =
-    [venueLabel, cityState || (nextFixture ? "" : "")].filter(Boolean).join(", ") ||
-    serviceArea;
-  const opponentName = nextFixture?.opponent?.trim() || "TBA";
-  const opponentLabel = nextFixture ? opponentName : "Next Opponent";
+  const cityState = [nextFixture.city?.trim(), nextFixture.state?.trim()].filter(Boolean).join(", ");
+  const venueLabel = nextFixture.venue?.trim() || (cityState ? "" : serviceArea);
+  const locationLabel = [venueLabel, cityState].filter(Boolean).join(", ") || serviceArea;
+  const opponentName = nextFixture.opponent?.trim() || "TBA";
+  // The competition belongs to the game (League, cup, friendly...). A game
+  // saved without one shows no competition line.
+  const { competition, homeAway: homeAwayLabel } = nextMatchLabels(nextFixture);
 
   return (
     <section
@@ -135,21 +147,26 @@ export default function AcademyNextMatch() {
           </div>
           <div className="text-center">
             <span className="font-display text-5xl font-black italic text-[#FF1616]">VS</span>
-            {leagueLabel && (
+            {competition && (
               <p className="mt-3 font-body text-xs font-bold uppercase text-[#6B7E94]">
-                {leagueLabel}
+                {competition}
               </p>
             )}
+            <p
+              className={`${competition ? "mt-1" : "mt-3"} font-body text-xs font-bold uppercase text-[#6B7E94]`}
+            >
+              {homeAwayLabel}
+            </p>
           </div>
           <div className="flex flex-col items-center text-center">
             <OpponentCrest
               name={opponentName}
-              logoUrl={nextFixture?.opponentLogoUrl}
+              logoUrl={nextFixture.opponentLogoUrl}
               size={112}
               className="[--opponent-crest-size:112px] md:[--opponent-crest-size:144px]"
             />
             <p className="mt-4 font-display text-xl font-black uppercase italic text-[#1E3653]">
-              {opponentLabel}
+              {opponentName}
             </p>
           </div>
         </div>

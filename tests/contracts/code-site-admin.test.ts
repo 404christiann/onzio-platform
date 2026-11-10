@@ -6,9 +6,10 @@ import { codeSiteAdminFor } from "@/lib/code-site-admin";
 describe("code site admin choices", () => {
   it("resolves Diverse City's admin choices only for the Academy presentation", () => {
     const policy = codeSiteAdminFor({ presentationTemplateKey: "academy@1" });
-    expect(policy?.programs).toMatchObject({ routeVisible: true, showSlugField: false, allowCreation: false, showPageCopyEditor: false });
+    expect(policy?.programs).toMatchObject({ routeVisible: true, showSlugField: false, allowCreation: false, showPageCopyEditor: true });
     expect(policy?.shop).toMatchObject({ variants: ["home"], showHomeFeature: true, initialSurface: "shop" });
     expect(policy?.schedule.showMatchSponsorFields).toBe(false);
+    expect(policy?.schedule.competitionShowsOnNextMatch).toBe(true);
     expect(codeSiteAdminFor({ presentationTemplateKey: "editorial@1" })).toBeNull();
     expect(codeSiteAdminFor({ presentationTemplateKey: null })).toBeNull();
   });

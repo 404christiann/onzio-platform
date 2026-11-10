@@ -360,13 +360,15 @@ describe("academy@1 program surfaces render stored content, not literals", () =>
     const nextMatch = source("components/AcademyNextMatch.tsx");
     expect(
       nextMatch.includes("UPSL Midwest Central"),
-      "the competition name belongs to the standings settings a club edits",
+      "the competition name belongs to the game, not to component source",
     ).toBe(false);
     expect(
       nextMatch.includes("Schaumburg, Illinois"),
       "the fallback location belongs to the club's contact service area",
     ).toBe(false);
-    expect(nextMatch).toContain("fetchLeagueStandings");
+    // ADMIN-RE-22: the competition is the game's own, so Next Match no longer
+    // reads the Standings title.
+    expect(nextMatch).not.toContain("fetchLeagueStandings");
     expect(nextMatch).toContain("fetchContactProfile");
   });
 

@@ -200,6 +200,97 @@ verified: production (nothing hosted touched), a real iPhone's safe areas.
 **Exact next step:** the bot reviews and merges 24a. Then 24b (the home) from
 the merged `main`.
 
+## 2026-11-10 - ADMIN-RE-22: Diverse City screens (Programs words, Next match)
+
+**Agent/package:** Claude Code, `ADMIN-RE-22`. Branch
+`claude/admin-re-22-diverse-city` from `main` `f44051e`. **Status:**
+approved by Christian (2026-11-10) to merge, PR #123; the visitor-facing change
+was read and approved first. No schema change, no migration, no change to
+`lib/club-context.ts`, no hosted action, no `admin_portal` change.
+
+**Completed work:**
+
+- **Next match card** (`components/AcademyNextMatch.tsx`, used by Diverse City's
+  homepage only): the competition line comes from the game itself
+  (`matches.competition`), not from the Standings title; a game with none shows
+  no competition line. Under "VS" the card now also says Home or Away. With no
+  game it says "No game coming up" and keeps only Full Schedule (it used to show
+  "Next Opponent" and "Date and time TBA"). It never filtered to league games,
+  so any game counts; the active-season scope and the club-time kickoff
+  (RE-03) are unchanged.
+- **Standings and Games words:** the Standings title help no longer says the
+  title shows on Next Match (`titleShowsOnNextMatch` is removed from
+  `site-definition.ts`); the Games form's Competition field says it shows under
+  VS on the Next Match card (new `schedule.competitionShowsOnNextMatch`).
+- **Programs words** (`/admin/programs`): the words editor that was hidden for
+  Diverse City (`showPageCopyEditor`) is on. It edits the eleven stored words
+  (the homepage "pathway" band, the Programs page header, the closing band),
+  with a live preview of the real page. A click on the page's heading or
+  closing band opens those words and puts the cursor in them; the "managed by
+  Onzio" notes are gone for this club. It works in both portals, because
+  Diverse City edits in the classic one today.
+- **Email to order:** verified, not redone (see below).
+
+**Not built, and why:** the words with no stored home (a program page's "The
+Program" heading, "Community Partners", "Join <club>") need a table or columns:
+a schema change, so they are left for Christian to decide. The click-to-change
+canvas with the page switcher is RE-13. "Add a game" in the new admin has no
+Competition question (the design has none; "League game?" waits for RE-11b), so
+a game added there shows no competition line until one is set in Games.
+
+**Files changed:** `components/AcademyNextMatch.tsx`,
+`components/sites/diverse-city/site-definition.ts`,
+`app/admin/(protected)/programs/page.tsx`,
+`app/admin/(protected)/schedule/page.tsx`,
+`app/admin/(protected)/standings/page.tsx`; new `lib/next-match-labels.ts`,
+`lib/__tests__/next-match-labels.test.ts`,
+`tests/contracts/admin-re-22-diverse-city.test.ts`,
+`tests/browser/admin-reimagined-diverse-city.spec.ts`; updated on purpose
+`tests/contracts/code-site-admin.test.ts`,
+`tests/contracts/admin-platform-fixes-02.test.ts`,
+`tests/contracts/diverse-city-program-registration-admin.test.ts`;
+`docs/admin-portal-redesign-plan.md`, this file, `HANDOFF.md`.
+
+**What Diverse City visitors see change at merge:** only the homepage Next Match
+card. (1) The competition line is the game's own: if Diverse City's coming games
+have no Competition filled in, today's line (the Standings title) disappears at
+merge. (2) A Home or Away label appears under it. (3) With no game coming up the
+card reads "No game coming up". Nothing on the Programs pages changes for
+visitors until an owner saves new words. Other clubs: `AcademyNextMatch` is
+imported only by Diverse City's homepage, `NextMatchCard` and every shared
+template file are untouched (a contract test pins both).
+
+**Verification:** see the PR body for the results table with the tested commit.
+Local only (Alpha stands in for Diverse City): before and after screenshots at
+390 and 1440 of the Next Match card (away game with a competition, home game
+without one, no game) and of `/admin/programs` in both portals.
+
+**Email to order (verified, not redone):** `20261105120000_shop_buy_link_email.sql`
+is on main and was applied to production (HANDOFF, ADMIN-PLATFORM-FIXES-02
+release); the shared contract accepts `mailto:` (`lib/shop-editor/contract.ts`)
+and its tests (`admin-platform-fixes-02` section 8 and
+`tests/database/shop-buy-link-email.test.ts`) pass. The design's "An email to the
+club" choice (the address from Your club, subject "Order: Home kit") is the
+Shop slice, RE-16.
+
+**Not verified:** nothing run against production. Diverse City's real
+`matches.competition` values: Christian's read-only query is in the shared notes
+(`re-22-competition-check.md`). Dark theme, a real phone, and the two Diverse
+City acceptance browser configs (they need the local Diverse City import, not the
+seeded Alpha) were not run.
+
+**Production check (Christian, read-only, 2026-11-09):** Diverse City has 1 game
+in total, none from today onward, none with a competition; so no competition
+line is lost at merge and the card reads "No game coming up" until a game is
+added. No fallback to the Standings title was added.
+
+**Exact next step:** a follow-up PR adds an optional Competition box to the new
+admin's Add a game, for Diverse City only, before Diverse City is switched to
+the new admin. Left over from the bot's Low notes: a failed schedule load shows
+"No game coming up" as if it were true, and the focus after a click on the
+page's heading is not asserted in the browser spec.
+
+
 ## 2026-11-10 - ADMIN-RE-18 (screen): Who can sign in on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-18` (the screen; the server half is

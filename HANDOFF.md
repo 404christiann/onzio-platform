@@ -47,6 +47,28 @@
   Details in `STATUS.md`.
 - **Exact next step:** the bot merges. Then 24b, the home.
 
+## 2026-11-10 - ADMIN-RE-22 Diverse City screens (Programs words, Next match)
+
+- **Status:** approved by Christian (2026-11-10) to merge, PR #123. No schema
+  change, no hosted action. Christian ran the read-only production check:
+  Diverse City has one past game and none coming up, so no competition line is
+  lost at merge.
+- **What it adds:** the Programs words editor (eleven stored words: homepage
+  band, page header, closing band) is on for Diverse City in `/admin/programs`,
+  in both admin portals. The homepage Next Match card takes its competition from
+  the game (no competition, no line), shows Home or Away, and says "No game
+  coming up" when nothing is scheduled. Email to order was already on main and is
+  verified, not redone.
+- **Visitors see at merge:** only the Next Match card changes (see `STATUS.md`).
+  Games with no Competition lose today's line.
+- **Not built:** the words that have no stored home (needs a schema change),
+  the click-to-change canvas (RE-13), a Competition question on the new Add a
+  game.
+- **Exact next step:** the follow-up PR adds an optional Competition box to
+  the new admin's Add a game, for Diverse City only, before Diverse City is
+  switched to the new admin.
+
+
 ## 2026-11-10 - ADMIN-RE-18 Who can sign in (the screen)
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no change to the
