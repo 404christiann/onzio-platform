@@ -64,6 +64,114 @@ package with a table). Insights for Rose City still waits on Onzio setting its
 
 **Exact next step:** the bot merges 24b. Then 24c (search with cmdk).
 
+## 2026-11-10 - ADMIN-RE-11b: League table per season, our row updates itself
+
+**Agent/package:** Claude Code, `ADMIN-RE-11b`. Branch
+`claude/admin-re-11b-league` from `main` `f44051e`. **Status:** `released`
+2026-11-10 (PR #120, merge `d665c655`). **Carried a migration**
+(`20261110090000_league_table_per_season.sql`, sorted after the Rose City 2027
+branch's last one, `20261109210000`), applied to production before the merge.
+No change to `lib/club-context.ts`.
+
+**Release record:** Christian applied the migration from his Mac
+(`supabase db push --linked --skip-vault`, CLI 2.122.0) after the bot cleared
+both Mediums at `6343286`, following `docs/agents/review-bot-supabase.md`. Before:
+the ledger had only this migration pending; a completed physical backup from the
+same day with no later audited writes (no extra dump); the dry run listed only
+this migration. After: the ledger matches and a second dry run says up to date;
+the migration has its history row and its triggers exist; no table row without
+a season; row counts unchanged apart from the audit events the backfill wrote;
+every existing season typed (`standings_from_scores` false); every club's own
+row unchanged; the generated types differ from the live schema only in
+generator formatting. I merged #120 pinned to head `75358950` (main with RE-24a
+merged in and a browser spec fix, after the bot's review of `6343286`; no
+migration or application change of this PR in those commits). Deploy READY;
+smoke checks passed: every verified production domain returns 200 after the
+`diversecityfc.com` to `www` redirect with no `UNKNOWN_TENANT`, Diverse City
+`/programs`, `/roster` and `/shop` return 200, and Rose City's admin sign-in
+returns 200. `onzio-platform.vercel.app/` returns 404, consistent with the
+public-site hold; I did not confirm which club it belongs to. Rollback target
+for code was the previous production deployment.
+
+**Completed work:**
+
+- Migration: `matches.league_game boolean not null default true` (decision 4);
+  `league_standings.season_id`, backfilled to the club's shown season (else its
+  newest), then not null, with a composite foreign key to `seasons`
+  (`on delete cascade`, like the stats tables) and unique
+  `(club_id, season_id, sort_order)`, deferred so one save can reorder; a CHECK
+  of 60 characters on `team_name`. A clashing `sort_order` is renumbered 0..n-1
+  first. The migration stops, rolling back whole, if a club has table rows and
+  no season, or a name is over 60 characters. It never touches the typed numbers.
+- `seasons.standings_from_scores` (decided by Christian 2026-11-09, "Keep typed,
+  new seasons auto"): false for every season that exists at the migration, true
+  for every season created after it (the Seasons hub, the classic page, a
+  club's first season: the column default). Only a season with it true works out
+  our row from its games; every existing season keeps its typed row, from the
+  new or the classic admin. **No live league table changes at merge**: Diverse
+  City, Lions and Rose City current seasons stay typed.
+- Bot review of `2dfce88`, two Mediums fixed: (1) a copied table shares team
+  logo files across seasons, so the Standings page now deletes a logo file only
+  when no league table row of the club still uses it
+  (`lib/standings-logo-cleanup.ts`; if the check fails, nothing is deleted);
+  (2) in a season with `standings_from_scores` true, a fifth trigger
+  (`keep_computed_league_row`) keeps the six computed numbers on our row against
+  any writer except the recompute, so a Standings page saved from an old
+  snapshot cannot put the old numbers back; the page shows them read-only with a
+  note. Typed seasons stay editable. Other columns and rows save as sent.
+- Four triggers, so every write path (Enter a score, `/admin/score`, the
+  classic Games page, imports) is covered and atomic: a table row saved without
+  a season goes to the shown season (admin code deployed before this change
+  keeps saving); inserting a season copies the club's newest table into it at
+  zero; saving, editing, clearing, moving or deleting a game recomputes the
+  club's `is_club` row for that season from its saved league games (3 points a
+  win, 1 a draw, both scores in, `league_game` true) when the season's
+  `standings_from_scores` is true, locking the row first so two saves at once
+  both count. Other teams' rows are never touched.
+- Reads: the public table and the Standings page filter by season (public: the
+  shown season; the page opens on it and has a season picker); the Seasons hub's
+  league summary reads the season on view and ranks by points, goal difference
+  and wins; a season whose table has numbers in it cannot be deleted as empty.
+- Writes: `league_game` is part of the games write contract; `team_name` is 60
+  characters in the contract and the Standings box; Add a game asks
+  "League game?" (Yes by default).
+
+**Decision made here, on purpose:** our row is recomputed from the games, never
+added to, so an edit or a cleared score cannot drift (tested). Christian's
+read-only production check (2026-11-09) showed Diverse City (typed 10 played, 13
+points, 0 scored games) and Lions (10 and 24, 0 scored) would shrink on the
+first save, and Rose City (typed 0, 5 scored games, possibly friendlies) would
+jump; his answer was to keep typed numbers in existing seasons and work out new
+seasons only. To turn an existing season on later: `update onzio.seasons set
+standings_from_scores = true where ...`; it takes effect at that season's next
+score save.
+
+**Files changed:** `supabase/migrations/20261110090000_league_table_per_season.sql`;
+`lib/database.generated.ts` (regenerated), `lib/db-types.ts`,
+`lib/admin-data-contract.ts`, `lib/queries.ts`, `lib/admin-seasons-data.ts`;
+`app/admin/(protected)/standings/page.tsx`,
+`components/admin/reimagined/AddGame.tsx`, `SeasonsHub.tsx`; new
+`tests/database/league-table-per-season.test.ts`,
+`tests/contracts/admin-reimagined-league.test.ts`,
+`tests/browser/admin-reimagined-league.spec.ts`; updated
+`tests/contracts/admin-reimagined-seasons.test.ts` (11a's "no migration" pin now
+only pins `lib/club-context.ts`; the League card note changed),
+`lib/__tests__/admin-seasons-data.test.ts`,
+`lib/__tests__/standings-read-failure.test.ts`;
+`docs/admin-portal-redesign-plan.md`, this file, `HANDOFF.md`.
+
+**Rollback (before any club starts a second season):** drop the four triggers
+and functions, then the unique, foreign key and `team_name` constraints and the
+`season_id` column on `league_standings`, then `matches.league_game` and `seasons.standings_from_scores`. Old code
+ignores them.
+
+**Verification:** red first, then green; the full suites on the PR head, with
+the tested commit, are in the PR body. Not verified: production data (see the
+check above), dark theme, the public site in a browser.
+
+**Exact next step:** RE-11c. Turning an existing season on for automatic rows is
+a separate data change after Christian's call (`update onzio.seasons set
+standings_from_scores = true where id = ...`). RE-11c is the next migration.
 ## 2026-11-10 - ADMIN-RE-24a: the five tabs (frame) on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24` (new package, recorded in

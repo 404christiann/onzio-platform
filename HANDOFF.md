@@ -16,6 +16,32 @@
   head, with the tested commit, are in the PR body. Details in `STATUS.md`.
 - **Exact next step:** the bot merges. Then 24c, search.
 
+## 2026-11-10 - ADMIN-RE-11b League table per season, our row updates itself
+
+- **Status:** `released` 2026-11-10. Migration `20261110090000` applied to
+  production by Christian from his Mac, then PR #120 merged (`d665c655`) and
+  deployed; smoke checks passed (every club domain returns 200 with no
+  `UNKNOWN_TENANT`; Diverse City `/programs`, `/roster`, `/shop` 200). No live
+  league table changed.
+- **What it adds:** each season has its own league table (starting a season
+  copies the teams at zero); saving, editing or clearing a score updates our
+  row (played, won, drawn, lost, goal difference, points) on its own, for every
+  write path; friendlies marked "League game? No" stay out. The Standings page
+  has a season picker; the public site shows the shown season's table.
+- **No live league table changes at merge.** Christian's decision (2026-11-09,
+  "Keep typed, new seasons auto"): existing seasons keep their hand-typed our row
+  (`seasons.standings_from_scores` false); seasons created after the migration
+  work it out from their saved league games (true). Diverse City, Lions and Rose
+  City current seasons stay typed.
+- **Verification:** database tests (25 new), contract and unit tests, a browser
+  spec at 390 and 1440; full suites and the tested commit are in the PR body.
+- **Bot review fixes:** a logo file shared by two seasons is no longer deleted when
+  one season drops it; in an automatic season our row's numbers are read-only on
+  the Standings page and a database guard stops a stale save from undoing them.
+- **Exact next step:** RE-11c is next. To make an existing season work out its
+  row from scores: `update onzio.seasons set standings_from_scores = true where
+  id = ...` (a data change, Christian's call; for Rose City, check its 5 scored
+  games for friendlies first).
 ## 2026-11-10 - ADMIN-RE-24a The five tabs (frame) on the new admin
 
 - **Status:** `in_progress`, PR open. New package `ADMIN-RE-24` (in

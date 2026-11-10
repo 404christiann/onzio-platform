@@ -100,6 +100,8 @@ export function AddGame({
   const [seasonId, setSeasonId] = useState(activeSeason?.id ?? "");
   const [opponent, setOpponent] = useState("");
   const [home, setHome] = useState(true);
+  // ADMIN-RE-11b (decision 4): friendlies and cups do not touch the league table.
+  const [leagueGame, setLeagueGame] = useState(true);
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(defaultTime);
   const [venue, setVenue] = useState("");
@@ -170,6 +172,7 @@ export function AddGame({
             time,
             opponent: name,
             home,
+            league_game: leagueGame,
             venue: place,
             ...opponentCarry(opponents, name),
             ...(showSponsors ? sponsorPayload(sponsor) : {}),
@@ -187,6 +190,7 @@ export function AddGame({
       setOpponent("");
       setVenue("");
       setHome(true);
+      setLeagueGame(true);
       setDate(defaultDate);
       setTime(defaultTime);
       setSave("done");
@@ -311,6 +315,30 @@ export function AddGame({
                 </button>
               ))}
             </div>
+          </div>
+        </fieldset>
+
+        <fieldset className={styles.row}>
+          <legend className={styles.q}>League game?</legend>
+          <div className={styles.answer}>
+            <div className={styles.segmented} role="radiogroup" aria-label="League game?" data-testid="add-game-league">
+              {([true, false] as const).map((value) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  role="radio"
+                  aria-checked={leagueGame === value}
+                  className={styles.segment}
+                  onClick={() => {
+                    touch();
+                    setLeagueGame(value);
+                  }}
+                >
+                  {value ? "Yes" : "No"}
+                </button>
+              ))}
+            </div>
+            <p className={styles.noSponsor}>{leagueGame ? "The score updates your league table." : "Friendlies and cups stay out of your league table."}</p>
           </div>
         </fieldset>
 

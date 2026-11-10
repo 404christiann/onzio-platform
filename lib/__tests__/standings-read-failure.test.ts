@@ -12,9 +12,10 @@ vi.mock("@/lib/media-assets", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   from.mockImplementation((table: string) => {
+    // The table shown is the shown season's (ADMIN-RE-11b), so the season lookup finds one.
     const response = table === state.failedTable
       ? { data: null, error: { message: `${table} unavailable` } }
-      : { data: [], error: null };
+      : { data: table === "seasons" ? [{ id: "22222222-2222-4222-8222-222222222222" }] : [], error: null };
     const chain: Record<string, unknown> = {};
     for (const method of ["select", "eq", "limit", "order"]) chain[method] = vi.fn(() => chain);
     chain.then = (resolve: (value: unknown) => unknown) => Promise.resolve(response).then(resolve);

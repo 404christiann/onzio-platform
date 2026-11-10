@@ -361,6 +361,8 @@ export const matchesMutation = z
     state: limitedNullableText(MATCH_TEXT_LIMITS.state),
     rose_city_score: matchScore.optional(),
     opponent_score: matchScore.optional(),
+    // ADMIN-RE-11b (decision 4): false for friendlies and cups, which never touch the league table.
+    league_game: z.boolean().optional(),
     attendance: z.number().int().min(0).nullable().optional(),
     scorers: z.array(jsonValue).max(200).optional(),
     created_at: z.string().optional(),
@@ -368,10 +370,23 @@ export const matchesMutation = z
   })
   .strict();
 
+// ADMIN-RE-11b: a team name holds 60 characters (database CHECK
+// league_standings_team_name_length). Counted before trimming, as the CHECK
+// measures what is stored. The other columns keep the classic editor's own
+// checks, so only what this package changes is pinned here.
+export const LEAGUE_TEAM_NAME_LIMIT = 60;
+const leagueStandingsMutation = z
+  .object({
+    team_name: z.string().max(LEAGUE_TEAM_NAME_LIMIT).optional(),
+    season_id: uuid.optional(),
+  })
+  .passthrough();
+
 const MATCH_INSERT_REQUIRED = ["season_id", "date", "time", "opponent", "venue"] as const;
 
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
   matches: matchesMutation,
+  league_standings: leagueStandingsMutation,
   programs: programMutation,
   program_media: programMediaMutation,
   programs_page_content: programsPageMutation,

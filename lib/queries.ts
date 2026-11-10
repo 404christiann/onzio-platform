@@ -1143,24 +1143,42 @@ export async function fetchSiteSponsorLogos(
   return rows.length > 0 || clubId ? rows : defaultSponsorLogosForPlacement(placement);
 }
 
-/** Fetches the DB-backed league standings table for the homepage. */
+/**
+ * Fetches the DB-backed league standings table for the homepage.
+ *
+ * Every season has its own table (ADMIN-RE-11b). Without `seasonId` this is the
+ * season the website shows; a club with no shown season has no table to show.
+ * The admin passes the season it is editing.
+ */
 export async function fetchLeagueStandings(
   clubId?: string,
-  options: { strict?: boolean } = {},
+  options: { strict?: boolean; seasonId?: string } = {},
 ): Promise<StandingsTableContent> {
   const tenantId = requireClubId(clubId);
   const tenantScoped = Boolean(clubId);
+  const seasonResult = options.seasonId
+    ? { data: [{ id: options.seasonId }], error: null }
+    : await supabase
+        .from("seasons")
+        .select("id")
+        .eq("club_id", tenantId)
+        .eq("active", true)
+        .limit(1);
+  const seasonId = ((seasonResult.data ?? []) as { id: string }[])[0]?.id ?? null;
   const [settingsResult, rowsResult] = await Promise.all([
     supabase
       .from("league_standings_settings")
       .select("*")
       .eq("club_id", tenantId)
       .limit(1),
-    supabase
-      .from("league_standings")
-      .select("*")
-      .eq("club_id", tenantId)
-      .order("sort_order", { ascending: true }),
+    seasonResult.error || !seasonId
+      ? Promise.resolve({ data: [] as unknown[], error: seasonResult.error })
+      : supabase
+          .from("league_standings")
+          .select("*")
+          .eq("club_id", tenantId)
+          .eq("season_id", seasonId)
+          .order("sort_order", { ascending: true }),
   ]);
 
   if (settingsResult.error || rowsResult.error) {
