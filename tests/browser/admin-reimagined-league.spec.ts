@@ -164,6 +164,8 @@ for (const width of [390, 1440]) {
 
     test("each season has its own table; starting a season copies the teams at zero", async ({ page }) => {
       const seasonId = await seedTable();
+      // This season is typed by hand (as every season before ADMIN-RE-11b is); the one started below works out ours.
+      await sql("update onzio.seasons set standings_from_scores=false where id=$1", [seasonId]);
       await sql("update onzio.league_standings set played=4, points=7 where club_id=$1 and season_id=$2 and is_club", [ALPHA, seasonId]);
       await sql("insert into onzio.seasons (club_id,label,start_year,end_year) values ($1,$2,2099,2099)", [ALPHA, OTHER_SEASON]);
       const [{ id: nextId }] = await sql<{ id: string }>("select id from onzio.seasons where club_id=$1 and label=$2", [ALPHA, OTHER_SEASON]);
