@@ -152,14 +152,15 @@ for (const width of [390, 1440]) {
       expect(await ourRow(seasonId)).toEqual({ played: 1, wins: 1, goal_difference: 2, points: 3 });
       await rivals.getByLabel("Games played").fill("5");
       await page.getByRole("button", { name: "Save Standings" }).click();
-      await expect(page.getByText("Saved", { exact: false }).first()).toBeVisible();
+      // Wait for the save itself (the typed 5 reaching the database), not for a word on the page.
+      await expect
+        .poll(async () => (await sql<{ played: number }>("select played from onzio.league_standings where club_id=$1 and team_name='Rivals FC'", [ALPHA]))[0]?.played)
+        .toBe(5);
       expect(await ourRow(seasonId)).toEqual({ played: 1, wins: 1, goal_difference: 2, points: 3 });
       await page.reload();
       await expect(
         main(page).locator("tr", { has: page.locator('input[aria-label="Team name"][value="Alpha FC"]') }).getByLabel("Games played"),
       ).toHaveValue("1");
-      const [{ played }] = await sql<{ played: number }>("select played from onzio.league_standings where club_id=$1 and team_name='Rivals FC'", [ALPHA]);
-      expect(played).toBe(5);
     });
 
     test("each season has its own table; starting a season copies the teams at zero", async ({ page }) => {
