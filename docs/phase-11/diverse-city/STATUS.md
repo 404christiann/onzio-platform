@@ -63,6 +63,61 @@ recorded above.
 
 **Exact next step:** bot review and merge (no gate).
 
+## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
+
+**Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so
+search can link to player pages). Branch `claude/admin-re-24d-players`, on top
+of 24b; `main` `1572f01` (24b #125, RE-11b #120, RE-22 #123) merged in.
+**Status:** `in_progress`, PR open for the review bot. UI only: no migration,
+no new dependency, no hosted action.
+
+**Completed work:**
+
+- Games tab, under the season's results: a Players card (forwards, then
+  midfielders, four each, "See all N players" to How the team is doing), each
+  row opening that player's page.
+- `/admin/games/players/<id>` (under the Games tab, "‹ Games", the player's
+  name in the page bar): heading with number, position and season, chips that
+  link to each teammate in the same position, a game still missing its score
+  with Enter score, then RE-19's own six-corner chart and recent games with
+  minutes bars. A player who is not in the shown season is a 404.
+- Reuse, not rebuild: RE-19's `PlayerDetail` and the on-demand
+  `fetchPlayerMatchLog` read, now behind a shared `usePlayerLog` hook that
+  RE-19's own player picker uses too. The Games tab reads RE-19's season once
+  and shares it with the home board.
+- From the bot's Low notes on #125: the Games tab skips the sign-up read it
+  never shows; one day's games are ordered by real kickoff time ("9:00 AM"
+  before "10:00 AM"); a game today with no time yet stays the next game all
+  day; and a comment says why a failed photo tidy-up keeps the editor open.
+- From the bot's review of #129: a game today with no kickoff time is the
+  next game and never also "missing a score". One shared rule,
+  `gameNeedsScore` in `lib/admin-home-data.ts`, now drives the home's count,
+  its Needs you row and the player page's row (an untimed game counts from the
+  next day). The Games tab starts RE-19's season read alongside its own. A
+  club with no forwards or midfielders sees its first two other positions in
+  the Players card instead of an empty card.
+- The bot's carried-over Low: Enter a score (`lib/admin-score-data.ts`) now
+  uses the same `gameNeedsScore`, so it no longer lists an untimed game today.
+
+**Files changed:** `app/admin/(protected)/games/players/[playerId]/page.tsx`
+(new), `app/admin/(protected)/games/page.tsx`,
+`components/admin/reimagined/{PlayerPage,PlayersList}.tsx` (new),
+`components/admin/reimagined/{TeamAnalytics,TopBar}.tsx`
+(`usePlayerLog`, `AnalyticsScope`, `TopBarTitle`),
+`components/admin/reimagined/home.module.css`, `lib/admin-home-board.ts`,
+`tests/contracts/admin-tabs.test.ts`,
+`tests/browser/admin-reimagined-players.spec.ts` (new), this file,
+`HANDOFF.md`.
+
+**Verification:** contract tests (route checks, reuse of RE-19's pieces,
+current tab) and browser tests at 390 and 1440, light and dark, on a fixture
+season with four players, three results and one game missing its score. Full
+suites on the PR head, with the tested commit, are in the PR body.
+
+**Blockers / decisions:** none new.
+
+**Exact next step:** the bot merges 24d. Then 24c (search).
+
 ## 2026-11-10 - ADMIN-RE-15: Sponsors, one list
 
 **Agent/package:** Claude Code, `ADMIN-RE-15`. Branch
@@ -307,6 +362,7 @@ package with a table). Insights for Rose City still waits on Onzio setting its
 `sponsor_insights` flag.
 
 **Exact next step:** the bot merges 24b. Then 24c (search with cmdk).
+
 
 ## 2026-11-10 - ADMIN-RE-11b: League table per season, our row updates itself
 

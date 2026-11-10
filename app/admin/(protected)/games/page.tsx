@@ -1,8 +1,10 @@
 import { IconSchedule, IconStandings } from "@/components/admin/icons";
 import { NextGame, SeasonCard } from "@/components/admin/reimagined/Glance";
+import { PlayersList } from "@/components/admin/reimagined/PlayersList";
+import { loadTeamAnalytics } from "@/lib/admin-analytics-data";
 import { TabPage, type TabButton } from "@/components/admin/reimagined/TabPage";
 import { loadHomeBoard } from "@/lib/admin-home-board";
-import { getVisibleAdminHomeJobs } from "@/lib/admin-route-manifest";
+import { getAdminRouteHref, getVisibleAdminHomeJobs } from "@/lib/admin-route-manifest";
 import { loadAdminTabPage } from "@/lib/admin-tab-page";
 import { gamesTabStatus, getAdminTab, getAdminTabPages } from "@/lib/admin-tabs";
 
@@ -14,7 +16,12 @@ export const dynamic = "force-dynamic";
 
 export default async function GamesTabPage() {
   const { access, home, supabase, club, portal } = await loadAdminTabPage("games");
-  const board = await loadHomeBoard(supabase, club.id, portal.timeZone);
+  // One RE-19 season read, shared, running alongside the board's own reads.
+  const teamRead = loadTeamAnalytics(supabase, club.id);
+  const [team, board] = await Promise.all([
+    teamRead,
+    loadHomeBoard(supabase, club.id, portal.timeZone, undefined, { team: teamRead, signUps: false }),
+  ]);
   const jobs = getVisibleAdminHomeJobs(access);
   const buttons: TabButton[] = jobs.flatMap((job): TabButton[] =>
     job.id === "enter-score"
@@ -34,6 +41,9 @@ export default async function GamesTabPage() {
       {/* Add a game is already a main button here. */}
       <NextGame game={board.nextGame} addHref={null} />
       <SeasonCard season={board.season} />
+      {team.status === "ready" ? (
+        <PlayersList groups={team.groups} allHref={getAdminRouteHref("analytics")} rosterHref={getAdminRouteHref("roster")} />
+      ) : null}
     </TabPage>
   );
 }

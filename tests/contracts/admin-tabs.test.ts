@@ -166,6 +166,7 @@ describe("the current tab", () => {
     ["/admin/your-club", "club"],
     ["/admin/payments", "club"],
     ["/admin/somewhere-new", "home"],
+    ["/admin/games/players/0e0e0e0e-0000-4000-8000-000000000000", "games"],
   ])("puts %s under %s", (pathname, tab) => {
     expect(tabForPathname(pathname, targets)).toBe(tab);
   });
@@ -231,6 +232,32 @@ describe("tab pages", () => {
     expect(insights).toContain("Your website isn’t live yet");
     expect(insights).toContain("No visit numbers yet");
     expect(insights).not.toMatch(/\b0 visits\b/);
+  });
+});
+
+// ADMIN-RE-24d: a player's page under the Games tab, built from RE-19's pieces.
+describe("player page", () => {
+  const route = read("app/admin/(protected)/games/players/[playerId]/page.tsx");
+  const view = read("components/admin/reimagined/PlayerPage.tsx");
+  const analytics = read("components/admin/reimagined/TeamAnalytics.tsx");
+
+  it("loads through the Games tab's checks and only finds players in the shown season", () => {
+    expect(route).not.toContain('"use client"');
+    expect(route).toContain('await loadAdminTabPage("games")');
+    expect(route).toContain("loadTeamAnalytics(supabase, club.id)");
+    expect(route).toContain("if (!group || !player) notFound();");
+  });
+
+  it("reuses RE-19's player view and match-log read instead of rebuilding them", () => {
+    expect(view).toContain('import { AnalyticsScope, PlayerDetail, usePlayerLog } from "./TeamAnalytics";');
+    expect(view).not.toContain("fetchPlayerMatchLog(");
+    expect(analytics.match(/fetchPlayerMatchLog\(/g)).toHaveLength(1);
+    expect(analytics).toContain("const { log, retry } = usePlayerLog(playerId, keeper, seasonId);");
+  });
+
+  it("is a page under Games with ‹ Games and the player's name in the page bar", () => {
+    expect(isAdminTabPage("/admin/games/players/x")).toBe(false);
+    expect(view).toContain("<TopBarTitle title={player.name} />");
   });
 });
 

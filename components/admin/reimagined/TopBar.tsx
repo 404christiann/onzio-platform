@@ -28,6 +28,8 @@ type TopBarSlot = {
   setTakenOver: (takenOver: boolean) => void;
   back: TabBack;
   guard: React.MutableRefObject<GuardEntry | null>;
+  title: string | null;
+  setTitle: (title: string | null) => void;
 };
 
 const NOOP = () => undefined;
@@ -41,6 +43,8 @@ const TopBarSlotContext = createContext<TopBarSlot>({
   setTakenOver: NOOP,
   back: HOME_BACK,
   guard: { current: null },
+  title: null,
+  setTitle: NOOP,
 });
 
 export function TopBarActionsProvider({
@@ -54,9 +58,10 @@ export function TopBarActionsProvider({
   const [takeover, setTakeover] = useState<HTMLElement | null>(null);
   const [takenOver, setTakenOver] = useState(false);
   const guard = useRef<GuardEntry | null>(null);
+  const [title, setTitle] = useState<string | null>(null);
   const value = useMemo(
-    () => ({ slot, setSlot, takeover, setTakeover, takenOver, setTakenOver, back, guard }),
-    [slot, takeover, takenOver, back],
+    () => ({ slot, setSlot, takeover, setTakeover, takenOver, setTakenOver, back, guard, title, setTitle }),
+    [slot, takeover, takenOver, back, title],
   );
   return <TopBarSlotContext.Provider value={value}>{children}</TopBarSlotContext.Provider>;
 }
@@ -117,6 +122,19 @@ export function useHasUnsaved(): () => boolean {
   return () => guard.current?.unsaved === true;
 }
 
+/**
+ * Names this page in the page bar, for a page the route manifest does not name
+ * (a player's page, ADMIN-RE-24d). Renders nothing.
+ */
+export function TopBarTitle({ title }: { title: string }) {
+  const { setTitle } = useContext(TopBarSlotContext);
+  useEffect(() => {
+    setTitle(title);
+    return () => setTitle(null);
+  }, [title, setTitle]);
+  return null;
+}
+
 /** Puts its children into the top bar's actions slot. Renders nothing in the classic admin. */
 export function TopBarActions({ children }: { children: React.ReactNode }) {
   const slot = useTopBarActions();
@@ -141,8 +159,9 @@ export function isPlainClick(event: React.MouseEvent) {
   return !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0);
 }
 
-export function TopBar({ title }: { title: string }) {
-  const { setSlot, setTakeover, takenOver, back } = useContext(TopBarSlotContext);
+export function TopBar({ title: routeTitle }: { title: string }) {
+  const { setSlot, setTakeover, takenOver, back, title: pageTitle } = useContext(TopBarSlotContext);
+  const title = pageTitle ?? routeTitle;
   const leave = useLeaveCheck();
   if (takenOver) {
     return (
