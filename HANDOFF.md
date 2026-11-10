@@ -1,3 +1,17 @@
+## 2026-11-09 - ADMIN-RE-14 Your club
+
+- **Status:** `in_progress` on branch `claude/admin-re-14-your-club-7788b6`
+  from `main` `600f5e7`, PR open. No migration. Nothing hosted touched.
+- **What it adds:** `/admin/your-club` for reimagined clubs (classic ones go to
+  `/admin/branding`): logo with "Fit your logo", email, phone, hours (200),
+  area, five social pages (2,048 each), footer line (160), live footer and
+  Contact previews, one Save. Only the cards the club's website has are shown
+  (Rose City-style sites: logo and social pages). The Your club More row now
+  opens it. Zod added for `site_social_links` and `site_branding` writes.
+- **Verification:** unit, contract and browser tests (390 and 1440); full
+  suites on the PR head in the PR body. Details in `STATUS.md`.
+- **Exact next step:** the bot merges. RE-13 later points website pages here.
+
 ## 2026-11-09 - ADMIN-RE-10a number boxes keep no leading zero
 
 - **Status:** `in_progress`, PR open. No migration. First fix from
