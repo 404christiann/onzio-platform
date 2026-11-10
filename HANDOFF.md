@@ -1,3 +1,21 @@
+## 2026-11-10 - ADMIN-RE-24b The new home on the new admin
+
+- **Status:** `in_progress`, PR open. PR 24b of `ADMIN-RE-24` (24a, #124, is
+  merged). UI only: no migration, no new dependency, no hosted action.
+- **What it adds:** the home Christian picked: the greeting and how many things
+  need you, Needs you rows with their own buttons (missing score, new
+  sign-ups), Next game, the jobs, and At a glance (season in magenta from
+  RE-19's reads; website "Not live yet" while held, "Not counted yet"
+  otherwise). The Games tab gets the next game and the season card; the
+  Website tab the included monthly card for clubs without Sponsor Insights.
+  Also the bot's Low notes on #124 (clean editor exits, Sign out asks first,
+  home counts read once).
+- **Open:** Rose City's "Update ticket prices" job waits for a ticket page on
+  `main`; visit numbers still have no data source.
+- **Verification:** unit, contract and browser tests; full suites on the PR
+  head, with the tested commit, are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** the bot merges. Then 24c, search.
+
 ## 2026-11-10 - ADMIN-RE-24a The five tabs (frame) on the new admin
 
 - **Status:** `in_progress`, PR open. New package `ADMIN-RE-24` (in

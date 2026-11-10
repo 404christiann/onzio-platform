@@ -178,8 +178,9 @@ export default function HomepageEditor() {
     if (editor.dirty.length) { setDestination(href); return; }
     if (await editor.discardUnsavedUploads()) router.push(href);
   }
-  // ADMIN-RE-24: the tabs ask first too while there are unsaved changes.
-  useLeaveGuard(reimagined && editor.dirty.length ? (href: string) => void go(href) : null);
+  // ADMIN-RE-24: the tabs leave through go() too, so it can ask first when
+  // something is unsaved and tidy up failed photo uploads when nothing is.
+  useLeaveGuard(reimagined ? (href: string) => void go(href) : null, editor.dirty.length > 0);
 
   if (editor.loading) return <HomepageEditorSkeleton />;
   if (!state || !snapshot) return <section className="hp-editor" aria-label="Homepage editor"><h1>Homepage</h1><p role="alert">{editor.error?.message ?? "We could not load your homepage."}</p><button className="hp-button" onClick={editor.retryLoad}>Try loading again</button></section>;

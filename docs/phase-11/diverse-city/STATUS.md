@@ -1,5 +1,69 @@
 # Diverse City FC Status
 
+## 2026-11-10 - ADMIN-RE-24b: the new home on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24b of four. Branch
+`claude/admin-re-24b-home`, `main` `aef71cc` (24a, #124) merged in.
+**Status:** `in_progress`, PR open for the review bot. UI only: no migration,
+no new dependency, no hosted action. Rose City is on `reimagined`, so merging
+shows it there; Diverse City stays classic.
+
+**Completed work:**
+
+- Home (design `admin-plain-search-two-clubs.html`): "Hi Andrea" / "Welcome
+  back" and "Nothing needs you right now" / "1 thing needs you" / "N things
+  need you". Needs you rows, each with its own button: the score missing for
+  the oldest game ("Add the score vs Lakeshore United", or "12 games need a
+  score" with the oldest named), and this week's new sign-ups with the forms
+  they came through (form titles only, never people). A row shows only when
+  its job is open to the person and its count could be read.
+- Next game (date block, "vs"/"at", time, Home/Away, venue, competition), or
+  "No games coming up" with Add a game. The jobs as the design's compact tiles
+  with a count badge on a laptop. At a glance: the season card in magenta
+  (W/D/L, top scorer, the last eight games as bars) from RE-19's
+  `loadTeamAnalytics`, and the website card: "Not live yet" while held,
+  "Not counted yet" otherwise. No visit numbers anywhere.
+- Games tab: the next game and the season card ("See every game and player"
+  to `/admin/analytics`). Website tab, clubs without Sponsor Insights: the
+  included "Website numbers" card with the one quiet Sponsor Insights line.
+- From the bot's Low notes on #124: the homepage editor always leaves through
+  its own `go()` (a clean editor still retries failed photo cleanups); Sign out
+  asks "Sign out without saving?" while a page has unsaved changes; the home's
+  counts are read once per request (`React.cache`) instead of two or three
+  times.
+
+**Left out on purpose:** Rose City's fourth job "Update ticket prices" (no
+ticket page on `main` yet; it comes with the Rose City 2027 branch or RE-21),
+"Under the Lights is hidden" and the sponsor report rows (RE-21 backend, visit
+data), the tryout reminder row, and refreshing the red dots after a save
+without a reload (the score page does not refresh server data; noted by the
+bot, left for later). Two `<nav aria-label="Club admin">` stay (one is hidden
+by CSS at each width).
+
+**Files changed:** `lib/admin-home-board.ts` (new),
+`lib/__tests__/admin-home-board.test.ts` (new), `lib/admin-tab-page.ts`,
+`app/admin/(protected)/{page,layout}.tsx`,
+`app/admin/(protected)/{games,website}/page.tsx`,
+`components/admin/reimagined/{ReimaginedHome,HomeJobs,ReimaginedShell,TopBar,AccountMenu}.tsx`,
+`components/admin/reimagined/Glance.tsx` (new),
+`components/admin/reimagined/home.module.css` (new),
+`components/admin/reimagined/{frame,reimagined}.module.css`,
+`components/admin/homepage/HomepageEditor.tsx`,
+`tests/contracts/admin-reimagined-home.test.ts`,
+`tests/browser/admin-reimagined-{home,tabs,your-club}.spec.ts`, this file,
+`HANDOFF.md`.
+
+**Verification:** unit tests for the game picks and words, the home contract,
+and browser tests at 390 and 1440 (light and dark in the tabs spec; Alpha as a
+programs club and as the held Rose City stand-in). Full suites on the PR head,
+with the tested commit, are in the PR body. Not verified: production.
+
+**Blockers / decisions:** visit numbers still have no data source (a later
+package with a table). Insights for Rose City still waits on Onzio setting its
+`sponsor_insights` flag.
+
+**Exact next step:** the bot merges 24b. Then 24c (search with cmdk).
+
 ## 2026-11-10 - ADMIN-RE-24a: the five tabs (frame) on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24` (new package, recorded in

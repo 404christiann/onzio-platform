@@ -19,7 +19,7 @@ import {
 import { createClient } from "@/lib/supabase-browser";
 import { AccountMenu } from "./AccountMenu";
 import { TAB_ICONS } from "./tabIcons";
-import { isPlainClick, TopBar, TopBarActionsProvider, useLeaveCheck, useTopBarTakenOver } from "./TopBar";
+import { isPlainClick, TopBar, TopBarActionsProvider, useHasUnsaved, useLeaveCheck, useTopBarTakenOver } from "./TopBar";
 import styles from "./frame.module.css";
 
 // ADMIN-RE-24: the frame around every page of the reimagined admin (design:
@@ -97,6 +97,7 @@ function Frame({
   const { clubLogoUrl } = useClubBranding();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const leave = useLeaveCheck();
+  const hasUnsaved = useHasUnsaved();
   const editing = useTopBarTakenOver();
 
   // The same predicate the home page and the Payments page use.
@@ -124,7 +125,7 @@ function Frame({
     </span>
   );
   const account = (placement: "side" | "top") => (
-    <AccountMenu email={userEmail} role={club.role} onSignOut={handleSignOut} placement={placement} />
+    <AccountMenu email={userEmail} role={club.role} onSignOut={handleSignOut} hasUnsaved={hasUnsaved} placement={placement} />
   );
 
   const tabLink = (tab: ShellTab, place: "side" | "bar") => {

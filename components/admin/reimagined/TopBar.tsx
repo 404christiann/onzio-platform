@@ -17,6 +17,7 @@ import styles from "./frame.module.css";
 export type TabBack = Readonly<{ href: `/admin${string}`; label: string }>;
 
 type LeaveGuard = (href: string) => void;
+type GuardEntry = { leave: LeaveGuard; unsaved: boolean };
 
 type TopBarSlot = {
   slot: HTMLElement | null;
@@ -26,7 +27,7 @@ type TopBarSlot = {
   takenOver: boolean;
   setTakenOver: (takenOver: boolean) => void;
   back: TabBack;
-  guard: React.MutableRefObject<LeaveGuard | null>;
+  guard: React.MutableRefObject<GuardEntry | null>;
 };
 
 const NOOP = () => undefined;
@@ -52,7 +53,7 @@ export function TopBarActionsProvider({
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const [takeover, setTakeover] = useState<HTMLElement | null>(null);
   const [takenOver, setTakenOver] = useState(false);
-  const guard = useRef<LeaveGuard | null>(null);
+  const guard = useRef<GuardEntry | null>(null);
   const value = useMemo(
     () => ({ slot, setSlot, takeover, setTakeover, takenOver, setTakenOver, back, guard }),
     [slot, takeover, takenOver, back],
@@ -81,32 +82,39 @@ export function useTabBack(): TabBack {
 
 /**
  * While `onLeave` is set, a tab or sidebar link calls it with its address
- * instead of navigating, so a page with unsaved changes can ask first. Pass
- * null when there is nothing to lose.
+ * instead of navigating, so a page can ask first or tidy up before it goes.
+ * `unsaved` says whether leaving now would lose changes (Sign out asks first
+ * when it would). Pass null for `onLeave` when the page needs neither.
  */
-export function useLeaveGuard(onLeave: LeaveGuard | null) {
+export function useLeaveGuard(onLeave: LeaveGuard | null, unsaved = onLeave !== null) {
   const { guard } = useContext(TopBarSlotContext);
   const latest = useRef(onLeave);
   latest.current = onLeave;
   const active = onLeave !== null;
   useEffect(() => {
     if (!active) return;
-    const handler: LeaveGuard = (href) => latest.current?.(href);
-    guard.current = handler;
+    const entry: GuardEntry = { leave: (href) => latest.current?.(href), unsaved };
+    guard.current = entry;
     return () => {
-      if (guard.current === handler) guard.current = null;
+      if (guard.current === entry) guard.current = null;
     };
-  }, [active, guard]);
+  }, [active, unsaved, guard]);
 }
 
-/** For the shell's links: true when a page took the click to ask first. */
+/** For the shell's links: true when a page took the click to handle leaving itself. */
 export function useLeaveCheck(): (href: string) => boolean {
   const { guard } = useContext(TopBarSlotContext);
   return (href) => {
     if (!guard.current) return false;
-    guard.current(href);
+    guard.current.leave(href);
     return true;
   };
+}
+
+/** True when the page says leaving now would lose changes. */
+export function useHasUnsaved(): () => boolean {
+  const { guard } = useContext(TopBarSlotContext);
+  return () => guard.current?.unsaved === true;
 }
 
 /** Puts its children into the top bar's actions slot. Renders nothing in the classic admin. */

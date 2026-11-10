@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Menu } from "@base-ui/react/menu";
 import { useEffect, useState } from "react";
 import { useAdminTheme } from "@/components/admin/AdminThemeProvider";
@@ -20,13 +21,17 @@ export function AccountMenu({
   email,
   role,
   onSignOut,
+  hasUnsaved,
   placement,
 }: {
   email: string | null;
   role: "owner" | "admin" | null;
   onSignOut: () => Promise<void>;
+  /** True when the page would lose changes; Sign out then asks first. */
+  hasUnsaved: () => boolean;
   placement: "side" | "top";
 }) {
+  const [confirming, setConfirming] = useState(false);
   const { theme, toggleTheme } = useAdminTheme();
   // Popups render inside the admin wrapper so the admin's theme colors apply.
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -82,13 +87,40 @@ export function AccountMenu({
               {theme === "dark" ? "Light mode" : "Dark mode"}
             </Menu.Item>
             <div className={styles.menuRule} role="separator" />
-            <Menu.Item className={styles.menuItem} onClick={() => void onSignOut()}>
+            <Menu.Item
+              className={styles.menuItem}
+              onClick={() => (hasUnsaved() ? setConfirming(true) : void onSignOut())}
+            >
               <IconSignOut aria-hidden="true" />
               Sign out
             </Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>
+      <AlertDialog.Root open={confirming} onOpenChange={setConfirming}>
+        <AlertDialog.Portal container={container}>
+          <AlertDialog.Backdrop className={styles.backdrop} />
+          <AlertDialog.Popup className={styles.alert} data-testid="sign-out-unsaved">
+            <AlertDialog.Title className={styles.alertTitle}>Sign out without saving?</AlertDialog.Title>
+            <AlertDialog.Description className={styles.alertText}>
+              Your changes on this page have not been saved yet.
+            </AlertDialog.Description>
+            <div className={styles.alertButtons}>
+              <AlertDialog.Close className={`${styles.button} ${styles.press}`} data-kind="primary">
+                Keep editing
+              </AlertDialog.Close>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.press}`}
+                data-kind="secondary"
+                onClick={() => void onSignOut()}
+              >
+                Sign out
+              </button>
+            </div>
+          </AlertDialog.Popup>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </Menu.Root>
   );
 }

@@ -32,7 +32,6 @@ import {
 import { adminGreeting } from "@/lib/admin-greeting";
 import {
   gamesNeedingScoreHint,
-  loadAdminHomeData,
   newSignUpsHint,
   readOwnDisplayName,
 } from "@/lib/admin-home-data";
@@ -44,6 +43,7 @@ import {
 } from "@/components/admin/reimagined/ReimaginedHome";
 import { gameLine, loadHomeBoard, needsSummary, signUpsNeed, versus } from "@/lib/admin-home-board";
 import { getAdminTab, getVisibleAdminTabs } from "@/lib/admin-tabs";
+import { readAdminHomeCounts } from "@/lib/admin-tab-page";
 import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 import type { AdminPortalSettings } from "@/lib/admin-portal";
 import { createClient } from "@/lib/supabase-server";
@@ -392,7 +392,7 @@ async function ReimaginedHomeContent({
   routeAccess: AdminRouteAccessContext;
 }) {
   const [home, displayName, board] = await Promise.all([
-    loadAdminHomeData(supabase, club.id, portal.timeZone),
+    readAdminHomeCounts(club.id, portal.timeZone),
     readOwnDisplayName(supabase, club.id, userId),
     loadHomeBoard(supabase, club.id, portal.timeZone),
   ]);

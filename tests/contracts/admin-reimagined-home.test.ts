@@ -154,6 +154,16 @@ describe("reimagined shell (ADMIN-RE-05, tabs since ADMIN-RE-24)", () => {
     expect(bar).toContain("export function TopBarActions(");
     expect(bar).toContain("createPortal(children, slot)");
     expect(bar).toContain("export function useLeaveGuard(");
+    // ADMIN-RE-24b (bot Low on #124): the homepage editor always leaves through
+    // go(), so a clean editor still tidies up; Sign out asks when unsaved.
+    expect(source("components/admin/homepage/HomepageEditor.tsx")).toContain(
+      "useLeaveGuard(reimagined ? (href: string) => void go(href) : null, editor.dirty.length > 0);",
+    );
+    expect(bar).toContain("export function useHasUnsaved()");
+    expect(components["AccountMenu.tsx"]).toContain("hasUnsaved() ? setConfirming(true) : void onSignOut()");
+    // The home's counts are read once per request.
+    expect(source("lib/admin-tab-page.ts")).toContain("export const readAdminHomeCounts = cache(");
+    expect(layout).toContain("readAdminHomeCounts(club.id, portal.timeZone)");
     const shell = components["ReimaginedShell.tsx"];
     expect(shell).toContain("isAdminTabPage(pathname)");
     expect(shell).toContain("<TopBar title={getReimaginedPageTitle(pathname)} />");
