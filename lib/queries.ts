@@ -178,6 +178,9 @@ export type MatchLogRow = {
   goals:    number;
   assists:  number;
   rating:   number | null;
+  /** Keepers only (ADMIN-RE-19): saves and goals let in that game. */
+  saves?:        number;
+  goalsAgainst?: number;
 };
 
 export type PlayerMatchTrendPoint = {
@@ -1429,6 +1432,7 @@ export async function fetchPlayerMatchLog(
         goals:    gk ? 0 : Number(r.goals),
         assists:  gk ? 0 : Number(r.assists),
         rating:   coerceRating(r.rating),
+        ...(gk ? { saves: Number(r.saves), goalsAgainst: Number(r.goals_against) } : {}),
       };
     })
     .filter((r): r is MatchLogRow => r !== null)
