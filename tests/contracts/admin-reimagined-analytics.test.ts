@@ -21,7 +21,9 @@ const page = source("app/admin/(protected)/analytics/page.tsx");
 const data = source("lib/admin-analytics-data.ts");
 const view = source("lib/admin-analytics-view.ts");
 const component = source("components/admin/reimagined/TeamAnalytics.tsx");
+const chart = source("components/admin/analytics/PlayerChart.tsx");
 const css = source("components/admin/reimagined/analytics.module.css");
+const chartCss = source("components/admin/analytics/player-chart.module.css");
 const classic = source("components/admin/ClassicAnalyticsPage.tsx");
 const queries = source("lib/queries.ts");
 
@@ -131,7 +133,7 @@ describe("the page only reads, and only this club's rows (ADMIN-RE-19)", () => {
 
 describe("the charts (ADMIN-RE-19)", () => {
   it("are plain SVG and CSS: no chart library", () => {
-    for (const file of [component, view, data]) {
+    for (const file of [component, chart, view, data]) {
       expect(file).not.toMatch(/from ["'](?:chart\.js|recharts|d3|@nivo|echarts|plotly|react-chartjs-2)/);
     }
   });
@@ -162,24 +164,31 @@ describe("the charts (ADMIN-RE-19)", () => {
   });
 
   it("write the player's corners as real text with their numbers", () => {
-    expect(component).toContain("aria-label={`${name}: ${radarSummary(axes)}`}");
-    expect(component).toContain("{axis.label}");
-    expect(component).toContain("{axis.text}");
-    expect(component).toContain('aria-hidden="true" focusable="false"');
+    expect(chart).toContain("aria-label={`${name}: ${radarSummary(axes)}`}");
+    expect(chart).toContain("{axis.label}");
+    expect(chart).toContain("{axis.text}");
+    expect(chart).toContain('aria-hidden="true" focusable="false"');
+  });
+
+  it("keep the SVG out of the icon-only folder, since the shape is a chart and not an icon", () => {
+    expect(chart).toContain("<svg");
+    expect(component).not.toMatch(/<svg[\s>]/);
+    expect(component).toContain('import { PlayerChart } from "@/components/admin/analytics/PlayerChart"');
   });
 
   it("the shape moves only for people who have not asked for less motion", () => {
-    const motion = css.match(/@media \(prefers-reduced-motion: no-preference\)/g) ?? [];
+    const motion = [css, chartCss].flatMap((file) => file.match(/@media \(prefers-reduced-motion: no-preference\)/g) ?? []);
     expect(motion.length).toBeGreaterThanOrEqual(3);
     // Nothing that moves the chart is declared before the first reduced-motion block
     const beforeMotion = css.split("@media (prefers-reduced-motion: no-preference)")[0];
     expect(beforeMotion).not.toMatch(/animation:/);
-    expect(css.replace(/@media \(prefers-reduced-motion: no-preference\)[\s\S]*$/, "")).not.toMatch(/transition: d /);
+    expect(chartCss.split("@media (prefers-reduced-motion: no-preference)")[0]).not.toMatch(/transition: d /);
   });
 
   it("have a dark pair for the chart colors", () => {
     expect(css).toContain(':global([data-admin-theme="dark"]) .page');
     expect(css).toContain("--ana-pop: #d6247a");
+    expect(chartCss).not.toMatch(/#[0-9a-f]{3,8}\b/i);
   });
 });
 

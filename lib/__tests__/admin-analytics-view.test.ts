@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assistsWords,
+  avatarInitials,
   barScale,
   chartGames,
   didWords,
@@ -385,5 +386,30 @@ describe("the chart's outline", () => {
       expect(p.y).toBeGreaterThanOrEqual(0);
       expect(p.y).toBeLessThanOrEqual(100);
     }
+  });
+});
+
+describe("the letters in a player's avatar", () => {
+  it("is the first letter of the first and last word", () => {
+    expect(avatarInitials("Maya Chen")).toBe("MC");
+    expect(avatarInitials("Christopher Alexander Montgomery III")).toBe("CI");
+    expect(avatarInitials("Jo")).toBe("J");
+  });
+
+  it("keeps a non-Latin name whole, by character", () => {
+    expect(avatarInitials("王秀英")).toBe("王");
+    expect(avatarInitials("Łukasz Żółć")).toBe("ŁŻ");
+  });
+
+  it("skips an emoji and uses the first letter after it, never half an emoji", () => {
+    expect(avatarInitials("🦊 Fox")).toBe("F");
+    expect(avatarInitials("🦊Fox")).toBe("F");
+    expect(avatarInitials("Sam 🦊")).toBe("S");
+  });
+
+  it("is a question mark for a name with no letter or number at all", () => {
+    expect(avatarInitials("🦊")).toBe("?");
+    expect(avatarInitials("   ")).toBe("?");
+    expect(avatarInitials("")).toBe("?");
   });
 });

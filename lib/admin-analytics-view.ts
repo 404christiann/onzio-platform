@@ -237,3 +237,29 @@ export function radarPoints(ratios: readonly number[], floor: number): { x: numb
     return { x: 50 + Math.cos(angle) * 50 * safe, y: 50 + Math.sin(angle) * 50 * safe };
   });
 }
+
+const letterSegmenter =
+  typeof Intl !== "undefined" && "Segmenter" in Intl ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : null;
+const LETTER_OR_NUMBER = /[\p{L}\p{N}]/u;
+
+/** The first letter or number of a word, whole, skipping emoji and marks. */
+function firstLetter(word: string): string {
+  const characters = letterSegmenter ? [...letterSegmenter.segment(word)].map((part) => part.segment) : Array.from(word);
+  return characters.find((character) => LETTER_OR_NUMBER.test(character)) ?? "";
+}
+
+/**
+ * Letters for a player's avatar: the first letter of the first and last word
+ * that have one. An emoji is never used (it would draw a broken initial);
+ * a name with no letter at all gives "?".
+ */
+export function avatarInitials(name: string): string {
+  const letters = name
+    .trim()
+    .split(/\s+/)
+    .map(firstLetter)
+    .filter(Boolean);
+  if (letters.length === 0) return "?";
+  const first = letters[0]!;
+  return (letters.length === 1 ? first : `${first}${letters[letters.length - 1]}`).toUpperCase();
+}

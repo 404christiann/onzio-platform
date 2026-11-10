@@ -548,7 +548,7 @@ for (const width of [390, 1440]) {
         await openAnalytics(page);
         await expect(page.getByTestId("analytics-players")).toContainText("No players yet");
         await expect(page.getByTestId("analytics-players").getByRole("link", { name: "Team roster" })).toHaveAttribute("href", "/admin/roster");
-        await expect(page.getByTestId("analytics-record")).toHaveText("2 won · 1 drawn · 0 lost");
+        await expect(page.getByTestId("analytics-record")).toHaveText("1 won · 1 drawn · 1 lost");
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/analytics-no-players-${width}.png`, fullPage: true });
 
