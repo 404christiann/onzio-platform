@@ -100,3 +100,15 @@ describe("home words", () => {
     expect(resultBars([{ id: "z", date: "2026-10-01", opponent: "Z", us: 0, them: 0 }])[0]).toMatchObject({ up: 0, down: 0 });
   });
 });
+
+describe("pickBoardGames, same day and no time (bot Low on #125)", () => {
+  it("orders one day's games by real kickoff and keeps a TBD game today as the next game", () => {
+    const rows = [
+      game({ id: "ten", date: "2026-11-14", time: "10:00 AM" }),
+      game({ id: "nine", date: "2026-11-14", time: "9:00 AM" }),
+    ];
+    expect(pickBoardGames(rows, CHICAGO, NOW).nextGame?.id).toBe("nine");
+    expect(pickBoardGames([game({ id: "tbd", date: "2026-11-10", time: "TBD" })], CHICAGO, NOW).nextGame?.id).toBe("tbd");
+    expect(pickBoardGames([game({ id: "none", date: "2026-11-10", time: null })], CHICAGO, NOW).nextGame?.id).toBe("none");
+  });
+});

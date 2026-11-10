@@ -21,6 +21,10 @@ no hosted action.
   `fetchPlayerMatchLog` read, now behind a shared `usePlayerLog` hook that
   RE-19's own player picker uses too. The Games tab reads RE-19's season once
   and shares it with the home board.
+- From the bot's Low notes on #125: the Games tab skips the sign-up read it
+  never shows; one day's games are ordered by real kickoff time ("9:00 AM"
+  before "10:00 AM"); a game today with no time yet stays the next game all
+  day; and a comment says why a failed photo tidy-up keeps the editor open.
 
 **Files changed:** `app/admin/(protected)/games/players/[playerId]/page.tsx`
 (new), `app/admin/(protected)/games/page.tsx`,

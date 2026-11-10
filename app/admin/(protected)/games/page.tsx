@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function GamesTabPage() {
   const { access, home, supabase, club, portal } = await loadAdminTabPage("games");
   const team = await loadTeamAnalytics(supabase, club.id);
-  const board = await loadHomeBoard(supabase, club.id, portal.timeZone, undefined, team);
+  const board = await loadHomeBoard(supabase, club.id, portal.timeZone, undefined, { team, signUps: false });
   const jobs = getVisibleAdminHomeJobs(access);
   const buttons: TabButton[] = jobs.flatMap((job): TabButton[] =>
     job.id === "enter-score"

@@ -179,7 +179,8 @@ export default function HomepageEditor() {
     if (await editor.discardUnsavedUploads()) router.push(href);
   }
   // ADMIN-RE-24: the tabs leave through go() too, so it can ask first when
-  // something is unsaved and tidy up failed photo uploads when nothing is.
+  // something is unsaved and tidy up failed photo uploads when nothing is. If
+  // that tidy-up fails, the page stays put (as the edit bar's back link does).
   useLeaveGuard(reimagined ? (href: string) => void go(href) : null, editor.dirty.length > 0);
 
   if (editor.loading) return <HomepageEditorSkeleton />;
