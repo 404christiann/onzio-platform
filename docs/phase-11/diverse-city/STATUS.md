@@ -18,7 +18,14 @@ run from his Mac, before the merge. No change to `lib/club-context.ts`.
   characters). Rows for the same logo file (same club and `media_asset_id`)
   become one: the homepage row stays, with the switches of all of them; the
   others are deleted. One order per club: the homepage strip's order, then the
-  footer-only logos in the footer's order. `name` gets CHECKs of 60 characters
+  footer-only logos in the footer's order. So the footer may reorder where a
+  logo was in both places (the merged logo comes before the footer-only ones;
+  the bot's M1 on #128). No live footer changes today: Diverse City's academy
+  footer shows no sponsors (`components/sites/diverse-city/Footer.tsx`) and
+  Rose City's public site is held (`lib/public-site-hold.ts`); Rose City's
+  generic footer would show them once it is live. A second read-only check
+  (footer order) counts the logos that move, per club, for Christian before
+  the gate. `name` gets CHECKs of 60 characters
   and not blank; the migration stops (rolls back whole) if a name is longer or
   blank instead of cutting it. `placement` stays, nullable, unread by the new
   code, until both clubs accept the page (plan, risk 5); a row inserted with a

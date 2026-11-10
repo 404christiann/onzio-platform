@@ -220,7 +220,9 @@ describe("the migration on rows that were there before it", () => {
     expect(await sponsors(BRAVO)).toEqual([
       { name: "Bravo Kim", show_on_homepage: true, show_in_footer: true, sort_order: 0 },
     ]);
-    // What visitors see is unchanged: the homepage in its order, the footer in its order.
+    // The homepage strip keeps its order. The footer keeps its logos but not its
+    // order: one order can't hold two, so the merged Kim takes its homepage
+    // place and comes before North, which was first in the footer.
     const homepage = (await sponsors(ALPHA)).filter((row) => row.show_on_homepage).map((row) => row.name);
     const footer = (await sponsors(ALPHA)).filter((row) => row.show_in_footer).map((row) => row.name);
     expect(homepage).toEqual(["Lake", "Kim", "Old"]);

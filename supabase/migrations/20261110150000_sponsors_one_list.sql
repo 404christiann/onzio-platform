@@ -28,10 +28,14 @@
 --      placement and neither switch on gets the switch for that placement, so
 --      code deployed before this migration keeps adding visible logos.
 --
--- Visitors see no change at merge: the homepage strip and footer show the same
--- logos in the same order (a club whose footer had logos the homepage didn't
--- keeps them in the footer, after the homepage ones, which the footer shows on
--- its own). The template decides whether the footer shows sponsors at all.
+-- What visitors see: the homepage strip and the footer show the same logos.
+-- The homepage strip keeps its order. The footer may reorder where a logo was
+-- in both places: one order cannot hold two different ones, so a merged logo
+-- takes its homepage position and comes before the footer-only logos. The
+-- template decides whether the footer shows sponsors at all: at the time of
+-- writing, Diverse City's academy footer shows none and Rose City's public
+-- site is held, so no live footer changes. Christian's read-only order check
+-- in the RE-15 notes counts the footer logos that move, per club.
 --
 -- Rollback (before any sponsor is saved with both switches from the new
 -- page): drop the trigger and its function, the two name checks and the

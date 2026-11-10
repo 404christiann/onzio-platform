@@ -13,7 +13,11 @@
   site definition). Diverse City's classic Sponsors page keeps working on the
   same rows. Sponsors with a website are links on the public site (nobody has
   one at merge). Names stop at 60 (database CHECK).
-- **Visitors see at merge:** the same logos in the same order.
+- **Visitors see at merge:** the same logos. The homepage strip keeps its
+  order; the footer may reorder where a logo was in both places (a merged logo
+  comes before the footer-only ones). No live footer changes today: Diverse
+  City's academy footer shows no sponsors and Rose City's site is held.
+  Christian's read-only order check counts the logos that move.
 - **Production counts (Christian, 2026-11-10):** all clean. At the gate Rose
   City's 12 sponsor rows become 7 and Diverse City's 4 become 3; Lions stays at
   6 (rows without a file record are never merged by link, decided here).
