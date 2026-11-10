@@ -51,6 +51,23 @@
   suites on the PR head in the PR body. Details in `STATUS.md`.
 - **Exact next step:** the bot merges. RE-13 later points website pages here.
 
+## 2026-11-09 - ADMIN-RE-19 How the team is doing
+
+- **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.
+  The page only reads. Rose City is already on the new admin, so merging shows
+  it there.
+- **What it adds:** `/admin/analytics` for a `reimagined` club (a `classic` club
+  keeps the old page): the season game by game (record, W/D/L letters, magenta
+  scored bars above a line, gray let-in bars below, who scored in one game,
+  every game as a table) and one player at a time (a six-corner chart in plain
+  words against the team's best in that position, recent games with minutes).
+  No chart library; no color-only meaning.
+- **Left out:** the league rank (waits for RE-11b) and a season switcher.
+- **Verification:** unit, contract and browser tests (390 and 1440); full suites
+  on the PR head, with the tested commit, are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** the bot merges.
+
 ## 2026-11-10 - ADMIN-RE-11a follow-up: the bot's Low notes on #116
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.
