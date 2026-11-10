@@ -221,7 +221,9 @@ describe("12. Seasons", () => {
   });
 
   it("no longer claims the league table follows the season", () => {
-    const page = source("app/admin/(protected)/seasons/page.tsx");
+    // ADMIN-RE-11a moved the old page, unchanged, to a component for clubs on
+    // the classic admin; the Seasons route renders it for them.
+    const page = source("components/admin/ClassicSeasonsPage.tsx");
     expect(page).toContain("nextSeasonAfter(");
     expect(page).not.toMatch(/Match Stats and Standings all read/);
     expect(page).toContain("does not change with the season");
