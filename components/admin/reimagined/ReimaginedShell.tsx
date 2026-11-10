@@ -185,7 +185,7 @@ function Frame({
         {onTabPage ? null : <TopBar title={getReimaginedPageTitle(pathname)} />}
         <main
           className={styles.main}
-          data-bare={(onTabPage && pathname !== "/admin") || undefined}
+          data-bare={onTabPage || undefined}
           data-editing={editing || undefined}
         >
           {club.kind === "customer" && club.publicAccess === "grace" ? (

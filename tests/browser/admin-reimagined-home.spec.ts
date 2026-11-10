@@ -118,8 +118,9 @@ for (const width of [390, 1440]) {
       try {
         await page.goto("/admin");
         await expect(main(page).getByRole("heading", { level: 1, name: "Welcome back" })).toBeVisible();
-        await expect(main(page).getByText("Alpha FC · Club admin", { exact: true })).toBeVisible();
-        await expect(main(page).getByText("What do you want to do?", { exact: true })).toBeVisible();
+        // ADMIN-RE-24b: the club's name is in the frame; the home says what needs you.
+        await expect(page.getByText("Alpha FC", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+        await expect(main(page).getByTestId("home-summary")).toHaveText(/^(Nothing needs you right now|\d+ things? needs? you)$/);
         // ADMIN-RE-24: no classic drawer; the tabs, with Home the current one.
         await expect(page.getByRole("button", { name: "Open admin navigation" })).toHaveCount(0);
         await expect(
@@ -156,19 +157,27 @@ for (const width of [390, 1440]) {
       }
     });
 
-    test("the score hint counts unscored games: none, one, twelve", async ({ page }) => {
+    test("the score hint and Needs you count unscored games: none, one, twelve", async ({ page }) => {
       const tile = main(page).locator('[data-job="enter-score"]');
+      const need = main(page).locator('[data-need="score"]');
       try {
         await page.goto("/admin");
         await expect(tile).toHaveText("Enter a score");
+        await expect(need).toHaveCount(0);
 
         await addUnscoredGames(1);
         await page.reload();
         await expect(tile).toContainText("1 game needs a score");
+        await expect(need).toContainText(`Add the score vs ${FIXTURE_OPPONENT}`);
+        await expect(need.getByRole("link", { name: /^Enter score/ })).toHaveAttribute("href", "/admin/score");
+        await expect(main(page).getByTestId("home-summary")).toHaveText("1 thing needs you");
+        await page.screenshot({ path: `${SHOTS}/home-one-need-${width}.png`, fullPage: true });
 
         await addUnscoredGames(11);
         await page.reload();
         await expect(tile).toContainText("12 games need a score");
+        await expect(need).toContainText("12 games need a score");
+        await expect(need).toContainText(`Oldest: vs ${FIXTURE_OPPONENT}`);
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/home-score-hint-${width}.png`, fullPage: true });
       } finally {
@@ -176,19 +185,32 @@ for (const width of [390, 1440]) {
       }
     });
 
-    test("a long club name stays on one line with an ellipsis", async ({ page }) => {
+    test("At a glance: the season card opens Games and the website card never shows zeros", async ({ page }) => {
+      await page.goto("/admin");
+      await expect(main(page).getByTestId("glance-visits")).toContainText("Not counted yet");
+      await expect(main(page)).not.toContainText(/\b0 visits\b/);
+      const season = main(page).getByTestId("glance-season");
+      await expect(season).toBeVisible();
+      await season.click();
+      await expect(page).toHaveURL(/\/admin\/(games|seasons)$/);
+    });
+
+    test("a long club name stays on one line in the phone bar, two lines in the sidebar", async ({ page }) => {
       const previous = await setClubName(WORST_CLUB_NAME);
       try {
         await page.goto("/admin");
-        const name = main(page).getByTestId("admin-home-club-name");
+        // ADMIN-RE-24: the name lives in the frame now.
+        const name =
+          width === 390
+            ? page.getByTestId("admin-shell-club-name")
+            : page.locator("aside").getByText(WORST_CLUB_NAME, { exact: true });
         await expect(name).toHaveText(WORST_CLUB_NAME);
-        await expect(main(page).getByText("· Club admin", { exact: true })).toBeVisible();
         const box = await name.evaluate((element) => ({
-          clipped: element.scrollWidth > element.clientWidth,
+          clipped: element.scrollHeight > element.clientHeight + 1 || element.scrollWidth > element.clientWidth,
           lines: Math.round(element.getBoundingClientRect().height / parseFloat(getComputedStyle(element).lineHeight)),
         }));
-        expect(box.lines).toBe(1);
-        if (width === 390) expect(box.clipped).toBe(true);
+        expect(box.lines).toBe(width === 390 ? 1 : 2);
+        expect(box.clipped).toBe(true);
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/home-long-name-${width}.png`, fullPage: true });
       } finally {

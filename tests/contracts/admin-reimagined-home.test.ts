@@ -45,15 +45,46 @@ describe("reimagined home (ADMIN-RE-05)", () => {
     expect(page).toContain("adminGreeting(displayName)");
   });
 
-  it("shows the club line, the greeting and the question from the design", () => {
+  // ADMIN-RE-24b: the club's name moved to the frame; the home leads with the
+  // greeting and how many things need you, each with its own button.
+  it("shows the greeting, what needs you, the next game, the jobs and the glance cards", () => {
     const home = components["ReimaginedHome.tsx"];
-    expect(home).toContain('" · Club admin"');
-    expect(home).toContain("What do you want to do?");
     expect(home).toMatch(/<h1[^>]*>\s*\{greeting\}\s*<\/h1>/);
-    expect(home).toContain("title={clubName}");
-    // One line with an ellipsis for long club names.
-    const css = source(`${dir}/reimagined.module.css`);
-    expect(css).toMatch(/\.clubName \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/);
+    expect(home).toContain('data-testid="home-summary"');
+    expect(home).toContain("Needs you");
+    expect(home).toContain("<NextGame");
+    expect(home).toContain("<HomeJobs");
+    expect(home).toContain("<SeasonGlance");
+    expect(home).toContain("<VisitsGlance");
+    expect(home).not.toContain("Club admin");
+    expect(page).toContain("summary={needsSummary(needs.length)}");
+    expect(page).toContain("loadHomeBoard(supabase, club.id, portal.timeZone)");
+    // A need shows only when its job is open to this person.
+    expect(page).toContain('const scoreHref = jobHref("enter-score");');
+    expect(page).toContain('const signUpsHref = jobHref("see-registrations");');
+    // Long names clamp; the frame shows the club's name.
+    const css = source(`${dir}/home.module.css`);
+    expect(css).toMatch(/\.greeting \{[^}]*-webkit-line-clamp: 2;/);
+    expect(css).toMatch(/\.clamp2 \{[^}]*overflow-wrap: anywhere;/);
+    expect(components["ReimaginedShell.tsx"]).toContain('data-testid="admin-shell-club-name"');
+  });
+
+  it("never shows visit numbers it does not have", () => {
+    const glance = components["Glance.tsx"];
+    expect(glance).toContain('"Not live yet"');
+    expect(glance).toContain('"Not counted yet"');
+    expect(glance).toContain('"No visit numbers yet"');
+    expect(glance).not.toMatch(/\b0 visits\b|visits: 0/);
+  });
+
+  it("reads the board server-side, user-scoped, club-scoped and free of personal details", () => {
+    const board = source("lib/admin-home-board.ts");
+    expect(board).not.toContain('"use client"');
+    expect(board).toContain('.eq("club_id", clubId)');
+    expect(board).not.toMatch(/createServiceRoleClient|supabase-service-role|SUPABASE_SERVICE_ROLE_KEY/);
+    expect(board).not.toMatch(/registrant_|guardian_|answers|status_token_hash|email|phone/);
+    // The season comes from RE-19's own reads, not a second copy.
+    expect(board).toContain("loadTeamAnalytics(supabase, clubId)");
   });
 
   it("greets by first name, or says Welcome back without one", () => {
@@ -100,6 +131,7 @@ describe("reimagined home (ADMIN-RE-05)", () => {
     }
     expect(components["HomeJobs.tsx"]).toContain('from "@/components/admin/icons"');
     expect(components["MoreList.tsx"]).toContain('from "@/components/admin/icons"');
+    expect(components["Glance.tsx"]).toContain('from "@/components/admin/icons"');
     expect(source(`${dir}/tabIcons.ts`)).toContain('from "@/components/admin/icons"');
   });
 });
