@@ -91,8 +91,9 @@ describe("the migration", () => {
     const names = readdirSync(resolve(process.cwd(), "supabase/migrations")).sort();
     expect(names).toContain(FILE);
     expect(FILE.slice(0, 14) > "20261109210000").toBe(true);
+    // Later packages' migrations sort after it (ADMIN-RE-15 is next).
     const later = names.filter((name) => name > FILE);
-    expect(later).toEqual([]);
+    expect(later).toEqual(["20261110150000_sponsors_one_list.sql"]);
   });
 
   it("does what the plan says, with the security helpers where the repo keeps them", () => {

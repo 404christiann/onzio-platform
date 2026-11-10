@@ -1,5 +1,6 @@
 import ResilientImage from "@/components/ResilientImage";
 import type { DBSiteSponsorLogo } from "@/lib/db-types";
+import SponsorLink from "@/components/SponsorLink";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 
 // `clubName` is a prop rather than a literal: this component shipped with one
@@ -52,6 +53,7 @@ export default function AcademySponsorsPage({
                   <div className="absolute left-0 top-0 bg-[#FF1616] px-4 py-2 font-nav text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white">
                     Proud partner
                   </div>
+                  <SponsorLink href={sponsor.website_url} name={sponsor.name} bareWithoutLink className="flex max-w-full items-center justify-center">
                   <ResilientImage
                     src={sponsor.logo_url}
                     alt={sponsor.name}
@@ -60,6 +62,7 @@ export default function AcademySponsorsPage({
                     className="max-h-44 w-auto max-w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
                     {...imageDeliveryProps("sponsor-logo")}
                   />
+                  </SponsorLink>
                 </article>
               ))}
             </div>

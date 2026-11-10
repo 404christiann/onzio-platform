@@ -261,7 +261,6 @@ async function readSponsors(supabase: SupabaseClient, clubId: string): Promise<A
       .from("site_sponsor_logos")
       .select("name,logo_url,media_asset_id")
       .eq("club_id", clubId)
-      .order("placement", { ascending: true })
       .order("sort_order", { ascending: true }),
   ]);
   // A failed read offers less, never someone else's sponsor.
