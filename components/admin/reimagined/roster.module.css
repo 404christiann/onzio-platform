@@ -1,0 +1,682 @@
+/* ADMIN-RE-17: Team roster (design: cd-roster-final-cascade). A laptop shows a
+   small pitch beside the players (its four zones jump to a position); a phone
+   shows four tabs pinned under the top bar. Colors come from the admin theme
+   tokens; the grass is the design's own and has a darker pair for the dark
+   theme. Names clamp to two lines (the phone clamp from MAP's break-ui list)
+   and end in "…" with the full name on hover. */
+
+.page {
+  --roster-grass: #dfe9e2;
+  --roster-line: rgb(255 255 255 / 0.85);
+  --roster-ink: #1f2d26;
+  /* What a section heading must clear when a jump lands on it: the top bar,
+     plus the tab bar on a phone. */
+  --roster-sticky: calc(56px + var(--admin-safe-area-top) + 16px);
+  margin: 0 auto;
+  max-width: 1120px;
+}
+
+:global([data-admin-theme="dark"]) .page {
+  --roster-grass: #22332a;
+  --roster-line: rgb(255 255 255 / 0.28);
+  --roster-ink: #e6efe9;
+}
+
+/* ---- Header ---- */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.titleRow {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 280px;
+  align-items: center;
+  gap: 14px;
+}
+
+.titleIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  place-items: center;
+  border-radius: 14px;
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+}
+
+.titles {
+  min-width: 0;
+}
+
+.h1 {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+}
+
+.h1Text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  flex: none;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: hsl(var(--accent));
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 26px;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--muted-foreground));
+}
+
+.sub {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+.add {
+  display: inline-flex;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: hsl(var(--primary));
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: hsl(var(--primary-foreground));
+}
+
+.add:hover {
+  background: hsl(var(--primary) / 0.9);
+}
+
+.add:focus-visible,
+.card:focus-visible,
+.zone:focus-visible,
+.tab:focus-visible,
+.switchTab:focus-visible,
+.sectionAdd:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* ---- Players / Staff switch and search ---- */
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: hsl(var(--muted));
+}
+
+.switchTab {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+
+.switchTab[aria-selected="true"] {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: 0 1px 2px rgb(15 20 40 / 0.12);
+}
+
+.search {
+  position: relative;
+  min-width: 0;
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px 0 36px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--card));
+  font-size: 16px;
+  color: hsl(var(--foreground));
+}
+
+.searchInput:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 1px;
+}
+
+.error {
+  margin: 16px 0 0;
+  font-size: 14px;
+  color: hsl(var(--destructive));
+}
+
+/* ---- Body: rail + sections ---- */
+
+.body {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.sections {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* The mini pitch: goal at the top, four equal zones. */
+
+.pitch {
+  position: sticky;
+  top: var(--roster-sticky);
+  display: grid;
+  width: 200px;
+  height: 332px;
+  flex: none;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--roster-grass);
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  overflow: hidden;
+}
+
+.pitch::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 2px solid var(--roster-line);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.pitchBox,
+.pitchSix {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  border: 2px solid var(--roster-line);
+  border-top: 0;
+  pointer-events: none;
+}
+
+.pitchBox {
+  width: 96px;
+  height: 28px;
+  margin-left: -48px;
+}
+
+.pitchSix {
+  width: 44px;
+  height: 12px;
+  margin-left: -22px;
+}
+
+.pitchHalf {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  left: 8px;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--roster-line);
+  pointer-events: none;
+}
+
+.pitchCircle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border: 2px solid var(--roster-line);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.tint {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  left: 8px;
+  height: calc((100% - 16px) / 4);
+  border-radius: 8px;
+  background: hsl(var(--primary) / 0.24);
+  box-shadow: inset 0 0 0 2px hsl(var(--primary));
+  transition: transform 0.55s cubic-bezier(0.3, 0.75, 0.1, 1);
+  pointer-events: none;
+}
+
+.zone {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--roster-ink);
+  transition: background-color 0.15s ease, color 0.2s ease;
+}
+
+.zone:hover {
+  background: rgb(255 255 255 / 0.28);
+}
+
+.zone[aria-current="true"] {
+  color: hsl(var(--primary));
+}
+
+/* On a phone: four equal tabs pinned under the top bar. */
+
+.tabs {
+  display: none;
+}
+
+/* ---- Sections and cards ---- */
+
+.section {
+  margin-bottom: 28px;
+  scroll-margin-top: var(--roster-sticky);
+}
+
+.sectionHead {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.015em;
+}
+
+.sectionCount {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--muted-foreground));
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 148px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 16px;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  text-align: left;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.35), 0 6px 16px -10px rgb(15 20 40 / 0.25);
+}
+
+.card:active {
+  transform: scale(0.985);
+}
+
+.card[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px hsl(var(--primary)), 0 14px 26px -16px rgb(40 56 140 / 0.45);
+}
+
+.card[data-hidden] {
+  background: hsl(var(--background));
+}
+
+.card[data-hidden] .avatar,
+.card[data-hidden] .name,
+.card[data-hidden] .town {
+  opacity: 0.55;
+}
+
+.avatar {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--avatar-hue, #6f86c9);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The number hangs in the corner, so the face, the name and the town share one
+   left edge. A long name never reaches it: the name sits below the avatar row. */
+.number {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  max-width: calc(100% - 96px);
+  overflow: hidden;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--muted-foreground));
+}
+
+.card[aria-pressed="true"] .number {
+  color: hsl(var(--primary));
+}
+
+.name {
+  display: -webkit-box;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 12px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 20px;
+  color: hsl(var(--foreground));
+}
+
+.town {
+  width: 100%;
+  min-height: 18px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.hiddenTag {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.skeleton {
+  min-height: 148px;
+  border-radius: 16px;
+}
+
+/* ---- Empty and no-match screens ---- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 40px 20px;
+  border-radius: 16px;
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.emptyText {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+.sectionEmpty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: hsl(var(--muted) / 0.5);
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+}
+
+.sectionAdd {
+  min-height: 44px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--primary));
+}
+
+/* ---- The jump: the page lands, the section's cards deal in ---- */
+
+@keyframes rosterDeal {
+  from {
+    opacity: 0.3;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.section[data-deal] .card,
+.section[data-deal] .sectionHead {
+  animation: rosterDeal 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--deal, 0) * 40ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section[data-deal] .card,
+  .section[data-deal] .sectionHead {
+    animation: none;
+  }
+
+  .tint,
+  .card {
+    transition: none;
+  }
+}
+
+/* ---- A phone ---- */
+
+@media (max-width: 639px) {
+  .page {
+    --roster-sticky: calc(56px + var(--admin-safe-area-top) + 64px + 8px);
+  }
+
+  .h1 {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .add {
+    width: 100%;
+  }
+
+  .switch {
+    width: 100%;
+  }
+
+  .search {
+    max-width: none;
+  }
+
+  .body {
+    display: block;
+    margin-top: 12px;
+  }
+
+  .pitch {
+    display: none;
+  }
+
+  /* Full width: undo <main>'s side padding so the bar reaches both edges. */
+  .tabs {
+    position: sticky;
+    top: calc(56px + var(--admin-safe-area-top));
+    z-index: 10;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    height: 64px;
+    margin: 0 -16px 16px;
+    padding: 8px 8px 0;
+    background: hsl(var(--muted));
+    box-shadow: 0 0.5px 0 hsl(var(--border));
+  }
+
+  .tab {
+    display: flex;
+    min-width: 0;
+    height: 48px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 18px;
+    color: hsl(var(--muted-foreground));
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .tab[aria-current="true"] {
+    background: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+  }
+
+  .tabLabel {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tabCount {
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sectionHead {
+    font-size: 20px;
+    line-height: 32px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .card {
+    min-height: 136px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 15px;
+  }
+
+  .number {
+    top: 10px;
+    right: 12px;
+    max-width: calc(100% - 72px);
+    font-size: 22px;
+  }
+
+  .name {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+}
