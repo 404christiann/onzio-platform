@@ -93,3 +93,38 @@ export function seasonNameProblemText(problem: SeasonNameProblem, name: string):
   const shown = characters(trimmed) > SHOWN_NAME_MAX ? `${[...trimmed].slice(0, SHOWN_NAME_MAX).join("")}…` : trimmed;
   return `A season called “${shown}” already exists. Pick another name.`;
 }
+
+const YEAR_ONLY = /^(\d{4})$/;
+const YEAR_SPLIT = /^(\d{4})[–-](\d{2}|\d{4})$/;
+
+/**
+ * The years saved with a season whose name the admin may have typed over the
+ * suggestion: a Spring or Fall name takes its year, "2028" takes 2028, and
+ * "2025–26" takes 2025 to 2026, so the next suggestion and the order follow
+ * the name. A name that says nothing about years, or whose years the database
+ * would refuse (2000 to 2200, end at most two after the start), keeps the
+ * suggestion's years.
+ */
+export function yearsForSeasonName(
+  name: string,
+  fallback: { startYear: number; endYear: number },
+): { startYear: number; endYear: number } {
+  const trimmed = name.trim();
+  const half = HALF_YEAR_NAME.exec(trimmed);
+  const only = YEAR_ONLY.exec(trimmed);
+  const split = YEAR_SPLIT.exec(trimmed);
+  let startYear: number;
+  let endYear: number;
+  if (half || only) {
+    startYear = endYear = Number((half ?? only)![half ? 2 : 1]);
+  } else if (split) {
+    startYear = Number(split[1]);
+    endYear = split[2].length === 2 ? Math.floor(startYear / 100) * 100 + Number(split[2]) : Number(split[2]);
+    // "2099–01" is 2099 to 2101: a two-digit end year past the century rolls over.
+    if (split[2].length === 2 && endYear < startYear) endYear += 100;
+  } else {
+    return fallback;
+  }
+  const accepted = startYear >= MIN_YEAR && startYear <= MAX_YEAR && endYear >= startYear && endYear <= startYear + 2;
+  return accepted ? { startYear, endYear } : fallback;
+}

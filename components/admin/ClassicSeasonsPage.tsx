@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
 import { cn } from "@/lib/utils";
-import { nextSeasonAfter } from "@/lib/season-label";
+import { newestSeasonFirst, nextSeasonAfter } from "@/lib/season-label";
 
 type SeasonDeleteState = { deletable: boolean; reason: string; matchCount: number; statRowCount: number };
 
@@ -79,7 +79,8 @@ export default function ClassicSeasonsPage() {
         return;
       }
 
-      const rows = (data ?? []) as DBSeason[];
+      // Newest first, with Fall ahead of Spring of the same year, so "Create Next Season" follows the latest one.
+      const rows = ((data ?? []) as DBSeason[]).sort(newestSeasonFirst);
       setSeasons(rows);
       try {
         const states = await Promise.all(
