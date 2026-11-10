@@ -7,6 +7,9 @@ import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { ReimaginedShell } from "@/components/admin/reimagined/ReimaginedShell";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { readAdminPortal } from "@/lib/admin-portal";
+import { loadAdminHomeData } from "@/lib/admin-home-data";
+import { adminAccessFor } from "@/lib/admin-tab-page";
+import { getAdminTabDots, getAdminTabTargets, getVisibleAdminTabs } from "@/lib/admin-tabs";
 import {
   ADMIN_THEME_COOKIE_NAME,
   resolveAdminTheme,
@@ -62,12 +65,29 @@ export default async function ProtectedLayout({
     cookieStore.get(ADMIN_THEME_COOKIE_NAME)?.value,
   );
 
+  // ADMIN-RE-24: the tabs follow the club, and a red dot marks a tab that
+  // needs you. Counts are read fail-safe: a failed read shows no dot.
+  let shell: React.ComponentProps<typeof ReimaginedShell> | null = null;
+  if (portal.portal === "reimagined") {
+    const needs = await loadAdminHomeData(supabase, club.id, portal.timeZone).catch(() => null);
+    const access = adminAccessFor(club, portal, needs?.hasLiveSignUps ?? false);
+    const tabs = getVisibleAdminTabs(access);
+    shell = {
+      tabs: tabs.map(({ id, label, href }) => ({ id, label, href })),
+      targets: getAdminTabTargets(access),
+      dots: getAdminTabDots(tabs, needs ?? { gamesNeedingScore: null, newSignUps: null }),
+      children: null,
+    };
+  }
+
   return (
     <AdminThemeProvider initialTheme={initialTheme}>
       <AdminPortalProvider settings={portal} isOwner={club.role === "owner"}>
         {/* ADMIN-RE-05: the club's admin_portal picks the shell; classic on any doubt. */}
-        {portal.portal === "reimagined" ? (
-          <ReimaginedShell>{children}</ReimaginedShell>
+        {shell ? (
+          <ReimaginedShell tabs={shell.tabs} targets={shell.targets} dots={shell.dots}>
+            {children}
+          </ReimaginedShell>
         ) : (
           <AdminShell>{children}</AdminShell>
         )}

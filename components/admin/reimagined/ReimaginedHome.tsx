@@ -1,22 +1,19 @@
-import type { AdminMoreRow } from "@/lib/admin-route-manifest";
 import { HomeJobs, type HomeJobTile } from "./HomeJobs";
-import { MoreList } from "./MoreList";
 import styles from "./reimagined.module.css";
 
 // ADMIN-RE-05: the reimagined home (design: cd-phone, cd-desktop). Server
 // rendered; app/admin/(protected)/page.tsx loads the data and passes it in.
+// ADMIN-RE-24 moved the More list's pages under the tabs.
 
 export function ReimaginedHome({
   clubName,
   greeting,
   jobs,
-  moreRows,
   contentPaused,
 }: {
   clubName: string;
   greeting: string;
   jobs: readonly HomeJobTile[];
-  moreRows: readonly AdminMoreRow[];
   contentPaused: boolean;
 }) {
   return (
@@ -39,7 +36,6 @@ export function ReimaginedHome({
           Changes to your website are paused right now, so the jobs that change it are hidden.
         </p>
       ) : null}
-      <MoreList rows={moreRows} />
     </div>
   );
 }

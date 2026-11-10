@@ -72,12 +72,14 @@ describe("the admin reads the switch fail-safe", () => {
 
   // ADMIN-RE-05 changed this on purpose: RE-02 rendered the classic shell for
   // both values; now "reimagined" gets the reimagined shell and anything else,
-  // including a failed read, keeps the classic one.
+  // including a failed read, keeps the classic one. ADMIN-RE-24 gave the
+  // reimagined shell its tabs, worked out only for a reimagined club.
   it("picks the shell by portal inside the provider, classic unless the read says reimagined", () => {
     const layout = read("app/admin/(protected)/layout.tsx");
     expect(layout).toContain("const portal = await readAdminPortal(supabase, club.id);");
+    expect(layout).toMatch(/let shell: [^\n]* \| null = null;\s*if \(portal\.portal === "reimagined"\) \{/);
     expect(layout).toMatch(
-      /<AdminPortalProvider settings=\{portal\} isOwner=\{club\.role === "owner"\}>[\s\S]*\{portal\.portal === "reimagined" \? \(\s*<ReimaginedShell>\{children\}<\/ReimaginedShell>\s*\) : \(\s*<AdminShell>\{children\}<\/AdminShell>\s*\)\}\s*<\/AdminPortalProvider>/,
+      /<AdminPortalProvider settings=\{portal\} isOwner=\{club\.role === "owner"\}>[\s\S]*\{shell \? \(\s*<ReimaginedShell tabs=\{shell\.tabs\} targets=\{shell\.targets\} dots=\{shell\.dots\}>\s*\{children\}\s*<\/ReimaginedShell>\s*\) : \(\s*<AdminShell>\{children\}<\/AdminShell>\s*\)\}\s*<\/AdminPortalProvider>/,
     );
   });
 });

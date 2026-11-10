@@ -101,8 +101,9 @@ async function measure(locator: Locator) {
   });
 }
 
+// ADMIN-RE-24: This season is on the Games tab's page (it was a More row).
 async function openHub(page: Page) {
-  await page.goto("/admin");
+  await page.goto("/admin/games");
   await main(page).getByRole("link", { name: "This season" }).click();
   await expect(page).toHaveURL(/\/admin\/seasons$/);
   await expect(main(page).getByRole("heading", { level: 1, name: "This season" })).toBeVisible();

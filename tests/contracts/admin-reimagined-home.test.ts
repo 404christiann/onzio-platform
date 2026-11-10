@@ -33,9 +33,10 @@ describe("reimagined home (ADMIN-RE-05)", () => {
     expect(page).toContain("<DashboardIntro clubName={club.name} />");
   });
 
-  it("builds the jobs and More rows from the manifest with the same capability predicates", () => {
+  it("builds the jobs from the manifest with the same capability predicates", () => {
     expect(page).toContain("getVisibleAdminHomeJobs(access)");
-    expect(page).toContain("getVisibleAdminMoreRows(access)");
+    // ADMIN-RE-24: the More list's pages moved under the tabs.
+    expect(page).not.toContain("getVisibleAdminMoreRows");
     expect(page).toContain("hasLiveSignUps: home.hasLiveSignUps");
     expect(page).toContain("adminPortal: portal.portal");
     expect(page).toContain('club.role === "owner" && club.lifecycle !== "archived"');
@@ -99,29 +100,36 @@ describe("reimagined home (ADMIN-RE-05)", () => {
     }
     expect(components["HomeJobs.tsx"]).toContain('from "@/components/admin/icons"');
     expect(components["MoreList.tsx"]).toContain('from "@/components/admin/icons"');
+    expect(source(`${dir}/tabIcons.ts`)).toContain('from "@/components/admin/icons"');
   });
 });
 
-describe("reimagined shell (ADMIN-RE-05)", () => {
+describe("reimagined shell (ADMIN-RE-05, tabs since ADMIN-RE-24)", () => {
   it("is picked by the layout from the fail-safe portal read", () => {
     expect(layout).toContain('portal.portal === "reimagined"');
-    expect(layout).toContain("<ReimaginedShell>{children}</ReimaginedShell>");
+    expect(layout).toContain("<ReimaginedShell tabs={shell.tabs} targets={shell.targets} dots={shell.dots}>");
     expect(layout).toContain("<AdminShell>{children}</AdminShell>");
+    // Tabs and dots are worked out on the server; a failed count shows no dot.
+    expect(layout).toContain("getVisibleAdminTabs(access)");
+    expect(layout).toContain(".catch(() => null)");
   });
 
-  it("puts the slim top bar with a way home, the title and an actions slot on every other page", () => {
+  it("puts a page bar with a way back to the tab, the title and an actions slot on every other page", () => {
     const bar = components["TopBar.tsx"];
-    expect(bar).toContain('href="/admin"');
-    expect(bar).toMatch(/aria-hidden="true" \/>\s*Home\s*<\/Link>/);
+    expect(bar).toContain("href={back.href}");
+    expect(bar).toMatch(/aria-hidden="true" \/>\s*\{back\.label\}\s*<\/Link>/);
     expect(bar).toContain("export function useTopBarActions()");
     expect(bar).toContain("export function TopBarActions(");
     expect(bar).toContain("createPortal(children, slot)");
+    expect(bar).toContain("export function useLeaveGuard(");
     const shell = components["ReimaginedShell.tsx"];
-    expect(shell).toContain('const isHome = pathname === "/admin";');
-    expect(shell).toContain("home={isHome}");
-    expect(shell).toContain("getReimaginedPageTitle(pathname)");
+    expect(shell).toContain("isAdminTabPage(pathname)");
+    expect(shell).toContain("<TopBar title={getReimaginedPageTitle(pathname)} />");
+    // Tabs are real links; the current one says so.
+    expect(shell).toContain("aria-current=");
+    expect(shell).toContain('<nav aria-label="Club admin"');
     // The account menu stays reachable; billing notices still show.
-    expect(shell).toContain("<AdminAccountMenu");
+    expect(shell).toContain("<AccountMenu");
     expect(shell).toContain('club.publicAccess === "suspended"');
     expect(shell).toContain('club.publicAccess === "grace"');
   });

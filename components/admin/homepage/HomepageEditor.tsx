@@ -6,6 +6,7 @@ import { ArrowRight } from "@/components/admin/icons";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { EditBar } from "@/components/admin/reimagined/EditBar";
+import { useLeaveGuard } from "@/components/admin/reimagined/TopBar";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { useSidebar } from "@/components/ui/sidebar";
 import HomePageClient from "@/components/HomePageClient";
@@ -177,6 +178,8 @@ export default function HomepageEditor() {
     if (editor.dirty.length) { setDestination(href); return; }
     if (await editor.discardUnsavedUploads()) router.push(href);
   }
+  // ADMIN-RE-24: the tabs ask first too while there are unsaved changes.
+  useLeaveGuard(reimagined && editor.dirty.length ? (href: string) => void go(href) : null);
 
   if (editor.loading) return <HomepageEditorSkeleton />;
   if (!state || !snapshot) return <section className="hp-editor" aria-label="Homepage editor"><h1>Homepage</h1><p role="alert">{editor.error?.message ?? "We could not load your homepage."}</p><button className="hp-button" onClick={editor.retryLoad}>Try loading again</button></section>;
@@ -203,7 +206,7 @@ export default function HomepageEditor() {
     savedText={savedLabel(websiteState(club))}
     saveDisabled={saveDisabled}
     onSave={() => void editor.save()}
-    onHome={() => void go("/admin")}
+    onHome={(href) => void go(href)}
   /> : null;
   const preview = <HomePageClient initialHeroContent={{ ...state.draft.hero, id: 1, updated_at: "" }} />;
   const tools = piece ? <>

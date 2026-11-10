@@ -323,8 +323,9 @@ test.describe("a helper", () => {
 
   test("does not see Payments and plan, and cannot open it", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/admin");
-    await expect(page.getByRole("heading", { name: "More" })).toBeVisible();
+    // ADMIN-RE-24: Payments and plan would be on the Club tab's page.
+    await page.goto("/admin/club");
+    await expect(page.getByRole("heading", { level: 1, name: "Club and account" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Payments and plan" })).toHaveCount(0);
     await openPayments(page);
     await expect(page).toHaveURL(/\/admin\/login\?error=owner_required/);

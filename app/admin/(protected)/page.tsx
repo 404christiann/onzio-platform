@@ -25,7 +25,6 @@ import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext, type ClubContext } from "@/lib/club-context";
 import {
   getVisibleAdminHomeJobs,
-  getVisibleAdminMoreRows,
   getVisibleAdminQuickActions,
   type AdminQuickActionId,
   type AdminRouteAccessContext,
@@ -412,7 +411,6 @@ async function ReimaginedHomeContent({
       clubName={club.name}
       greeting={adminGreeting(displayName)}
       jobs={jobs}
-      moreRows={getVisibleAdminMoreRows(access)}
       contentPaused={!routeAccess.canMutateContent}
     />
   );

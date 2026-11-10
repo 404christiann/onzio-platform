@@ -98,6 +98,8 @@ function main(page: Page) {
 }
 
 async function jobIds(page: Page) {
+  // The home streams in after its placeholder; wait for the real tiles.
+  await expect(main(page).locator("[data-job]").first()).toBeVisible();
   return main(page).locator("[data-job]").evaluateAll((links) => links.map((link) => link.getAttribute("data-job")));
 }
 
@@ -118,9 +120,11 @@ for (const width of [390, 1440]) {
         await expect(main(page).getByRole("heading", { level: 1, name: "Welcome back" })).toBeVisible();
         await expect(main(page).getByText("Alpha FC · Club admin", { exact: true })).toBeVisible();
         await expect(main(page).getByText("What do you want to do?", { exact: true })).toBeVisible();
-        // The reimagined shell: no sidebar and no Home link on the home itself.
+        // ADMIN-RE-24: no classic drawer; the tabs, with Home the current one.
         await expect(page.getByRole("button", { name: "Open admin navigation" })).toHaveCount(0);
-        await expect(page.getByRole("link", { name: "Home", exact: true })).toHaveCount(0);
+        await expect(
+          page.getByRole("navigation", { name: "Club admin" }).locator('[data-tab="home"]'),
+        ).toHaveAttribute("aria-current", "page");
 
         await setOwnerName("Andrea Lopez-Whitfield");
         await page.reload();
@@ -132,19 +136,11 @@ for (const width of [390, 1440]) {
       }
     });
 
-    test("three jobs then four once a form is open, with Sign-up forms in More", async ({ page }) => {
+    test("three jobs then four once a form is open; the pages sit under the tabs", async ({ page }) => {
       await page.goto("/admin");
       expect(await jobIds(page)).toEqual(["enter-score", "add-game", "edit-website"]);
-      const more = main(page).getByRole("region", { name: "More" });
-      await expect(more.getByRole("link", { name: "Sign-up forms" })).toHaveAttribute("href", "/admin/registrations");
-      await expect(more.getByRole("link", { name: "Team roster" })).toHaveAttribute("href", "/admin/roster");
-      await expect(more.getByRole("link", { name: "Who can sign in" })).toHaveAttribute("href", "/admin/members");
-      await expect(more.getByRole("link", { name: "Payments and plan" })).toHaveAttribute("href", "/admin/payments");
-      await expect(more.getByRole("link", { name: "About page" })).toHaveAttribute("href", "/admin/about");
-      await expect(more.getByRole("link", { name: "Player numbers" })).toHaveAttribute("href", "/admin/stats");
-      // Games is always a row (no job opens it); Homepage only while content changes are paused.
-      await expect(more.getByRole("link", { name: "Games", exact: true })).toHaveAttribute("href", "/admin/schedule");
-      await expect(more.getByRole("link", { name: "Homepage", exact: true })).toHaveCount(0);
+      // ADMIN-RE-24: the More list is gone; its pages are on each tab's page.
+      await expect(main(page).getByRole("region", { name: "More" })).toHaveCount(0);
       await expect(main(page).locator('[data-job="enter-score"]')).toHaveAttribute("href", "/admin/score");
       await expect(main(page).locator('[data-job="edit-website"]')).toHaveAttribute("href", "/admin/homepage");
 
@@ -153,8 +149,6 @@ for (const width of [390, 1440]) {
         await page.reload();
         expect(await jobIds(page)).toEqual(["enter-score", "add-game", "see-registrations", "edit-website"]);
         await expect(main(page).locator('[data-job="see-registrations"]')).toHaveAttribute("href", "/admin/sign-ups");
-        // ADMIN-RE-08: the forms page stays in More now that the tile opens /admin/sign-ups.
-        await expect(more.getByRole("link", { name: "Sign-up forms" })).toHaveAttribute("href", "/admin/registrations");
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/home-four-jobs-${width}.png`, fullPage: true });
       } finally {
@@ -202,18 +196,20 @@ for (const width of [390, 1440]) {
       }
     });
 
-    test("other pages get the slim top bar back to Home", async ({ page }) => {
+    test("other pages get the page bar back to their tab", async ({ page }) => {
       await page.goto("/admin/roster");
-      const home = page.getByRole("link", { name: "Home", exact: true });
-      await expect(home).toBeVisible();
+      // ADMIN-RE-24: the roster sits under Programs on a programs club like Alpha.
+      const back = page.getByRole("banner").getByRole("link", { name: "Programs", exact: true });
+      await expect(back).toBeVisible();
       await expect(page.getByTestId("admin-top-bar-title")).toHaveText("Team roster");
       // ADMIN-RE-17: the roster is the new Team roster page inside the new shell.
       await expect(page.getByRole("heading", { level: 1, name: /Your players/ })).toBeVisible();
       await expect(page.getByRole("button", { name: "Add a player" }).first()).toBeVisible();
       await expectNoSideScroll(page, width);
       await page.screenshot({ path: `${SHOTS}/roster-top-bar-${width}.png` });
-      await home.click();
-      await expect(page).toHaveURL(/\/admin$/);
+      await back.click();
+      await expect(page).toHaveURL(/\/admin\/programs-and-sign-ups$/);
+      await page.getByRole("navigation", { name: "Club admin" }).locator('[data-tab="home"]').click();
       await expect(main(page).getByRole("heading", { level: 1 })).toHaveText(/^(Hi .+|Welcome back)$/);
     });
 
@@ -223,7 +219,7 @@ for (const width of [390, 1440]) {
       await page.goto("/admin");
       await main(page).locator('[data-job="edit-website"]').click();
       await expect(page).toHaveURL(/\/admin\/homepage$/);
-      await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+      await expect(page.getByTestId("admin-edit-bar").getByRole("link", { name: "Website", exact: true })).toBeVisible();
       await expect(main(page).locator(".hp-editor")).toBeVisible();
       await expect(main(page).getByText("We could not load your homepage.")).toHaveCount(0);
       // The editor hides its tools while the sidebar's phone menu is open; the
