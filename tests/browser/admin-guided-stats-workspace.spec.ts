@@ -13,7 +13,7 @@ const client = createClient(url, process.env.SUPABASE_TEST_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false, autoRefreshToken: false },
   realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
 }).schema("onzio");
-const tables = ["seasons", "players", "matches", "player_season_stats", "goalkeeper_season_stats", "player_match_stats", "goalkeeper_match_stats"];
+const tables = ["seasons", "players", "matches", "player_season_stats", "goalkeeper_season_stats", "player_season_adjustments", "goalkeeper_season_adjustments", "player_match_stats", "goalkeeper_match_stats"];
 const artifacts = "/private/tmp/onzio-stats-workspace";
 async function checked(result: { error: { message: string } | null }) {
   if (result.error) throw new Error(result.error.message);
@@ -47,13 +47,21 @@ async function fixtures() {
   try {
     await checked(await client.from("seasons").insert(seasonIds.map((id, index) => ({ id, club_id: clubId, label: `Workspace ${2024 + index} ${suffix}`, start_year: 2024 + index, end_year: 2025 + index, active: false }))));
     await checked(await client.from("players").insert(playerIds.map((id, index) => ({ id, club_id: clubId, name: names[index], number: index ? 91 : 90, age: 22, position: index ? "Goalkeeper" : "Forward", active: false }))));
-    for (const [index, seasonId] of seasonIds.entries()) {
-      await checked(await client.from("player_season_stats").insert({ club_id: clubId, player_id: playerIds[0], season_id: seasonId, goals: index + 1, starts: 2, mins: 180 }));
-      await checked(await client.from("goalkeeper_season_stats").insert({ club_id: clubId, player_id: playerIds[1], season_id: seasonId, saves: index + 4, starts: 2, mins: 180 }));
+    for (const seasonId of seasonIds) {
+      await checked(await client.from("player_season_stats").insert({ club_id: clubId, player_id: playerIds[0], season_id: seasonId }));
+      await checked(await client.from("goalkeeper_season_stats").insert({ club_id: clubId, player_id: playerIds[1], season_id: seasonId }));
     }
     await checked(await client.from("matches").insert(matchIds.map((id, index) => ({ id, club_id: clubId, season_id: seasonIds[index === 2 ? 1 : 0], date: `2026-06-${10 + index}`, time: "18:00", opponent: `Workspace Opponent ${index}`, home: true }))));
     await checked(await client.from("player_match_stats").insert(matchIds.map((id, index) => ({ club_id: clubId, player_id: playerIds[0], match_id: id, starts: true, mins: 75, goals: index + 3 }))));
     await checked(await client.from("goalkeeper_match_stats").insert(matchIds.map((id, index) => ({ club_id: clubId, player_id: playerIds[1], match_id: id, starts: false, mins: 0, saves: index + 5 }))));
+    // ADMIN-RE-11c: season totals are the season's match stats plus an adjustment. These
+    // adjustments make the totals goals 1 / 2, saves 4 / 5, starts 2, minutes 180, as
+    // before: season 1 has matches 0 and 1 (goals 3 + 4, saves 5 + 6), season 2 match 2.
+    for (const [index, seasonId] of seasonIds.entries()) {
+      const games = index === 0 ? { goals: 7, starts: 2, mins: 150, saves: 11 } : { goals: 5, starts: 1, mins: 75, saves: 7 };
+      await checked(await client.from("player_season_adjustments").insert({ club_id: clubId, player_id: playerIds[0], season_id: seasonId, goals: index + 1 - games.goals, starts: 2 - games.starts, mins: 180 - games.mins }));
+      await checked(await client.from("goalkeeper_season_adjustments").insert({ club_id: clubId, player_id: playerIds[1], season_id: seasonId, saves: index + 4 - games.saves, starts: 2, mins: 180 }));
+    }
   } catch (error) { await restore(); throw error; }
   return { seasonIds, playerIds, matchIds, names, suffix, restore };
 }
@@ -169,8 +177,8 @@ for (const width of [320, 390, 1440]) {
         await saved(page, saveLabel);
         const contextKey = match ? "match_id" : "season_id";
         const contextId = match ? fixture.matchIds[0] : fixture.seasonIds[0];
-        await checkRow(match ? "player_match_stats" : "player_season_stats", fixture.playerIds[0], contextKey, contextId, fieldValues);
-        await checkRow(match ? "goalkeeper_match_stats" : "goalkeeper_season_stats", fixture.playerIds[1], contextKey, contextId, keeperValues);
+        await checkRow(match ? "player_match_stats" : "player_season_totals", fixture.playerIds[0], contextKey, contextId, fieldValues);
+        await checkRow(match ? "goalkeeper_match_stats" : "goalkeeper_season_totals", fixture.playerIds[1], contextKey, contextId, keeperValues);
         await page.reload();
         await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonIds[0]);
         if (match) {
@@ -239,12 +247,14 @@ test("phone scope changes: cancel/discard/save, failed save retains context and 
       if (!await page.getByRole("dialog").isVisible()) await scope.selectOption(original);
       await page.getByRole("button", { name: "Save & switch", exact: true }).click();
       await expect(scope).toHaveValue(original);
-      await checkRow(match ? "player_match_stats" : "player_season_stats", fixture.playerIds[0], match ? "match_id" : "season_id", target, { goals: 74 });
+      await checkRow(match ? "player_match_stats" : "player_season_totals", fixture.playerIds[0], match ? "match_id" : "season_id", target, { goals: 74 });
       await selectPlayer(page, fixture.names[0]);
       await expect(goals).toHaveValue(match ? "3" : "1");
       if (match) {
-        // A match write does not silently recompute manual Season totals.
-        await checkRow("player_season_stats", fixture.playerIds[0], "season_id", fixture.seasonIds[1], { goals: 74 });
+        // ADMIN-RE-11c: a match write adds up into its own season's totals (match 1 went
+        // from 4 to 74 goals: 1 + 70) and leaves other seasons alone.
+        await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 71 });
+        await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[1], { goals: 74 });
         await goals.fill("81");
         await seasons.selectOption(fixture.seasonIds[1]);
         await expect(page.getByRole("dialog")).toBeVisible();
@@ -298,7 +308,7 @@ for (const width of [320, 1440]) {
       // The selected player and phone detail view survive a tab switch.
       await expect(goals).toHaveValue("3");
       await expect(page.getByRole("checkbox", { name: `${fixture.names[0]}: started the match`, exact: true })).toBeVisible();
-      await checkRow("player_season_stats", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 17 });
+      await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 17 });
       await goals.fill("9");
       await seasonTab.click();
       await page.getByRole("button", { name: "Discard changes", exact: true }).click();
@@ -310,9 +320,10 @@ for (const width of [320, 1440]) {
       await goals.fill("23");
       await seasonTab.click();
       await page.getByRole("button", { name: "Save & switch", exact: true }).click();
-      await expect(goals).toHaveValue("17");
+      // ADMIN-RE-11c: the season total adds the match's change (3 to 23 goals): 17 + 20.
+      await expect(goals).toHaveValue("37");
       await checkRow("player_match_stats", fixture.playerIds[0], "match_id", fixture.matchIds[0], { goals: 23 });
-      await checkRow("player_season_stats", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 17 });
+      await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 37 });
       await seasonTab.press("ArrowLeft");
       await expect(matchTab).toHaveAttribute("aria-selected", "true");
       await expect(matchTab).toBeFocused();
@@ -358,7 +369,7 @@ test("Season Save & switch keeps newly saved values clean and blocks edits while
     await expect(goals).toBeDisabled();
     await expect(page.getByRole("button", { name: "Save season totals", exact: true })).toBeDisabled();
     await expect(page.getByRole("tab", { name: "Match stats", exact: true })).toBeDisabled();
-    await checkRow("player_season_stats", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 33 });
+    await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 33 });
     release();
     await expect(page.getByRole("tab", { name: "Match stats", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: "Season stats", exact: true })).toBeEnabled();

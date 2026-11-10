@@ -239,12 +239,13 @@ export function SeasonsHub({
         filters: [{ kind: "eq", column: "season_id", value: season.id }],
       }),
       adminData({
-        table: "player_season_stats", operation: "select",
+        // ADMIN-RE-11c: the totals as visitors see them (games added up plus adjustments).
+        table: "player_season_totals", operation: "select",
         columns: "player_id,season_id,goals,assists,tackles,offsides,fouls,fouls_suffered,starts,yellow,red,mins",
         filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: STAT_READ_LIMIT,
       }),
       adminData({
-        table: "goalkeeper_season_stats", operation: "select",
+        table: "goalkeeper_season_totals", operation: "select",
         columns: "player_id,season_id,goals_against,saves,clean_sheets,starts,yellow,red,mins",
         filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: STAT_READ_LIMIT,
       }),

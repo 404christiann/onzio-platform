@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { Client } from "pg";
 import { CLUB_IDS } from "../fixtures/entities";
 import { clubToday } from "../../lib/club-time";
+import { KEEP_TYPED_TOTALS_SQL } from "../helpers/season-adjustments";
 
 // ADMIN-RE-24d: players in the Games tab on local Alpha (design:
 // admin-plain-search-two-clubs.html). A fixture season is shown for the run,
@@ -107,6 +108,8 @@ async function seed(): Promise<Record<string, string>> {
       ]);
     }
   }
+  // ADMIN-RE-11c: keep the typed totals as the totals (adjustment = typed - games).
+  for (const statement of KEEP_TYPED_TOTALS_SQL) await sql(statement, [ALPHA, Object.values(ids)]);
   return ids;
 }
 

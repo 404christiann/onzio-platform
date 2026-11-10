@@ -23,8 +23,8 @@ for (const width of [390, 1440]) for (const initialView of ["match", "season"] a
     const reads: Record<string, unknown[]> = {
       matches: [{ id: matchId, season_id: seasonId, opponent: "Discard regression match", date: "2026-06-10", time: "18:00", home: true }],
       players: [{ id: playerId, name, number: 9, position: "Forward", active: true }],
-      player_season_stats: [{ ...fields, goals: 17, player_id: playerId, season_id: seasonId }],
-      goalkeeper_season_stats: [],
+      player_season_totals: [{ ...fields, goals: 17, player_id: playerId, season_id: seasonId }],
+      goalkeeper_season_totals: [],
       player_match_stats: [{ ...fields, starts: true, player_id: playerId, match_id: matchId }],
       goalkeeper_match_stats: [],
     };

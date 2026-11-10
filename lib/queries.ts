@@ -1307,8 +1307,9 @@ export async function fetchRoster(seasonId?: string, clubId?: string): Promise<{
 
   if (resolvedSeasonId) {
     const [fieldResult, goalkeeperResult] = await Promise.all([
-      supabase.from("player_season_stats").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
-      supabase.from("goalkeeper_season_stats").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
+      // ADMIN-RE-11c: totals are the season's player numbers added up, plus the hand-entered adjustment.
+      supabase.from("player_season_totals").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
+      supabase.from("goalkeeper_season_totals").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
     ]);
     const seasonStatsError = fieldResult.error ?? goalkeeperResult.error;
     if (seasonStatsError) throw new Error(`fetchRoster season stats: ${seasonStatsError.message}`);
@@ -1454,7 +1455,7 @@ export async function fetchPlayerMatchLog(
     : "match_id, goals, assists, mins, rating";
 
   const { data: statsData, error: statsError } = await supabase
-    .from(table).select(fields).eq("club_id", tenantId).eq("player_id", playerId).gt("mins", 0);
+    .from(table).select(fields).eq("club_id", tenantId).eq("player_id", playerId).eq("played", true);
   if (statsError) throw new Error(statsError.message);
 
   const { data: matchData, error: matchError } = await supabase
@@ -1484,7 +1485,7 @@ export async function fetchPlayerMatchLog(
 
 /**
  * Fetches per-match stats for a single player sorted chronologically.
- * Only matches where the player played (mins > 0) are included.
+ * Only games the player played in (`played`) are included.
  * When `seasonId` is provided, results are scoped to that season.
  */
 export async function fetchPlayerMatchTrend(
@@ -1500,7 +1501,7 @@ export async function fetchPlayerMatchTrend(
     : "match_id, goals, assists, mins, rating";
 
   const [{ data: statsData }, { data: matchData }] = await Promise.all([
-    supabase.from(table).select(fields).eq("club_id", tenantId).eq("player_id", playerId).gt("mins", 0),
+    supabase.from(table).select(fields).eq("club_id", tenantId).eq("player_id", playerId).eq("played", true),
     supabase.from("matches").select("id, date, opponent, season_id").eq("club_id", tenantId),
   ]);
 

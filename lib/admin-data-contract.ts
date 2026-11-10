@@ -7,6 +7,7 @@ import {
 } from "@/lib/contact-admin";
 import { FOOTER_TAGLINE_LIMIT } from "@/lib/club-branding";
 import { YOUR_CLUB_LIMITS } from "@/lib/your-club";
+import { SEASON_ADJUSTMENT_LIMITS } from "@/lib/season-totals";
 import { SPONSOR_NAME_LIMIT, SPONSOR_WEBSITE_LIMIT } from "@/lib/sponsor-content";
 
 export const ADMIN_TABLE_FEATURES = {
@@ -16,7 +17,9 @@ export const ADMIN_TABLE_FEATURES = {
   contact_page_content: "contact",
   contact_profile: "contact",
   goalkeeper_match_stats: "roster",
+  goalkeeper_season_adjustments: "roster",
   goalkeeper_season_stats: "roster",
+  goalkeeper_season_totals: "roster",
   homepage_hero_content: "homepage",
   homepage_slideshow_photos: "homepage",
   homepage_slideshow_settings: "homepage",
@@ -26,7 +29,9 @@ export const ADMIN_TABLE_FEATURES = {
   matches: "schedule",
   player_match_stats: "roster",
   player_photos: "roster",
+  player_season_adjustments: "roster",
   player_season_stats: "roster",
+  player_season_totals: "roster",
   players: "roster",
   program_media: "programs",
   programs: "programs",
@@ -49,6 +54,13 @@ export const ADMIN_TABLE_FEATURES = {
 } as const;
 
 export type AdminTable = keyof typeof ADMIN_TABLE_FEATURES;
+
+// ADMIN-RE-11c: views the admin reads but never writes. Season totals are worked
+// out by the database (games added up plus adjustments).
+export const ADMIN_READ_ONLY_TABLES: ReadonlySet<AdminTable> = new Set([
+  "player_season_totals",
+  "goalkeeper_season_totals",
+]);
 
 const identifier = z.string().regex(/^[a-z][a-z0-9_]*$/).max(80);
 const scalar = z.union([
@@ -416,11 +428,57 @@ const siteSponsorLogoMutation = z
   })
   .strict();
 
+// ADMIN-RE-11c (decision 0001): a player's adjustment, the part of their season
+// totals added by hand. It may be negative (2026-11-10, "Keep today's numbers").
+// The ceilings mirror the database CHECKs (20261110160000_season_totals_add_up.sql);
+// the database also refuses an adjustment that takes a total below 0.
+const adjustmentNumber = z
+  .number()
+  .int()
+  .min(-SEASON_ADJUSTMENT_LIMITS.number)
+  .max(SEASON_ADJUSTMENT_LIMITS.number);
+const adjustmentMinutes = z
+  .number()
+  .int()
+  .min(-SEASON_ADJUSTMENT_LIMITS.mins)
+  .max(SEASON_ADJUSTMENT_LIMITS.mins);
+const playerSeasonAdjustmentMutation = z
+  .object({
+    player_id: uuid.optional(),
+    season_id: uuid.optional(),
+    goals: adjustmentNumber.optional(),
+    assists: adjustmentNumber.optional(),
+    tackles: adjustmentNumber.optional(),
+    starts: adjustmentNumber.optional(),
+    yellow: adjustmentNumber.optional(),
+    red: adjustmentNumber.optional(),
+    mins: adjustmentMinutes.optional(),
+    offsides: adjustmentNumber.optional(),
+    fouls: adjustmentNumber.optional(),
+    fouls_suffered: adjustmentNumber.optional(),
+  })
+  .strict();
+const goalkeeperSeasonAdjustmentMutation = z
+  .object({
+    player_id: uuid.optional(),
+    season_id: uuid.optional(),
+    goals_against: adjustmentNumber.optional(),
+    saves: adjustmentNumber.optional(),
+    clean_sheets: adjustmentNumber.optional(),
+    starts: adjustmentNumber.optional(),
+    yellow: adjustmentNumber.optional(),
+    red: adjustmentNumber.optional(),
+    mins: adjustmentMinutes.optional(),
+  })
+  .strict();
+
 const MATCH_INSERT_REQUIRED = ["season_id", "date", "time", "opponent", "venue"] as const;
 
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
   matches: matchesMutation,
   league_standings: leagueStandingsMutation,
+  player_season_adjustments: playerSeasonAdjustmentMutation,
+  goalkeeper_season_adjustments: goalkeeperSeasonAdjustmentMutation,
   programs: programMutation,
   program_media: programMediaMutation,
   programs_page_content: programsPageMutation,
@@ -475,6 +533,14 @@ export const adminDataRequestSchema = z
       .optional(),
   })
   .superRefine((request, context) => {
+    if (request.operation !== "select" && ADMIN_READ_ONLY_TABLES.has(request.table)) {
+      context.addIssue({
+        code: "custom",
+        path: ["operation"],
+        message: `${request.table} is read-only`,
+      });
+      return;
+    }
     const schema = NEW_DOMAIN_MUTATION_SCHEMAS[
       request.table as keyof typeof NEW_DOMAIN_MUTATION_SCHEMAS
     ];

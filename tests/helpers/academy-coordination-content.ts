@@ -101,6 +101,9 @@ export async function populateAcademyContent(db: Client, clubId: string): Promis
     }
     await insert("player_season_stats", { club_id: clubId, player_id: playerId, season_id: seasonId, goals: 3, assists: 2, mins: 180 });
     await insert("goalkeeper_season_stats", { club_id: clubId, player_id: keeperId, season_id: seasonId, saves: 5, clean_sheets: 1, mins: 180 });
+    // ADMIN-RE-11c: totals are games + adjustment; this fixture has no player numbers, so the totals are the adjustments.
+    await insert("player_season_adjustments", { club_id: clubId, player_id: playerId, season_id: seasonId, goals: 3, assists: 2, mins: 180 });
+    await insert("goalkeeper_season_adjustments", { club_id: clubId, player_id: keeperId, season_id: seasonId, saves: 5, clean_sheets: 1, mins: 180 });
     await insert("staff", { club_id: clubId, name: "Proof Coach", role: "Head coach", initials: "PC", photo_url: image, active: true });
     const now = Date.now();
     for (const [id, days, score] of [[fixtureId, -3, 2], [randomUUID(), 7, null]] as const) await insert("matches", { id, club_id: clubId, season_id: seasonId, date: new Date(now + days * 86400000).toISOString().slice(0, 10), time: "15:00", opponent: "Proof Opponent", home: true, venue: "Proof ground", rose_city_score: score, opponent_score: score === null ? null : 1 });
@@ -130,7 +133,7 @@ export async function populateAcademyContent(db: Client, clubId: string): Promis
 export async function removeAcademyContent(db: Client, clubId: string) {
   if (!await ownedClub(db, clubId)) return;
   await db.query("update onzio.registration_forms set status='closed' where club_id=$1 and status<>'closed'", [clubId]);
-  const order: readonly Table[] = ["tryouts", "program_media", "programs", "registrations", "registration_form_fields", "registration_price_options", "registration_forms", "club_stripe_connect", "stripe_events", "club_subscriptions", "player_match_stats", "goalkeeper_match_stats", "player_season_stats", "goalkeeper_season_stats", "player_photos", "matches", "players", "staff", "seasons", "shop_kit_photos", "shop_kit_section", "league_standings", "league_standings_settings", "site_sponsor_logos", "site_social_links", "site_branding", "about_page_content", "club_logo_page_content", "contact_profile", "contact_page_content", "programs_page_content", "tryouts_page_content"];
+  const order: readonly Table[] = ["tryouts", "program_media", "programs", "registrations", "registration_form_fields", "registration_price_options", "registration_forms", "club_stripe_connect", "stripe_events", "club_subscriptions", "player_match_stats", "goalkeeper_match_stats", "player_season_adjustments", "goalkeeper_season_adjustments", "player_season_stats", "goalkeeper_season_stats", "player_photos", "matches", "players", "staff", "seasons", "shop_kit_photos", "shop_kit_section", "league_standings", "league_standings_settings", "site_sponsor_logos", "site_social_links", "site_branding", "about_page_content", "club_logo_page_content", "contact_profile", "contact_page_content", "programs_page_content", "tryouts_page_content"];
   for (const table of order) await db.query(`delete from onzio."${table}" where club_id=$1`, [clubId]);
   for (const relation of await tenantRelations(db)) if (relation.schema === "onzio_private" && !authority.has(`${relation.schema}.${relation.name}`)) {
     await db.query(`delete from "${relation.schema}"."${relation.name}" where club_id=$1`, [clubId]);

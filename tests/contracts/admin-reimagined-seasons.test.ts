@@ -72,7 +72,7 @@ describe("where the hub runs", () => {
 describe("what the hub reads", () => {
   it("reads through the signed-in person's client, scoped to the club", () => {
     expect(loader).toContain('supabase.schema("onzio")');
-    for (const table of ["seasons", "league_standings", "matches", "player_season_stats", "goalkeeper_season_stats"]) {
+    for (const table of ["seasons", "league_standings", "matches", "player_season_totals", "goalkeeper_season_totals"]) {
       expect(loader).toContain(`.from("${table}")`);
     }
     expect(loader.match(/\.eq\("club_id", clubId\)/g)?.length).toBeGreaterThanOrEqual(6);

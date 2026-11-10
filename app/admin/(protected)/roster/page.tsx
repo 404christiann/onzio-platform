@@ -43,6 +43,7 @@ import { getRosterImageSrc, isRosterPlaceholderLogo, rosterImageForStorage } fro
 import { cn } from "@/lib/utils";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { NATIONALITIES } from "@/lib/nationalities";
+import { saveSeasonTotals } from "@/lib/season-totals-save";
 import { PLAYER_MAX_AGE, PLAYER_MIN_AGE, playerAgeError } from "@/lib/roster-player-age";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import {
@@ -1267,6 +1268,7 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
   const [error, setError]             = useState<string | null>(null);
+  const [inSeason, setInSeason]       = useState(false);
 
   const defaultStats: Record<string, number> = isGK
     ? { goals_against: 0, saves: 0, clean_sheets: 0, starts: 0, yellow: 0, red: 0, mins: 0 }
@@ -1287,21 +1289,25 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
     setLoading(false);
   }
 
+  // ADMIN-RE-11c: the totals as visitors see them (match stats added up plus what
+  // was added by hand). Saving keeps what is typed as the part added by hand.
   async function loadStats(seasonId: string) {
     const supabase = createClient();
-    const table = isGK ? "goalkeeper_season_stats" : "player_season_stats";
+    const table = isGK ? "goalkeeper_season_totals" : "player_season_totals";
     const { data, error: statsError } = await supabase
       .from(table)
-      .select("*")
+      .select(Object.keys(defaultStats).join(","))
       .eq("player_id", playerId)
       .eq("season_id", seasonId)
       .maybeSingle();
     if (statsError) {
       setError(statsError.message);
       setStats({ ...defaultStats });
+      setInSeason(false);
       return;
     }
-    setStats(data ? { ...data } : { ...defaultStats });
+    setStats(data ? { ...defaultStats, ...(data as Record<string, number>) } : { ...defaultStats });
+    setInSeason(Boolean(data));
   }
 
   useEffect(() => { loadSeasons(); }, [playerId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1319,11 +1325,14 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
 
   async function handleSave() {
     setSaving(true); setError(null);
-    const supabase = createClient();
-    const table = isGK ? "goalkeeper_season_stats" : "player_season_stats";
-    const payload = { ...stats, player_id: playerId, season_id: selectedId };
-    const { error: e } = await supabase.from(table).upsert([payload], { onConflict: "player_id,season_id" });
-    if (e) { setError(e.message); } else { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    try {
+      const problem = await saveSeasonTotals(createClient(), selectedId, [
+        { playerId, name: "This player", keeper: isGK, typed: stats, inSeason },
+      ]);
+      if (problem) { setError(problem); } else { setInSeason(true); setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Season stats were not saved.");
+    }
     setSaving(false);
   }
 
