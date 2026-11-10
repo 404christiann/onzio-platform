@@ -5,6 +5,8 @@ import {
   isValidPublicEmail,
   isValidPublicPhone,
 } from "@/lib/contact-admin";
+import { FOOTER_TAGLINE_LIMIT } from "@/lib/club-branding";
+import { YOUR_CLUB_LIMITS } from "@/lib/your-club";
 
 export const ADMIN_TABLE_FEATURES = {
   about_page_content: "about",
@@ -207,6 +209,46 @@ const contactProfileMutation = z
   })
   .strict();
 
+// ADMIN-RE-14. `href` had no limit in Zod or the database (the break-ui gap):
+// 2,048 now, on every write, Branding's included. The URL rule still comes from
+// the generic row check above. The id is the platform ("instagram"), kept as
+// text because the table's key is (club_id, id).
+const siteSocialLinkMutation = z
+  .object({
+    id: z
+      .string()
+      .min(1)
+      .max(40)
+      .regex(/^[a-z][a-z0-9_-]*$/)
+      .optional(),
+    label: optionalText(40),
+    href: z
+      .string()
+      .max(YOUR_CLUB_LIMITS.socialHref)
+      .refine(isAllowedPublicHref, {
+        message: "URL fields require http, https, mailto, or a local path",
+      })
+      .optional(),
+    icon: optionalText(200),
+    sort_order: z.number().int().min(0).max(100).optional(),
+    updated_at: z.string().max(40).optional(),
+  })
+  .strict();
+
+// ADMIN-RE-14. The footer line ceiling mirrors the CHECK on
+// onzio.site_branding.footer_tagline (160), so a rejection is a field message,
+// not a database error.
+const siteBrandingMutation = z
+  .object({
+    club_logo_path: z.string().max(2_048).optional(),
+    club_logo_asset_id: nullableUuid.optional(),
+    inverse_logo_path: z.string().max(2_048).optional(),
+    inverse_logo_asset_id: nullableUuid.optional(),
+    footer_tagline: optionalText(FOOTER_TAGLINE_LIMIT),
+    updated_at: z.string().max(40).optional(),
+  })
+  .strict();
+
 const contactPageMutation = z
   .object({
     eyebrow: optionalText(80),
@@ -336,6 +378,8 @@ const NEW_DOMAIN_MUTATION_SCHEMAS = {
   homepage_story_section: homepageStoryMutation,
   contact_profile: contactProfileMutation,
   contact_page_content: contactPageMutation,
+  site_branding: siteBrandingMutation,
+  site_social_links: siteSocialLinkMutation,
   tryouts: tryoutMutation,
   tryouts_page_content: tryoutsPageMutation,
 } as const;
