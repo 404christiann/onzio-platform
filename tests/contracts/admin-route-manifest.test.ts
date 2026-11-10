@@ -43,12 +43,12 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(21);
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(22);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      21,
+      22,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      21,
+      22,
     );
   });
 
@@ -297,7 +297,7 @@ describe("reimagined home jobs and More rows", () => {
       ["Contact page", "contact"],
       ["Sponsors", "sponsors"],
       ["Shop", "shop"],
-      ["Your club", "branding"],
+      ["Your club", "your-club"],
       ["How the team is doing", "analytics"],
       ["Payments and plan", "payments"],
       ["Who can sign in", "team-access"],
@@ -315,7 +315,7 @@ describe("reimagined home jobs and More rows", () => {
       "/admin/contact",
       "/admin/sponsors",
       "/admin/shop",
-      "/admin/branding",
+      "/admin/your-club",
       "/admin/analytics",
       "/admin/payments",
       "/admin/members",
@@ -394,10 +394,13 @@ describe("reimagined home jobs and More rows", () => {
       ]);
       // The classic sidebar's pages; the reimagined-only job pages (ADMIN-RE-06
       // onward) are reached through their own tiles when those apply.
+      // ADMIN-RE-14 (deliberate): Your club replaces the classic Branding page
+      // for the same data (decision 0006), so Branding is no longer a row.
       const missing = getVisibleAdminRoutes({ ...context, adminPortal: "classic" })
         .map((route) => route.href)
-        .filter((href) => !fromHome.has(href));
+        .filter((href) => !fromHome.has(href) && href !== "/admin/branding");
       expect(missing).toEqual([]);
+      expect(fromHome.has("/admin/your-club")).toBe(true);
     }
   });
 
@@ -428,7 +431,9 @@ describe("reimagined home jobs and More rows", () => {
   it("titles each page in the top bar with its More name, otherwise its own name", () => {
     expect(getReimaginedPageTitle("/admin/roster")).toBe("Team roster");
     expect(getReimaginedPageTitle("/admin/roster/player-1")).toBe("Team roster");
-    expect(getReimaginedPageTitle("/admin/branding")).toBe("Your club");
+    expect(getReimaginedPageTitle("/admin/your-club")).toBe("Your club");
+    // ADMIN-RE-14: Branding is the classic page again; its row moved to /admin/your-club.
+    expect(getReimaginedPageTitle("/admin/branding")).toBe("Branding");
     expect(getReimaginedPageTitle("/admin/members")).toBe("Who can sign in");
     expect(getReimaginedPageTitle("/admin/registrations")).toBe("Sign-up forms");
     expect(getReimaginedPageTitle("/admin/sign-ups")).toBe("Registrations");

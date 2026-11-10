@@ -1,5 +1,96 @@
 # Diverse City FC Status
 
+## 2026-11-09 - ADMIN-RE-14: Your club
+
+**Agent/package:** Claude Code, `ADMIN-RE-14`. Branch
+`claude/admin-re-14-your-club-7788b6` from `main` `600f5e7`. **Status:**
+`in_progress`, PR open for the review bot. No migration, no schema change.
+Nobody sees it on Rose City until the Your club row opens it, which it does
+as soon as this merges (Rose City is already on the new admin); Diverse City
+stays on the old Branding page until its own switch.
+
+**Completed work:**
+
+- New page `/admin/your-club` (design `cd-your-club`; decision 0006; group 3
+  decisions 10 and 11): logo with "Fit your logo", how people reach the club
+  (email, phone, hours with a 200 counter, area), the five social pages
+  (blank hides one), a footer line (160 counter), the website's footer and
+  Contact page following what is typed, and one Save in the page's own top
+  bar ("N changes not saved yet" then the hold-aware "Saved · on your
+  website" / "Saved · your website is paused"). "Home" asks "Save your
+  changes first?" when something is not saved; a browser reload or tab close
+  warns too. A club still on the old admin is sent to `/admin/branding`.
+- Only what the club's website has is asked (decision 0005), through
+  `codeSiteAdminFor`, the same rule the old Branding and Contact pages use:
+  the contact details need a Contact page, the footer line needs a footer
+  that prints one. So Diverse City (and Alpha) see four cards; a generic or
+  Rose City-style site sees the logo and social pages only.
+- Only what changed is written, in order: logo + footer line (one
+  `site_branding` row), social pages, contact details. If a later part
+  fails, the message says what was already saved and a retry redoes the
+  rest (a logo already uploaded is reused). Existing values that are over a
+  new limit never block an unrelated edit.
+- "Fit your logo": a square frame with zoom (1 to 4), drag and arrow keys,
+  and small previews for menu, footer and browser tab; "Use this fit" makes a
+  square PNG, "Use it as it is" keeps the chosen file. JPEG is refused up
+  front ("Choose a PNG or WebP picture.").
+- Zod on `/api/admin/data` for the two tables that had none:
+  `site_social_links` (href at most 2,048, the break-ui gap, label 40, id a
+  platform name) and `site_branding` (footer line at most 160, as the
+  database does). The old Branding page's writes still validate.
+- Manifest: new reimagined-only route `your-club`; the Your club More row
+  opens it (it opened `/admin/branding`). Branding is therefore no longer a
+  More row; the manifest test says so on purpose.
+- JPG copy gap (PR #88): verified, not redone. `tests/contracts/admin-platform-fixes-02.test.ts`
+  section 3 passes and the old Branding page has no JPG/JPEG wording.
+
+- Review bot Medium on #117, fixed: a saved `http://`, upper-case-scheme or
+  port social address no longer loads as an unsaved change or gets rewritten
+  to `https://` on an unrelated Save (`effectiveSocialHref`,
+  `draftFromSaved` in `lib/your-club.ts`; unit and browser round-trip tests).
+  Two Lows too: a cleared footer line previews the standard wording the
+  website prints, and the Fit your logo preview address is made and revoked
+  in one effect. Left as a follow-up: tie `club_logo_path` to the finalized
+  asset in the strict `site_branding` schema (the old Branding page also
+  trusts the string).
+
+**Differences from the design, on purpose:** the footer preview card sits
+above the questions on a phone but is not pinned there; "Live" shows the
+website's state (Live or Paused) rather than lighting up only after Save; the
+footer card is a simple stand-in, not the website's real footer component.
+The Contact page still edits email, phone, hours and area itself until
+ADMIN-RE-13 (the "These come from Your club" notice is that package).
+
+**Files changed:** new `app/admin/(protected)/your-club/page.tsx`,
+`components/admin/reimagined/{YourClub,FitLogo}.tsx`,
+`components/admin/reimagined/your-club.module.css`, `lib/your-club.ts`,
+`lib/admin-your-club-data.ts`, `lib/__tests__/your-club.test.ts`,
+`tests/contracts/admin-your-club.test.ts`,
+`tests/browser/admin-reimagined-your-club.spec.ts`; edited
+`lib/admin-data-contract.ts`, `lib/admin-route-manifest.ts`,
+`tests/contracts/admin-route-manifest.test.ts`; this file, `HANDOFF.md`,
+`docs/admin-portal-redesign-plan.md` (as-built note). `lib/club-context.ts`
+untouched (the contract test pins it).
+
+**Verification:** by hand under `scripts/with-local-db-lock.sh` in this
+worktree, on the PR head. The results table with the tested SHA is in the PR
+body. Browser checks (14: 7 at 390 and 7 at 1440, serial, Alpha) cover
+open-from-More, every card, edit then one Save then reload, Home prompt (keep,
+leave, save and continue), refused answers, the worst case (2,048-character
+address, 200-character hours, 160-character line, a 250-character email) with
+no sideways scroll, the logo flow through the real media chain, a site
+without Contact or footer line, and the classic redirect. Three tables are
+restored from a snapshot after each test.
+
+**Not verified:** a real phone's keyboard and touch (Chromium at 390 wide
+only); dark theme; the logo on Rose City's own legacy renderer (Alpha stands
+in); Safari. Nothing was run against production.
+
+**Exact next step:** the bot reviews and merges. Then Christian can try
+"Your club" on Rose City (logo and social pages) in his walk-through; every
+finding is an `ADMIN-RE-10x` or follow-up PR. RE-13 adds the "These come from
+Your club" shortcuts on the website pages.
+
 ## 2026-11-10 - ADMIN-RE-11a follow-up: the review bot's Low notes on #116
 
 **Agent/package:** Claude Code, `ADMIN-RE-11a` (follow-up). Branch
@@ -94,6 +185,7 @@ season row. Dark theme was not checked by eye.
 
 **Exact next step:** the bot reviews and merges. Christian opens "This season"
 on Rose City and tries Start next season with a name he likes.
+
 ## 2026-11-09 - ADMIN-RE-20: Payments and plan on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-20`. Branch

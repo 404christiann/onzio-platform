@@ -56,7 +56,8 @@ export type AdminRouteId =
   | "team-access"
   | "payments"
   | "sign-ups"
-  | "add-game";
+  | "add-game"
+  | "your-club";
 
 export type AdminRouteIconKey =
   | "dashboard"
@@ -310,6 +311,16 @@ export const ADMIN_ROUTE_MANIFEST = [
     groupId: null,
     reimaginedOnly: true,
   },
+  // ADMIN-RE-14: logo, how to reach the club, social pages and the footer line
+  // on one page. Branding stays the classic admin's page for the same data.
+  {
+    id: "your-club",
+    label: "Your club",
+    href: "/admin/your-club",
+    iconKey: "branding",
+    groupId: null,
+    reimaginedOnly: true,
+  },
 ] as const satisfies readonly AdminRouteDefinition[];
 
 export const ADMIN_NAVIGATION_MANIFEST = [
@@ -413,6 +424,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   payments: ["payments", "billing", "subscription", "invoices"],
   "sign-ups": ["registrations", "sign-ups", "registrants", "players", "guardians", "download list"],
   "add-game": ["schedule", "fixtures", "add a game", "new match"],
+  "your-club": ["club settings", "logo", "social pages", "footer", "email", "phone", "hours", "contact details"],
 } as const satisfies Record<AdminRouteId, readonly string[]>;
 
 const ROUTE_BY_ID = new Map<AdminRouteId, AdminRouteDefinition>(
@@ -675,7 +687,7 @@ export const ADMIN_MORE_ROWS = [
   { id: "contact-page", label: "Contact page", routeId: "contact" },
   { id: "sponsors", label: "Sponsors", routeId: "sponsors" },
   { id: "shop", label: "Shop", routeId: "shop" },
-  { id: "your-club", label: "Your club", routeId: "branding" },
+  { id: "your-club", label: "Your club", routeId: "your-club" },
   { id: "how-the-team-is-doing", label: "How the team is doing", routeId: "analytics" },
   { id: "payments-and-plan", label: "Payments and plan", routeId: "payments" },
   { id: "who-can-sign-in", label: "Who can sign in", routeId: "team-access" },
