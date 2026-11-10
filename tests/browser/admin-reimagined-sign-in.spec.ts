@@ -340,6 +340,8 @@ test.describe("remove and Undo, with the answers given by the test", () => {
     const people = [
       helper(1, { displayName: "Sam Okafor", email: "sam@alpha.example" }),
       helper(2, { displayName: "Dana Ruiz", email: "dana@alpha.example", lastSignInAt: null }),
+      helper(3, { displayName: "Pat Coach", email: "pat@alpha.example", lastSignInAt: null }),
+      helper(4, { displayName: "Lee Kim", email: "lee@alpha.example", lastSignInAt: null }),
     ];
     let admins = [...people];
     const posts: Array<Record<string, unknown>> = [];
@@ -375,11 +377,11 @@ test.describe("remove and Undo, with the answers given by the test", () => {
     await expect(undoToast).toBeVisible();
     expect(posts.filter((post) => post.action === "remove")).toHaveLength(1);
 
-    // Three more toasts later, Sam's Undo is still there.
-    for (let index = 0; index < 3; index += 1) {
-      const resend = rowFor(page, "Dana Ruiz").getByTestId("sign-in-resend");
-      if (await resend.count()) await resend.click();
-      else break;
+    // Three more toasts later (one code to each of three people), Sam's Undo is still there.
+    for (const name of ["Dana Ruiz", "Pat Coach", "Lee Kim"]) {
+      const row = rowFor(page, name);
+      await row.getByTestId("sign-in-resend").click();
+      await expect(row.getByTestId("sign-in-status")).toContainText("Code sent");
     }
     await expect(undoToast).toBeVisible();
 
