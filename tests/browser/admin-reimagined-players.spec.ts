@@ -154,7 +154,8 @@ for (const width of [390, 1440]) {
       await page.screenshot({ path: `${SHOTS}/players-games-${width}-${theme}.png`, fullPage: true });
 
       await players.getByRole("link", { name: /Maya Chen/ }).click();
-      await expect(page).toHaveURL(new RegExp(`/admin/games/players/${ids.maya}$`));
+      // The player page is a server render; give the navigation the same time as other specs.
+      await expect(page).toHaveURL(new RegExp(`/admin/games/players/${ids.maya}$`), { timeout: 15_000 });
       await expect(main(page).getByRole("heading", { level: 1, name: "Maya Chen" })).toBeVisible();
       await expect(page.getByTestId("admin-top-bar-title")).toHaveText("Maya Chen");
       await expect(page.getByRole("banner").getByRole("link", { name: "Games", exact: true })).toHaveAttribute("href", "/admin/games");
@@ -175,7 +176,7 @@ for (const width of [390, 1440]) {
       await page.screenshot({ path: `${SHOTS}/players-maya-${width}-${theme}.png`, fullPage: true });
 
       await chips.getByRole("link", { name: "Sam Okafor" }).click();
-      await expect(page).toHaveURL(new RegExp(`/admin/games/players/${ids.sam}$`));
+      await expect(page).toHaveURL(new RegExp(`/admin/games/players/${ids.sam}$`), { timeout: 15_000 });
       await expect(main(page).getByRole("heading", { level: 1, name: "Sam Okafor" })).toBeVisible();
       await expect(page.getByTestId("admin-top-bar-title")).toHaveText("Sam Okafor");
     });
