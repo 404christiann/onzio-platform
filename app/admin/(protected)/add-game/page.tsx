@@ -25,7 +25,10 @@ export default async function AddGamePage() {
   // Match sponsors only where the club's website shows them: the same rule as
   // the classic Games form (Diverse City's academy pages never do).
   const showSponsors = codeSiteAdminFor(club)?.schedule.showMatchSponsorFields !== false;
-  const data = await loadAddGameData(supabase, club.id, portal.timeZone, { showSponsors }).catch(() => null);
+  // The competition question only where the club's website shows a game's own
+  // competition (Diverse City's Next Match card); the classic Games form's rule.
+  const showCompetition = codeSiteAdminFor(club)?.schedule.competitionShowsOnNextMatch === true;
+  const data = await loadAddGameData(supabase, club.id, portal.timeZone, { showSponsors, showCompetition }).catch(() => null);
   if (!data) {
     return (
       <p role="alert" className="mx-auto max-w-[1120px] text-sm text-destructive">
@@ -39,6 +42,8 @@ export default async function AddGamePage() {
       seasons={data.seasons}
       upcoming={data.upcoming}
       recentVenues={data.recentVenues}
+      showCompetition={showCompetition}
+      recentCompetitions={data.recentCompetitions}
       showSponsors={showSponsors}
       sponsors={data.sponsors}
       opponents={data.opponents}
