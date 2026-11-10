@@ -16,6 +16,16 @@
 - **Exact next step:** Christian runs the read-only competition query, decides
   on the fallback, and approves the draft.
 
+## 2026-11-10 - ADMIN-RE-11a follow-up: the bot's Low notes on #116
+
+- **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.
+- **What it fixes:** a season's years now follow the name typed over the
+  suggestion ("Fall 2025" is 2025); the classic Seasons page orders Fall before
+  Spring of one year; the delete check keeps a season when a stat read hit its
+  row cap. Delete is still three requests (atomic needs a migration).
+- **Verification:** red first; full suites on the PR head are in the PR body.
+- **Exact next step:** the bot merges.
+
 ## 2026-11-09 - ADMIN-RE-11a This season hub and season names
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.
