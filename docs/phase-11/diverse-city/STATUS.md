@@ -96,8 +96,8 @@ the merged `main`.
 
 **Agent/package:** Claude Code, `ADMIN-RE-22`. Branch
 `claude/admin-re-22-diverse-city` from `main` `f44051e`. **Status:**
-`in_progress`, draft PR for Christian to approve the visitor-facing change before
-it goes to the review bot. No schema change, no migration, no change to
+approved by Christian (2026-11-10) to merge, PR #123; the visitor-facing change
+was read and approved first. No schema change, no migration, no change to
 `lib/club-context.ts`, no hosted action, no `admin_portal` change.
 
 **Completed work:**
@@ -171,9 +171,16 @@ Shop slice, RE-16.
 City acceptance browser configs (they need the local Diverse City import, not the
 seeded Alpha) were not run.
 
-**Exact next step:** Christian reads the visitor-change section, runs the
-competition query, and says whether to fall back to the Standings title for
-games with no competition; then the PR is marked ready for the review bot.
+**Production check (Christian, read-only, 2026-11-09):** Diverse City has 1 game
+in total, none from today onward, none with a competition; so no competition
+line is lost at merge and the card reads "No game coming up" until a game is
+added. No fallback to the Standings title was added.
+
+**Exact next step:** a follow-up PR adds an optional Competition box to the new
+admin's Add a game, for Diverse City only, before Diverse City is switched to
+the new admin. Left over from the bot's Low notes: a failed schedule load shows
+"No game coming up" as if it were true, and the focus after a click on the
+page's heading is not asserted in the browser spec.
 
 
 ## 2026-11-10 - ADMIN-RE-18 (screen): Who can sign in on the new admin

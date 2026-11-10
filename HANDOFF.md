@@ -23,8 +23,10 @@
 
 ## 2026-11-10 - ADMIN-RE-22 Diverse City screens (Programs words, Next match)
 
-- **Status:** `in_progress`, draft PR. No schema change, no hosted action.
-  Christian approves the visitor-facing change before it is marked ready.
+- **Status:** approved by Christian (2026-11-10) to merge, PR #123. No schema
+  change, no hosted action. Christian ran the read-only production check:
+  Diverse City has one past game and none coming up, so no competition line is
+  lost at merge.
 - **What it adds:** the Programs words editor (eleven stored words: homepage
   band, page header, closing band) is on for Diverse City in `/admin/programs`,
   in both admin portals. The homepage Next Match card takes its competition from
@@ -36,8 +38,9 @@
 - **Not built:** the words that have no stored home (needs a schema change),
   the click-to-change canvas (RE-13), a Competition question on the new Add a
   game.
-- **Exact next step:** Christian runs the read-only competition query, decides
-  on the fallback, and approves the draft.
+- **Exact next step:** the follow-up PR adds an optional Competition box to
+  the new admin's Add a game, for Diverse City only, before Diverse City is
+  switched to the new admin.
 
 
 ## 2026-11-10 - ADMIN-RE-18 Who can sign in (the screen)
