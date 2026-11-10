@@ -293,15 +293,20 @@ describe("saving a score updates our row", () => {
   it("never touches another team's row, another club's table or a past season", async () => {
     await db.query("update onzio.league_standings set played=7, points=11 where id=$1", [other]);
     const bravoSeason = (await db.query("select id from onzio.seasons where club_id=$1 and active", [BRAVO])).rows[0].id;
-    await addTeam(BRAVO, bravoSeason, "Bravo us", 0, true);
-    await db.query("update onzio.league_standings set played=4, points=9 where club_id=$1", [BRAVO]);
+    // Our rows are written with their numbers at insert: in a season that works them out, only the recompute may change them.
+    await db.query(
+      "insert into onzio.league_standings (club_id,season_id,team_name,is_club,sort_order,played,points) values ($1,$2,'Bravo us',true,0,4,9)",
+      [BRAVO, bravoSeason],
+    );
     const past = await addSeason(ALPHA, "RE-11b past", 2020);
-    await addTeam(ALPHA, past, "Past us", 0, true);
-    await db.query("update onzio.league_standings set played=3, points=5 where season_id=$1", [past]);
+    await db.query(
+      "insert into onzio.league_standings (club_id,season_id,team_name,is_club,sort_order,played,points) values ($1,$2,'Past us',true,0,3,5)",
+      [ALPHA, past],
+    );
     await addGame(ALPHA, season, 1, 0);
     expect((await db.query("select played,points from onzio.league_standings where id=$1", [other])).rows[0]).toEqual({ played: 7, points: 11 });
     expect((await db.query("select played,points from onzio.league_standings where club_id=$1", [BRAVO])).rows[0]).toEqual({ played: 4, points: 9 });
-    expect((await db.query("select played,points from onzio.league_standings where season_id=$1", [past])).rows[0]).toEqual({ played: 3, points: 5 });
+    expect((await db.query("select played,points from onzio.league_standings where season_id=$1 and team_name='Past us'", [past])).rows[0]).toEqual({ played: 3, points: 5 });
   });
 
   it("is a no-op for a season with no table, or with no team marked as ours", async () => {
