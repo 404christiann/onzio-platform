@@ -37,8 +37,10 @@ async function expectNoSideScroll(page: Page, width: number) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 }
 
+/** The seed runs after the migrations, so Alpha's season already works out our row; make sure, and put it back in cleanup. */
 async function seedTable(): Promise<string> {
   const [{ id: seasonId }] = await sql<{ id: string }>("select id from onzio.seasons where club_id=$1 and active", [ALPHA]);
+  await sql("update onzio.seasons set standings_from_scores=true where id=$1", [seasonId]);
   await sql(
     `insert into onzio.league_standings (club_id, season_id, team_name, team_abbreviation, is_club, sort_order, played, wins, draws, losses, goal_difference, points)
      values ($1,$2,'Alpha FC','ALP',true,0,0,0,0,0,0,0),
@@ -62,6 +64,7 @@ async function addPastGame(seasonId: string, leagueGame = true): Promise<string>
 }
 
 async function cleanup() {
+  await sql("update onzio.seasons set standings_from_scores=true where club_id=$1 and active", [ALPHA]);
   await sql("delete from onzio.matches where club_id=$1 and opponent=$2", [ALPHA, OPPONENT]);
   await sql("delete from onzio.seasons where club_id=$1 and label=$2", [ALPHA, OTHER_SEASON]);
   await sql(

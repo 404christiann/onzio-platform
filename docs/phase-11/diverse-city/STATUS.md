@@ -19,14 +19,22 @@ hosted project. No change to `lib/club-context.ts`.
   of 60 characters on `team_name`. A clashing `sort_order` is renumbered 0..n-1
   first. The migration stops, rolling back whole, if a club has table rows and
   no season, or a name is over 60 characters. It never touches the typed numbers.
+- `seasons.standings_from_scores` (decided by Christian 2026-11-09, "Keep typed,
+  new seasons auto"): false for every season that exists at the migration, true
+  for every season created after it (the Seasons hub, the classic page, a
+  club's first season: the column default). Only a season with it true works out
+  our row from its games; every existing season keeps its typed row, from the
+  new or the classic admin. **No live league table changes at merge**: Diverse
+  City, Lions and Rose City current seasons stay typed.
 - Four triggers, so every write path (Enter a score, `/admin/score`, the
   classic Games page, imports) is covered and atomic: a table row saved without
   a season goes to the shown season (admin code deployed before this change
   keeps saving); inserting a season copies the club's newest table into it at
   zero; saving, editing, clearing, moving or deleting a game recomputes the
   club's `is_club` row for that season from its saved league games (3 points a
-  win, 1 a draw, both scores in, `league_game` true), locking the row first so
-  two saves at once both count. Other teams' rows are never touched.
+  win, 1 a draw, both scores in, `league_game` true) when the season's
+  `standings_from_scores` is true, locking the row first so two saves at once
+  both count. Other teams' rows are never touched.
 - Reads: the public table and the Standings page filter by season (public: the
   shown season; the page opens on it and has a season picker); the Seasons hub's
   league summary reads the season on view and ranks by points, goal difference
@@ -36,11 +44,14 @@ hosted project. No change to `lib/club-context.ts`.
   "League game?" (Yes by default).
 
 **Decision made here, on purpose:** our row is recomputed from the games, never
-added to, so an edit or a cleared score cannot drift (tested). The cost: the
-first score saved in a season replaces numbers typed on our row with what the
-games add up to. Christian's read-only production check
-(`re-11b-production-check.md` in the shared notes folder) shows whether any club
-would see that.
+added to, so an edit or a cleared score cannot drift (tested). Christian's
+read-only production check (2026-11-09) showed Diverse City (typed 10 played, 13
+points, 0 scored games) and Lions (10 and 24, 0 scored) would shrink on the
+first save, and Rose City (typed 0, 5 scored games, possibly friendlies) would
+jump; his answer was to keep typed numbers in existing seasons and work out new
+seasons only. To turn an existing season on later: `update onzio.seasons set
+standings_from_scores = true where ...`; it takes effect at that season's next
+score save.
 
 **Files changed:** `supabase/migrations/20261110090000_league_table_per_season.sql`;
 `lib/database.generated.ts` (regenerated), `lib/db-types.ts`,
@@ -58,15 +69,15 @@ only pins `lib/club-context.ts`; the League card note changed),
 
 **Rollback (before any club starts a second season):** drop the four triggers
 and functions, then the unique, foreign key and `team_name` constraints and the
-`season_id` column on `league_standings`, then `matches.league_game`. Old code
-ignores both columns.
+`season_id` column on `league_standings`, then `matches.league_game` and `seasons.standings_from_scores`. Old code
+ignores them.
 
 **Verification:** red first, then green; the full suites on the PR head, with
 the tested commit, are in the PR body. Not verified: production data (see the
 check above), dark theme, the public site in a browser.
 
-**Exact next step:** Christian runs the production check and sends the output;
-then the bot runs `GATE-MIGRATE` and merges. RE-11c is the next migration.
+**Exact next step:** the bot runs `GATE-MIGRATE` and merges (the production check
+is back and safe: one shown season per club, no duplicate order, longest name 27). RE-11c is the next migration.
 ## 2026-11-10 - ADMIN-RE-18 (screen): Who can sign in on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-18` (the screen; the server half is

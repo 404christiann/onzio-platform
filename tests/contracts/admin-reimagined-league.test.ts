@@ -93,6 +93,9 @@ describe("the migration", () => {
     expect(sql).toContain("references onzio.seasons (club_id, id)");
     expect(sql).toContain("unique (club_id, season_id, sort_order) deferrable initially deferred");
     expect(sql).toContain("league_standings_team_name_length");
+    // "Keep typed, new seasons auto": existing seasons false, seasons created after true.
+    expect(sql).toMatch(/add column standings_from_scores boolean not null default false;\s+alter table onzio\.seasons\s+alter column standings_from_scores set default true;/);
+    expect(sql).toContain("s.standings_from_scores");
     expect(sql.match(/security definer\s+set search_path = ''/g)?.length).toBe(4);
     expect(sql.match(/revoke all on function onzio_private\./g)?.length).toBe(4);
     expect(sql).not.toMatch(/drop table|truncate|delete from/i);

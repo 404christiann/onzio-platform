@@ -2277,6 +2277,7 @@ export type Database = {
           end_year: number
           id: string
           label: string
+          standings_from_scores: boolean
           start_year: number
           updated_at: string
         }
@@ -2287,6 +2288,7 @@ export type Database = {
           end_year: number
           id?: string
           label: string
+          standings_from_scores?: boolean
           start_year: number
           updated_at?: string
         }
@@ -2297,6 +2299,7 @@ export type Database = {
           end_year?: number
           id?: string
           label?: string
+          standings_from_scores?: boolean
           start_year?: number
           updated_at?: string
         }

@@ -11,8 +11,12 @@
 --      season, so classic-admin code deployed before this change keeps saving.
 --   5. Inserting a season copies the club's newest table into it at zero
 --      ("Start next season").
---   6. Saving, editing, clearing or deleting a game recomputes the club's own
---      (is_club) row for that game's season from the club's saved games.
+--   6. onzio.seasons.standings_from_scores: false for every season that exists
+--      now, true for every season created after this migration.
+--   7. In a season with standings_from_scores = true, saving, editing, clearing
+--      or deleting a game recomputes the club's own (is_club) row for that
+--      game's season from the club's saved games. In any other season nothing
+--      is recomputed and the hand-typed row stays as it is.
 --
 -- Backfill: every row goes to its club's shown (active) season, else the club's
 -- newest season. A club with table rows and no season at all stops the
@@ -21,21 +25,36 @@
 -- in its current order before the unique rule is added. The backfill does not
 -- touch the numbers: our row keeps what was typed until the first score is saved.
 --
+-- Typed numbers stay (Christian, 2026-11-09, "Keep typed, new seasons auto"):
+-- no live league table changes when this migration applies or when the code
+-- deploys. Every existing season gets standings_from_scores = false, so a score
+-- saved in it, from the new or the classic admin, leaves its typed our row alone.
+-- A season created afterwards, from the Seasons hub or the classic page, or the
+-- club's first season, defaults to true and works out our row from its games.
+-- The flag is one column on seasons; refresh_club_league_row is the only reader.
+--
 -- Our row from games: played, won, drawn, lost, goal difference (our goals
 -- minus theirs) and points (3 per win, 1 per draw), counting only games with
 -- both scores in and league_game = true. It is recomputed from the games, never
--- added to, so an edit or a cleared score cannot drift. The first score saved in
--- a season replaces typed numbers in that season's our row with what the games
--- add up to. Other teams' rows are never touched.
+-- added to, so an edit or a cleared score cannot drift. Other teams' rows are
+-- never touched.
 --
 -- Rollback (before any club starts a second season; nothing else reads the new
 -- pieces): drop the triggers and functions below, then the unique and foreign
 -- key constraints, team_name check and season_id column on league_standings, then
--- matches.league_game. Old code ignores both columns.
+-- matches.league_game and seasons.standings_from_scores. Old code ignores them.
 
 -- 1. Games: league game or not (friendlies, cups).
 alter table onzio.matches
   add column league_game boolean not null default true;
+
+-- 6a. Which seasons work out our row from saved scores. Every season that
+-- exists now keeps its typed row (false); the default flips to true after, so
+-- seasons created from here on work it out. A constant default: no table rewrite.
+alter table onzio.seasons
+  add column standings_from_scores boolean not null default false;
+alter table onzio.seasons
+  alter column standings_from_scores set default true;
 
 -- 2. League table per season.
 alter table onzio.league_standings
@@ -177,6 +196,16 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Only seasons that work out our row from scores. A season whose row was
+  -- typed by hand (every season that existed before this migration) is left as it is.
+  if not exists (
+    select 1
+    from onzio.seasons s
+    where s.club_id = p_club_id and s.id = p_season_id and s.standings_from_scores
+  ) then
+    return;
+  end if;
+
   perform 1
   from onzio.league_standings l
   where l.club_id = p_club_id and l.season_id = p_season_id and l.is_club
@@ -248,6 +277,8 @@ revoke all on function onzio_private.copy_league_standings_into_new_season() fro
 revoke all on function onzio_private.refresh_club_league_row(uuid, uuid) from public;
 revoke all on function onzio_private.refresh_league_row_after_game() from public;
 
+comment on column onzio.seasons.standings_from_scores is
+  'True when the season''s league table works out the club''s own row from its saved league games. False (hand-typed) for seasons that existed before ADMIN-RE-11b; true for seasons created after.';
 comment on column onzio.matches.league_game is
   'False for friendlies and cups: the game never touches the league table. Defaults to true.';
 comment on column onzio.league_standings.season_id is

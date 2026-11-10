@@ -7,14 +7,14 @@
   row (played, won, drawn, lost, goal difference, points) on its own, for every
   write path; friendlies marked "League game? No" stay out. The Standings page
   has a season picker; the public site shows the shown season's table.
-- **One visible effect on live data:** our row is worked out from the saved
-  games, so the first score saved in a season replaces numbers typed on it.
-  Christian's read-only production check shows whether any club has typed
-  numbers ahead of its saved games.
+- **No live league table changes at merge.** Christian's decision (2026-11-09,
+  "Keep typed, new seasons auto"): existing seasons keep their hand-typed our row
+  (`seasons.standings_from_scores` false); seasons created after the migration
+  work it out from their saved league games (true). Diverse City, Lions and Rose
+  City current seasons stay typed.
 - **Verification:** database tests (25 new), contract and unit tests, a browser
   spec at 390 and 1440; full suites and the tested commit are in the PR body.
-- **Exact next step:** Christian sends the production check; the bot runs
-  `GATE-MIGRATE` and merges. RE-11c is next.
+- **Exact next step:** the bot runs `GATE-MIGRATE` and merges. RE-11c is next.
 ## 2026-11-10 - ADMIN-RE-18 Who can sign in (the screen)
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no change to the

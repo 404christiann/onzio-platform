@@ -8,6 +8,14 @@ import { assertSafeTestEnvironment } from "../helpers/environment";
 // ADMIN-RE-11b (decision 0002): one league table per season, and our row
 // (is_club) updates itself from the club's saved league games. Each test runs
 // in a transaction that is rolled back.
+//
+// Christian's decision (2026-11-09, "Keep typed, new seasons auto"): a season that
+// existed before the migration keeps its hand-typed our row
+// (seasons.standings_from_scores = false); a season created after works it out
+// from its saved league games (true). The seed runs after the migrations, so
+// Alpha's seeded season is true here; the tests that need a season that "was
+// there before" set it false, and the migration replay at the foot proves
+// every season that existed when it ran is false.
 
 const MIGRATION = resolve(__dirname, "../../supabase/migrations/20261110090000_league_table_per_season.sql");
 const ALPHA = CLUB_IDS.alpha;
@@ -305,6 +313,65 @@ describe("saving a score updates our row", () => {
   });
 });
 
+describe("seasons that keep their typed row, and seasons that work it out", () => {
+  it("is true for a season created after the migration, and never null", async () => {
+    const created = await addSeason(ALPHA, "RE-11b created after", 2050);
+    expect((await db.query("select standings_from_scores as f from onzio.seasons where id=$1", [created])).rows[0].f).toBe(true);
+    await db.query("update onzio.seasons set standings_from_scores=null where id=$1", [created]).then(
+      () => { throw new Error("expected a not-null failure"); },
+      (error: Error) => expect(error.message).toContain("standings_from_scores"),
+    );
+  });
+
+  it("leaves an existing season's typed row alone on a score save, an edit, a clear and a delete", async () => {
+    await db.query("update onzio.seasons set standings_from_scores=false where id=$1", [season]); // as a season that was there before
+    await db.query(
+      `insert into onzio.league_standings (club_id,season_id,team_name,is_club,sort_order,played,wins,draws,losses,goal_difference,points)
+       values ($1,$2,'Typed us',true,0,10,4,1,5,-3,13)`,
+      [ALPHA, season],
+    );
+    const typed = { played: 10, wins: 4, draws: 1, losses: 5, goal_difference: -3, points: 13 };
+    const game = await addGame(ALPHA, season, 3, 0);
+    expect(await ourRow(ALPHA, season)).toEqual(typed);
+    await db.query("update onzio.matches set rose_city_score=0, opponent_score=2 where id=$1", [game]);
+    expect(await ourRow(ALPHA, season)).toEqual(typed);
+    await db.query("update onzio.matches set rose_city_score=null, opponent_score=null where id=$1", [game]);
+    expect(await ourRow(ALPHA, season)).toEqual(typed);
+    await db.query("delete from onzio.matches where id=$1", [game]);
+    expect(await ourRow(ALPHA, season)).toEqual(typed);
+  });
+
+  it("works out a new season's row on save, edit and clear, and ignores non-league games", async () => {
+    await addTeam(ALPHA, season, "Our team", 0, true);
+    const created = await addSeason(ALPHA, "RE-11b new hub season", 2051);
+    expect(await ourRow(ALPHA, created)).toEqual(ZERO);
+    const game = await addGame(ALPHA, created, 2, 1);
+    expect(await ourRow(ALPHA, created)).toEqual({ played: 1, wins: 1, draws: 0, losses: 0, goal_difference: 1, points: 3 });
+    await db.query("update onzio.matches set rose_city_score=1, opponent_score=1 where id=$1", [game]);
+    expect(await ourRow(ALPHA, created)).toEqual({ played: 1, wins: 0, draws: 1, losses: 0, goal_difference: 0, points: 1 });
+    await addGame(ALPHA, created, 9, 0, { league: false });
+    expect(await ourRow(ALPHA, created)).toEqual({ played: 1, wins: 0, draws: 1, losses: 0, goal_difference: 0, points: 1 });
+    await db.query("update onzio.matches set rose_city_score=null, opponent_score=null where id=$1", [game]);
+    expect(await ourRow(ALPHA, created)).toEqual(ZERO);
+    // The season before it, still typed, was never touched.
+    expect(await ourRow(ALPHA, season)).toEqual(ZERO);
+  });
+
+  it("starts working a typed season out from its games once it is switched on", async () => {
+    await db.query("update onzio.seasons set standings_from_scores=false where id=$1", [season]);
+    await db.query(
+      "insert into onzio.league_standings (club_id,season_id,team_name,is_club,sort_order,played,points) values ($1,$2,'Typed us',true,0,10,13)",
+      [ALPHA, season],
+    );
+    await addGame(ALPHA, season, 1, 0);
+    expect(await ourRow(ALPHA, season)).toMatchObject({ played: 10, points: 13 });
+    await db.query("update onzio.seasons set standings_from_scores=true where id=$1", [season]);
+    const second = await addGame(ALPHA, season, 2, 2);
+    expect(await ourRow(ALPHA, season)).toEqual({ played: 2, wins: 1, draws: 1, losses: 0, goal_difference: 1, points: 4 });
+    expect(second).toBeTruthy();
+  });
+});
+
 describe("two scores saved at the same moment", () => {
   it("both count (the second waits for the first, then totals with it)", async () => {
     // Real committed data, removed in finally, so a second connection can see it.
@@ -353,6 +420,7 @@ describe("the migration on rows that were there before it", () => {
     await db.query("alter table onzio.league_standings drop constraint league_standings_team_name_length");
     await db.query("alter table onzio.league_standings drop column season_id");
     await db.query("alter table onzio.matches drop column league_game");
+    await db.query("alter table onzio.seasons drop column standings_from_scores");
     await db.query("drop function onzio_private.refresh_league_row_after_game()");
     await db.query("drop function onzio_private.refresh_club_league_row(uuid, uuid)");
     await db.query("drop function onzio_private.copy_league_standings_into_new_season()");
@@ -388,6 +456,11 @@ describe("the migration on rows that were there before it", () => {
     expect(alpha.every((row) => row.played === 7 && row.points === 13)).toBe(true);
     const bravo = (await db.query("select season_id,sort_order from onzio.league_standings where club_id=$1", [BRAVO])).rows;
     expect(bravo).toEqual([{ season_id: newest, sort_order: 5 }]);
+    // Every season that existed keeps its typed row; one created after the migration works it out.
+    const flags = (await db.query("select distinct standings_from_scores as f from onzio.seasons")).rows;
+    expect(flags).toEqual([{ f: false }]);
+    const created = await addSeason(ALPHA, "RE-11b after migration", 2060);
+    expect((await db.query("select standings_from_scores as f from onzio.seasons where id=$1", [created])).rows[0].f).toBe(true);
   });
 
   it("stops, without changing anything, when a club has a table and no season", async () => {
