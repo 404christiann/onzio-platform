@@ -14,6 +14,21 @@
 - **Exact next step:** the bot merges. RE-11b (league table per season) and
   RE-11c are migrations and go through the production migration gate one at a
   time.
+## 2026-11-09 - ADMIN-RE-20 Payments and plan
+
+- **Status:** `in_progress`, PR open. No migration, no Stripe change, no new
+  env var. Nobody sees it until a club is on `reimagined`.
+- **What it adds:** `/admin/payments` on the new admin says plainly whether
+  billing is fine or what to fix, with one button, for every state the old
+  card handled (not started, no plan needed, active, ending, card failed,
+  overdue with days left, ended). Plan, website, registration-money link and
+  past invoices below it. The buttons are the old card's own portal and
+  checkout form. Classic clubs keep the old page; owners only.
+- **Left out:** Connect status on the page (needs a Stripe read), a due date
+  for a failed card (the state has none), and the home's warning strip.
+- **Verification:** contract and browser tests; full suites in the PR body.
+- **Exact next step:** the bot merges.
+
 ## 2026-11-09 - ADMIN-RE-17 Team roster
 
 - **Status:** `in_progress`, PR open. No migration. Nobody sees it until a
