@@ -1,8 +1,7 @@
 import { defineConfig } from "vitest/config";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  resolve: { tsconfigPaths: true },
   // Next.js preserves JSX for its own compiler. Render contracts need Vite
   // to compile it using React's automatic runtime instead.
   oxc: { jsx: { runtime: "automatic" } },
