@@ -53,6 +53,14 @@ async function sponsors(club: string): Promise<Sponsor[]> {
   )).rows;
 }
 
+async function places(club: string): Promise<{ homepage: string[]; footer: string[] }> {
+  const rows = await sponsors(club);
+  return {
+    homepage: rows.filter((row) => row.show_on_homepage).map((row) => row.name),
+    footer: rows.filter((row) => row.show_in_footer).map((row) => row.name),
+  };
+}
+
 beforeEach(async () => {
   assertSafeTestEnvironment();
   db = new Client({ host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" });
@@ -211,22 +219,48 @@ describe("the migration on rows that were there before it", () => {
 
     await db.query(readFileSync(MIGRATION, "utf8"));
 
+    // North was first in the footer and followed nothing, so it goes first.
     expect(await sponsors(ALPHA)).toEqual([
-      { name: "Lake", show_on_homepage: true, show_in_footer: false, sort_order: 0 },
-      { name: "Kim", show_on_homepage: true, show_in_footer: true, sort_order: 1 },
-      { name: "Old", show_on_homepage: true, show_in_footer: false, sort_order: 2 },
-      { name: "North", show_on_homepage: false, show_in_footer: true, sort_order: 3 },
+      { name: "North", show_on_homepage: false, show_in_footer: true, sort_order: 0 },
+      { name: "Lake", show_on_homepage: true, show_in_footer: false, sort_order: 1 },
+      { name: "Kim", show_on_homepage: true, show_in_footer: true, sort_order: 2 },
+      { name: "Old", show_on_homepage: true, show_in_footer: false, sort_order: 3 },
     ]);
     expect(await sponsors(BRAVO)).toEqual([
       { name: "Bravo Kim", show_on_homepage: true, show_in_footer: true, sort_order: 0 },
     ]);
-    // The homepage strip keeps its order. The footer keeps its logos but not its
-    // order: one order can't hold two, so the merged Kim takes its homepage
-    // place and comes before North, which was first in the footer.
-    const homepage = (await sponsors(ALPHA)).filter((row) => row.show_on_homepage).map((row) => row.name);
-    const footer = (await sponsors(ALPHA)).filter((row) => row.show_in_footer).map((row) => row.name);
-    expect(homepage).toEqual(["Lake", "Kim", "Old"]);
-    expect(footer).toEqual(["Kim", "North"]);
+    // What visitors see keeps both orders: the homepage as it was, the footer as it was.
+    expect(await places(ALPHA)).toEqual({ homepage: ["Lake", "Kim", "Old"], footer: ["North", "Kim"] });
+  });
+
+  it("slots each footer-only logo in right after the logo it followed in the footer", async () => {
+    const [a, b, c] = [await asset(ALPHA), await asset(ALPHA), await asset(ALPHA)];
+    await stepBack();
+    // Homepage: A, B, C. Footer: B, X, C, Y (B and C are the same files; X and Y only in the footer).
+    await legacy(ALPHA, "carousel", "A", 0, a);
+    await legacy(ALPHA, "carousel", "B", 1, b);
+    await legacy(ALPHA, "carousel", "C", 2, c);
+    await legacy(ALPHA, "footer", "B", 0, b);
+    await legacy(ALPHA, "footer", "X", 1, null);
+    await legacy(ALPHA, "footer", "C", 2, c);
+    await legacy(ALPHA, "footer", "Y", 3, null);
+    await db.query(readFileSync(MIGRATION, "utf8"));
+    expect((await sponsors(ALPHA)).map((row) => row.name)).toEqual(["A", "B", "X", "C", "Y"]);
+    expect(await places(ALPHA)).toEqual({ homepage: ["A", "B", "C"], footer: ["B", "X", "C", "Y"] });
+  });
+
+  it("follows the homepage where the two places listed shared logos in opposite order, and moves only those", async () => {
+    const [a, b] = [await asset(ALPHA), await asset(ALPHA)];
+    await stepBack();
+    // Homepage: A, B. Footer: B, A, Z. One order can't hold both A-before-B and B-before-A.
+    await legacy(ALPHA, "carousel", "A", 0, a);
+    await legacy(ALPHA, "carousel", "B", 1, b);
+    await legacy(ALPHA, "footer", "B", 0, b);
+    await legacy(ALPHA, "footer", "A", 1, a);
+    await legacy(ALPHA, "footer", "Z", 2, null);
+    await db.query(readFileSync(MIGRATION, "utf8"));
+    // The homepage wins: A and B swap in the footer; Z stays after them.
+    expect(await places(ALPHA)).toEqual({ homepage: ["A", "B"], footer: ["A", "B", "Z"] });
   });
 
   it("merges two footer rows for the same file into the first", async () => {
@@ -247,10 +281,11 @@ describe("the migration on rows that were there before it", () => {
       [ALPHA],
     );
     await db.query(readFileSync(MIGRATION, "utf8"));
+    // Three rows stay three; the footer-only two keep their order and go first (they followed nothing).
     expect(await sponsors(ALPHA)).toEqual([
-      { name: "Highbank Credit Union", show_on_homepage: true, show_in_footer: false, sort_order: 0 },
-      { name: "Midwest Supply", show_on_homepage: false, show_in_footer: true, sort_order: 1 },
-      { name: "Franklinton Works", show_on_homepage: false, show_in_footer: true, sort_order: 2 },
+      { name: "Midwest Supply", show_on_homepage: false, show_in_footer: true, sort_order: 0 },
+      { name: "Franklinton Works", show_on_homepage: false, show_in_footer: true, sort_order: 1 },
+      { name: "Highbank Credit Union", show_on_homepage: true, show_in_footer: false, sort_order: 2 },
     ]);
   });
 

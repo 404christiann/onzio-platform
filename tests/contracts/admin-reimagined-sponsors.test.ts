@@ -124,7 +124,10 @@ describe("the migration", () => {
     expect(sql).toContain("site_sponsor_logos_name_length");
     expect(sql).toContain("check (char_length(name) <= 60)");
     expect(sql).toContain("alter column placement drop not null");
-    expect(sql).not.toMatch(/drop column|drop table|truncate/i);
+    expect(sql).not.toMatch(/drop column|truncate/i);
+    // The only table it drops is its own temporary order table.
+    expect(sql.match(/drop table [a-z0-9_.]+/gi)).toEqual(["drop table re15_sponsor_order"]);
+    expect(sql).toContain("create temporary table re15_sponsor_order");
     // Its one helper touches only the new row: no definer rights, empty search path, no grants.
     expect(sql).not.toMatch(/security definer/i);
     expect(sql.match(/security invoker\s+set search_path = ''/g)?.length).toBe(1);

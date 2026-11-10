@@ -17,15 +17,17 @@ run from his Mac, before the merge. No change to `lib/club-context.ts`.
   `placement`) and `website_url` (null or an http(s) address of at most 2,048
   characters). Rows for the same logo file (same club and `media_asset_id`)
   become one: the homepage row stays, with the switches of all of them; the
-  others are deleted. One order per club: the homepage strip's order, then the
-  footer-only logos in the footer's order. So the footer may reorder where a
-  logo was in both places (the merged logo comes before the footer-only ones;
-  the bot's M1 on #128). No live footer changes today: Diverse City's academy
-  footer shows no sponsors (`components/sites/diverse-city/Footer.tsx`) and
-  Rose City's public site is held (`lib/public-site-hold.ts`); Rose City's
-  generic footer would show them once it is live. A second read-only check
-  (footer order) counts the logos that move, per club, for Christian before
-  the gate. `name` gets CHECKs of 60 characters
+  others are deleted. One order per club that keeps both places' orders
+  (Christian's go after the bot's M1 on #128): the homepage strip's order, with
+  each footer-only logo slotted in right after the logo it followed in the
+  footer. Only where the two places listed shared logos in opposite order does
+  the footer follow the homepage and those logos move. It is worked out before
+  the merge, while both places' positions exist. Who would see a move today:
+  nobody (Diverse City's academy footer shows no sponsors,
+  `components/sites/diverse-city/Footer.tsx`; Rose City's public site is held,
+  `lib/public-site-hold.ts`; its generic footer would show sponsors once live).
+  A second read-only check counts the footer logos that would move, per club,
+  for Christian before the gate. `name` gets CHECKs of 60 characters
   and not blank; the migration stops (rolls back whole) if a name is longer or
   blank instead of cutting it. `placement` stays, nullable, unread by the new
   code, until both clubs accept the page (plan, risk 5); a row inserted with a
