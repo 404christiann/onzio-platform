@@ -992,6 +992,7 @@ export type Database = {
           losses: number
           played: number
           points: number
+          season_id: string
           sort_order: number
           team_abbreviation: string | null
           team_name: string
@@ -1010,6 +1011,7 @@ export type Database = {
           losses?: number
           played?: number
           points?: number
+          season_id: string
           sort_order?: number
           team_abbreviation?: string | null
           team_name: string
@@ -1028,6 +1030,7 @@ export type Database = {
           losses?: number
           played?: number
           points?: number
+          season_id?: string
           sort_order?: number
           team_abbreviation?: string | null
           team_name?: string
@@ -1047,6 +1050,13 @@ export type Database = {
             columns: ["club_id", "logo_asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "league_standings_season_fk"
+            columns: ["club_id", "season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
             referencedColumns: ["club_id", "id"]
           },
         ]
@@ -1094,6 +1104,7 @@ export type Database = {
           date: string
           home: boolean
           id: string
+          league_game: boolean
           opponent: string
           opponent_logo_asset_id: string | null
           opponent_logo_url: string | null
@@ -1121,6 +1132,7 @@ export type Database = {
           date: string
           home?: boolean
           id?: string
+          league_game?: boolean
           opponent: string
           opponent_logo_asset_id?: string | null
           opponent_logo_url?: string | null
@@ -1148,6 +1160,7 @@ export type Database = {
           date?: string
           home?: boolean
           id?: string
+          league_game?: boolean
           opponent?: string
           opponent_logo_asset_id?: string | null
           opponent_logo_url?: string | null
@@ -2264,6 +2277,7 @@ export type Database = {
           end_year: number
           id: string
           label: string
+          standings_from_scores: boolean
           start_year: number
           updated_at: string
         }
@@ -2274,6 +2288,7 @@ export type Database = {
           end_year: number
           id?: string
           label: string
+          standings_from_scores?: boolean
           start_year: number
           updated_at?: string
         }
@@ -2284,6 +2299,7 @@ export type Database = {
           end_year?: number
           id?: string
           label?: string
+          standings_from_scores?: boolean
           start_year?: number
           updated_at?: string
         }

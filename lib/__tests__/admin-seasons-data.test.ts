@@ -114,6 +114,16 @@ describe("leagueSummary", () => {
     expect(leagueSummary([row(false, 31), row(true, 27), row(false, 25)])).toEqual({ rank: 2, of: 3, points: 27 });
   });
 
+  it("ranks by points, goal difference and wins, not by the typed order (our row moves on its own)", () => {
+    const table = [
+      { is_club: true, points: 9, goal_difference: 1, wins: 3, sort_order: 0 },
+      { is_club: false, points: 12, goal_difference: 5, wins: 4, sort_order: 1 },
+      { is_club: false, points: 9, goal_difference: 4, wins: 3, sort_order: 2 },
+    ];
+    expect(leagueSummary(table)).toEqual({ rank: 3, of: 3, points: 9 });
+    expect(leagueSummary([{ ...table[0], goal_difference: 4, wins: 4 }, table[1], table[2]])).toEqual({ rank: 2, of: 3, points: 9 });
+  });
+
   it("is none with no table, or when our team is not in it", () => {
     expect(leagueSummary([])).toBeNull();
     expect(leagueSummary([row(false, 3)])).toBeNull();

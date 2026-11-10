@@ -911,6 +911,8 @@ function MatchForm({
   // renders these through NextMatchCard.
   const schedulePolicy = codeSiteAdminFor(club)?.schedule;
   const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false;
+  // ADMIN-RE-22: academy@1's Next Match card shows the game's own competition.
+  const competitionOnNextMatch = schedulePolicy?.competitionShowsOnNextMatch === true;
 
   function set(field: string, value: string | boolean | number | null) {
     onChange({ ...form, [field]: value });
@@ -1004,7 +1006,13 @@ function MatchForm({
             />
           </Field>
 
-          <Field id="match-competition" label="Competition" optional className="sm:col-span-2">
+          <Field
+            id="match-competition"
+            label="Competition"
+            optional
+            help={competitionOnNextMatch ? "Shows under VS on your homepage Next Match card. Leave it blank to show no competition." : undefined}
+            className="sm:col-span-2"
+          >
             <input
               id="match-competition"
               type="text"

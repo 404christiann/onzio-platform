@@ -4,8 +4,9 @@
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so
 search can link to player pages). Branch `claude/admin-re-24d-players`, on top
-of 24b. **Status:** `in_progress`. UI only: no migration, no new dependency,
-no hosted action.
+of 24b; `main` `1572f01` (24b #125, RE-11b #120, RE-22 #123) merged in.
+**Status:** `in_progress`, PR open for the review bot. UI only: no migration,
+no new dependency, no hosted action.
 
 **Completed work:**
 
@@ -43,7 +44,7 @@ suites on the PR head, with the tested commit, are in the PR body.
 
 **Blockers / decisions:** none new.
 
-**Exact next step:** open the PR once 24b is merged, then 24c (search).
+**Exact next step:** the bot merges 24d. Then 24c (search).
 
 ## 2026-11-10 - ADMIN-RE-24b: the new home on the new admin
 
@@ -109,6 +110,115 @@ package with a table). Insights for Rose City still waits on Onzio setting its
 
 **Exact next step:** the bot merges 24b. Then 24c (search with cmdk).
 
+
+## 2026-11-10 - ADMIN-RE-11b: League table per season, our row updates itself
+
+**Agent/package:** Claude Code, `ADMIN-RE-11b`. Branch
+`claude/admin-re-11b-league` from `main` `f44051e`. **Status:** `released`
+2026-11-10 (PR #120, merge `d665c655`). **Carried a migration**
+(`20261110090000_league_table_per_season.sql`, sorted after the Rose City 2027
+branch's last one, `20261109210000`), applied to production before the merge.
+No change to `lib/club-context.ts`.
+
+**Release record:** Christian applied the migration from his Mac
+(`supabase db push --linked --skip-vault`, CLI 2.122.0) after the bot cleared
+both Mediums at `6343286`, following `docs/agents/review-bot-supabase.md`. Before:
+the ledger had only this migration pending; a completed physical backup from the
+same day with no later audited writes (no extra dump); the dry run listed only
+this migration. After: the ledger matches and a second dry run says up to date;
+the migration has its history row and its triggers exist; no table row without
+a season; row counts unchanged apart from the audit events the backfill wrote;
+every existing season typed (`standings_from_scores` false); every club's own
+row unchanged; the generated types differ from the live schema only in
+generator formatting. I merged #120 pinned to head `75358950` (main with RE-24a
+merged in and a browser spec fix, after the bot's review of `6343286`; no
+migration or application change of this PR in those commits). Deploy READY;
+smoke checks passed: every verified production domain returns 200 after the
+`diversecityfc.com` to `www` redirect with no `UNKNOWN_TENANT`, Diverse City
+`/programs`, `/roster` and `/shop` return 200, and Rose City's admin sign-in
+returns 200. `onzio-platform.vercel.app/` returns 404, consistent with the
+public-site hold; I did not confirm which club it belongs to. Rollback target
+for code was the previous production deployment.
+
+**Completed work:**
+
+- Migration: `matches.league_game boolean not null default true` (decision 4);
+  `league_standings.season_id`, backfilled to the club's shown season (else its
+  newest), then not null, with a composite foreign key to `seasons`
+  (`on delete cascade`, like the stats tables) and unique
+  `(club_id, season_id, sort_order)`, deferred so one save can reorder; a CHECK
+  of 60 characters on `team_name`. A clashing `sort_order` is renumbered 0..n-1
+  first. The migration stops, rolling back whole, if a club has table rows and
+  no season, or a name is over 60 characters. It never touches the typed numbers.
+- `seasons.standings_from_scores` (decided by Christian 2026-11-09, "Keep typed,
+  new seasons auto"): false for every season that exists at the migration, true
+  for every season created after it (the Seasons hub, the classic page, a
+  club's first season: the column default). Only a season with it true works out
+  our row from its games; every existing season keeps its typed row, from the
+  new or the classic admin. **No live league table changes at merge**: Diverse
+  City, Lions and Rose City current seasons stay typed.
+- Bot review of `2dfce88`, two Mediums fixed: (1) a copied table shares team
+  logo files across seasons, so the Standings page now deletes a logo file only
+  when no league table row of the club still uses it
+  (`lib/standings-logo-cleanup.ts`; if the check fails, nothing is deleted);
+  (2) in a season with `standings_from_scores` true, a fifth trigger
+  (`keep_computed_league_row`) keeps the six computed numbers on our row against
+  any writer except the recompute, so a Standings page saved from an old
+  snapshot cannot put the old numbers back; the page shows them read-only with a
+  note. Typed seasons stay editable. Other columns and rows save as sent.
+- Four triggers, so every write path (Enter a score, `/admin/score`, the
+  classic Games page, imports) is covered and atomic: a table row saved without
+  a season goes to the shown season (admin code deployed before this change
+  keeps saving); inserting a season copies the club's newest table into it at
+  zero; saving, editing, clearing, moving or deleting a game recomputes the
+  club's `is_club` row for that season from its saved league games (3 points a
+  win, 1 a draw, both scores in, `league_game` true) when the season's
+  `standings_from_scores` is true, locking the row first so two saves at once
+  both count. Other teams' rows are never touched.
+- Reads: the public table and the Standings page filter by season (public: the
+  shown season; the page opens on it and has a season picker); the Seasons hub's
+  league summary reads the season on view and ranks by points, goal difference
+  and wins; a season whose table has numbers in it cannot be deleted as empty.
+- Writes: `league_game` is part of the games write contract; `team_name` is 60
+  characters in the contract and the Standings box; Add a game asks
+  "League game?" (Yes by default).
+
+**Decision made here, on purpose:** our row is recomputed from the games, never
+added to, so an edit or a cleared score cannot drift (tested). Christian's
+read-only production check (2026-11-09) showed Diverse City (typed 10 played, 13
+points, 0 scored games) and Lions (10 and 24, 0 scored) would shrink on the
+first save, and Rose City (typed 0, 5 scored games, possibly friendlies) would
+jump; his answer was to keep typed numbers in existing seasons and work out new
+seasons only. To turn an existing season on later: `update onzio.seasons set
+standings_from_scores = true where ...`; it takes effect at that season's next
+score save.
+
+**Files changed:** `supabase/migrations/20261110090000_league_table_per_season.sql`;
+`lib/database.generated.ts` (regenerated), `lib/db-types.ts`,
+`lib/admin-data-contract.ts`, `lib/queries.ts`, `lib/admin-seasons-data.ts`;
+`app/admin/(protected)/standings/page.tsx`,
+`components/admin/reimagined/AddGame.tsx`, `SeasonsHub.tsx`; new
+`tests/database/league-table-per-season.test.ts`,
+`tests/contracts/admin-reimagined-league.test.ts`,
+`tests/browser/admin-reimagined-league.spec.ts`; updated
+`tests/contracts/admin-reimagined-seasons.test.ts` (11a's "no migration" pin now
+only pins `lib/club-context.ts`; the League card note changed),
+`lib/__tests__/admin-seasons-data.test.ts`,
+`lib/__tests__/standings-read-failure.test.ts`;
+`docs/admin-portal-redesign-plan.md`, this file, `HANDOFF.md`.
+
+**Rollback (before any club starts a second season):** drop the four triggers
+and functions, then the unique, foreign key and `team_name` constraints and the
+`season_id` column on `league_standings`, then `matches.league_game` and `seasons.standings_from_scores`. Old code
+ignores them.
+
+**Verification:** red first, then green; the full suites on the PR head, with
+the tested commit, are in the PR body. Not verified: production data (see the
+check above), dark theme, the public site in a browser.
+
+**Exact next step:** RE-11c. Turning an existing season on for automatic rows is
+a separate data change after Christian's call (`update onzio.seasons set
+standings_from_scores = true where id = ...`). RE-11c is the next migration.
 ## 2026-11-10 - ADMIN-RE-24a: the five tabs (frame) on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24` (new package, recorded in
@@ -200,6 +310,97 @@ verified: production (nothing hosted touched), a real iPhone's safe areas.
 
 **Exact next step:** the bot reviews and merges 24a. Then 24b (the home) from
 the merged `main`.
+
+## 2026-11-10 - ADMIN-RE-22: Diverse City screens (Programs words, Next match)
+
+**Agent/package:** Claude Code, `ADMIN-RE-22`. Branch
+`claude/admin-re-22-diverse-city` from `main` `f44051e`. **Status:**
+approved by Christian (2026-11-10) to merge, PR #123; the visitor-facing change
+was read and approved first. No schema change, no migration, no change to
+`lib/club-context.ts`, no hosted action, no `admin_portal` change.
+
+**Completed work:**
+
+- **Next match card** (`components/AcademyNextMatch.tsx`, used by Diverse City's
+  homepage only): the competition line comes from the game itself
+  (`matches.competition`), not from the Standings title; a game with none shows
+  no competition line. Under "VS" the card now also says Home or Away. With no
+  game it says "No game coming up" and keeps only Full Schedule (it used to show
+  "Next Opponent" and "Date and time TBA"). It never filtered to league games,
+  so any game counts; the active-season scope and the club-time kickoff
+  (RE-03) are unchanged.
+- **Standings and Games words:** the Standings title help no longer says the
+  title shows on Next Match (`titleShowsOnNextMatch` is removed from
+  `site-definition.ts`); the Games form's Competition field says it shows under
+  VS on the Next Match card (new `schedule.competitionShowsOnNextMatch`).
+- **Programs words** (`/admin/programs`): the words editor that was hidden for
+  Diverse City (`showPageCopyEditor`) is on. It edits the eleven stored words
+  (the homepage "pathway" band, the Programs page header, the closing band),
+  with a live preview of the real page. A click on the page's heading or
+  closing band opens those words and puts the cursor in them; the "managed by
+  Onzio" notes are gone for this club. It works in both portals, because
+  Diverse City edits in the classic one today.
+- **Email to order:** verified, not redone (see below).
+
+**Not built, and why:** the words with no stored home (a program page's "The
+Program" heading, "Community Partners", "Join <club>") need a table or columns:
+a schema change, so they are left for Christian to decide. The click-to-change
+canvas with the page switcher is RE-13. "Add a game" in the new admin has no
+Competition question (the design has none; "League game?" waits for RE-11b), so
+a game added there shows no competition line until one is set in Games.
+
+**Files changed:** `components/AcademyNextMatch.tsx`,
+`components/sites/diverse-city/site-definition.ts`,
+`app/admin/(protected)/programs/page.tsx`,
+`app/admin/(protected)/schedule/page.tsx`,
+`app/admin/(protected)/standings/page.tsx`; new `lib/next-match-labels.ts`,
+`lib/__tests__/next-match-labels.test.ts`,
+`tests/contracts/admin-re-22-diverse-city.test.ts`,
+`tests/browser/admin-reimagined-diverse-city.spec.ts`; updated on purpose
+`tests/contracts/code-site-admin.test.ts`,
+`tests/contracts/admin-platform-fixes-02.test.ts`,
+`tests/contracts/diverse-city-program-registration-admin.test.ts`;
+`docs/admin-portal-redesign-plan.md`, this file, `HANDOFF.md`.
+
+**What Diverse City visitors see change at merge:** only the homepage Next Match
+card. (1) The competition line is the game's own: if Diverse City's coming games
+have no Competition filled in, today's line (the Standings title) disappears at
+merge. (2) A Home or Away label appears under it. (3) With no game coming up the
+card reads "No game coming up". Nothing on the Programs pages changes for
+visitors until an owner saves new words. Other clubs: `AcademyNextMatch` is
+imported only by Diverse City's homepage, `NextMatchCard` and every shared
+template file are untouched (a contract test pins both).
+
+**Verification:** see the PR body for the results table with the tested commit.
+Local only (Alpha stands in for Diverse City): before and after screenshots at
+390 and 1440 of the Next Match card (away game with a competition, home game
+without one, no game) and of `/admin/programs` in both portals.
+
+**Email to order (verified, not redone):** `20261105120000_shop_buy_link_email.sql`
+is on main and was applied to production (HANDOFF, ADMIN-PLATFORM-FIXES-02
+release); the shared contract accepts `mailto:` (`lib/shop-editor/contract.ts`)
+and its tests (`admin-platform-fixes-02` section 8 and
+`tests/database/shop-buy-link-email.test.ts`) pass. The design's "An email to the
+club" choice (the address from Your club, subject "Order: Home kit") is the
+Shop slice, RE-16.
+
+**Not verified:** nothing run against production. Diverse City's real
+`matches.competition` values: Christian's read-only query is in the shared notes
+(`re-22-competition-check.md`). Dark theme, a real phone, and the two Diverse
+City acceptance browser configs (they need the local Diverse City import, not the
+seeded Alpha) were not run.
+
+**Production check (Christian, read-only, 2026-11-09):** Diverse City has 1 game
+in total, none from today onward, none with a competition; so no competition
+line is lost at merge and the card reads "No game coming up" until a game is
+added. No fallback to the Standings title was added.
+
+**Exact next step:** a follow-up PR adds an optional Competition box to the new
+admin's Add a game, for Diverse City only, before Diverse City is switched to
+the new admin. Left over from the bot's Low notes: a failed schedule load shows
+"No game coming up" as if it were true, and the focus after a click on the
+page's heading is not asserted in the browser spec.
+
 
 ## 2026-11-10 - ADMIN-RE-18 (screen): Who can sign in on the new admin
 
