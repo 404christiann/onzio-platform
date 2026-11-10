@@ -383,6 +383,9 @@ test.describe("remove and Undo, with the answers given by the test", () => {
       await row.getByTestId("sign-in-resend").click();
       await expect(row.getByTestId("sign-in-status")).toContainText("Code sent");
     }
+    // The newest "Code sent" toast is on screen next to Sam's Undo (older plain toasts make way: Undo + the two newest).
+    await expect(page.getByTestId("sign-in-toast").filter({ hasText: "Code sent to lee@alpha.example" })).toBeVisible();
+    await expect(page.getByTestId("sign-in-toast")).toHaveCount(3);
     await expect(undoToast).toBeVisible();
 
     await undoToast.getByRole("button", { name: "Undo" }).click();
