@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { gameNeedsScore } from "@/lib/admin-home-data";
 import {
   gameLine,
   needsSummary,
@@ -98,5 +99,40 @@ describe("home words", () => {
     ]);
     expect(bars[0].label).toBe("4–1 A");
     expect(resultBars([{ id: "z", date: "2026-10-01", opponent: "Z", us: 0, them: 0 }])[0]).toMatchObject({ up: 0, down: 0 });
+  });
+});
+
+describe("pickBoardGames, same day and no time (bot Low on #125)", () => {
+  it("orders one day's games by real kickoff and keeps a TBD game today as the next game", () => {
+    const rows = [
+      game({ id: "ten", date: "2026-11-14", time: "10:00 AM" }),
+      game({ id: "nine", date: "2026-11-14", time: "9:00 AM" }),
+    ];
+    expect(pickBoardGames(rows, CHICAGO, NOW).nextGame?.id).toBe("nine");
+    // Untimed today: the next game, and never also "missing a score" (bot Medium on #129).
+    expect(pickBoardGames([game({ id: "tbd", date: "2026-11-10", time: "TBD" })], CHICAGO, NOW)).toEqual({
+      missingScore: null,
+      nextGame: expect.objectContaining({ id: "tbd" }),
+    });
+    expect(pickBoardGames([game({ id: "none", date: "2026-11-10", time: null })], CHICAGO, NOW)).toEqual({
+      missingScore: null,
+      nextGame: expect.objectContaining({ id: "none" }),
+    });
+    // Untimed yesterday: played, so it needs its score and is not the next game.
+    expect(pickBoardGames([game({ id: "past", date: "2026-11-09", time: "TBD" })], CHICAGO, NOW)).toEqual({
+      missingScore: expect.objectContaining({ id: "past" }),
+      nextGame: null,
+    });
+  });
+});
+
+describe("gameNeedsScore: the one rule for the home's count, its row and the player page", () => {
+  it("counts a game two hours after kickoff, an untimed game only from the next day", () => {
+    expect(gameNeedsScore("2026-11-10", "09:30", CHICAGO, NOW)).toBe(true);
+    expect(gameNeedsScore("2026-11-10", "11:00", CHICAGO, NOW)).toBe(false);
+    expect(gameNeedsScore("2026-11-10", "TBD", CHICAGO, NOW)).toBe(false);
+    expect(gameNeedsScore("2026-11-10", null, CHICAGO, NOW)).toBe(false);
+    expect(gameNeedsScore("2026-11-09", null, CHICAGO, NOW)).toBe(true);
+    expect(gameNeedsScore("2026-11-11", "09:00", CHICAGO, NOW)).toBe(false);
   });
 });

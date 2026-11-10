@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { SCORE_GRACE_MINUTES } from "@/lib/admin-home-data";
-import { clubToday, formatClubTime, isKickoffPast } from "@/lib/club-time";
+import { gameNeedsScore } from "@/lib/admin-home-data";
+import { clubToday, formatClubTime } from "@/lib/club-time";
 
 // ADMIN-RE-06: what the Enter a score page shows. The same rule as the home's
 // "N games need a score" hint (lib/admin-home-data.ts): a game in the active
@@ -120,7 +120,8 @@ export async function loadScorePageData(
     if (unscored.error || scored.error) return { status: "error" };
 
     const needScore = ((unscored.data ?? []) as MatchRow[])
-      .filter((row) => isKickoffPast(row.date, row.time, timeZone, SCORE_GRACE_MINUTES, now))
+      // The home's rule: an untimed game today waits until tomorrow (ADMIN-RE-24d).
+      .filter((row) => gameNeedsScore(row.date, row.time, timeZone, now))
       .map(toGame);
     const earlier = ((scored.data ?? []) as MatchRow[]).map(toGame);
     return { status: "ready", seasonLabel: active.label, needScore, earlier };

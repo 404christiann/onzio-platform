@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadTeamAnalytics } from "@/lib/admin-analytics-data";
+import { loadTeamAnalytics, type TeamAnalyticsData } from "@/lib/admin-analytics-data";
 import type { ResultGame, SeasonRecord } from "@/lib/admin-analytics-view";
-import { SCORE_GRACE_MINUTES, newSignUpsSince } from "@/lib/admin-home-data";
-import { clubToday, formatClubDate, formatClubTime, isKickoffPast } from "@/lib/club-time";
+import { gameNeedsScore, newSignUpsSince } from "@/lib/admin-home-data";
+import { clubToday, formatClubDate, formatClubTime, isKickoffPast, parseKickoffTime } from "@/lib/club-time";
 
 // ADMIN-RE-24b: what the new home shows beyond the job counts (design:
 // admin-plain-search-two-clubs.html): the game a score is missing for, the next
@@ -76,12 +76,18 @@ export function pickBoardGames(
 ): { missingScore: BoardGame | null; nextGame: BoardGame | null } {
   const today = clubToday(timeZone, now);
   const unscored = (row: MatchRow) => row.rose_city_score === null && row.opponent_score === null;
-  const missing = rows.find(
-    (row) => unscored(row) && row.date <= today && isKickoffPast(row.date, row.time, timeZone, SCORE_GRACE_MINUTES, now),
-  );
-  const next = rows.find(
-    (row) => unscored(row) && row.date >= today && !isKickoffPast(row.date, row.time, timeZone, 0, now),
-  );
+  // Same day, real kickoff order ("9:00 AM" before "10:00 AM"; the column is text).
+  const kickoff = (row: MatchRow) => {
+    const { hours, minutes } = parseKickoffTime(row.time);
+    return hours * 60 + minutes;
+  };
+  const ordered = [...rows].sort((a, b) => a.date.localeCompare(b.date) || kickoff(a) - kickoff(b));
+  // The same rule as the home's count, so the row names the game that was counted.
+  const missing = ordered.find((row) => unscored(row) && gameNeedsScore(row.date, row.time, timeZone, now));
+  // A game today with no time yet ("TBD") is still to come all day.
+  const stillToCome = (row: MatchRow) =>
+    row.date > today || (row.date === today && (!formatClubTime(row.time) || !isKickoffPast(row.date, row.time, timeZone, 0, now)));
+  const next = ordered.find((row) => unscored(row) && stillToCome(row));
   return { missingScore: missing ? toBoardGame(missing) : null, nextGame: next ? toBoardGame(next) : null };
 }
 
@@ -115,11 +121,17 @@ export async function loadHomeBoard(
   clubId: string,
   timeZone: string,
   now: Date = new Date(),
+  options: {
+    /** RE-19's season read when the caller also needs it (the Games tab); may still be loading. */
+    team?: TeamAnalyticsData | Promise<TeamAnalyticsData>;
+    /** False where the forms behind new sign-ups are not shown (the Games tab). */
+    signUps?: boolean;
+  } = {},
 ): Promise<HomeBoard> {
   const [games, forms, analytics] = await Promise.allSettled([
     readSeasonGames(supabase, clubId),
-    readNewSignUpForms(supabase, clubId, timeZone, now),
-    loadTeamAnalytics(supabase, clubId),
+    options.signUps === false ? Promise.resolve([]) : readNewSignUpForms(supabase, clubId, timeZone, now),
+    options.team ?? loadTeamAnalytics(supabase, clubId),
   ]);
   const rows = games.status === "fulfilled" ? games.value : null;
   const picked = rows ? pickBoardGames(rows, timeZone, now) : null;
@@ -200,4 +212,19 @@ export function resultBars(games: readonly ResultGame[]): { id: string; up: numb
     down: game.them / most,
     label: `${game.us}–${game.them} ${game.opponent}`,
   }));
+}
+
+/** The oldest game still missing a score, for the player page's "Enter score" row. */
+export async function readMissingScoreGame(
+  supabase: SupabaseClient,
+  clubId: string,
+  timeZone: string,
+  now: Date = new Date(),
+): Promise<BoardGame | null> {
+  try {
+    const rows = await readSeasonGames(supabase, clubId);
+    return rows ? pickBoardGames(rows, timeZone, now).missingScore : null;
+  } catch {
+    return null;
+  }
 }

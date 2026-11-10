@@ -3,6 +3,7 @@ import {
   clubKickoffInstant,
   clubToday,
   DEFAULT_CLUB_TIME_ZONE,
+  formatClubTime,
   isKickoffPast,
 } from "@/lib/club-time";
 
@@ -37,6 +38,19 @@ export function newSignUpsSince(timeZone: string, now: Date = new Date()): strin
   return clubKickoffInstant(firstDay, "00:00", timeZone).toISOString();
 }
 
+/**
+ * Whether an unscored game needs its score: two hours after kickoff, in club
+ * time. A game today with no kickoff time yet ("TBD") is still to come, so it
+ * waits until tomorrow; one on an earlier day counts. The home's count, its
+ * Needs you row and the player page all use this (ADMIN-RE-24d, bot Medium on #129).
+ */
+export function gameNeedsScore(date: string, time: string | null, timeZone: string, now: Date = new Date()): boolean {
+  const today = clubToday(timeZone, now);
+  if (date > today) return false;
+  if (date === today && !formatClubTime(time)) return false;
+  return isKickoffPast(date, time, timeZone, SCORE_GRACE_MINUTES, now);
+}
+
 async function countGamesNeedingScore(
   onzio: Onzio,
   clubId: string,
@@ -64,7 +78,7 @@ async function countGamesNeedingScore(
     .order("date", { ascending: true });
   if (error) return null;
   return ((data ?? []) as Array<{ date: string; time: string | null }>).filter((match) =>
-    isKickoffPast(match.date, match.time, timeZone, SCORE_GRACE_MINUTES, now),
+    gameNeedsScore(match.date, match.time, timeZone, now),
   ).length;
 }
 
