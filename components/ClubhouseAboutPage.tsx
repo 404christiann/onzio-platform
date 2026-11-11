@@ -11,7 +11,7 @@ export default function ClubhouseAboutPage({
 }) {
   const storyMark = content.values[0]?.title.match(/\b(20\d{2})\b/)?.[1]?.slice(-2) ?? "14";
   const paragraphs = content.story_paragraphs.filter(Boolean);
-  const mission = content.closing_text || "Roar as one for Columbus.";
+  const mission = content.closing_text || "One club, one community.";
 
   return (
     <div className="clubhouse-route-page clubhouse-about-page">
@@ -19,9 +19,9 @@ export default function ClubhouseAboutPage({
         <div>
           <p className="clubhouse-eyebrow">Our club</p>
           <h1>
-            From Columbus.
+            From our city.
             <br />
-            <em>For the Capital City.</em>
+            <em>For our community.</em>
           </h1>
         </div>
       </header>
@@ -53,7 +53,7 @@ export default function ClubhouseAboutPage({
           <div className="clubhouse-about-feature-image">
             <ResilientImage
               src={content.feature_image_url}
-              alt="Lions Football Club matchday"
+              alt="Club matchday"
               fill
               fallbackVariant="photo"
               sizes="(max-width: 900px) 100vw, 46vw"

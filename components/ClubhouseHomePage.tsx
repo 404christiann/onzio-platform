@@ -108,7 +108,7 @@ function ClubhouseNextMatch() {
     <section className="clubhouse-match-feature">
       <header className="clubhouse-match-feature-head">
         <span className="clubhouse-eyebrow">Next match</span>
-        <p>{next.competition || "Midwest Premier League"}</p>
+        <p>{next.competition || "League match"}</p>
       </header>
       <div className="clubhouse-match-stage">
         <div className="clubhouse-match-side">
@@ -121,7 +121,7 @@ function ClubhouseNextMatch() {
               {...imageDeliveryProps("club-logo")}
             />
           )}
-          <strong>Lions FC</strong>
+          <strong>{club.name}</strong>
         </div>
         <div className="clubhouse-match-center">
           <span>VS</span>
@@ -205,14 +205,13 @@ function ClubhouseKitHome() {
         </div>
         <div className="clubhouse-kit-home-intro">
           <p>
-            Built in navy, red, and white for every side of matchday. The
-            Capital City collection carries the Lions crest wherever the club
-            goes.
+            Built in club colors for every side of matchday. The collection
+            carries the club crest wherever the team goes.
           </p>
           <Link href="/shop">Shop the collection</Link>
         </div>
       </header>
-      <div className="clubhouse-kit-collection" role="list" aria-label="2026 Lions Football Club jerseys">
+      <div className="clubhouse-kit-collection" role="list" aria-label={`${club.name} jerseys`}>
         {kits.map(({ variant, content, photo }, index) => (
           <Link
             href="/shop"
@@ -260,7 +259,7 @@ function ClubhouseClubStory() {
 
   const values = about?.values?.map((value) => value.title).filter(Boolean) ?? [];
   const story = about?.story_paragraphs?.[0] ??
-    "Lions Football Club was founded to give Columbus a club that competes with ambition and belongs to its community.";
+    `${club.name} competes with ambition and belongs to its community.`;
 
   return (
     <section className="clubhouse-club-story">
@@ -269,18 +268,12 @@ function ClubhouseClubStory() {
         <h2>
           A club shaped by
           <br />
-          <em>Columbus.</em>
+          <em>its community.</em>
         </h2>
       </header>
       <div className="clubhouse-story-copy">
         <p {...storyPiece}>{story}</p>
         <div className="clubhouse-story-meta">
-          <span>
-            Founded <strong>2014</strong>
-          </span>
-          <span>
-            Home <strong>Scioto Field</strong>
-          </span>
         </div>
         <Link href="/club/about">Our story</Link>
       </div>

@@ -22,6 +22,41 @@
   commit are in the PR body. Details in `STATUS.md`.
 - **Exact next step:** bot review and merge.
 
+## 2026-11-10 - Lions removed (production data, then repo code)
+
+- **Status:** production removal `done` 2026-11-10; repo cleanup `in_progress`,
+  PR open. No migration, no deploy.
+- **Production (done, on Christian's go):** Lions was archived since 11-02.
+  Christian ran a read-only count first, then Claude saved a backup on his Mac
+  (`~/lions-export.tgz`: a data-only dump of `onzio` and `onzio_private` plus
+  the 13 Lions photos; sha256 `8bd532f3…25534c3`). Christian pasted one guarded
+  transaction into the SQL editor at 23:01Z. It deleted 94 rows plus the club
+  in dependency order, every per-table count equal to the read-only count, and
+  wrote audit event 961 (`hard_purge`, club_id null). The 124 old Lions audit
+  rows and any Stripe events stay, with club_id null (by design since Phase 5).
+  Claude then deleted the 13 photos from `onzio-media` after checking each one
+  against the backup. Post-check: nothing left for the old id; clubs left are
+  `diverse-city` and `rose-city`. Smoke: Diverse City `/`, `/programs`,
+  `/roster`, `/shop` 200 with no `UNKNOWN_TENANT`; Rose City `/admin/login` 200
+  (its `/` is 404 by the public-site hold).
+- **Why not the operator purge:** `lib/operator/purge-club.ts` lists only the
+  Phase 2 tables, deletes Storage first and is not transactional, so it would
+  have stopped half way on the newer RESTRICT foreign keys. It still needs
+  updating before it is used for any club.
+- **Repo cleanup (this PR):** removed the Lions importers, planner, standings
+  seed, their four `package.json` scripts, two contract tests, the roster
+  browser spec no config ran, `docs/lions-fc-launch-plan.md` and the Lions media
+  plan JSON. The Clubhouse template now shows the club's own name and neutral
+  copy where it said Lions, Columbus, Capital City, Scioto Field or Founded
+  2014. Kept on purpose: migration comments, the template origin notes in
+  `packages/presentation` (provenance, like the Rose City and Deportivo Olimpico
+  notes), the `.vercelignore` line and older history entries.
+- **Not done:** staging still has its own Lions tenant (separate go from
+  Christian); one auth user whose only club was Lions still exists.
+- **Verification:** on `1326604c` (`main` `8fa5926`): TypeScript and ESLint on app code pass; unit and contract 3,101 passed, 12 pilot tests timed out under heavy load and passed 47/47 when rerun alone; production build passes; Homepage browser 62/63 (the one failure passed on rerun) and page editors 36/37 (the About committed-500 case fails the same way on clean `main`). Full table in the PR body and `STATUS.md`.
+- **Exact next step:** the bot reviews and merges the PR. Then, on Christian's
+  go, staging's Lions tenant.
+
 ## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
 
 - **Status:** `in_progress`, PR open. PR 24d of `ADMIN-RE-24` (built before 24c so

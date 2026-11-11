@@ -27,9 +27,9 @@ describe("admin data request contract", () => {
         table: "homepage_hero_content",
         operation: "upsert",
         payload: {
-          headline_line_one: "Capital City.",
-          headline_line_two: "Roar as One.",
-          intro: "Semi-pro soccer built for Columbus.",
+          headline_line_one: "Our city.",
+          headline_line_two: "Our club.",
+          intro: "Semi-pro soccer built for our community.",
           primary_cta_label: "Next match",
           primary_cta_href: "/schedule",
           secondary_cta_label: "Meet the squad",
