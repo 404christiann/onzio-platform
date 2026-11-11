@@ -16,6 +16,7 @@ import {
   IconWarning,
 } from "@/components/admin/icons";
 import { Spinner } from "@/components/ui/spinner";
+import { formatGameDay } from "@/lib/admin-score-data";
 import {
   deleteVerdict,
   statRowHasNumbers,
@@ -44,6 +45,8 @@ export type SeasonsHubLinks = {
   league: string | null;
   totals: string | null;
   games: string | null;
+  /** ADMIN-RE-11c-2: where one game's player numbers live (/admin/score/<game>). */
+  playerNumbers: string | null;
 };
 
 type Step = "closed" | "start" | "ask" | "delete";
@@ -302,6 +305,7 @@ export function SeasonsHub({
     router.refresh();
   }
 
+  const gamesWithNumbers = Math.max(0, data.gamesPlayed - data.needNumbers);
   const viewingPast = viewed !== null && shown !== null && viewed.id !== shown.id;
   const viewingUnshown = viewed !== null && !viewed.active;
   const askSub = shown
@@ -402,8 +406,13 @@ export function SeasonsHub({
                   ? "No player totals yet"
                   : `${numbers.format(data.players)} ${noun(data.players, "player", "players")} this season`
               }
+              note={
+                data.players === 0
+                  ? undefined
+                  : `Added up from ${numbers.format(gamesWithNumbers)} ${noun(gamesWithNumbers, "game’s", "games’")} player numbers`
+              }
               button="See totals"
-              href={links.totals}
+              href={links.totals ? `${links.totals}?season=${viewed.id}` : null}
             />
             <HubCard
               icon={<IconSchedule className="size-6" aria-hidden="true" />}
@@ -411,15 +420,23 @@ export function SeasonsHub({
               main={
                 data.gamesTotal === 0
                   ? "No games yet"
-                  : `${numbers.format(data.gamesPlayed)} played so far`
+                  : data.needNumbers > 0
+                    ? `${numbers.format(data.needNumbers)} ${noun(data.needNumbers, "game needs", "games need")} player numbers`
+                    : `${numbers.format(data.gamesPlayed)} played so far`
               }
               note={
-                data.gamesTotal > data.gamesPlayed
-                  ? `${numbers.format(data.gamesTotal - data.gamesPlayed)} still to play`
-                  : undefined
+                data.nextNeedsNumbers
+                  ? `${data.nextNeedsNumbers.home ? "vs" : "at"} ${data.nextNeedsNumbers.opponent} · ${formatGameDay(data.nextNeedsNumbers.date)}`
+                  : data.gamesTotal > data.gamesPlayed
+                    ? `${numbers.format(data.gamesTotal - data.gamesPlayed)} still to play`
+                    : undefined
               }
-              button="See games"
-              href={links.games}
+              button={data.nextNeedsNumbers ? "Add player numbers" : "See games"}
+              href={
+                data.nextNeedsNumbers && links.playerNumbers
+                  ? `${links.playerNumbers}/${data.nextNeedsNumbers.id}?from=season`
+                  : links.games
+              }
             />
           </div>
 

@@ -1,5 +1,68 @@
 # Diverse City FC Status
 
+## 2026-11-11 - ADMIN-RE-11c-2: Who played and scored?, games that need player numbers, Season totals
+
+**Agent/package:** Claude Code, `ADMIN-RE-11c` part 2 of 2 (screens; 11c-1, #137, is
+released). Branch `claude/admin-re-11c-2` from `main` `ec0b9a28`. Started on Christian's
+"run 12c, 11c-2 and #133 in parallel" (via the orchestrator).
+**Status:** `in_progress`, PR open for the review bot. **No migration**: it uses 11c-1's
+tables, views and `played`. Nothing added to the tenant select in `lib/club-context.ts`.
+No new dependency; icons are the admin's icons.download set; no BoardUI (decision 6).
+
+**Completed work (designs `cd-after-game`, `cd-season-totals`, the hub in
+`cd-season-final`; group 1 decisions 2, 3, 6, 7, 11):**
+
+- **Enter a score:** once a score saves, its card asks "Who played and scored?" with
+  "Add player numbers" (to the game's list) and "Later" ("You'll find it in This season").
+- **Player numbers, `/admin/score/<game>`:** the game's season players by position, each
+  with a Played switch. Goals and Assists up front (keepers: Saves, Goals let in); Yellow,
+  Red and "More numbers" (started, clean sheet, minutes up to 300, tackles, offsides,
+  fouls, fouled) once the player has played. Any number marks a player as played; Played
+  can be set on its own; switching it off clears the row. The summary says "2 of 3 goals
+  added" (segments up to 12 goals, a bar above), warns "That's more than the 3-goal
+  score", and "Own goal or not sure" fills the gap; Save always works. One "Save player
+  numbers" writes every row with an explicit `played` through `POST /api/admin/data`
+  (upsert on `player_id,match_id`); "Saved · on each player's page", or the paused words
+  while the site is held. Phone: the summary sticks under the page bar and Save is a bar
+  above the tab bar; laptop: game, summary and Save on the left, the list on the right.
+  Leaving with unsaved changes asks first. A classic club goes to the old Match stats.
+- **This season hub:** the Games card says "N games need player numbers" (a scored game
+  where nobody is marked as played) with the newest one's line and "Add player numbers";
+  the Player totals card says "Added up from N games' player numbers" and "See totals"
+  opens the new page.
+- **Season totals, `/admin/seasons/totals`:** one table per position on a laptop, one card
+  per player on a phone; every number is the totals view's, so no cell is a field. A
+  number with a hand-entered part is highlighted, with "Goals: 5 from games · 2 added by
+  hand" (or "taken off by hand"). "Adjust" opens a centered panel (laptop) or bottom sheet
+  (phone): "Add numbers for games that aren't in Onzio", "These add on top of the N games
+  you entered", a stepper per number with "Total 7 · 5 from games", "More numbers".
+  Taking off stops at what the games give, so a total never goes below 0; the limit is
+  ±9,999. Saves upsert the adjustment through `POST /api/admin/data`. A classic club goes
+  to the old Season stats.
+
+**Deliberate gap (Christian, 2026-11-11, "Yes, leave it out"):** the design's Adjust
+panel has a "Played" stepper, but adjustments have no games-played column. Played is not
+adjustable; adding it later needs a migration (a `games_played` column on
+`*_season_adjustments` and the views).
+
+**Files changed:** `lib/player-numbers.ts` (new), `lib/admin-player-numbers-data.ts` (new),
+`lib/admin-season-totals-data.ts` (new), `lib/admin-seasons-data.ts`,
+`app/admin/(protected)/score/[matchId]/page.tsx` (new),
+`app/admin/(protected)/seasons/totals/page.tsx` (new), `app/admin/(protected)/seasons/page.tsx`,
+`components/admin/reimagined/{PlayerNumbers,SeasonTotals}.tsx` (new) and their CSS modules,
+`components/admin/reimagined/{ScoreEntry,SeasonsHub}.tsx`, `score.module.css`,
+`tests/contracts/admin-reimagined-player-numbers.test.ts` (new),
+`tests/contracts/admin-reimagined-seasons.test.ts`,
+`tests/browser/admin-reimagined-player-numbers.spec.ts` (new), this file, `HANDOFF.md`,
+`docs/admin-portal-redesign-plan.md`.
+
+**Verification:** see the PR body (results table with the tested commit).
+
+**Blockers/decisions:** none open. Not done here: the old Match stats page still never
+sends `played`.
+
+**Next step:** clear the review bot; the bot merges (no migration, no gate).
+
 ## 2026-11-11 - ADMIN-RE-12c: the "Programs and tryouts" page
 
 **Agent/package:** Claude Code, `ADMIN-RE-12c`, the last of three RE-12 PRs

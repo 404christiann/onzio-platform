@@ -18,6 +18,9 @@ import styles from "./score.module.css";
 // stepper per side and a Save button that confirms on itself. Saving changes
 // the match only (the league table is ADMIN-RE-11b) and goes through
 // POST /api/admin/data, which resolves the club and checks the session itself.
+// ADMIN-RE-11c-2 (design cd-after-game): once a score is saved, the card asks
+// "Who played and scored?" and leads to that game's player numbers; "Later"
+// leaves the game in This season's Games card (group 1 decision 11).
 
 const MAX_SCORE = 99;
 
@@ -116,6 +119,7 @@ function GameCard({
   const [theirs, setTheirs] = useState(game.theirScore ?? 0);
   const [save, setSave] = useState<SaveState>("idle");
   const [savedResult, setSavedResult] = useState<string | null>(null);
+  const [later, setLater] = useState(false);
   const titleId = `score-game-${game.id}`;
 
   function change(side: "ours" | "theirs", value: number) {
@@ -202,6 +206,20 @@ function GameCard({
         <p className={styles.error} role="alert">
           The score wasn’t saved. Check your connection and try again.
         </p>
+      ) : null}
+      {savedResult && !later ? (
+        <div className={styles.next} data-testid="who-played">
+          <p className={styles.nextTitle}>Who played and scored?</p>
+          <div className={styles.nextRow}>
+            <Link href={`/admin/score/${game.id}`} className={styles.nextMain}>
+              Add player numbers
+            </Link>
+            <button type="button" className={styles.nextLater} onClick={() => setLater(true)}>
+              Later
+            </button>
+          </div>
+          <p className={styles.nextHint}>You’ll find it in This season</p>
+        </div>
       ) : null}
     </article>
   );
