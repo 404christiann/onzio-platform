@@ -1,32 +1,43 @@
-## 2026-11-10 - Operator hard purge made safe
+## 2026-11-11 - Operator hard purge made safe (released)
 
-- **Status:** `in_progress`, PR open. **Has a migration**
-  (`20261111080000_purge_archived_club.sql`, two functions, no table or row
-  change), so `GATE-MIGRATE` before merge. Nothing hosted touched.
+- **Status:** `released` 2026-11-11. Migration
+  `20261111080000_purge_archived_club.sql` (two functions, no table or row
+  change) was applied to production at 17:35:39 UTC from Christian's Mac at
+  his request (`GATE-MIGRATE`, "Yes, gate #138"). Then PR #138 merged
+  (`ec0b9a28`) and deployed (`dpl_7NPyj8ZXTPybTjM4sAqZWD6vMBef`). Smoke
+  passed: every Diverse City domain and `/programs`, `/roster`, `/shop` 200
+  with no `UNKNOWN_TENANT`; Rose City `/admin/login` 200 (its `/` is 404 by
+  the public-site hold). **No purge has been run against any club.** Gate
+  record on #138.
 - **What changed:** `purgeClub` now calls one security-definer function that
   does the whole database purge in one transaction (the Lions transaction,
-  reusable): guards under lock, every club table locked against writes,
-  children-first deletes with the presentation triggers lifted for that
-  transaction only, refusal on an unknown club table, other clubs' counts
-  checked, export marked purged, one `hard_purge` audit event. Storage is
-  removed only after commit; a Storage failure can be retried by running the
-  purge again (`already_purged`).
-- **Verification:** new database test 11/11 on a private throwaway database
-  (every club table filled, other clubs byte-identical), contract tests 35/35,
-  tsc and ESLint clean. Details in `STATUS.md` and the PR body.
+  made reusable):
+  - guards under the club row lock, then every club table locked against
+    writes (reads continue) before the domain, subscription, Connect and
+    export checks;
+  - children-first deletes with the presentation triggers lifted for that
+    transaction only;
+  - refusal on an unknown club table; other clubs' counts checked;
+  - export marked purged, one `hard_purge` audit event (`storage: pending`).
+  Storage is removed only after commit, and its outcome gets its own
+  `hard_purge_storage` event (`removed` or `failed`). A failed Storage step
+  is retried by running the purge again (`already_purged`).
+- **Renamed before release:** first written as `20261110210000`. RE-11c's
+  `20261110220000` reached production first, so the gate at `953fb496`
+  stopped before apply and the migration was renamed to sort after it. The
+  delete order and the purge test now include RE-11c's two season
+  adjustment tables.
 - **Decided (Christian, 2026-11-11):** a linked Stripe Connect account blocks
   the purge only while it can take payments (`charges_enabled`).
-- **Open:** RE-11c's season adjustment tables need fixture rows in the purge
-  test once both PRs are in.
-- **Review-bot Mediums fixed:** the Storage outcome now has its own
-  `hard_purge_storage` audit event (removed or failed; the main event says
-  `pending`), and `lib/database.generated.ts` has the new function.
-- **Bot re-review (0 High, 0 Medium) Lows fixed 2026-11-11:** a record that
-  can't be written after a successful Storage removal is now
-  `PURGE_STORAGE_UNRECORDED`; the domain, subscription, Connect and export
-  checks run after the table locks. Merged `main` with RE-12b; its new
-  private receipts table is in the purge test's fixture.
-- **Exact next step:** bot review, `GATE-MIGRATE` on Christian's go, merge.
+- **Verification:** runner table on `0c31556f` all PASS (`test:db` 1,122,
+  unit and contract 2,741, architecture 426 + 1 skipped, `db:types:check`,
+  `tsc`). Details in `STATUS.md` and the PR body.
+- **During the gate, unrelated:** at 17:35:39 UTC Christian deliberately
+  deleted Diverse City's one game (with its 11 player and 2 goalkeeper stat
+  rows) as a signed-in owner, for the club owner. Diverse City having 0
+  games is expected.
+- **Exact next step:** none for the purge. Before any real purge: archive
+  the club, register a verified export, and get Christian's go.
 
 ## 2026-11-10 - ADMIN-RE-11c-1 Season totals add up from player numbers (migration)
 
