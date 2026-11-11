@@ -4,7 +4,7 @@
 
 **Agent/package:** Claude Code, `ADMIN-RE-12b` (the second of three RE-12
 PRs; 12a #131 is the Programs words test, 12c the "Programs and tryouts"
-page). Branch `claude/admin-re-12b-sign-up-state` from `main` `8fa59263`.
+page). Branch `claude/admin-re-12b-sign-up-state` from `main` `428a1590`.
 **Status:** `in_progress`, PR open for the review bot. **Carries a migration**
 (`20261110180000_programs_tryouts_sign_up_state.sql`, sorted after RE-15's
 `20261110150000` and RE-11c-1's `20261110160000`), so it needs `GATE-MIGRATE`
