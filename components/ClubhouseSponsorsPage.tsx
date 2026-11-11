@@ -108,7 +108,7 @@ export default function ClubhouseSponsorsPage() {
                 {tier.sponsors.map((sponsor) => (
                   <article key={sponsor.id}>
                     <strong>{sponsor.name}</strong>
-                    {tier.id === "title" && <p>Backing Columbus ambition.</p>}
+                    {tier.id === "title" && <p>Backing the club&apos;s ambition.</p>}
                   </article>
                 ))}
               </div>
