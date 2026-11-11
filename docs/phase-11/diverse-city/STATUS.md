@@ -1,5 +1,45 @@
 # Diverse City FC Status
 
+## 2026-11-10 - About/Logo save browser test: clean-up restores "no row"
+
+**Agent/package:** Claude Code, test fix found while checking the Lions PR
+(#134); no work-package ID. Branch `claude/busy-maxwell-fdae7f` from `main`
+`428a1590`.
+**Status:** `in_progress`, PR open. Test only: no product, API, migration or
+hosted change.
+
+**What was wrong:** `public-page-about-save.spec.ts`, case "About reconciles
+committed-500 ...", failed in its clean-up with `INVALID_ABOUT_DESTINATION`.
+Seeded Alpha has **no** About or Logo row, so the baseline snapshot's
+`content` is `null`. The test rebuilt it from `EMPTY_ABOUT_PAGE_CONTENT`,
+whose closing button is `""`, and the API (correctly) refuses that. `/schedule`
+was never a seeded row: it is Academy's fixed closing button
+(`components/sites/diverse-city/site-definition.ts`), which the editor always
+sends. The editor never sends `""`: without a fixed button it keeps Save off
+until a listed page is picked. So the API rule stays as it is. Only the first
+case failed because its failed clean-up left a `/schedule` row behind, which
+later cases then snapshot and restored. The first Logo case only passed
+because of that leftover row.
+
+**Completed work:** in `tests/browser/public-page-about-save.spec.ts`, a
+`restore()` helper deletes the page's row when the baseline had none and
+otherwise writes the baseline back. The concurrent case's "other admin" save
+uses Academy's `/schedule`. The first Logo case (Alpha on Clubhouse, no fixed
+button) picks "Button goes to" `/schedule` before saving About when no row
+exists, as an admin must.
+
+**Files changed:** `tests/browser/public-page-about-save.spec.ts`, this file.
+
+**Verification:** production build at `http://alpha.localhost:3110`, all runs
+under `scripts/with-local-db-lock.sh`, Alpha starting with no About/Logo row.
+Before (spec at `main`): 1 failed (`INVALID_ABOUT_DESTINATION`), 6 passed, and
+the run left an About row and a Logo row behind. After: 7 passed, twice in a
+row, and Alpha ends with no About or Logo row both times. `tsc --noEmit` clean.
+
+**Blockers:** none.
+
+**Next step:** review and merge the PR.
+
 ## 2026-11-10 - ADMIN-RE-24c: search on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24c (last of four; built
