@@ -28,8 +28,10 @@
 --      per table is unchanged;
 --   7. marks the export purged and writes one hard_purge audit event
 --      (club_id null) with the per-table counts.
--- Storage is not touched (Supabase blocks deleting storage.objects in SQL);
--- purgeClub removes the club's files through the Storage API after commit.
+-- Storage is not touched (Supabase blocks deleting storage.objects in SQL),
+-- so the hard_purge event records storage as pending. purgeClub removes the
+-- club's files through the Storage API after commit and records the outcome
+-- (removed or failed) in its own hard_purge_storage audit event.
 --
 -- When the club is already gone and the export is marked purged for it with
 -- the same slug, the function returns already_purged, so purgeClub can retry
@@ -286,7 +288,7 @@ begin
       'club_slug', v_club.slug,
       'export_id', v_export.id,
       'export_checksum', v_export.checksum_sha256,
-      'storage', 'removed through the Storage API after commit',
+      'storage', 'pending',
       'rows_deleted', v_deleted
     )
   ) returning id into v_audit_id;

@@ -263,6 +263,8 @@ describe("hard purge of an archived club", () => {
         club_slug: slug,
         export_id: exportId,
         export_checksum: "b".repeat(64),
+        // purgeClub records the Storage outcome in its own event after commit.
+        storage: "pending",
         rows_deleted: result.rows_deleted,
       },
     });

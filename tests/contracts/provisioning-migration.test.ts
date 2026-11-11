@@ -178,10 +178,12 @@ describe("hard purge database and Storage order", () => {
     rpc: RpcReply;
     storage?: Record<string, string[]>;
     removeError?: string;
+    auditError?: string;
   }) {
     const calls: string[] = [];
     const rpcArgs: unknown[] = [];
     const removed: string[] = [];
+    const audits: Record<string, unknown>[] = [];
     const storage = options.storage ?? {};
     const client = {
       schema(schema: string) {
@@ -191,6 +193,20 @@ describe("hard purge database and Storage order", () => {
             rpcArgs.push(args);
             return options.rpc;
           },
+          from: (table: string) => ({
+            insert: (row: Record<string, unknown>) => ({
+              select: () => ({
+                single: async () => {
+                  calls.push(`insert:${schema}.${table}`);
+                  if (options.auditError) {
+                    return { data: null, error: { message: options.auditError } };
+                  }
+                  audits.push(row);
+                  return { data: { id: 77 }, error: null };
+                },
+              }),
+            }),
+          }),
         };
       },
       storage: {
@@ -220,7 +236,7 @@ describe("hard purge database and Storage order", () => {
         },
       },
     };
-    return { client, calls, rpcArgs, removed };
+    return { client, calls, rpcArgs, removed, audits };
   }
 
   async function purge(client: unknown) {
@@ -265,6 +281,7 @@ describe("hard purge database and Storage order", () => {
       auditEventId: 42,
       rowsDeleted: { "onzio.players": 3, "onzio.clubs": 1 },
       storageObjectsRemoved: 3,
+      storageAuditEventId: 77,
       finalAuditOutsideTenant: true,
     });
     expect(fake.rpcArgs).toEqual([
@@ -281,6 +298,19 @@ describe("hard purge database and Storage order", () => {
       `onzio-media/${clubs.alpha.id}/branding/logo.png`,
       `onzio-media/${clubs.alpha.id}/roster/player.jpg`,
       `onzio-upload-staging/${clubs.alpha.id}/roster/staged.jpg`,
+    ]);
+    // The Storage outcome is its own audit event, written after the files go.
+    expect(fake.calls.at(-1)).toBe("insert:onzio.audit_events");
+    expect(fake.audits).toEqual([
+      {
+        club_id: null,
+        actor_user_id: USER_IDS.ownerAal2,
+        actor_type: "operator",
+        operation: "hard_purge_storage",
+        resource_type: "purged_club",
+        resource_id: clubs.alpha.id,
+        payload: { export_id: "export_123", objects_removed: 3, status: "removed" },
+      },
     ]);
   });
 
@@ -300,6 +330,7 @@ describe("hard purge database and Storage order", () => {
     });
     await expectContractError(() => purge(fake.client), code);
     expect(fake.calls).toEqual(["rpc:onzio.purge_archived_club"]);
+    expect(fake.audits).toEqual([]);
   });
 
   it("reports any other database error as PURGE_DATABASE_FAILED and leaves Storage alone", async () => {
@@ -311,11 +342,34 @@ describe("hard purge database and Storage order", () => {
     expect(fake.calls).toEqual(["rpc:onzio.purge_archived_club"]);
   });
 
-  it("reports a Storage failure after the rows are purged as PURGE_STORAGE_FAILED", async () => {
+  it("records a Storage failure after the rows are purged, then reports PURGE_STORAGE_FAILED", async () => {
     const fake = fakeClient({
       rpc: { data: { status: "purged", club_slug: clubs.alpha.slug }, error: null },
       storage: media,
       removeError: "storage unavailable",
+    });
+    await expectContractError(() => purge(fake.client), "PURGE_STORAGE_FAILED");
+    expect(fake.audits).toEqual([
+      expect.objectContaining({
+        club_id: null,
+        operation: "hard_purge_storage",
+        resource_id: clubs.alpha.id,
+        payload: {
+          export_id: "export_123",
+          objects_removed: 0,
+          status: "failed",
+          error: "onzio-upload-staging: storage unavailable",
+        },
+      }),
+    ]);
+  });
+
+  it("still reports PURGE_STORAGE_FAILED when the failure can't be recorded", async () => {
+    const fake = fakeClient({
+      rpc: { data: { status: "purged", club_slug: clubs.alpha.slug }, error: null },
+      storage: media,
+      removeError: "storage unavailable",
+      auditError: "audit insert failed",
     });
     await expectContractError(() => purge(fake.client), "PURGE_STORAGE_FAILED");
   });

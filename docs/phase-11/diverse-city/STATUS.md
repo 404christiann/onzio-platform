@@ -61,6 +61,23 @@ cascade from the season stats rows, so the purge still empties them, but
 whichever PR merges second must add fixture rows for them to the purge test
 (and may list them in `v_order` before the season stats).
 
+**Review-bot Mediums on #138 (fixed):**
+
+- M1: the `hard_purge` event said Storage was removed before it was. It now
+  records `storage: pending`. `purgeClub` writes a `hard_purge_storage` audit
+  event (club_id null, resource_id the club) after the files go
+  (`status: removed`, `objects_removed`). If the removal fails, it writes
+  `status: failed` with the objects removed so far and the error before
+  raising `PURGE_STORAGE_FAILED`, so "purged but files still up" can be found
+  by query. Contract tests cover the removed record, the failed record, and
+  a failure that can't be recorded.
+- M2: `lib/database.generated.ts` regenerated from the private database with
+  the migration applied (`supabase gen types typescript --db-url ... --schema
+  onzio`). The diff is only the new `purge_archived_club` entry.
+- Verification after the fixes: database test 11/11 (private database),
+  `provisioning-migration` 36/36, tsc and ESLint clean. The unit and contract
+  totals are in the PR body.
+
 **Exact next step:** bot review; `GATE-MIGRATE` on Christian's go, then merge.
 No purge runs on production without Christian's go.
 

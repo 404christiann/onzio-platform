@@ -10,6 +10,7 @@ import {
   type OperatorClient,
   type OperatorDependencies,
   uuidSchema,
+  writeOperatorAudit,
 } from "@/lib/operator/shared";
 
 const purgeSchema = z.object({
@@ -72,21 +73,21 @@ async function listStoragePaths(
   return paths;
 }
 
+// Counts into `progress` so a failure part way still reports what went.
 async function removeStorage(
   client: OperatorClient,
   clubId: string,
-): Promise<number> {
-  let removed = 0;
+  progress: { removed: number },
+): Promise<void> {
   for (const bucket of STORAGE_BUCKETS) {
     const paths = await listStoragePaths(client, bucket, clubId);
     for (let index = 0; index < paths.length; index += 100) {
       const batch = paths.slice(index, index + 100);
       const { error } = await client.storage.from(bucket).remove(batch);
       if (error) throw new Error(`${bucket}: ${error.message}`);
-      removed += batch.length;
+      progress.removed += batch.length;
     }
   }
-  return removed;
 }
 
 export async function purgeClub(
@@ -134,20 +135,47 @@ export async function purgeClub(
   }
   const result = data as PurgeResult;
 
-  // Storage only after the rows are gone for good. A failure here leaves the
-  // database purge in place; calling purgeClub again with the same export
-  // and confirmation retries the Storage removal (already_purged).
-  let storageObjectsRemoved: number;
+  // Storage only after the rows are gone for good. The hard_purge event
+  // records storage as pending; the outcome goes in its own
+  // hard_purge_storage event, so "purged but files still up" can be found
+  // by query. A failure leaves the database purge in place; calling
+  // purgeClub again with the same export and confirmation retries the
+  // Storage removal (already_purged).
+  const progress = { removed: 0 };
+  const recordStorage = (payload: Record<string, unknown>) =>
+    writeOperatorAudit(client, {
+      actorId,
+      clubId: null,
+      operation: "hard_purge_storage",
+      resourceType: "purged_club",
+      resourceId: input.clubId,
+      payload: {
+        export_id: input.exportId,
+        objects_removed: progress.removed,
+        ...payload,
+      },
+    });
+
   try {
-    storageObjectsRemoved = await removeStorage(client, input.clubId);
+    await removeStorage(client, input.clubId, progress);
   } catch (storageError) {
+    const message =
+      storageError instanceof Error ? storageError.message : String(storageError);
+    let recorded = true;
+    try {
+      await recordStorage({ status: "failed", error: message.slice(0, 500) });
+    } catch {
+      recorded = false;
+    }
     failContract(
       "PURGE_STORAGE_FAILED",
-      `Club rows are purged; run the purge again with the same export to retry Storage. ${String(
-        storageError instanceof Error ? storageError.message : storageError,
-      )}`,
+      `Club rows are purged but its files are not all removed${
+        recorded ? " (recorded as hard_purge_storage failed)" : " and the failure could not be recorded"
+      }; run the purge again with the same export to retry Storage. ${message}`,
     );
   }
+  const storageAuditEventId = await recordStorage({ status: "removed" });
+  const storageObjectsRemoved = progress.removed;
 
   return {
     clubId: input.clubId,
@@ -157,6 +185,7 @@ export async function purgeClub(
     auditEventId: result.audit_event_id ?? null,
     rowsDeleted: result.rows_deleted ?? {},
     storageObjectsRemoved,
+    storageAuditEventId,
     finalAuditOutsideTenant: true,
   };
 }

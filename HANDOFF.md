@@ -17,6 +17,9 @@
 - **Open:** Connect guard blocks only when `charges_enabled` (Christian may
   want stricter). RE-11c's season adjustment tables need fixture rows in the
   purge test once both PRs are in.
+- **Review-bot Mediums fixed:** the Storage outcome now has its own
+  `hard_purge_storage` audit event (removed or failed; the main event says
+  `pending`), and `lib/database.generated.ts` has the new function.
 - **Exact next step:** bot review, `GATE-MIGRATE` on Christian's go, merge.
 
 ## 2026-11-10 - ADMIN-RE-24c Search on the new admin

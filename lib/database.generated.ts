@@ -3019,6 +3019,15 @@ export type Database = {
         Args: { p_club_id: string; p_registration_id: string }
         Returns: undefined
       }
+      purge_archived_club: {
+        Args: {
+          p_actor_id: string
+          p_club_id: string
+          p_confirmation: string
+          p_export_id: string
+        }
+        Returns: Json
+      }
       record_stripe_rejection: {
         Args: {
           p_club_id: string
