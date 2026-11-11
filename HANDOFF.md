@@ -1,4 +1,18 @@
-## 2026-11-11 - GATE-FLIP-DC Diverse City switched to the new admin
+## 2026-11-11 - GATE-FLIP-DC undone: Diverse City back on the classic admin
+
+- **Status:** `released`. By Christian's decision, Diverse City was switched on at
+  20:37:29Z and switched back to `classic` at 20:51:29Z. He gave the go in the flip
+  session. The time zone (`America/Chicago`) and flags (`{}`) are unchanged. Read back
+  with `needsUpdate: false`.
+- **Smoke checks:** every Diverse City domain's `/`, `/programs`, `/roster`, `/shop`,
+  `/schedule` and `/admin/login` return 200, with no `UNKNOWN_TENANT`.
+- **Switch on again** (only on Christian's go): `npx tsx scripts/set-club-admin-portal.ts
+  diverse-city --portal=reimagined --execute --confirm-project=ioalthwsdrlzrubomrow`.
+- **Staging:** the staging Supabase project `fxefqnoqxbezeccjvrsw` is deleted, so there
+  is no staging Lions club to remove.
+- **Details:** `STATUS.md`, `docs/admin-portal-production-release.md`.
+
+## 2026-11-11 - GATE-FLIP-DC Diverse City switched to the new admin (switched back at 20:51:29Z, see above)
 
 - **Status:** `released` 2026-11-11T20:37:29Z, on Christian's go in the flip
   session ("Dry run, then flip"). Diverse City's `admin_portal` is
