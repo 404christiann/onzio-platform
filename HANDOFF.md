@@ -1,3 +1,64 @@
+## 2026-11-10 - Unit tests run in parallel: test:contracts and test:legacy about 5 times faster
+
+- **Status:** `in_progress`, draft PR open (Christian decides when it is ready).
+  Test infrastructure only, no work package. No application code, migration,
+  hosted action or new dependency (one dependency is removed).
+- **What changed:** `vitest.config.ts` splits the test files into three
+  projects. `unit` (every file except the two groups below) runs files in
+  parallel threads. `db` (`tests/database/**`) and `pilot`
+  (`tests/architecture/pilot-*.test.ts`) still run one file at a time in forked
+  processes. `tests/global-setup/serial-project-guard.ts` stops those two
+  projects before any test runs if the command line sets `--fileParallelism` or
+  `--isolate=false`. New scripts `test:unit` and `test:pilot` exist, and
+  `test:db` now selects the `db` project. The local test data cleanup is the `db` project's
+  `globalSetup`, so it runs only when database files are selected. Vite's
+  `resolve.tsconfigPaths` replaces the `vite-tsconfig-paths` plugin, and the
+  package and its two private dependencies are removed from the lockfile. A
+  `Unit tests` workflow (last commit, droppable on its own) runs
+  `npm run test:unit` on pull requests and pushes to `main`.
+- **What did not change:** no test was edited, skipped, deleted or mocked, and
+  `isolate: false` is not enabled (two experimental runs with
+  `--project unit --isolate=false` failed 55 tests in 7 files, then 28 tests in
+  4 other files, and were no faster). The test list is identical before and
+  after: 3,907 tests in 279 non-pilot files, plus 281 pilot tests in 7 files.
+  `npm test` as a whole improves only about 5 to 10%, because the pilot files
+  take 1,346 to 1,373 seconds on this loaded Mac and still run one at a time.
+- **Verification (measured at `706620ef`, then `test:unit` and `tsc` re-run on the
+  branch rebased onto `8fa59263`: 227 files, 2,840 of 2,840 passed, the same
+  286-file list; a shared Mac with a one-minute load average of 9 to 21 during
+  the timing runs):** medians of three runs, old config and new
+  config interleaved. `test:contracts` 56.4s to 10.7s, `test:legacy` 26.6s to
+  5.1s, `test:unit` 128.4s to 51.6s (2.5 times). Five later `test:unit` runs at
+  lower load took 27.6 to 32.3s. Seven consecutive `test:unit` runs passed
+  2,833/2,833 (five plain, one with `.env.test` exported, one with `TZ=UTC`),
+  and one run with no env files and a bare environment passed too. Pilot, old
+  config then new config: 281 tests each, 275 then 279 passed, the one test that
+  failed after is among the 5 that failed before (all `Test timed out in
+  15000ms` under load), and 1 is skipped in both. Database: 52 files, 1,074 of
+  1,074 passed before (old config) and after, each under the lock. After the
+  change the local test data cleanup ran from the `db` project and removed 991
+  audit rows, 23 Stripe events, 1 email delivery event, 103 auth log entries, 1
+  presentation publication and 5 presentation documents. `npx tsc --noEmit` is
+  clean. `npm run lint` fails in this worktree only because it sits inside
+  another checkout whose `.eslintrc.json` conflicts. ESLint with this repo's
+  config alone reports 0 errors (one existing warning in
+  `app/(public)/sponsors/page.tsx`). Not run: `npm test` end to end, a Linux run
+  of the new workflow, and the production build. The full run table with load
+  averages and tested commits is in the PR body.
+- **Interaction to fix:** the unmerged `agent/verify-faster` branch
+  (`scripts/codex-loop-verify.sh`) skips the pilot files and avoids double runs
+  with `--exclude=...`. The projects ignore `--exclude`, so on top of this
+  change those rows would run more files, never fewer, and the pilot skip would
+  stop skipping. Whichever of the two lands second should select files with
+  `--project unit` and directories instead. Not checked by running that
+  script.
+- **Exact next step:** Christian reviews the draft PR. After the first Linux
+  run of the `Unit tests` workflow, decide whether to keep that commit and
+  whether the check is required (branch protection is not touched here). The
+  next lever is `tests/architecture/template-selectors.test.ts`. In three
+  recorded `test:unit` runs the other 226 files finished by 13 to 14 seconds
+  and this one finished last, at 26 to 30 seconds.
+
 ## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
 
 - **Status:** `in_progress`, PR open. PR 24d of `ADMIN-RE-24` (built before 24c so

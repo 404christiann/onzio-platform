@@ -1,14 +1,12 @@
 import { configDefaults, defineConfig } from "vitest/config";
 
-// One file set, three projects. `unit` is the catch-all, so a test file added
-// in a new directory still runs. The two serial projects carve out the files
-// that share state outside their own process.
+// `unit` is the catch-all, so a test file added in a new directory still runs.
 const ALL_TESTS = ["tests/**/*.test.ts", "lib/__tests__/**/*.test.ts"];
 // Database files share deterministic tenant singleton fixtures. Running them
 // in parallel lets one file restore a singleton while another asserts it.
 const DATABASE_TESTS = ["tests/database/**/*.test.ts"];
-// Pilot proofs start servers and own process groups. Measured 2026-11-01:
-// parallel files collide on ports and processes.
+// Pilot proofs start servers and own process groups, so parallel files collide
+// on ports and processes.
 const PILOT_TESTS = ["tests/architecture/pilot-*.test.ts"];
 const SETUP = ["./vitest.setup.ts"];
 const SERIAL_GUARD = "./tests/global-setup/serial-project-guard.ts";

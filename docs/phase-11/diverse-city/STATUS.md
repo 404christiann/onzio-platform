@@ -1,5 +1,73 @@
 # Diverse City FC Status
 
+## 2026-11-10 - Test infrastructure: parallel unit tests (no work package)
+
+**Agent/package:** Claude Code, test infrastructure, no work package. Branch
+`claude/test-speed-projects`, rebased onto `main` `8fa59263` (measured at
+`706620ef`). **Status:** `in_progress`, draft PR open. No application code, migration, hosted action, Stripe, DNS or
+email change. One dev dependency removed.
+
+**Completed work:**
+
+- `vitest.config.ts` has three projects. `unit` is the catch-all and runs files
+  in parallel threads. `db` (`tests/database/**`) and `pilot`
+  (`tests/architecture/pilot-*.test.ts`) run one file at a time in forked
+  processes, as before. `tests/global-setup/serial-project-guard.ts` makes
+  `--fileParallelism` or `--isolate=false` fail those two projects before any
+  test runs (both flags checked: exit 1 with the guard message, no tests run).
+- `package.json` adds `test:unit` and `test:pilot`, and `test:db` runs
+  `--project db`. The local test data cleanup now runs only with the `db`
+  project, so it no longer starts for `test:unit`, `test:legacy` or
+  `test:contracts` (it did nothing there without `SUPABASE_LOCAL=1`).
+- `resolve.tsconfigPaths` replaces `vite-tsconfig-paths`. The package is out of
+  `package.json`, and it, `globrex` and `tsconfck` are out of `package-lock.json`.
+  The lockfile edit is 45 deleted lines, made by script because npm 10.9.9 also drops the
+  `libc` fields from other entries.
+- `tests/README.md` documents the projects, the guard, the per-script
+  parallelism and two Vitest 4.1.10 command-line limits (`--exclude` has no
+  effect on the projects, and `--project '!db' --project '!pilot'` selects all
+  three).
+- A `Unit tests` workflow (`.github/workflows/unit-tests.yml`, the last commit)
+  runs `npm run test:unit` on pull requests and pushes to `main`. Not yet run on
+  Linux.
+
+**Files changed:** `vitest.config.ts`, `package.json`, `package-lock.json`,
+new `tests/global-setup/serial-project-guard.ts`, new
+`.github/workflows/unit-tests.yml`, `tests/README.md`, this file, `HANDOFF.md`.
+No test file was edited.
+
+**Verification (measured at `706620ef`, then `test:unit` and `tsc` re-run on the
+rebased branch at `8fa59263`: 227 files, 2,840 of 2,840 passed, same 286-file
+list):** the file list is identical before and after
+(286 files: 227 `unit`, 52 `db`, 7 `pilot`, no overlap) and the test ID list for
+the 279 non-pilot files is identical (3,907 tests). Medians of three, old and
+new config interleaved on a loaded Mac: `test:contracts` 56.4s to 10.7s,
+`test:legacy` 26.6s to 5.1s, `test:unit` 128.4s to 51.6s. Seven consecutive
+`test:unit` runs passed 2,833/2,833 (five plain, one with `.env.test` exported,
+one with `TZ=UTC`). A run with no env files and a bare environment also passed,
+and so did one after the plugin was removed. Pilot, old config then new config
+(after the plugin removal): 281 tests each, 275 then 279 passed, 5 then 1
+failed (test timeouts in `pilot-accepted-build-identity`, the one after is
+among the five before), 1 skipped in both. Database: 52 files, 1,074 of 1,074
+passed before (old config) and after, each under the lock. After the change the
+local test data cleanup ran from the `db` project and removed 991 audit rows, 23
+Stripe events, 1 email delivery event, 103 auth log entries, 1 presentation
+publication and 5 presentation documents. `npx tsc --noEmit` clean. ESLint with
+this repo's config: 0 errors. `npm run lint` itself fails in this worktree
+because the worktree sits inside another checkout whose `.eslintrc.json`
+conflicts. Raw logs and JSON are outside the repository.
+
+**Blockers / decisions:** the `Unit tests` workflow has not run on Linux, and
+whether it is a required check is Christian's decision. `npm test` end to end,
+the production build and a Linux run were not run. The unmerged
+`agent/verify-faster` branch skips pilot files with `--exclude=...`, which the
+projects ignore, so whichever lands second must switch it to `--project`
+(not checked by running that script).
+
+**Exact next step:** Christian reviews the draft PR and decides whether to keep
+the workflow commit. After the first Linux run, fix any Linux-only failure in
+its own change or drop the workflow commit.
+
 ## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so
