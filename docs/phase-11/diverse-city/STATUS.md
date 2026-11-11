@@ -122,6 +122,12 @@ runs under `scripts/with-local-db-lock.sh` against a production build at
   `8fa5926` build, so it is not from this PR.
 - Database suite: not run; no migration, seed or SQL change.
 
+**Follow-up (bot's Low notes on #134):** removed the empty
+`clubhouse-story-meta` box and its CSS (it drew a stray divider), and the
+Clubhouse About story mark falls back to empty instead of "14". Checked with
+`tsc`, ESLint, contracts 151 files / 1,945 tests, `npm run build`, and
+`homepage-editor-templates.spec.ts` 2/2 under the database lock.
+
 **Blockers / decisions:** staging's own Lions tenant waits for Christian's go.
 `lib/operator/purge-club.ts` is out of date (Phase 2 table list, Storage first,
 not transactional) and should be fixed before it is used for any club.
