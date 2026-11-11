@@ -7,7 +7,7 @@ import {
   adjustmentProblem,
   FIELD_TOTAL_KEYS,
   KEEPER_TOTAL_KEYS,
-  SEASON_ADJUSTMENT_LIMITS,
+  SEASON_ADJUSTMENT_LIMIT,
   sumGames,
 } from "@/lib/season-totals";
 
@@ -86,18 +86,19 @@ describe("a typed total becomes an adjustment", () => {
     expect(adjustmentFor({ goals: 3 }, undefined, FIELD_TOTAL_KEYS).goals).toBe(3);
   });
 
-  it("keeps minutes within 9,999 and other numbers within 999, either way", () => {
-    expect(SEASON_ADJUSTMENT_LIMITS).toEqual({ number: 999, mins: 9999 });
-    const ok = adjustmentFor({ mins: 9999, goals: 999 }, undefined, FIELD_TOTAL_KEYS);
+  it("keeps every number within 9,999, either way", () => {
+    expect(SEASON_ADJUSTMENT_LIMIT).toBe(9999);
+    const ok = adjustmentFor({ mins: 9999, goals: 9999 }, undefined, FIELD_TOTAL_KEYS);
     expect(adjustmentProblem(ok, FIELD_TOTAL_KEYS)).toBeNull();
     expect(adjustmentProblem({ ...ok, mins: 10_000 }, FIELD_TOTAL_KEYS)).toBe("Minutes added by hand stop at 9,999.");
-    expect(adjustmentProblem({ ...ok, goals: -1000 }, FIELD_TOTAL_KEYS)).toBe("Numbers added by hand stop at 999.");
+    expect(adjustmentProblem({ ...ok, goals: -10_000 }, FIELD_TOTAL_KEYS)).toBe("Numbers added by hand stop at 9,999.");
   });
 
   it("uses the same limits as the database", () => {
     expect(migration).toContain("check (mins between -9999 and 9999)");
-    expect(migration).toContain("check (goals between -999 and 999)");
-    expect(migration).toContain("check (saves between -999 and 999)");
+    expect(migration).toContain("check (goals between -9999 and 9999)");
+    expect(migration).toContain("check (saves between -9999 and 9999)");
+    expect(migration).not.toMatch(/between -999 and 999\)/);
   });
 });
 

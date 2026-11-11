@@ -29,9 +29,9 @@ player numbers for the season's games plus a hand-entered adjustment.
 
 **Christian's decision (2026-11-10, "Keep today's numbers"):** adjustments may be
 negative. The migration sets each adjustment to typed − games, so every total visitors
-see stays exactly as it is; no test rows deleted. Limits: an adjustment's minutes
-within ±9,999 (largest typed season minutes on production: 990), every other number
-within ±999 (database CHECK and Zod). A save that would take a total below 0 is refused
+see stays exactly as it is; no test rows deleted. Limits: every number of an
+adjustment within ±9,999 (database CHECK and Zod; largest typed season minutes on
+production 990, largest other typed number 31). A save that would take a total below 0 is refused
 (`SEASON_TOTAL_BELOW_ZERO`, trigger); the views never show a total below 0.
 
 **Production check (read-only, Christian, 2026-11-10):** 7 player-seasons had a typed

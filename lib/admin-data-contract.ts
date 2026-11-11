@@ -7,7 +7,7 @@ import {
 } from "@/lib/contact-admin";
 import { FOOTER_TAGLINE_LIMIT } from "@/lib/club-branding";
 import { YOUR_CLUB_LIMITS } from "@/lib/your-club";
-import { SEASON_ADJUSTMENT_LIMITS } from "@/lib/season-totals";
+import { SEASON_ADJUSTMENT_LIMIT } from "@/lib/season-totals";
 import { SPONSOR_NAME_LIMIT, SPONSOR_WEBSITE_LIMIT } from "@/lib/sponsor-content";
 
 export const ADMIN_TABLE_FEATURES = {
@@ -432,16 +432,7 @@ const siteSponsorLogoMutation = z
 // totals added by hand. It may be negative (2026-11-10, "Keep today's numbers").
 // The ceilings mirror the database CHECKs (20261110160000_season_totals_add_up.sql);
 // the database also refuses an adjustment that takes a total below 0.
-const adjustmentNumber = z
-  .number()
-  .int()
-  .min(-SEASON_ADJUSTMENT_LIMITS.number)
-  .max(SEASON_ADJUSTMENT_LIMITS.number);
-const adjustmentMinutes = z
-  .number()
-  .int()
-  .min(-SEASON_ADJUSTMENT_LIMITS.mins)
-  .max(SEASON_ADJUSTMENT_LIMITS.mins);
+const adjustmentNumber = z.number().int().min(-SEASON_ADJUSTMENT_LIMIT).max(SEASON_ADJUSTMENT_LIMIT);
 const playerSeasonAdjustmentMutation = z
   .object({
     player_id: uuid.optional(),
@@ -452,7 +443,7 @@ const playerSeasonAdjustmentMutation = z
     starts: adjustmentNumber.optional(),
     yellow: adjustmentNumber.optional(),
     red: adjustmentNumber.optional(),
-    mins: adjustmentMinutes.optional(),
+    mins: adjustmentNumber.optional(),
     offsides: adjustmentNumber.optional(),
     fouls: adjustmentNumber.optional(),
     fouls_suffered: adjustmentNumber.optional(),
@@ -468,7 +459,7 @@ const goalkeeperSeasonAdjustmentMutation = z
     starts: adjustmentNumber.optional(),
     yellow: adjustmentNumber.optional(),
     red: adjustmentNumber.optional(),
-    mins: adjustmentMinutes.optional(),
+    mins: adjustmentNumber.optional(),
   })
   .strict();
 

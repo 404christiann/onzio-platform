@@ -23,8 +23,8 @@
 -- between this migration and the deploy keeps showing the right totals.
 --
 -- Bounds (production check, 2026-11-10: largest typed season minutes 990,
--- largest other typed number 31): an adjustment's minutes stay within +-9,999 and
--- every other number within +-999. Saving an adjustment that would take a total
+-- largest other typed number 31): every number of an adjustment stays within
+-- +-9,999. Saving an adjustment that would take a total
 -- below 0 is refused, and the views never show a total below 0 (a later change to
 -- the games could otherwise do it).
 --
@@ -38,16 +38,16 @@ create table onzio.player_season_adjustments (
   club_id uuid not null references onzio.clubs(id) on delete restrict,
   player_id uuid not null,
   season_id uuid not null,
-  goals integer not null default 0 check (goals between -999 and 999),
-  assists integer not null default 0 check (assists between -999 and 999),
-  tackles integer not null default 0 check (tackles between -999 and 999),
-  starts integer not null default 0 check (starts between -999 and 999),
-  yellow integer not null default 0 check (yellow between -999 and 999),
-  red integer not null default 0 check (red between -999 and 999),
+  goals integer not null default 0 check (goals between -9999 and 9999),
+  assists integer not null default 0 check (assists between -9999 and 9999),
+  tackles integer not null default 0 check (tackles between -9999 and 9999),
+  starts integer not null default 0 check (starts between -9999 and 9999),
+  yellow integer not null default 0 check (yellow between -9999 and 9999),
+  red integer not null default 0 check (red between -9999 and 9999),
   mins integer not null default 0 check (mins between -9999 and 9999),
-  offsides integer not null default 0 check (offsides between -999 and 999),
-  fouls integer not null default 0 check (fouls between -999 and 999),
-  fouls_suffered integer not null default 0 check (fouls_suffered between -999 and 999),
+  offsides integer not null default 0 check (offsides between -9999 and 9999),
+  fouls integer not null default 0 check (fouls between -9999 and 9999),
+  fouls_suffered integer not null default 0 check (fouls_suffered between -9999 and 9999),
   updated_at timestamptz not null default now(),
   primary key (club_id, player_id, season_id),
   foreign key (club_id, player_id, season_id)
@@ -58,12 +58,12 @@ create table onzio.goalkeeper_season_adjustments (
   club_id uuid not null references onzio.clubs(id) on delete restrict,
   player_id uuid not null,
   season_id uuid not null,
-  goals_against integer not null default 0 check (goals_against between -999 and 999),
-  saves integer not null default 0 check (saves between -999 and 999),
-  clean_sheets integer not null default 0 check (clean_sheets between -999 and 999),
-  starts integer not null default 0 check (starts between -999 and 999),
-  yellow integer not null default 0 check (yellow between -999 and 999),
-  red integer not null default 0 check (red between -999 and 999),
+  goals_against integer not null default 0 check (goals_against between -9999 and 9999),
+  saves integer not null default 0 check (saves between -9999 and 9999),
+  clean_sheets integer not null default 0 check (clean_sheets between -9999 and 9999),
+  starts integer not null default 0 check (starts between -9999 and 9999),
+  yellow integer not null default 0 check (yellow between -9999 and 9999),
+  red integer not null default 0 check (red between -9999 and 9999),
   mins integer not null default 0 check (mins between -9999 and 9999),
   updated_at timestamptz not null default now(),
   primary key (club_id, player_id, season_id),

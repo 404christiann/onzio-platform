@@ -97,7 +97,8 @@ async function editNumbers(page: Page, name: string, labels: string[], offset: n
     await expect(input).toBeVisible();
     expect((await input.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     expect(await input.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
-    const value = label === "minutes" ? (largeMinutes ? 16020 : 120) + offset : index + offset;
+    // Season minutes go far past one game's 300; ADMIN-RE-11c caps only what is added by hand (9,999).
+    const value = label === "minutes" ? (largeMinutes ? 9020 : 120) + offset : index + offset;
     await input.fill(String(value));
     values[databaseKeys[label] ?? label] = value;
   }
@@ -374,4 +375,24 @@ test("Season Save & switch keeps newly saved values clean and blocks edits while
     await expect(page.getByRole("tab", { name: "Match stats", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: "Season stats", exact: true })).toBeEnabled();
   } finally { release(); await fixture.restore(); }
+});
+
+test("ADMIN-RE-11c: a season total that needs more than 9,999 minutes added by hand is refused in plain words", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const fixture = await fixtures();
+  try {
+    await page.goto("/admin/stats?view=season");
+    await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonIds[0]);
+    await selectPlayer(page, fixture.names[0]);
+    const minutes = page.getByRole("spinbutton", { name: `${fixture.names[0]}: minutes`, exact: true });
+    // The season's games give 150 minutes, so 10,149 is the most a total can be.
+    await minutes.fill("10149");
+    await saved(page, "Save season totals");
+    await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { mins: 10149 });
+    await minutes.fill("10150");
+    await page.getByRole("button", { name: "Save season totals", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("Minutes added by hand stop at 9,999.");
+    await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { mins: 10149 });
+  } finally { await fixture.restore(); }
 });

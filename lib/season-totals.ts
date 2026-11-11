@@ -4,8 +4,8 @@
 // (onzio.player_season_totals / onzio.goalkeeper_season_totals); this module holds
 // the pieces the admin needs to turn a typed total back into an adjustment.
 
-/** Mirrors the CHECKs in 20261110160000_season_totals_add_up.sql. */
-export const SEASON_ADJUSTMENT_LIMITS = { number: 999, mins: 9_999 } as const;
+/** Mirrors the CHECKs in 20261110160000_season_totals_add_up.sql: every number, either way. */
+export const SEASON_ADJUSTMENT_LIMIT = 9_999;
 
 export const FIELD_TOTAL_KEYS = [
   "goals",
@@ -84,11 +84,9 @@ export function adjustmentFor<K extends TotalKey>(
 /** Why an adjustment can't be saved, in the words the admin shows; null when it can. */
 export function adjustmentProblem<K extends TotalKey>(adjustment: Numbers<K>, keys: readonly K[]): string | null {
   for (const key of keys) {
-    const limit = key === "mins" ? SEASON_ADJUSTMENT_LIMITS.mins : SEASON_ADJUSTMENT_LIMITS.number;
-    if (Math.abs(adjustment[key]) > limit) {
-      return key === "mins"
-        ? `Minutes added by hand stop at ${SEASON_ADJUSTMENT_LIMITS.mins.toLocaleString("en-US")}.`
-        : `Numbers added by hand stop at ${SEASON_ADJUSTMENT_LIMITS.number}.`;
+    if (Math.abs(adjustment[key]) > SEASON_ADJUSTMENT_LIMIT) {
+      const limit = SEASON_ADJUSTMENT_LIMIT.toLocaleString("en-US");
+      return key === "mins" ? `Minutes added by hand stop at ${limit}.` : `Numbers added by hand stop at ${limit}.`;
     }
   }
   return null;

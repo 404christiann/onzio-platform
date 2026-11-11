@@ -94,7 +94,7 @@ async function fixtures() {
     // ADMIN-RE-11c: season totals are the season's match stats plus an adjustment. These make
     // the totals goals 3 / 1, assists 2 / 1, starts 2 / 1, minutes 150 / 80, as before.
     await checkResult(await client.from("player_season_adjustments").insert([
-      { club_id: clubId, player_id: playerId, season_id: activeSeason.id, assists: 1 },
+      { club_id: clubId, player_id: playerId, season_id: activeSeason.id, goals: 0, assists: 1, mins: 0 },
       { club_id: clubId, player_id: playerId, season_id: seasonId, goals: -2, assists: -1, mins: 5 },
     ]));
     await checkResult(await client.from("league_standings").insert({ id: standingId, club_id: clubId, team_name: `Guided QA team ${suffix}`, team_abbreviation: "QA", played: 3, wins: 2, draws: 1, losses: 0, goal_difference: 4, points: 7, sort_order: 77 }));

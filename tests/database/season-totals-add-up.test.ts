@@ -201,13 +201,13 @@ describe("adjustments", () => {
     expect((await totals(player)).goals).toBe(0);
   });
 
-  it("keep minutes within 9,999 and every other number within 999, either way", async () => {
+  it("keep every number within 9,999, either way", async () => {
     const player = await inSeason(ALPHA, season);
-    await adjust(ALPHA, player, season, { mins: 9999, goals: 999 });
+    await adjust(ALPHA, player, season, { mins: 9999, goals: 9999 });
     await rejects("update onzio.player_season_adjustments set mins=10000 where player_id=$1", [player], "mins_check");
-    await rejects("update onzio.player_season_adjustments set goals=1000 where player_id=$1", [player], "goals_check");
-    // Below -999 the "never below 0" trigger answers first (it runs before the CHECK).
-    await rejects("update onzio.player_season_adjustments set goals=-1000 where player_id=$1", [player], /goals_check|SEASON_TOTAL_BELOW_ZERO/);
+    await rejects("update onzio.player_season_adjustments set goals=10000 where player_id=$1", [player], "goals_check");
+    // Below -9,999 the "never below 0" trigger answers first (it runs before the CHECK).
+    await rejects("update onzio.player_season_adjustments set goals=-10000 where player_id=$1", [player], /goals_check|SEASON_TOTAL_BELOW_ZERO/);
     const keeper = await inSeason(ALPHA, season, {}, true);
     await adjust(ALPHA, keeper, season, { mins: 9999 }, true);
     await rejects("update onzio.goalkeeper_season_adjustments set mins=-10000 where player_id=$1", [keeper], /mins_check|SEASON_TOTAL_BELOW_ZERO/);
