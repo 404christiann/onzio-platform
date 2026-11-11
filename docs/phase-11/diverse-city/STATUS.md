@@ -1,5 +1,75 @@
 # Diverse City FC Status
 
+## 2026-11-11 - ADMIN-RE-12c: the "Programs and tryouts" page
+
+**Agent/package:** Claude Code, `ADMIN-RE-12c`, the last of three RE-12 PRs
+(12a #131 and 12b #139 are released). Branch
+`claude/admin-re-12c-programs-tryouts` from `main` `ec0b9a28`. **Status:**
+`in_progress`, PR open for the review bot. **No migration**: it uses the RPCs
+RE-12b put on production. No change to `lib/club-context.ts`, no hosted
+action. Started on the orchestrator's go, relaying Christian's "run 12c, 11c-2
+and #133 in parallel" (2026-11-11).
+
+**Completed work:**
+
+- **Page** `/admin/programs-and-tryouts` (`app/admin/(protected)/programs-and-tryouts/page.tsx`,
+  `components/admin/reimagined/ProgramsTryouts.tsx`, `TryoutForm.tsx`,
+  `programs-tryouts.module.css`). Designs `cd-programs-final` and
+  `cd-tryout-final`. It follows group 2 decisions 1-8 and 10-13 as built, and
+  14 with the same exception as the HANDOFF entry.
+  - **List:** tryouts by date, then programs in website order. Each row has
+    the state pill, the form price and "N signed up", which links to See
+    registrations for that form.
+  - **Sign-up way menu:** form (with "Used by", "Connect payments first · Set
+    up", "Not open yet" and "Make a new form"), link, or they contact you.
+  - **⋯ menu:** change the details; close or reopen; hide or show; make a
+    copy; move up or down; delete with a confirm.
+  - **Saving:** each change saves at once with "Saved · Undo", using the
+    hold-aware saved words.
+  - **Add or change a tryout:** plain questions with a preview. The tab's
+    "Add a tryout" opens it (`?add=tryout`).
+  - **Classic pages:** the page-wide words link to them.
+  - A classic club is sent to the old pages.
+- **Data:** `lib/admin-programs-tryouts-data.ts`, reading through the user's
+  own client, scoped to the club. It reads no names or contact details;
+  states come from `lib/sign-up-state.ts`. `tallySignUps` in
+  `lib/admin-sign-ups-data.ts` now also counts paid and refunded per form.
+- **Writes:** `POST /api/admin/programs-and-tryouts`
+  (`lib/programs-tryouts-contract.ts`). The club and session are resolved on
+  the server, and it checks that the club's site has the section and allows
+  new programs for Make a copy. It calls `save_tryout`,
+  `save_program_sign_up`, `copy_program`, `copy_tryout`, `delete_tryout` and
+  `save_program_directory`, and a deleted tryout's photo is retired.
+- **Manifest:**
+  - route `programs-and-tryouts`, new admin only, visible when the site has
+    programs or tryouts;
+  - one More row in place of the Programs and Tryouts rows (named for the one
+    section a club has);
+  - Programs tab placement and search keywords.
+- **See registrations:** `?form=` narrows the list, the tab counts and "new
+  this week" to one of the club's own forms. A foreign or malformed id is
+  ignored. It shows "From <form> · All forms".
+- **Classic Tryouts editor preview:** leaves hidden tryouts out, keeps a
+  reopened one open, and sorts by date, like the website. Its save is
+  unchanged (the review bot's Low on #139).
+- **Icons:** eye-slash and link from icons.download (medium/outline/round),
+  with `approved-selection.json` and the icon contract test.
+
+**Not done:** "Make a new form" opens Sign-up forms but doesn't come back with
+the new form chosen (decision 7's return trip). The top bar always reads
+"Programs and tryouts"; the page heading and More row follow the club's
+sections.
+
+**Verification:** `tests/contracts/admin-reimagined-programs-tryouts.test.ts`,
+the updated manifest and icon contracts, and
+`tests/browser/admin-reimagined-programs-tryouts.spec.ts` at 390 and 1440 on
+local Alpha with the worst-case 80-character name and 160-character place.
+The full suites, with the commit they ran on, are in the PR body.
+
+**Blockers:** none.
+
+**Exact next step:** bot review, then merge (no gate).
+
 ## 2026-11-11 - Operator hard purge released
 
 **Agent/package:** Claude Code, operator purge fix (PR #138), `GATE-MIGRATE`

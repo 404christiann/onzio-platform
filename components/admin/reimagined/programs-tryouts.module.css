@@ -1,0 +1,844 @@
+/* ADMIN-RE-12c: "Programs and tryouts" (design: cd-programs-final,
+   cd-tryout-final). Colors come from the admin theme tokens; green says
+   "taking sign-ups". Names wrap to two lines and then end in "…", with the
+   full value on hover (MAP, break-ui). */
+
+.page {
+  --pt-ok: #187a43;
+  --pt-ok-bg: #d6f1df;
+  --pt-closed-bg: hsl(var(--muted));
+  margin: 0 auto;
+  max-width: 1120px;
+  padding-bottom: 96px;
+}
+
+:global([data-admin-theme="dark"]) .page {
+  --pt-ok: #7ddca1;
+  --pt-ok-bg: #123a24;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.count {
+  display: inline-grid;
+  min-width: 28px;
+  height: 24px;
+  place-items: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.words a {
+  color: hsl(var(--muted-foreground));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.caret {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.section {
+  margin: 28px 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.groupEmpty,
+.empty p {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+.empty {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 14px;
+}
+
+.notice {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: hsl(var(--destructive) / 0.1);
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--destructive));
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card));
+}
+
+.card[aria-busy] {
+  opacity: 0.7;
+}
+
+.main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 12px 12px 18px;
+}
+
+.text {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+
+.name,
+.line {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+  -webkit-line-clamp: 2;
+}
+
+.line {
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+  -webkit-line-clamp: 1;
+}
+
+.price {
+  flex: none;
+  min-width: 52px;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.status {
+  display: flex;
+  flex: 0 1 380px;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.pill {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+}
+
+span.pill {
+  cursor: default;
+}
+
+.pill > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill[data-tone="taking"] {
+  background: var(--pt-ok-bg);
+  color: var(--pt-ok);
+}
+
+.pill[data-tone="closed"] {
+  background: var(--pt-closed-bg);
+}
+
+.pill[data-tone="hidden"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+}
+
+.pill:focus-visible,
+.more:focus-visible,
+.menuRow:focus-visible,
+.linkButton:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.seen {
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.tail {
+  font-size: 13px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.more {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+
+.more:hover {
+  background: hsl(var(--muted));
+}
+
+.closed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-height: 40px;
+  padding: 6px 18px;
+  border-top: 1px solid hsl(var(--border));
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+.linkButton {
+  min-height: 32px;
+  margin-left: auto;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.add,
+.primary,
+.secondary,
+.danger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add,
+.primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondary {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.danger {
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+.menu {
+  display: grid;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(480px, 70vh);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.16);
+}
+
+.menuHead {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: hsl(var(--muted-foreground));
+}
+
+button.menuHead {
+  cursor: pointer;
+}
+
+.menuRow {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.menuRow:hover {
+  background: hsl(var(--muted));
+}
+
+.menuRow[data-picked] {
+  font-weight: 600;
+}
+
+.menuRow[data-danger] {
+  color: hsl(var(--destructive));
+}
+
+.menuRow[aria-disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.menuRow[aria-disabled]:hover {
+  background: transparent;
+}
+
+.menuRow[data-quiet] {
+  border-top: 1px solid hsl(var(--border));
+  border-radius: 0 0 10px 10px;
+  color: hsl(var(--muted-foreground));
+}
+
+.menuTwo {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+
+.menuTop {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+}
+
+.menuName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuPrice {
+  flex: none;
+  color: hsl(var(--muted-foreground));
+}
+
+.menuSub,
+.menuNote {
+  font-size: 13px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+  overflow-wrap: anywhere;
+}
+
+.menuNote {
+  margin: 0 10px 8px;
+}
+
+.inlineLink {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.menuForm {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 6px;
+}
+
+.menuForm .field {
+  margin: 0 10px;
+}
+
+.menuForm .primary {
+  margin: 0 10px;
+}
+
+.picker {
+  display: grid;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.field input {
+  min-height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid hsl(var(--input));
+  border-radius: 10px;
+  background: hsl(var(--card));
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  color: hsl(var(--foreground));
+}
+
+.field input:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 1px;
+}
+
+.toast {
+  position: fixed;
+  z-index: 60;
+  right: 24px;
+  top: 76px;
+  display: inline-flex;
+  max-width: calc(100vw - 32px);
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 16px;
+  border-radius: 999px;
+  background: hsl(var(--foreground));
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(var(--background));
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast[data-on] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.undo {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* The delete confirm: a sheet from the foot on a phone, a card in the middle on
+   a laptop (the Seasons hub's dialog). AdminModal takes its whole look from
+   these classes, so they position and stack it above the scrim. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgb(20 25 45 / 0.4);
+}
+
+.dialog {
+  position: fixed;
+  z-index: 201;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 24px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 -12px 40px -16px rgb(15 20 40 / 0.45), 0 0 0 1px hsl(var(--border));
+}
+
+@media (min-width: 721px) {
+  .dialog {
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    width: min(440px, calc(100vw - 32px));
+    max-height: calc(100dvh - 48px);
+    transform: translate(-50%, -50%);
+    border-radius: 20px;
+    padding: 28px;
+  }
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 26px;
+  overflow-wrap: anywhere;
+}
+
+.dialogText {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+.dialogButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Add or change a tryout */
+.back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+  gap: 32px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+/* One column that never grows past the screen: a long "Last used" place or
+   note can't stretch it (an auto grid track would size to their full width). */
+.questions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  min-width: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.chipsLabel {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+}
+
+.chip {
+  max-width: 100%;
+  min-height: 32px;
+  overflow: hidden;
+  padding: 0 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--card));
+  font: inherit;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ways {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ways legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.wayCard {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.wayCard[data-picked] {
+  border-color: hsl(var(--primary));
+  box-shadow: inset 0 0 0 1px hsl(var(--primary));
+}
+
+.wayCard input {
+  accent-color: hsl(var(--primary));
+}
+
+.quiet {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+.formButtons {
+  display: flex;
+}
+
+.preview {
+  position: sticky;
+  top: 88px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.previewLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+
+.previewCard {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card));
+}
+
+.previewName {
+  font-size: 18px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.previewFacts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.previewFacts div {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.previewFacts dt {
+  width: 70px;
+  flex: none;
+  color: hsl(var(--muted-foreground));
+}
+
+.previewFacts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.previewButton {
+  justify-self: start;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: hsl(var(--primary));
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--primary-foreground));
+}
+
+.previewButton[data-off] {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+@media (max-width: 720px) {
+  /* Name, price and ⋯ on the first line; the state underneath, full width. */
+  .main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: start;
+    gap: 8px 10px;
+    padding: 14px 8px 14px 16px;
+  }
+
+  .text {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .price {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    padding-top: 1px;
+  }
+
+  .more {
+    grid-column: 3;
+    grid-row: 1;
+    margin-top: -10px;
+  }
+
+  .status {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .toast {
+    top: auto;
+    right: 16px;
+    bottom: 88px;
+    left: 16px;
+    justify-content: center;
+  }
+
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview {
+    position: static;
+    order: -1;
+  }
+
+  .ways {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

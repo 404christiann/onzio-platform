@@ -1,3 +1,24 @@
+## 2026-11-11 - ADMIN-RE-12c The "Programs and tryouts" page
+
+- **Status:** `in_progress`, PR open. **No migration** (it uses RE-12b's
+  functions, already on production); no hosted action.
+- **What it adds:** on the new admin, one "Programs and tryouts" page (More
+  row and Programs tab). It lists tryouts by date and programs in website
+  order. Each row shows whether families can sign up, the form's price and "N
+  signed up" (that opens See registrations for that form). One tap changes
+  how families sign up, closes or reopens, hides or shows, makes a copy,
+  moves a program, or deletes a tryout, each saved at once with Undo. A tryout
+  is added or changed with plain questions and a preview. The page-wide words
+  and a program's page stay on the classic pages, linked from the list.
+- **Visitors see:** nothing until an owner changes something there. The
+  classic Tryouts editor's preview now matches the website (hidden tryouts
+  left out, date order).
+- **Not done:** "Make a new form" doesn't come back with the new form chosen.
+- **Verification:** unit, contract and browser tests (390 and 1440, worst-case
+  names); full suites and the tested commit are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** bot review and merge.
+
 ## 2026-11-11 - Operator hard purge made safe (released)
 
 - **Status:** `released` 2026-11-11. Migration

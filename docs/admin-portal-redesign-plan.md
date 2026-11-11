@@ -152,6 +152,22 @@ New RPCs for 12c, each with an operation receipt: `save_tryout` (one tryout), `s
 
 Production counts (Christian, 2026-11-10): no form stops taking sign-ups and no badge word changes. Two past tryouts close at deploy (1 Diverse City, 1 Lions); Christian: "Yes, close them". Date order moves 2 of Lions' 3 tryouts; Christian: Lions doesn't need attention ("anything regarding lions we shouldnt need to worry about"). `GATE-MIGRATE`.
 
+*As built, part 2 (2026-11-11), ADMIN-RE-12c, no migration:* the "Programs and tryouts" page, `/admin/programs-and-tryouts` (new admin only). Its More row replaces the old Programs and Tryouts rows and sits under the Programs tab. A club whose site has only one of them sees that row named "Tryouts" or "Programs" (decision 0005).
+
+The list shows tryouts by date, then programs in website order. Each row has its state pill, the form's price, and "N signed up" (paid + refunded) linking to See registrations narrowed to that form (`?form=`). The pill opens "How should families sign up?": Sign-up form, then "Which form?" with price, "Used by …", "Connect payments first · Set up" and "Not open yet", plus "Make a new form" (to Sign-up forms); A link to another site; They contact you (with the cost note for tryouts).
+
+The ⋯ menu has:
+- Change the details (tryouts);
+- Close or Reopen sign-ups. Reopen after the date keeps it open until the date changes;
+- Hide from, or Show on, your website;
+- Make a copy (programs only where the site allows new programs, so not Diverse City);
+- Move up and Move down (programs);
+- Delete with a plain confirm (tryouts).
+
+Each change saves at once with "Saved · Undo". Add or change a tryout with plain questions, a "Last used" place, no status question, and a preview card. The Programs tab's "Add a tryout" opens it.
+
+The page-wide words, a program's page, and a tryout's photo and closed message stay on the classic pages, linked from the list until RE-13. Writes go through `POST /api/admin/programs-and-tryouts`, which calls the RE-12b RPCs. The classic Tryouts preview now leaves hidden tryouts out and sorts by date, like the website. Not done: "Make a new form" returns to the list rather than coming back with the new form chosen.
+
 **ADMIN-RE-13 — Edit my website, every page** (design `cd-site-final`; group 3 decision 1, 2, 6). Page switcher in the edit bar reusing `components/admin/about/AboutPageCanvas.tsx`, `components/admin/contact/ContactPageCanvas.tsx`, `components/admin/ProgramCanvasFrame.tsx`, `components/admin/tryouts/TryoutsPageEditor.tsx`; "These come from Your club · Change them there" shortcuts; "‹ Done" with Save/Discard. Break-ui: About and Shop validate only at Save; add as-you-type counters against the existing Zod limits (`lib/about-editor/contract.ts`, `lib/shop-editor/contract.ts`). No schema. Size L.
 
 **ADMIN-RE-14 — Your club** (design `cd-your-club`; decision 0006; group 3 decisions 10, 11). One page, one Save for logo (`site_branding`), footer line (≤ 160 with counter), social pages (`site_social_links` href ≤ 2048, break-ui gap, Zod), public email/phone/hours (≤ 200)/area from `contact_profile`; "Fit your logo" crop. The JPG copy gap is already closed on main (PR #88: Branding and Sponsors say PNG or WebP; `tests/contracts/admin-platform-fixes-02.test.ts` section 3); verify, don't redo. No schema. Size M. As built (2026-11-09): `/admin/your-club`, reimagined-only; contact details and footer line appear only where the club's website has a Contact page or prints a footer line (`codeSiteAdminFor`, decision 0005), so a Rose City-style site is asked for the logo and social pages only. The Your club More row opens it; the old Branding page stays for classic clubs. Zod added for `site_social_links` and `site_branding`. Logo goes through the media chain as a square PNG after "Fit your logo"; the server stores it as WebP.

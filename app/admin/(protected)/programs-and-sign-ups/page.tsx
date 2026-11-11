@@ -16,9 +16,11 @@ export default async function ProgramsTabPage() {
   const buttons: TabButton[] = [];
   const signUps = getVisibleAdminHomeJobs(access).find((job) => job.id === "see-registrations");
   if (signUps) buttons.push({ label: "See sign-ups", href: signUps.href, icon: IconSeasonStats, kind: "primary" });
-  const tryouts = getVisibleAdminRoutes(access).find((route) => route.id === "tryouts");
-  if (tryouts && access.canMutateContent) {
-    buttons.push({ label: "Add a tryout", href: tryouts.href, icon: IconTryouts, kind: signUps ? "secondary" : "primary" });
+  // ADMIN-RE-12c: tryouts are added on "Programs and tryouts", in its plain-question form.
+  const visible = getVisibleAdminRoutes(access);
+  const list = visible.find((route) => route.id === "programs-and-tryouts");
+  if (list && visible.some((route) => route.id === "tryouts") && access.canMutateContent) {
+    buttons.push({ label: "Add a tryout", href: `${list.href}?add=tryout`, icon: IconTryouts, kind: signUps ? "secondary" : "primary" });
   }
   return (
     <TabPage

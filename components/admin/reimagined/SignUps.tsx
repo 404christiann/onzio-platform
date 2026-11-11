@@ -44,9 +44,10 @@ function avatarHue(id: string): string {
   return AVATAR_HUES[hash % AVATAR_HUES.length];
 }
 
-function hrefFor(tab: SignUpTab, personId: string | null): string {
+function hrefFor(tab: SignUpTab, personId: string | null, formId: string | null = null): string {
   const params = new URLSearchParams();
   if (tab !== "all") params.set("tab", tab);
+  if (formId) params.set("form", formId);
   if (personId) params.set("person", personId);
   const query = params.toString();
   return query ? `/admin/sign-ups?${query}` : "/admin/sign-ups";
@@ -79,11 +80,13 @@ export function SignUps({ data, personId }: { data: SignUpsData; personId: strin
   useEffect(() => setSelectedId(personId), [personId]);
 
   const tab: SignUpTab = data.status === "ready" ? data.tab : "all";
+  // ADMIN-RE-12c: narrowed to one form from Programs and tryouts ("N signed up").
+  const formId = data.status === "ready" ? (data.form?.id ?? null) : null;
 
   function go(nextPerson: string | null) {
     setSelectedId(nextPerson);
     startTransition(() => {
-      router.push(hrefFor(tab, nextPerson), { scroll: false });
+      router.push(hrefFor(tab, nextPerson, formId), { scroll: false });
     });
   }
 
@@ -130,13 +133,23 @@ export function SignUps({ data, personId }: { data: SignUpsData; personId: strin
         <h1 className={styles.h1}>
           {data.newThisWeek === null ? "Registrations" : `${countFormat.format(data.newThisWeek)} new this week`}
         </h1>
-        <p className={styles.sub}>Newest first, from all your registration forms</p>
+        {data.form ? (
+          <p className={styles.sub}>
+            Newest first, from <span className={styles.subForm} title={data.form.title}>{data.form.title}</span>
+            {" · "}
+            <Link href={hrefFor(tab, null)} scroll={false} className={styles.subLink}>
+              All forms
+            </Link>
+          </p>
+        ) : (
+          <p className={styles.sub}>Newest first, from all your registration forms</p>
+        )}
 
         <nav className={styles.tabs} aria-label="Show sign-ups">
           {TABS.map((item) => (
             <Link
               key={item.id}
-              href={hrefFor(item.id, null)}
+              href={hrefFor(item.id, null, formId)}
               scroll={false}
               className={styles.tab}
               aria-current={item.id === tab ? "page" : undefined}
@@ -157,7 +170,7 @@ export function SignUps({ data, personId }: { data: SignUpsData; personId: strin
             {data.rows.map((row) => (
               <li key={row.id}>
                 <Link
-                  href={hrefFor(tab, row.id)}
+                  href={hrefFor(tab, row.id, formId)}
                   scroll={false}
                   className={styles.row}
                   data-person={row.id}
