@@ -1,3 +1,27 @@
+## 2026-11-10 - ADMIN-RE-12a The Programs words browser test, made steady
+
+- **Status:** `in_progress`, PR open. Test and one editor focus fix only: no
+  migration, no hosted action. The first of three RE-12 PRs (12b: sign-up
+  state migration; 12c: the "Programs and tryouts" page).
+- **What was wrong:** RE-22's "Programs page words are editable" test at 1440
+  failed now and then. In every failure the editor still held what was typed.
+  The causes: a save slower than the test's 5 s wait, whose late write then
+  broke the next run; one public page that showed the standard words 7 ms
+  after a stored save (cause not found, never reproduced in 300 direct
+  probes); and a focus race when the editor focused the words box one frame
+  after a click.
+- **What changed:** the editor puts the cursor in the clicked section's first
+  field once that section is drawn, and never takes it from a field already in
+  use. The test clears the words before and after, waits for the words box
+  and the cursor to settle, checks the stored row, allows the save 20 s, and
+  requires the public page to show the words on its first render (no reload:
+  review-bot M1 on #131). The one stale public render is an open item.
+- **Verification:** the first version of the fix went 40 of 40 at 1440,
+  twice. The final version is repeated 20 times per portal at both 390 and
+  1440, and the full suites run, on the PR head. The counts and the tested
+  commit are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** bot review and merge.
+
 ## 2026-11-10 - Lions removed (production data, then repo code)
 
 - **Status:** production removal `done` 2026-11-10; repo cleanup `in_progress`,
