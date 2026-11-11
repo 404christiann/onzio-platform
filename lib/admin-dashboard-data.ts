@@ -103,6 +103,7 @@ export async function loadAdminDashboardData(
     .select("id,event_date,headline,location,status,sort_order")
     .eq("club_id", clubId)
     .in("status", ["upcoming", "open"])
+    .eq("hidden", false)
     .gte("event_date", today)
     .order("event_date", { ascending: true })
     .order("sort_order", { ascending: true });

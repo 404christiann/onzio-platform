@@ -58,10 +58,14 @@ export default function AcademyProgramDetailPage({
     alt: item.alt,
   }));
   const usesRegistrationSlideshow = slides.length > 0;
+  // ADMIN-RE-12b: a program whose owner closed sign-ups, or that families
+  // sign up for by contacting the club, keeps its band too.
   const showsRegistrationSection =
     registration.enabled ||
     program.nativeRegistration !== null ||
-    program.externalCta !== null;
+    program.externalCta !== null ||
+    program.contactCta !== null ||
+    program.signUpsClosed;
 
   return (
     <div className="bg-[#F9FAFD]">
@@ -121,9 +125,11 @@ export default function AcademyProgramDetailPage({
               </h2>
               <div className="mt-7 h-px w-16 bg-[#B9E3F6]" />
               <p className="mt-6 max-w-md font-body text-base leading-8 text-[#1E3653]/70 md:text-lg">
-                {program.nativeRegistration || program.externalCta
-                  ? registration.body
-                  : registration.pendingBody}
+                {program.signUpsClosed
+                  ? "Sign-ups for this program are closed."
+                  : program.nativeRegistration || program.externalCta || program.contactCta
+                    ? registration.body
+                    : registration.pendingBody}
               </p>
               {program.nativeRegistration ? (
                 <RegistrationCtaButton
@@ -141,6 +147,17 @@ export default function AcademyProgramDetailPage({
                 >
                   {program.externalCta.label}
                 </a>
+              ) : program.contactCta ? (
+                <a
+                  href={program.contactCta.href}
+                  className="mt-7 inline-flex min-h-12 items-center justify-center bg-[#FF1616] px-6 text-center font-display text-xs font-bold uppercase text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#D70000] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1E3653]"
+                >
+                  {program.contactCta.label}
+                </a>
+              ) : program.signUpsClosed ? (
+                <p className="mt-7 inline-flex min-h-12 items-center justify-center border border-[#1E3653]/25 bg-[#1E3653]/5 px-6 text-center font-display text-xs font-bold uppercase text-[#51667E]">
+                  Sign-ups are closed
+                </p>
               ) : (
                 // DCFC-D102 TBA state: no placeholder destination exists yet,
                 // so this is deliberately not a link — a disabled-style block

@@ -34,6 +34,8 @@ function program(overrides: Partial<DBProgram> = {}): DBProgram {
     external_cta_label: "Learn more",
     external_cta_href: "https://registration.example.test/program",
     registration_form_id: null,
+    sign_ups_closed: false,
+    sign_up_by_contact: false,
     registration_enabled: false,
     registration_eyebrow: "",
     registration_headline: "",
