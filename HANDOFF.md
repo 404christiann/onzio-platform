@@ -1,3 +1,24 @@
+## 2026-11-10 - Operator hard purge made safe
+
+- **Status:** `in_progress`, PR open. **Has a migration**
+  (`20261110210000_purge_archived_club.sql`, two functions, no table or row
+  change), so `GATE-MIGRATE` before merge. Nothing hosted touched.
+- **What changed:** `purgeClub` now calls one security-definer function that
+  does the whole database purge in one transaction (the Lions transaction,
+  reusable): guards under lock, every club table locked against writes,
+  children-first deletes with the presentation triggers lifted for that
+  transaction only, refusal on an unknown club table, other clubs' counts
+  checked, export marked purged, one `hard_purge` audit event. Storage is
+  removed only after commit; a Storage failure can be retried by running the
+  purge again (`already_purged`).
+- **Verification:** new database test 11/11 on a private throwaway database
+  (every club table filled, other clubs byte-identical), contract tests 35/35,
+  tsc and ESLint clean. Details in `STATUS.md` and the PR body.
+- **Open:** Connect guard blocks only when `charges_enabled` (Christian may
+  want stricter). RE-11c's season adjustment tables need fixture rows in the
+  purge test once both PRs are in.
+- **Exact next step:** bot review, `GATE-MIGRATE` on Christian's go, merge.
+
 ## 2026-11-10 - ADMIN-RE-24c Search on the new admin
 
 - **Status:** `in_progress`, PR open. Last PR of `ADMIN-RE-24`. **New dependency:
@@ -11,6 +32,7 @@
   `STATUS.md`.
 - **Exact next step:** the bot merges. Christian walks the new home and tabs
   on Rose City.
+
 
 ## 2026-11-10 - ADMIN-RE-12a The Programs words browser test, made steady
 

@@ -1,5 +1,66 @@
 # Diverse City FC Status
 
+## 2026-11-10 - Operator hard purge made safe (one transaction, Storage after commit)
+
+**Agent/package:** Claude Code, operator purge fix (not an ADMIN-RE package;
+follow-up to the Lions removal, which found `lib/operator/purge-club.ts`
+unusable). Branch `claude/sweet-cohen-eea328` from `main` `428a1590`.
+**Status:** `in_progress`, PR open. **Has a migration**
+(`20261110210000_purge_archived_club.sql`), so it needs `GATE-MIGRATE` before
+merge. Adds two functions; changes no table and no row. Nothing hosted was
+touched.
+
+**What was wrong:** the purge deleted Storage first, then one table at a time
+over PostgREST, from Phase 2 table lists. Newer club tables have RESTRICT keys
+to `onzio.clubs` and the presentation history refuses deletes, so it would
+stop half way with the media already gone. Its contract test covered only the
+simulation path.
+
+**Completed work:**
+
+- `onzio_private.purge_archived_club` (security definer, empty search path,
+  service_role only through the `onzio.purge_archived_club` wrapper): the
+  Lions transaction made reusable. One transaction: lock the club row; check
+  slug confirmation, archived, no active domain, no live Stripe subscription,
+  no Connect account that can take payments (`charges_enabled`), verified
+  export for this club and slug; lock every club table against writes (reads
+  continue) so the other-clubs check holds on a live database; delete children
+  first with the presentation immutability triggers lifted for the
+  transaction only; refuse on an unknown club table holding rows; delete the
+  club (private receipts cascade, audit and Stripe history kept with club_id
+  null); check nothing is left and every other club's per-table count is
+  unchanged; mark the export purged; write one `hard_purge` audit event with
+  per-table counts.
+- `lib/operator/purge-club.ts`: keeps its guards (export id, direct operator
+  invocation, operator TOTP session), calls the function once, then removes
+  `<club_id>/` from both buckets. A Storage failure after commit reports
+  `PURGE_STORAGE_FAILED`; running the purge again with the same export and
+  slug returns `already_purged` from the database and retries only Storage.
+- Tests: `tests/database/purge-archived-club.test.ts` (fills every club table
+  for an archived club, purges as service_role, proves every table empty,
+  ledgers kept, one audit event, other clubs' rows byte-identical by digest,
+  triggers back on; each guard; unknown table; a trigger leaking into another
+  club; browser roles refused; the retry). Contract tests now cover the real
+  path with a fake client (one RPC, refusals pass through with Storage
+  untouched, Storage only after commit, the retry).
+
+**Verification:** on a private throwaway database (`supabase/postgres:15.8.1.085`,
+port 54998, all 63 migrations plus seed; the shared contracts database was
+being reset by other sessions): `purge-archived-club.test.ts` 11/11.
+`provisioning-migration.test.ts` 35/35. `tsc --noEmit` clean; ESLint clean
+on the changed files. Wider suites are in the PR body.
+
+**Blockers / decisions:** (1) the Connect guard blocks only when
+`charges_enabled`; Christian may prefer any linked account to block.
+(2) RE-11c's unmerged migration `20261110160000_season_totals_add_up.sql`
+adds `player_season_adjustments` and `goalkeeper_season_adjustments`. They
+cascade from the season stats rows, so the purge still empties them, but
+whichever PR merges second must add fixture rows for them to the purge test
+(and may list them in `v_order` before the season stats).
+
+**Exact next step:** bot review; `GATE-MIGRATE` on Christian's go, then merge.
+No purge runs on production without Christian's go.
+
 ## 2026-11-10 - ADMIN-RE-24c: search on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24c (last of four; built
@@ -46,6 +107,7 @@ head, with the tested commit, are in the PR body.
 
 **Exact next step:** the bot merges 24c. Then ADMIN-RE-24 is built;
 Christian walks it on Rose City.
+
 
 ## 2026-11-10 - ADMIN-RE-12a: the Programs words browser test, made steady
 
