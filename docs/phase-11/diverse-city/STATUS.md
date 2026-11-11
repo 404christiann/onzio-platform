@@ -1,5 +1,74 @@
 # Diverse City FC Status
 
+## 2026-11-10 - Test infrastructure: template-selectors split (no work package)
+
+**Agent/package:** Claude Code, test infrastructure, no work package, follow-up
+to the parallel unit tests entry below on the same branch
+`claude/test-speed-projects` (commit `336879a3`). **Status:** `in_progress`,
+draft PR open. No application code, migration, hosted action, Stripe, DNS or
+email change, and no new dependency.
+
+**Completed work:**
+
+- `tests/architecture/template-selectors.test.ts` was the long pole of
+  `test:unit` (17.4 to 19.4 s of test time in the runs below, 35 s in a profile
+  run at load 21). 108 of its 116 tests take under 40 ms. The other eight each
+  build a git repository with `execFileSync`. The `git` on this Mac's PATH is the
+  Homebrew x86_64 build under Rosetta, which takes 110 to 160 ms per process
+  against 24 to 31 ms for the arm64 `/usr/bin/git`. One traced run started 118
+  git processes. Running the old file with `/usr/bin` first on `PATH` took a
+  median of 5.2 s instead of 16.6 s (3 interleaved pairs, load 18 to 32).
+- `withSelectorRepository` moved to the new `tests/helpers/selector-repository.ts`.
+  It builds one starting repository per test file (`git init --template=`, one
+  empty commit, `refs/remotes/origin/main`), copies it for each test, passes the
+  commit identity with `-c` and sets `maintenance.auto=false`. A test no longer
+  starts 5 setup processes, and `git commit` no longer starts a second
+  `git maintenance run --auto` process (109 of one commit's 176 ms in a trace).
+  An `afterAll` that the helper registers when a test file imports it removes the
+  starting repository.
+- The tests that build a temporary repository moved to
+  `template-selector-retirement.test.ts` (2 tests),
+  `template-selector-baseline.test.ts` (4) and
+  `template-selector-baseline-history.test.ts` (2), so Vitest runs them on
+  separate workers. The four files start 67 git processes, down from 118.
+  `ALLOWLIST_PATH` is now exported from `tests/helpers/template-selectors.ts`.
+  The ratchet describe stays in `template-selectors.test.ts` under its name,
+  because the retirement test copies that file by path and filters on
+  `^template selector ratchet`. That file imports only
+  `../helpers/template-selectors` so the copy keeps working.
+- `tests/README.md` names the new files and says that a file of slow
+  synchronous tests sets the floor for `test:unit`.
+
+**Files changed:** `tests/helpers/selector-repository.ts` (new),
+`tests/helpers/template-selectors.ts`, `tests/architecture/template-selectors.test.ts`,
+the three new `tests/architecture/template-selector-*.test.ts` files,
+`tests/README.md`, this file, `HANDOFF.md`. No test body, assertion or title
+changed, and nothing is skipped, deleted or mocked.
+
+**Verification:** `vitest list` over all three projects gives the same 4,194
+project and title pairs before and after (286 files before, 289 after, 3 added,
+none removed, 108 + 2 + 4 + 2 for the former 116). `test:unit`, 3 interleaved
+pairs of the old tip `ff4d9d90` and `336879a3`, at one-minute load 27 to 35:
+median 36.6 s (35.1 to 40.0) before, 20.2 s (19.5 to 20.9) after. The slowest
+file went from `template-selectors.test.ts` at 17.4 to 19.4 s to
+`template-selector-retirement.test.ts` at 5.9 to 6.5 s. All nine runs on the new
+tip (three interleaved, five more plain, one with `TZ=UTC`) passed 2,840 of
+2,840 in 230 files, at load 29 to 68 (the eight plain runs: median 21.5 s, range
+19.5 to 29.3 s, slowest file 10.3 s once at load 68). `npx tsc --noEmit` clean.
+ESLint with this repo's config alone: 0 problems on the six changed TypeScript
+files. `npm run lint` not run, because the worktree sits inside another checkout
+whose `.eslintrc.json` conflicts. No `onzio-selector-regression-*` directory is
+left in the temp directory. Raw JSON and logs are outside the repository.
+
+**Blockers / decisions:** the branch is behind `main` and conflicts with it in
+`HANDOFF.md` and this file, so GitHub does not start the `pull_request`
+workflow for it. The Linux runs of the new head came from `workflow_dispatch`
+and are in the PR body. The pilot and database projects were not run.
+
+**Exact next step:** Christian reviews the draft PR, merges `main` into the
+branch to clear the two documentation conflicts, and decides whether to keep the
+`Unit tests` workflow commit and whether the check is required.
+
 ## 2026-11-10 - Test infrastructure: parallel unit tests (no work package)
 
 **Agent/package:** Claude Code, test infrastructure, no work package. Branch

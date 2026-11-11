@@ -53,12 +53,56 @@
   stop skipping. Whichever of the two lands second should select files with
   `--project unit` and directories instead. Not checked by running that
   script.
-- **Exact next step:** Christian reviews the draft PR and decides whether to keep
+- **Follow-up, `template-selectors.test.ts` split (commit `336879a3`):** that
+  file was the long pole of `test:unit`, at 17.4 to 19.4 seconds of test time in
+  the runs below (35 seconds in a profile run at load 21). 108 of its 116 tests
+  take under 40 milliseconds. The other eight each build a git repository, and
+  the `git` on this Mac's PATH is the Homebrew x86_64 build running under
+  Rosetta. It takes 110 to 160 ms per process, where the arm64 `/usr/bin/git`
+  takes 24 to 31 ms. One traced run of the file started 118 git processes.
+  Running the old file with `/usr/bin` first on `PATH` took a median of 5.2
+  seconds instead of 16.6 (3 interleaved pairs, load 18 to 32), so the git
+  binary is the limiter, not Vitest. Each `git commit` also started a second
+  process, `git maintenance run --auto`, which was 109 of one commit's 176 ms in
+  a trace. The change has two parts. `withSelectorRepository` moved to
+  `tests/helpers/selector-repository.ts`. It builds one starting repository per
+  test file, copies it for each test and turns auto maintenance off, so a test
+  no longer starts 5 setup processes and 2 maintenance processes. The
+  temporary-repository tests also moved to three files,
+  `template-selector-retirement.test.ts`, `template-selector-baseline.test.ts`
+  and `template-selector-baseline-history.test.ts`, so Vitest runs them on
+  separate workers. The four files start 67 git processes between them, down
+  from 118. The ratchet describe stays in `template-selectors.test.ts` under its
+  name, because the retirement test copies that file by path and filters on that
+  name. No test body, assertion or title changed.
+- **Follow-up verification:** `vitest list` over all three projects gives the
+  same 4,194 project and title pairs before and after (286 files before, 289
+  after, 3 added, none removed, and the 116 tests are now 108 + 2 + 4 + 2 across
+  four files). `test:unit`, 3 interleaved pairs of the old tip `ff4d9d90` and
+  `336879a3`: median 36.6 s (35.1 to 40.0) before and 20.2 s (19.5 to 20.9)
+  after, at one-minute load 27 to 35. The slowest file went from
+  `template-selectors.test.ts` at 17.4 to 19.4 s of test time to
+  `template-selector-retirement.test.ts` at 5.9 to 6.5 s. All nine runs on the
+  new tip (the three interleaved ones, five more plain runs and one with
+  `TZ=UTC`) passed 2,840 of 2,840 in 230 files, at load 29 to 68. The eight
+  plain runs had a median of 21.5 s (19.5 to 29.3 s), and the slowest file
+  reached 10.3 s once, at load 68. `npx tsc --noEmit` is clean, ESLint with this
+  repo's config alone reports 0 problems on the six changed TypeScript files,
+  and no `onzio-selector-regression-*` directory is left in the temp directory.
+  `npm run lint` was not run, for the worktree reason above. The branch is
+  behind `main` and conflicts with it in `HANDOFF.md` and
+  `docs/phase-11/diverse-city/STATUS.md`, so GitHub does not start the
+  `pull_request` workflow for it. The Linux runs of the new head came from
+  `workflow_dispatch` and are in the PR body.
+- **Exact next step:** Christian reviews the draft PR, merges `main` into the
+  branch to clear the two documentation conflicts, and decides whether to keep
   the `Unit tests` workflow commit and whether the check is required (branch
-  protection is not touched here). The
-  next lever is `tests/architecture/template-selectors.test.ts`. In three
-  recorded `test:unit` runs the other 226 files finished by 13 to 14 seconds
-  and this one finished last, at 26 to 30 seconds.
+  protection is not touched here). `test:unit` no longer waits on one file, which
+  I infer from the Vitest summaries. A run on the new tip shows 117 s of
+  cumulative worker time in an 18 s run (6.3 times), where a run on the old tip
+  showed 124 s in 38 s (3.3 times). The cumulative import time (58 s) is larger
+  than the cumulative test time (43 s). Further speedups there were not
+  investigated.
 
 ## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
 

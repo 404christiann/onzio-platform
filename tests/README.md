@@ -144,6 +144,11 @@ makes both projects fail before any test runs when the command line sets `--file
 `--project unit --isolate=false` failed 55 tests in 7 files, then 28 tests in 4 other files, and
 were no faster.
 
+A file runs its tests one after another, so one file of slow synchronous tests sets the floor
+for `test:unit`. Split such a file by describe block, keep every title unchanged, and put the
+shared setup in `tests/helpers`. `tests/architecture/template-selector-*.test.ts` came out of
+`template-selectors.test.ts` this way.
+
 Two limits of Vitest 4.1.10 apply to the command line.
 
 - `--exclude` has no effect on the projects. `vitest run --exclude 'tests/contracts/**'` runs more
@@ -445,6 +450,14 @@ browser pass under the shared database lock, as with the homepage suites above.
 It stops new code from branching on the presentation template while SITE-08
 retires the existing branches. A club-specific behavior belongs in that club's
 site module, not in a template branch.
+
+The tests that build a temporary git repository live in
+`template-selector-retirement.test.ts`, `template-selector-baseline.test.ts` and
+`template-selector-baseline-history.test.ts`, so Vitest runs them on separate workers.
+They share `tests/helpers/selector-repository.ts`, which builds one starting repository per
+test file and copies it for each test. The retirement test copies
+`template-selectors.test.ts` into its temporary repository by path and runs the tests whose
+names start with `template selector ratchet`, so keep that file and that describe name.
 
 The check parses every TypeScript and JavaScript file that git does not ignore, including
 untracked source and new top-level directories.
