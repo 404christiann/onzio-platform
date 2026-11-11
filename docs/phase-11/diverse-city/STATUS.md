@@ -60,14 +60,27 @@ files. `npm run lint` not run, because the worktree sits inside another checkout
 whose `.eslintrc.json` conflicts. No `onzio-selector-regression-*` directory is
 left in the temp directory. Raw JSON and logs are outside the repository.
 
-**Blockers / decisions:** the branch is behind `main` and conflicts with it in
-`HANDOFF.md` and this file, so GitHub does not start the `pull_request`
-workflow for it. The Linux runs of the new head came from `workflow_dispatch`
-and are in the PR body. The pilot and database projects were not run.
+**Merge and full run (2026-11-11):** `main` was merged into the branch twice
+(`ec0b9a28`, then `4db5e907`, documentation only). The only conflicts were the
+top entries of `HANDOFF.md` and this file; both sides were kept. The new
+migrations `20261110220000` and `20261111080000` need nothing from the Vitest
+config (their tests are in `tests/database/`, so the `db` project runs them).
+On the first merge head (`364a82e8`), under `scripts/with-local-db-lock.sh` with
+the installed Supabase CLI 2.109.1: `npm run test:db` passed 1,122 of 1,122 in
+55 files (71 s); the full `npm test` passed 4,289 with 1 skipped in 293 files
+(618 s of Vitest time, 10 min 19 s wall), pilot included, no flake, no re-run;
+`npm run test:unit` passed 2,887 of 2,887 in 231 files (12 s); `npx tsc
+--noEmit` is clean. Not run: the production build and `npm run lint` (worktree
+reason above). Other sessions: use `npm run test:unit`, `test:db` (under the
+lock) and `test:pilot`; after this merges `--exclude` no longer excludes files
+from the projects, so `npx vitest run --exclude 'tests/database/**'` would run
+the database files.
 
-**Exact next step:** Christian reviews the draft PR, merges `main` into the
-branch to clear the two documentation conflicts, and decides whether to keep the
-`Unit tests` workflow commit and whether the check is required.
+**Blockers / decisions:** whether the `Unit tests` workflow is a required check
+is Christian's decision, and when the PR leaves draft.
+
+**Exact next step:** Christian decides when to mark the PR ready and whether to
+keep the `Unit tests` workflow commit.
 
 ## 2026-11-10 - Test infrastructure: parallel unit tests (no work package)
 
@@ -137,15 +150,63 @@ projects ignore, so whichever lands second must switch it to `--project`
 **Exact next step:** Christian reviews the draft PR and decides whether to keep
 the workflow commit and whether the check is required.
 
+## 2026-11-11 - Operator hard purge released
+
+**Agent/package:** Claude Code, operator purge fix (PR #138), `GATE-MIGRATE`
+and release. Notes branch `claude/purge-released` from `main` `ec0b9a28`.
+**Status:** `released`. **No purge has been run against any club.**
+
+**Release record (gate record comment on #138):**
+
+- Christian approved the gate in the PR's session ("Yes, gate #138").
+  Supabase CLI 2.122.0, linked to `ioalthwsdrlzrubomrow` only.
+- Preconditions at head `0c31556f`: bot review 0 High / 0 Medium; contains
+  `main` `846a3676`; adds only `20261111080000_purge_archived_club.sql`;
+  runner table all PASS at that head; `hold` taken for #138 only.
+- Ledger before: only `20261111080000` Local-only, nothing Remote-only.
+  Rollback target `dpl_45YLR1GrCPBLpxcbzJTw3ZPEQm6q`. Snapshot: 2 clubs,
+  4 verified production domains, 1,005 audit events (newest 06:57:12 UTC),
+  0 exports. Recovery point: physical backup `2234441219` (2026-11-11
+  11:24 UTC); no logical dump (no writes since, no row changes).
+- Dry run: exactly `20261111080000`. Applied 17:35:35 to 17:35:39 UTC.
+- Verify: ledger matches (65, nothing Local-only or Remote-only), second dry
+  run up to date, history row present, both functions present with the
+  right definer, `search_path` and `service_role`-only grants, presentation
+  triggers enabled, counts unchanged, generated types differ only in CLI
+  formatting.
+- Merged as `ec0b9a28` (pinned to `0c31556f`), production deployment
+  `dpl_7NPyj8ZXTPybTjM4sAqZWD6vMBef` Ready. Smoke: `diversecityfc.com`,
+  `www.diversecityfc.com`, `diverse-city-fc-private.vercel.app`, Diverse City
+  `/programs`, `/roster`, `/shop`, `onzio-platform.vercel.app/admin/login`
+  all 200 with no `UNKNOWN_TENANT`; `onzio-platform.vercel.app/` 404 by
+  design. `hold` removed.
+
+**Rename before release:** the gate at `953fb496` stopped before apply
+because RE-11c's `20261110220000` was already on production (Remote-only),
+and `20261110210000` would have needed `--include-all`. The migration was
+renamed to `20261111080000`, `main` merged (RE-11c, then its notes), RE-11c's
+two adjustment tables added to the delete order and the purge test.
+
+**During the gate, unrelated to the migration:** the 14 audit rows at
+17:35:39.343 UTC are Christian's intentional deletion, as a signed-in owner
+and for the club owner, of Diverse City's one game with its 11 player and 2
+goalkeeper match-stat rows. Diverse City having 0 games is expected
+(Christian confirmed). The migration changes no rows.
+
+**Blockers:** none.
+
+**Exact next step:** none for the purge. A real purge needs an archived
+club, a verified export and Christian's go.
+
+
 ## 2026-11-10 - Operator hard purge made safe (one transaction, Storage after commit)
 
 **Agent/package:** Claude Code, operator purge fix (not an ADMIN-RE package;
 follow-up to the Lions removal, which found `lib/operator/purge-club.ts`
 unusable). Branch `claude/sweet-cohen-eea328` from `main` `428a1590`, merged with `main` `29c2da89`.
-**Status:** `in_progress`, PR open. **Has a migration**
-(`20261111080000_purge_archived_club.sql`), so it needs `GATE-MIGRATE` before
-merge. Adds two functions; changes no table and no row. Nothing hosted was
-touched.
+**Status:** `released` 2026-11-11 (see the release entry above). Migration
+`20261111080000_purge_archived_club.sql` adds two functions; changes no
+table and no row.
 
 **What was wrong:** the purge deleted Storage first, then one table at a time
 over PostgREST, from Phase 2 table lists. Newer club tables have RESTRICT keys
@@ -193,11 +254,10 @@ on the changed files. Wider suites are in the PR body.
 **Blockers / decisions:** (1) the Connect guard blocks only when
 `charges_enabled`. Christian decided on 2026-11-11 to keep it that way: a
 linked account that can't take payments is purged with the club.
-(2) RE-11c's unmerged migration `20261110160000_season_totals_add_up.sql`
-adds `player_season_adjustments` and `goalkeeper_season_adjustments`. They
-cascade from the season stats rows, so the purge still empties them, but
-whichever PR merges second must add fixture rows for them to the purge test
-(and may list them in `v_order` before the season stats).
+(2) RE-11c (released as `20261110220000_season_totals_add_up.sql`) adds
+`player_season_adjustments` and `goalkeeper_season_adjustments`. Done in
+`5cf5bd09`: they are in `v_order` before the season stats and in the purge
+test's fixture.
 
 **Review-bot Mediums on #138 (fixed):**
 

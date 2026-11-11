@@ -1,6 +1,7 @@
 ## 2026-11-10 - Unit tests run in parallel: test:contracts and test:legacy about 5 times faster
 
-- **Status:** `in_progress`, draft PR open (Christian decides when it is ready).
+- **Status:** `in_progress`, draft PR open, merged with `main` and verified in full
+  (Christian decides when it is ready).
   Test infrastructure only, no work package. No application code, migration,
   hosted action or new dependency (one dependency is removed).
 - **What changed:** `vitest.config.ts` splits the test files into three
@@ -89,14 +90,28 @@
   reached 10.3 s once, at load 68. `npx tsc --noEmit` is clean, ESLint with this
   repo's config alone reports 0 problems on the six changed TypeScript files,
   and no `onzio-selector-regression-*` directory is left in the temp directory.
-  `npm run lint` was not run, for the worktree reason above. The branch is
-  behind `main` and conflicts with it in `HANDOFF.md` and
-  `docs/phase-11/diverse-city/STATUS.md`, so GitHub does not start the
-  `pull_request` workflow for it. The Linux runs of the new head came from
-  `workflow_dispatch` and are in the PR body.
-- **Exact next step:** Christian reviews the draft PR, merges `main` into the
-  branch to clear the two documentation conflicts, and decides whether to keep
-  the `Unit tests` workflow commit and whether the check is required (branch
+  `npm run lint` was not run, for the worktree reason above. The Linux runs of
+  the earlier heads came from `workflow_dispatch` and are in the PR body.
+- **Merge of `main` and full run (2026-11-11):** `main` was merged into the
+  branch twice (`ec0b9a28`, then `4db5e907`, which is documentation only); the
+  only conflicts were the top entries of this file and `STATUS.md`, and both
+  sides were kept. The two new migrations (`20261110220000`,
+  `20261111080000`) need nothing from the Vitest config: their tests are under
+  `tests/database/`, so the `db` project picks them up. On the first merge head
+  (`364a82e8`), under `scripts/with-local-db-lock.sh` with the installed
+  Supabase CLI 2.109.1: `test:db` passed 1,122 of 1,122 in 55 files (71 s), and
+  the full `npm test` passed 4,289 tests with 1 skipped in 293 files (618 s of
+  Vitest time, 10 min 19 s wall), pilot included, with no flake and no re-run.
+  `test:unit` passed 2,887 of 2,887 in 231 files (12 s) and `npx tsc --noEmit`
+  is clean. The production build was not run.
+- **What other sessions should run once this merges:** `npm run test:unit` for
+  the fast loop, `npm run test:db` (under the lock) for database files and
+  `npm run test:pilot` for the pilot files. Until it merges the old commands
+  work. After it merges, do not use `npx vitest run --exclude 'tests/database/**'`:
+  in Vitest 4.1.10 `--exclude` does not apply to projects, so that command
+  would run the database files too. Use `--project unit`, or name the files.
+- **Exact next step:** Christian decides when to mark the PR ready and whether
+  to keep the `Unit tests` workflow commit and make the check required (branch
   protection is not touched here). `test:unit` no longer waits on one file, which
   I infer from the Vitest summaries. A run on the new tip shows 117 s of
   cumulative worker time in an 18 s run (6.3 times), where a run on the old tip
@@ -104,35 +119,46 @@
   than the cumulative test time (43 s). Further speedups there were not
   investigated.
 
-## 2026-11-10 - Operator hard purge made safe
+## 2026-11-11 - Operator hard purge made safe (released)
 
-- **Status:** `in_progress`, PR open. **Has a migration**
-  (`20261111080000_purge_archived_club.sql`, two functions, no table or row
-  change), so `GATE-MIGRATE` before merge. Nothing hosted touched.
+- **Status:** `released` 2026-11-11. Migration
+  `20261111080000_purge_archived_club.sql` (two functions, no table or row
+  change) was applied to production at 17:35:39 UTC from Christian's Mac at
+  his request (`GATE-MIGRATE`, "Yes, gate #138"). Then PR #138 merged
+  (`ec0b9a28`) and deployed (`dpl_7NPyj8ZXTPybTjM4sAqZWD6vMBef`). Smoke
+  passed: every Diverse City domain and `/programs`, `/roster`, `/shop` 200
+  with no `UNKNOWN_TENANT`; Rose City `/admin/login` 200 (its `/` is 404 by
+  the public-site hold). **No purge has been run against any club.** Gate
+  record on #138.
 - **What changed:** `purgeClub` now calls one security-definer function that
   does the whole database purge in one transaction (the Lions transaction,
-  reusable): guards under lock, every club table locked against writes,
-  children-first deletes with the presentation triggers lifted for that
-  transaction only, refusal on an unknown club table, other clubs' counts
-  checked, export marked purged, one `hard_purge` audit event. Storage is
-  removed only after commit; a Storage failure can be retried by running the
-  purge again (`already_purged`).
-- **Verification:** new database test 11/11 on a private throwaway database
-  (every club table filled, other clubs byte-identical), contract tests 35/35,
-  tsc and ESLint clean. Details in `STATUS.md` and the PR body.
+  made reusable):
+  - guards under the club row lock, then every club table locked against
+    writes (reads continue) before the domain, subscription, Connect and
+    export checks;
+  - children-first deletes with the presentation triggers lifted for that
+    transaction only;
+  - refusal on an unknown club table; other clubs' counts checked;
+  - export marked purged, one `hard_purge` audit event (`storage: pending`).
+  Storage is removed only after commit, and its outcome gets its own
+  `hard_purge_storage` event (`removed` or `failed`). A failed Storage step
+  is retried by running the purge again (`already_purged`).
+- **Renamed before release:** first written as `20261110210000`. RE-11c's
+  `20261110220000` reached production first, so the gate at `953fb496`
+  stopped before apply and the migration was renamed to sort after it. The
+  delete order and the purge test now include RE-11c's two season
+  adjustment tables.
 - **Decided (Christian, 2026-11-11):** a linked Stripe Connect account blocks
   the purge only while it can take payments (`charges_enabled`).
-- **Open:** RE-11c's season adjustment tables need fixture rows in the purge
-  test once both PRs are in.
-- **Review-bot Mediums fixed:** the Storage outcome now has its own
-  `hard_purge_storage` audit event (removed or failed; the main event says
-  `pending`), and `lib/database.generated.ts` has the new function.
-- **Bot re-review (0 High, 0 Medium) Lows fixed 2026-11-11:** a record that
-  can't be written after a successful Storage removal is now
-  `PURGE_STORAGE_UNRECORDED`; the domain, subscription, Connect and export
-  checks run after the table locks. Merged `main` with RE-12b; its new
-  private receipts table is in the purge test's fixture.
-- **Exact next step:** bot review, `GATE-MIGRATE` on Christian's go, merge.
+- **Verification:** runner table on `0c31556f` all PASS (`test:db` 1,122,
+  unit and contract 2,741, architecture 426 + 1 skipped, `db:types:check`,
+  `tsc`). Details in `STATUS.md` and the PR body.
+- **During the gate, unrelated:** at 17:35:39 UTC Christian deliberately
+  deleted Diverse City's one game (with its 11 player and 2 goalkeeper stat
+  rows) as a signed-in owner, for the club owner. Diverse City having 0
+  games is expected.
+- **Exact next step:** none for the purge. Before any real purge: archive
+  the club, register a verified export, and get Christian's go.
 
 ## 2026-11-10 - ADMIN-RE-11c-1 Season totals add up from player numbers (migration)
 
