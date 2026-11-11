@@ -37,11 +37,11 @@ and `20261110210000` would have needed `--include-all`. The migration was
 renamed to `20261111080000`, `main` merged (RE-11c, then its notes), RE-11c's
 two adjustment tables added to the delete order and the purge test.
 
-**Seen during the gate, not caused by it:** 14 audit rows at 17:35:39.343
-UTC, one transaction by an active Diverse City owner (a signed-in user)
-deleting one game with its 11 player and 2 goalkeeper match-stat rows.
-Diverse City now has 0 games. The migration runs as `postgres` without a
-user, and its deletes exist only inside function bodies.
+**During the gate, unrelated to the migration:** the 14 audit rows at
+17:35:39.343 UTC are Christian's intentional deletion, as a signed-in owner
+and for the club owner, of Diverse City's one game with its 11 player and 2
+goalkeeper match-stat rows. Diverse City having 0 games is expected
+(Christian confirmed). The migration changes no rows.
 
 **Blockers:** none.
 

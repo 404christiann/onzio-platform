@@ -32,9 +32,10 @@
 - **Verification:** runner table on `0c31556f` all PASS (`test:db` 1,122,
   unit and contract 2,741, architecture 426 + 1 skipped, `db:types:check`,
   `tsc`). Details in `STATUS.md` and the PR body.
-- **Seen during the gate (not caused by it):** at 17:35:39 UTC a signed-in
-  Diverse City owner deleted their one game (with its 11 player and 2
-  goalkeeper stat rows); Diverse City now has 0 games.
+- **During the gate, unrelated:** at 17:35:39 UTC Christian deliberately
+  deleted Diverse City's one game (with its 11 player and 2 goalkeeper stat
+  rows) as a signed-in owner, for the club owner. Diverse City having 0
+  games is expected.
 - **Exact next step:** none for the purge. Before any real purge: archive
   the club, register a verified export, and get Christian's go.
 
