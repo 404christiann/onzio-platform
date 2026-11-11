@@ -43,6 +43,10 @@
 -- purge-archived-club.test.ts fills every club table and fails when one is
 -- missing from its fixture.
 --
+-- Named 20261111080000 so it sorts after RE-11c's 20261110220000, which
+-- reached production first (it was 20261110210000 until then; contents
+-- unchanged apart from listing RE-11c's two adjustment tables).
+--
 -- Rollback: drop function onzio.purge_archived_club(uuid, text, text, uuid);
 -- drop function onzio_private.purge_archived_club(uuid, text, text, uuid).
 
@@ -63,6 +67,8 @@ declare
   v_order constant text[] := array[
     'onzio.player_match_stats',
     'onzio.goalkeeper_match_stats',
+    'onzio.player_season_adjustments',
+    'onzio.goalkeeper_season_adjustments',
     'onzio.player_season_stats',
     'onzio.goalkeeper_season_stats',
     'onzio.player_photos',

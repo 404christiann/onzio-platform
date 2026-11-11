@@ -6,7 +6,7 @@
 follow-up to the Lions removal, which found `lib/operator/purge-club.ts`
 unusable). Branch `claude/sweet-cohen-eea328` from `main` `428a1590`, merged with `main` `29c2da89`.
 **Status:** `in_progress`, PR open. **Has a migration**
-(`20261110210000_purge_archived_club.sql`), so it needs `GATE-MIGRATE` before
+(`20261111080000_purge_archived_club.sql`), so it needs `GATE-MIGRATE` before
 merge. Adds two functions; changes no table and no row. Nothing hosted was
 touched.
 

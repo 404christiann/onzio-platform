@@ -1,7 +1,7 @@
 ## 2026-11-10 - Operator hard purge made safe
 
 - **Status:** `in_progress`, PR open. **Has a migration**
-  (`20261110210000_purge_archived_club.sql`, two functions, no table or row
+  (`20261111080000_purge_archived_club.sql`, two functions, no table or row
   change), so `GATE-MIGRATE` before merge. Nothing hosted touched.
 - **What changed:** `purgeClub` now calls one security-definer function that
   does the whole database purge in one transaction (the Lions transaction,

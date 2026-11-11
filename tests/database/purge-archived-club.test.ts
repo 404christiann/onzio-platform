@@ -13,7 +13,7 @@ import { assertSafeTestEnvironment } from "../helpers/environment";
 
 const MIGRATION = resolve(
   __dirname,
-  "../../supabase/migrations/20261110210000_purge_archived_club.sql",
+  "../../supabase/migrations/20261111080000_purge_archived_club.sql",
 );
 const OPERATOR = USER_IDS.ownerAal2;
 const LEDGERS = ["onzio.audit_events", "onzio.stripe_events", "onzio.club_exports"];
@@ -59,6 +59,8 @@ begin
   insert into onzio.goalkeeper_match_stats (club_id, player_id, match_id) values (c, player, match);
   insert into onzio.player_season_stats (club_id, player_id, season_id) values (c, player, season);
   insert into onzio.goalkeeper_season_stats (club_id, player_id, season_id) values (c, player, season);
+  insert into onzio.player_season_adjustments (club_id, player_id, season_id, goals) values (c, player, season, 1) on conflict do nothing;
+  insert into onzio.goalkeeper_season_adjustments (club_id, player_id, season_id, saves) values (c, player, season, 1) on conflict do nothing;
   insert into onzio.league_standings_settings (club_id) values (c);
   insert into onzio.league_standings (club_id, team_name, season_id, logo_asset_id) values (c, 'Purge Target', season, asset);
 
