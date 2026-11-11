@@ -45,7 +45,7 @@ const affiliationLogos = [
   },
 ];
 
-const lionsLocalAffiliations = [
+const clubhouseAffiliations = [
   {
     src: "/images/logo/affiliations/us-soccer-color.png",
     alt: "US Soccer",
@@ -88,7 +88,7 @@ const navLinks: NavLink[] = [
   { label: "Shop", href: "/shop" },
 ];
 
-const lionsNavLinks: NavLink[] = [
+const clubhouseNavLinks: NavLink[] = [
   { label: "Home", href: "/" },
   { label: "Roster", href: "/roster" },
   { label: "Schedule", href: "/schedule" },
@@ -149,7 +149,7 @@ export default function Nav() {
   // The shared /club-logo route has a legacy Rose City fallback. Keep this
   // tenant's initials visible until its scoped branding read has a real URL.
   const displayedLogoUrl = clubLogoUrl;
-  const clubhouseLinks = withoutShopLinks(lionsNavLinks, club.storeEnabled);
+  const clubhouseLinks = withoutShopLinks(clubhouseNavLinks, club.storeEnabled);
   const templateLinks = withoutShopLinks(navLinks, club.storeEnabled);
 
   if (club.presentationTemplateKey === "clubhouse@1") {
@@ -183,7 +183,7 @@ export default function Nav() {
         <div className="clubhouse-affiliation-lockup" aria-label="Club affiliations">
           <span aria-hidden="true" />
           <div>
-            {lionsLocalAffiliations.map((logo) => (
+            {clubhouseAffiliations.map((logo) => (
               <div key={logo.alt} className={`relative flex-shrink-0 ${logo.className}`}>
                 <Image
                   src={logo.src}

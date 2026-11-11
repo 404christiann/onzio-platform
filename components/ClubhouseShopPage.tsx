@@ -96,11 +96,11 @@ export default function ClubhouseShopPage({ editorContent, onEditorSelectKit }: 
           <h1>
             Made for the match.
             <br />
-            <em>Worn for Columbus.</em>
+            <em>Worn by our supporters.</em>
           </h1>
           <p>
-            First-team colors. One Lions badge. Built for every side of
-            matchday in the Capital City.
+            First-team colors. One club badge. Built for every side of
+            matchday.
           </p>
         </div>
 
@@ -235,8 +235,8 @@ export default function ClubhouseShopPage({ editorContent, onEditorSelectKit }: 
               <h2 id="clubhouse-store-product-title">{productName(selected)}</h2>
               <p className="clubhouse-store-modal-price">$75</p>
               <p className="clubhouse-store-modal-description">
-                The 2026 Lions jersey, finished in club colors and built to
-                carry Columbus wherever matchday goes.
+                The 2026 first-team jersey, finished in club colors and built
+                for every matchday.
               </p>
               <div className="clubhouse-store-sizes">
                 <span>Select size</span>
