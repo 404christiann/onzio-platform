@@ -33,6 +33,8 @@ import type {
   DBTryoutsPageContent,
 } from "@/lib/db-types";
 import { mapTryout } from "@/lib/queries";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import { clubToday } from "@/lib/club-time";
 import {
   buildTryoutMutationPayload,
   buildTryoutsPageMutationPayload,
@@ -73,6 +75,7 @@ function FieldError({ message }: { message?: string }) {
 // completes integration checks. The route now renders the new editor below.
 function LegacyAdminTryoutsPage() {
   const club = useClubContext();
+  const { timeZone } = useAdminPortal();
   // Show only fields used by the active public Tryouts page.
   const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;
   const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? true;
@@ -459,7 +462,7 @@ function LegacyAdminTryoutsPage() {
       : [...tryouts, draft]
     : tryouts;
   const previewTryouts = previewRows.map((tryout) =>
-    mapTryout(tryoutDraftToRow(tryout), contactEmail),
+    mapTryout(tryoutDraftToRow(tryout), contactEmail, undefined, clubToday(timeZone)),
   );
   // Resolved through the same rule the public page uses, so a blank field
   // previews the template default rather than an empty paragraph.

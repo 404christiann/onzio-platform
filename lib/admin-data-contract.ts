@@ -430,7 +430,7 @@ const siteSponsorLogoMutation = z
 
 // ADMIN-RE-11c (decision 0001): a player's adjustment, the part of their season
 // totals added by hand. It may be negative (2026-11-10, "Keep today's numbers").
-// The ceilings mirror the database CHECKs (20261110160000_season_totals_add_up.sql);
+// The ceilings mirror the database CHECKs (20261110220000_season_totals_add_up.sql);
 // the database also refuses an adjustment that takes a total below 0.
 const adjustmentNumber = z.number().int().min(-SEASON_ADJUSTMENT_LIMIT).max(SEASON_ADJUSTMENT_LIMIT);
 const playerSeasonAdjustmentMutation = z

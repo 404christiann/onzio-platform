@@ -11,7 +11,7 @@ import { assertSafeTestEnvironment } from "../helpers/environment";
 // typed total - games, so no total visitors see moves, and an adjustment may be
 // negative. Each test runs in a transaction that is rolled back.
 
-const MIGRATION = resolve(__dirname, "../../supabase/migrations/20261110160000_season_totals_add_up.sql");
+const MIGRATION = resolve(__dirname, "../../supabase/migrations/20261110220000_season_totals_add_up.sql");
 const ALPHA = CLUB_IDS.alpha;
 const BRAVO = CLUB_IDS.bravo;
 

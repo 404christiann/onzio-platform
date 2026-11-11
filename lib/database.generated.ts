@@ -1992,6 +1992,8 @@ export type Database = {
           registration_headline: string
           registration_pending_body: string
           registration_pending_label: string
+          sign_up_by_contact: boolean
+          sign_ups_closed: boolean
           slug: string
           sort_order: number
           status: string
@@ -2019,6 +2021,8 @@ export type Database = {
           registration_headline?: string
           registration_pending_body?: string
           registration_pending_label?: string
+          sign_up_by_contact?: boolean
+          sign_ups_closed?: boolean
           slug: string
           sort_order?: number
           status?: string
@@ -2046,6 +2050,8 @@ export type Database = {
           registration_headline?: string
           registration_pending_body?: string
           registration_pending_label?: string
+          sign_up_by_contact?: boolean
+          sign_ups_closed?: boolean
           slug?: string
           sort_order?: number
           status?: string
@@ -2912,6 +2918,7 @@ export type Database = {
           eyebrow: string
           headline: string
           hero_media_asset_id: string | null
+          hidden: boolean
           id: string
           intro: string
           location: string
@@ -2919,8 +2926,10 @@ export type Database = {
           program_id: string | null
           registration_form_id: string | null
           registration_href: string
+          sign_up_by_contact: boolean
           sort_order: number
           status: string
+          stays_open_after_date: boolean
           updated_at: string
           what_to_expect_copy: string
         }
@@ -2935,6 +2944,7 @@ export type Database = {
           eyebrow?: string
           headline?: string
           hero_media_asset_id?: string | null
+          hidden?: boolean
           id?: string
           intro?: string
           location?: string
@@ -2942,8 +2952,10 @@ export type Database = {
           program_id?: string | null
           registration_form_id?: string | null
           registration_href?: string
+          sign_up_by_contact?: boolean
           sort_order?: number
           status?: string
+          stays_open_after_date?: boolean
           updated_at?: string
           what_to_expect_copy?: string
         }
@@ -2958,6 +2970,7 @@ export type Database = {
           eyebrow?: string
           headline?: string
           hero_media_asset_id?: string | null
+          hidden?: boolean
           id?: string
           intro?: string
           location?: string
@@ -2965,8 +2978,10 @@ export type Database = {
           program_id?: string | null
           registration_form_id?: string | null
           registration_href?: string
+          sign_up_by_contact?: boolean
           sort_order?: number
           status?: string
+          stays_open_after_date?: boolean
           updated_at?: string
           what_to_expect_copy?: string
         }
@@ -3185,6 +3200,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      copy_program: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      copy_tryout: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
       create_pending_registration: {
         Args: {
           p_answers: Json
@@ -3198,6 +3221,10 @@ export type Database = {
           p_waiver_accepted_at: string
         }
         Returns: string
+      }
+      delete_tryout: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
       }
       expire_registration: {
         Args: { p_club_id: string; p_registration_id: string }
@@ -3252,6 +3279,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      registration_form_accepting: {
+        Args: { p_club_id: string; p_form_id: string }
+        Returns: boolean
+      }
       resolve_verified_tenant: {
         Args: { p_environment: string; p_hostname: string }
         Returns: {
@@ -3297,7 +3328,15 @@ export type Database = {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }
+      save_program_sign_up: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
       save_shop_page: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_tryout: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

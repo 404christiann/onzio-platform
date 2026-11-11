@@ -4,7 +4,7 @@
 // (onzio.player_season_totals / onzio.goalkeeper_season_totals); this module holds
 // the pieces the admin needs to turn a typed total back into an adjustment.
 
-/** Mirrors the CHECKs in 20261110160000_season_totals_add_up.sql: every number, either way. */
+/** Mirrors the CHECKs in 20261110220000_season_totals_add_up.sql: every number, either way. */
 export const SEASON_ADJUSTMENT_LIMIT = 9_999;
 
 export const FIELD_TOTAL_KEYS = [

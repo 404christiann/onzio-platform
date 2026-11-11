@@ -48,6 +48,9 @@ function tryout(overrides: Partial<DBTryout> = {}): DBTryout {
     cta_label: "Register externally",
     registration_href: "https://registration.example.test/tryouts",
     registration_form_id: null,
+    hidden: false,
+    sign_up_by_contact: false,
+    stays_open_after_date: false,
     closed_message: "Registration is closed for this opportunity.",
     sort_order: 0,
     created_at: "2026-08-01T00:00:00Z",
@@ -418,7 +421,9 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
   it("exposes the approved event, state, association, media, and complete UX fields", () => {
     for (const label of [
       "Program association",
-      "Status",
+      // ADMIN-RE-12b: the state follows the sign-up way and the date; the
+      // owner only chooses whether it is closed.
+      "Sign-ups",
       // The merged single name field, stored in the existing `headline`
       // column. It replaced the Eyebrow + Headline pair.
       'label="Name"',

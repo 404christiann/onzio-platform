@@ -17,7 +17,7 @@ import {
 // tenant select in lib/club-context.ts.
 
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
-const migration = source("supabase/migrations/20261110160000_season_totals_add_up.sql");
+const migration = source("supabase/migrations/20261110220000_season_totals_add_up.sql");
 const PLAYER = "11111111-1111-4111-8111-111111111111";
 const SEASON = "22222222-2222-4222-8222-222222222222";
 
