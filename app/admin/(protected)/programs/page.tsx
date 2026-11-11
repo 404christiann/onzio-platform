@@ -441,6 +441,30 @@ export default function AdminProgramsPage() {
     setPageView("manage");
   }
 
+  // ADMIN-RE-12a: after a click on the page's heading or closing band, the
+  // words box takes the cursor once React has drawn the clicked section, in
+  // that section's first field, and never away from a field already in use.
+  // An effect (not a frame timer) so the field is certain to exist.
+  // A new object per click, so a second click on the same section asks again.
+  const [wordsFocus, setWordsFocus] = useState<{ section: PageCopySection } | null>(null);
+  useEffect(() => {
+    if (!wordsFocus) return;
+    // Drop a request the person has moved on from (another section chosen, or
+    // the words box gone), so it never takes the cursor later.
+    if (hidesPageCopyEditor || wordsFocus.section !== activePageCopySection) {
+      setWordsFocus(null);
+      return;
+    }
+    const panel = pageCopyPanel.current;
+    const field = panel?.querySelector<HTMLElement>(
+      `[data-page-copy-section="${wordsFocus.section}"] input, [data-page-copy-section="${wordsFocus.section}"] textarea`,
+    );
+    if (!panel || !field) return;
+    setWordsFocus(null);
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!panel.contains(document.activeElement)) field.focus({ preventScroll: true });
+  }, [wordsFocus, activePageCopySection, hidesPageCopyEditor]);
+
   function selectCanvasSection(section: string) {
     setSelectedSection(section);
     if (section === "Registration band") selectTab("registration");
@@ -452,12 +476,7 @@ export default function AdminProgramsPage() {
     // takes the cursor.
     if (!hidesPageCopyEditor && (section === "Page heading" || section === "Closing band")) {
       setSelectedSection(null);
-      requestAnimationFrame(() => {
-        const panel = pageCopyPanel.current;
-        if (!panel) return;
-        panel.scrollIntoView({ behavior: "smooth", block: "start" });
-        panel.querySelector<HTMLElement>("input, textarea")?.focus({ preventScroll: true });
-      });
+      setWordsFocus({ section: section === "Page heading" ? "pageHeader" : "closingBand" });
     }
   }
 
@@ -1082,7 +1101,7 @@ export default function AdminProgramsPage() {
 
             <SlidingPanel activeKey={activePageCopySection} direction={pageCopyDirection}>
               {activePageCopySection === "homepageBand" && (
-                <div>
+                <div data-page-copy-section="homepageBand">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <FormField label="Eyebrow" error={pageCopyFieldError("pathwayEyebrow")}>
                       <input
@@ -1119,7 +1138,7 @@ export default function AdminProgramsPage() {
               )}
 
               {activePageCopySection === "pageHeader" && (
-                <div>
+                <div data-page-copy-section="pageHeader">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <FormField label="Eyebrow" error={pageCopyFieldError("heroEyebrow")}>
                       <input
@@ -1166,7 +1185,7 @@ export default function AdminProgramsPage() {
               )}
 
               {activePageCopySection === "closingBand" && (
-                <div>
+                <div data-page-copy-section="closingBand">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <FormField label="Heading line 1" error={pageCopyFieldError("closingHeadingLineOne")}>
                       <input

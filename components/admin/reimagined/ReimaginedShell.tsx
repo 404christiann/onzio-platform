@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import guided from "@/components/admin/AdminGuided.module.css";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
@@ -17,7 +17,9 @@ import {
   type AdminTabTarget,
 } from "@/lib/admin-tabs";
 import { createClient } from "@/lib/supabase-browser";
+import type { AdminSearchItem } from "@/lib/admin-search";
 import { AccountMenu } from "./AccountMenu";
+import { SearchBox, SearchButton, SearchDialog, useSearchShortcut } from "./AdminSearch";
 import { TAB_ICONS } from "./tabIcons";
 import { isPlainClick, TopBar, TopBarActionsProvider, useHasUnsaved, useLeaveCheck, useTopBarTakenOver } from "./TopBar";
 import styles from "./frame.module.css";
@@ -43,11 +45,13 @@ export function ReimaginedShell({
   tabs,
   targets,
   dots,
+  search,
   children,
 }: {
   tabs: readonly ShellTab[];
   targets: readonly AdminTabTarget[];
   dots: readonly AdminTabId[];
+  search: readonly AdminSearchItem[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -68,7 +72,7 @@ export function ReimaginedShell({
         style={SHELL_STYLE}
         data-admin-shell="reimagined"
       >
-        <Frame tabs={tabs} current={current} dots={dots} onTabPage={onTabPage} pathname={pathname} club={club}>
+        <Frame tabs={tabs} current={current} dots={dots} search={search} onTabPage={onTabPage} pathname={pathname} club={club}>
           {children}
         </Frame>
       </SidebarProvider>
@@ -80,6 +84,7 @@ function Frame({
   tabs,
   current,
   dots,
+  search,
   onTabPage,
   pathname,
   club,
@@ -88,6 +93,7 @@ function Frame({
   tabs: readonly ShellTab[];
   current: AdminTabId;
   dots: readonly AdminTabId[];
+  search: readonly AdminSearchItem[];
   onTabPage: boolean;
   pathname: string;
   club: ReturnType<typeof useClubContext>;
@@ -99,6 +105,9 @@ function Frame({
   const leave = useLeaveCheck();
   const hasUnsaved = useHasUnsaved();
   const editing = useTopBarTakenOver();
+  const [searching, setSearching] = useState(false);
+  const openSearch = useCallback(() => setSearching(true), []);
+  useSearchShortcut(openSearch);
 
   // The same predicate the home page and the Payments page use.
   const isBillingAuthorized = club.role === "owner" && club.lifecycle !== "archived";
@@ -166,6 +175,7 @@ function Frame({
             <small>Club admin</small>
           </span>
         </div>
+        <SearchBox onOpen={openSearch} />
         <nav aria-label="Club admin" className={styles.sideNav}>
           {tabs.map((tab) => tabLink(tab, "side"))}
         </nav>
@@ -181,6 +191,7 @@ function Frame({
             </b>
             <small>Club admin</small>
           </span>
+          <SearchButton onOpen={openSearch} />
           {account("top")}
         </header>
         {onTabPage ? null : <TopBar title={getReimaginedPageTitle(pathname)} />}
@@ -223,6 +234,15 @@ function Frame({
         </main>
       </div>
 
+      <SearchDialog
+        items={search}
+        open={searching}
+        onOpenChange={setSearching}
+        onNavigate={(href) => {
+          // Like a tab: a page with unsaved changes asks before it is left.
+          if (!leave(href)) router.push(href);
+        }}
+      />
       <nav aria-label="Club admin" className={styles.tabBar} data-count={tabs.length} hidden={editing}>
         {tabs.map((tab) => tabLink(tab, "bar"))}
       </nav>

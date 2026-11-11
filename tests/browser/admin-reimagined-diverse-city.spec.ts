@@ -126,6 +126,10 @@ for (const width of [390, 1440]) {
     for (const portal of ["classic", "reimagined"] as const) {
       test(`Programs page words are editable on the page (${portal} admin)`, async ({ page }) => {
         await setPortal(portal);
+        // Start from the standard words. A save from an earlier run that
+        // landed after its own clean-up would otherwise already hold the
+        // headline, leaving nothing to change and Save disabled.
+        await sql("delete from onzio.programs_page_content where club_id=$1", [ALPHA]);
         try {
           await page.goto("/admin/programs");
           const main = page.getByRole("main");
@@ -138,19 +142,40 @@ for (const width of [390, 1440]) {
           // A click on the page's heading opens the page header words and puts the cursor there.
           const canvas = page.frameLocator("iframe").first();
           await canvas.locator('[data-program-editor-section="Page heading"]').click({ timeout: 20_000 });
-          await expect(main.getByLabel("Headline line 1")).toBeVisible();
+          // Type only once the words box has finished switching to the page
+          // header: one section on screen, and it is the page header's.
+          await expect(main.locator("[data-page-copy-section]")).toHaveCount(1);
+          await expect(main.locator('[data-page-copy-section="pageHeader"]')).toBeVisible();
+          // The cursor lands in the clicked section's first field (Eyebrow),
+          // and only then does the test type, so nothing moves focus mid-fill.
+          await expect(main.locator('[data-page-copy-section="pageHeader"] input').first()).toBeFocused();
+          const headline = main.getByLabel("Headline line 1");
+          await expect(headline).toBeVisible();
           await expect(main.getByText("This wording is managed by Onzio")).toHaveCount(0);
 
-          await main.getByLabel("Headline line 1").fill(HEADLINE);
+          await headline.fill(HEADLINE);
+          await expect(headline).toHaveValue(HEADLINE);
           // The page itself shows the new words before anything is saved.
           await expect(canvas.getByRole("heading", { level: 1 })).toContainText(HEADLINE);
           await page.screenshot({ path: `${SHOTS}/dc-programs-${portal}-edited-${width}.png`, fullPage: true });
 
           await main.getByRole("button", { name: /^Save page copy/ }).click();
-          await expect(main.getByText("Page copy saved")).toBeVisible();
+          // A busy machine has taken over 5 s to answer this save (2026-11-10);
+          // give it the same 20 s as the page's first load above.
+          await expect(main.getByText("Page copy saved")).toBeVisible({ timeout: 20_000 });
+          // What was typed is what was stored, before the public page is asked for it.
+          await expect
+            .poll(async () => (await sql<{ h: string }>(
+              "select hero_headline_line_one as h from onzio.programs_page_content where club_id=$1",
+              [ALPHA],
+            ))[0]?.h)
+            .toBe(HEADLINE);
 
+          // The first render of the public page must show it. With the stored
+          // row proved above, a failure here means the site served old words
+          // after a save (seen once in 40 runs on 2026-11-10, cause unknown).
           await page.goto("/programs");
-          await expect(page.getByRole("heading", { level: 1 })).toContainText(HEADLINE);
+          await expect(page.getByRole("heading", { level: 1 })).toContainText(HEADLINE, { timeout: 20_000 });
         } finally {
           await sql("delete from onzio.programs_page_content where club_id=$1", [ALPHA]);
           await setPortal("reimagined");
