@@ -61,7 +61,7 @@ import {
   normalizeKitStoreNote,
 } from "@/lib/shop-kit";
 import { normalizeShopPurchaseDetails } from "@/lib/shop-purchase-details";
-import { defaultSponsorLogosForPlacement } from "@/lib/sponsor-content";
+import { defaultSponsorLogosForPlacement, SPONSOR_PLACEMENT_SWITCH } from "@/lib/sponsor-content";
 import {
   DEFAULT_ABOUT_PAGE_CONTENT,
   EMPTY_ABOUT_PAGE_CONTENT,
@@ -1193,7 +1193,10 @@ export async function fetchAboutClubContent(
   };
 }
 
-/** Fetches ordered site sponsor logos for a public placement. */
+/**
+ * Fetches ordered site sponsor logos for a public placement: the sponsors
+ * whose Homepage (carousel) or Footer switch is on (ADMIN-RE-15).
+ */
 export async function fetchSiteSponsorLogos(
   placement: SponsorLogoPlacement,
   clubId?: string,
@@ -1203,8 +1206,9 @@ export async function fetchSiteSponsorLogos(
     .from("site_sponsor_logos")
     .select("*")
     .eq("club_id", tenantId)
-    .eq("placement", placement)
-    .order("sort_order", { ascending: true });
+    .eq(SPONSOR_PLACEMENT_SWITCH[placement], true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
   if (error) {
     console.error(`fetchSiteSponsorLogos(${placement}):`, error.message);
     return clubId ? [] : defaultSponsorLogosForPlacement(placement);
@@ -1215,6 +1219,27 @@ export async function fetchSiteSponsorLogos(
     [{ assetId: "media_asset_id", url: "logo_url" }],
   )) as unknown as DBSiteSponsorLogo[];
   return rows.length > 0 || clubId ? rows : defaultSponsorLogosForPlacement(placement);
+}
+
+/**
+ * The club's whole sponsor list in its one order (ADMIN-RE-15), for the admin
+ * pages. Throws on a failed read so a page never saves over a list it could
+ * not load.
+ */
+export async function fetchSponsorList(clubId: string): Promise<DBSiteSponsorLogo[]> {
+  const tenantId = requireClubId(clubId);
+  const { data, error } = await supabase
+    .from("site_sponsor_logos")
+    .select("*")
+    .eq("club_id", tenantId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (await resolveMediaReferences(
+    (data ?? []) as Record<string, unknown>[],
+    tenantId,
+    [{ assetId: "media_asset_id", url: "logo_url" }],
+  )) as unknown as DBSiteSponsorLogo[];
 }
 
 /**

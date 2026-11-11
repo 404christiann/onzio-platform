@@ -2604,8 +2604,11 @@ export type Database = {
           logo_url: string
           media_asset_id: string | null
           name: string
-          placement: string
+          placement: string | null
+          show_in_footer: boolean
+          show_on_homepage: boolean
           sort_order: number
+          website_url: string | null
         }
         Insert: {
           club_id: string
@@ -2614,8 +2617,11 @@ export type Database = {
           logo_url: string
           media_asset_id?: string | null
           name: string
-          placement: string
+          placement?: string | null
+          show_in_footer?: boolean
+          show_on_homepage?: boolean
           sort_order?: number
+          website_url?: string | null
         }
         Update: {
           club_id?: string
@@ -2624,8 +2630,11 @@ export type Database = {
           logo_url?: string
           media_asset_id?: string | null
           name?: string
-          placement?: string
+          placement?: string | null
+          show_in_footer?: boolean
+          show_on_homepage?: boolean
           sort_order?: number
+          website_url?: string | null
         }
         Relationships: [
           {

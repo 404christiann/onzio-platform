@@ -67,7 +67,7 @@ function avatarHue(id: string): string {
   return AVATAR_HUES[hash % AVATAR_HUES.length]!;
 }
 
-function Avatar({ id, name, size }: { id: string; name: string; size: number }) {
+export function Avatar({ id, name, size }: { id: string; name: string; size: number }) {
   return (
     <span
       className={styles.avatar}
@@ -81,6 +81,11 @@ function Avatar({ id, name, size }: { id: string; name: string; size: number }) 
 
 function dateWords(date: string): string {
   return formatClubDate(date, "weekday-short") ?? date;
+}
+
+/** RE-19's chart colors and spacing, for its pieces shown on another page (ADMIN-RE-24d). */
+export function AnalyticsScope({ children }: { children: React.ReactNode }) {
+  return <div className={styles.page}>{children}</div>;
 }
 
 export type TeamAnalyticsLinks = { score: string; stats: string; roster: string };
@@ -403,28 +408,17 @@ function GameCard({
 
 // ── One player at a time ─────────────────────────────────────────────────────
 
-type Log = { status: "loading" } | { status: "error" } | { status: "ready"; rows: MatchLogRow[] };
+export type Log = { status: "loading" } | { status: "error" } | { status: "ready"; rows: MatchLogRow[] };
 
-function listLine(player: AnalyticsPlayer): string {
-  const figure = player.keeper
-    ? `${formatCount(player.saves)} ${player.saves === 1 ? "save" : "saves"}`
-    : goalsWords(player.goals);
-  return [player.number > 0 ? `#${player.number}` : null, figure].filter(Boolean).join(" · ");
-}
-
-function PlayersCard({ data, links }: { data: TeamAnalyticsData; links: TeamAnalyticsLinks }) {
+/**
+ * One player's games this season, read on demand with fetchPlayerMatchLog and
+ * kept per player. Shared by this page's player picker and the Games tab's
+ * player page (ADMIN-RE-24d).
+ */
+export function usePlayerLog(playerId: string | null, keeper: boolean, seasonId: string) {
   const clubId = useClubId();
-  const everyone = useMemo(() => data.groups.flatMap((group) => group.players), [data.groups]);
-  const [selectedId, setSelectedId] = useState<string | null>(() => defaultPlayerId(data.groups));
-  const [screen, setScreen] = useState<"list" | "player">("list");
   const [logs, setLogs] = useState<Record<string, Log>>({});
   const [attempt, setAttempt] = useState(0);
-  const player = everyone.find((candidate) => candidate.id === selectedId) ?? everyone[0] ?? null;
-  const playerId = player?.id ?? null;
-  const keeper = player?.keeper ?? false;
-  const seasonId = data.season.id;
-  const backRef = useRef<HTMLButtonElement>(null);
-  const listRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
     if (!playerId) return;
@@ -441,6 +435,35 @@ function PlayersCard({ data, links }: { data: TeamAnalyticsData; links: TeamAnal
       active = false;
     };
   }, [playerId, keeper, seasonId, clubId, attempt]);
+
+  const log: Log = (playerId && logs[playerId]) || { status: "loading" };
+  const retry = useCallback(() => {
+    if (!playerId) return;
+    setLogs((current) => ({ ...current, [playerId]: { status: "loading" } }));
+    setAttempt((value) => value + 1);
+  }, [playerId]);
+  return { log, retry };
+}
+
+function listLine(player: AnalyticsPlayer): string {
+  const figure = player.keeper
+    ? `${formatCount(player.saves)} ${player.saves === 1 ? "save" : "saves"}`
+    : goalsWords(player.goals);
+  return [player.number > 0 ? `#${player.number}` : null, figure].filter(Boolean).join(" · ");
+}
+
+function PlayersCard({ data, links }: { data: TeamAnalyticsData; links: TeamAnalyticsLinks }) {
+  const everyone = useMemo(() => data.groups.flatMap((group) => group.players), [data.groups]);
+  const [selectedId, setSelectedId] = useState<string | null>(() => defaultPlayerId(data.groups));
+  const [screen, setScreen] = useState<"list" | "player">("list");
+  const player = everyone.find((candidate) => candidate.id === selectedId) ?? everyone[0] ?? null;
+  const playerId = player?.id ?? null;
+  const keeper = player?.keeper ?? false;
+  const seasonId = data.season.id;
+  const backRef = useRef<HTMLButtonElement>(null);
+  const listRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const { log, retry } = usePlayerLog(playerId, keeper, seasonId);
 
   if (!player) {
     return (
@@ -471,7 +494,6 @@ function PlayersCard({ data, links }: { data: TeamAnalyticsData; links: TeamAnal
     requestAnimationFrame(() => listRefs.current[player.id]?.focus());
   };
 
-  const log: Log = logs[player.id] ?? { status: "loading" };
   return (
     <section
       className={styles.card}
@@ -551,23 +573,21 @@ function PlayersCard({ data, links }: { data: TeamAnalyticsData; links: TeamAnal
           games={data.games}
           teamGames={data.record.played}
           statsHref={links.stats}
-          onRetry={() => {
-            setLogs((current) => ({ ...current, [player.id]: { status: "loading" } }));
-            setAttempt((value) => value + 1);
-          }}
+          onRetry={retry}
         />
       </div>
     </section>
   );
 }
 
-function PlayerDetail({
+export function PlayerDetail({
   player,
   log,
   games,
   teamGames,
   statsHref,
   onRetry,
+  showName = true,
 }: {
   player: AnalyticsPlayer;
   log: Log;
@@ -575,6 +595,8 @@ function PlayerDetail({
   teamGames: number;
   statsHref: string;
   onRetry: () => void;
+  /** False where the page already names the player in its own heading (ADMIN-RE-24d). */
+  showName?: boolean;
 }) {
   const rows = log.status === "ready" ? log.rows : [];
   const played = rows.length;
@@ -586,7 +608,7 @@ function PlayerDetail({
     : `The edge is the team’s best ${POSITION_LABEL[player.position].toLowerCase()}.`;
   return (
     <div className={styles.player} data-testid="analytics-player">
-      <div className={styles.who}>
+      <div className={styles.who} hidden={!showName}>
         <h3 className={styles.whoName} title={player.name} data-testid="analytics-player-name">
           {player.name}
         </h3>

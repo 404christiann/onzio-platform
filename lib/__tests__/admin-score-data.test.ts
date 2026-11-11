@@ -131,6 +131,21 @@ describe("Enter a score data (ADMIN-RE-06)", () => {
     });
   });
 
+  // ADMIN-RE-24d: the home's rule (gameNeedsScore). An untimed game today is
+  // still to come; an untimed game yesterday needs its score.
+  it("leaves an untimed game today off the list, and lists one from yesterday", async () => {
+    const { client } = fakeClient({
+      seasons,
+      matches: [
+        match({ id: "tbd-today", date: "2026-11-08", time: "TBD", opponent: "Later Today FC" }),
+        match({ id: "none-today", date: "2026-11-08", time: null, opponent: "No Time FC" }),
+        match({ id: "tbd-yesterday", date: "2026-11-07", time: "TBD", opponent: "Yesterday FC" }),
+      ],
+    });
+    const data = await loadScorePageData(client, CLUB, CHICAGO, NOW);
+    expect(data.status === "ready" && data.needScore.map((game) => game.id)).toEqual(["tbd-yesterday"]);
+  });
+
   it("shows earlier results from the active season, newest first, capped", async () => {
     const scored = Array.from({ length: EARLIER_RESULTS_LIMIT + 3 }, (_, index) =>
       match({

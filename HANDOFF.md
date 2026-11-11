@@ -1,3 +1,45 @@
+## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
+
+- **Status:** `in_progress`, PR open. PR 24d of `ADMIN-RE-24` (built before 24c so
+  search can link to players). UI only: no migration, no new dependency, no
+  hosted action.
+- **What it adds:** a Players card on the Games tab and a page per player
+  (`/admin/games/players/<id>`, "‹ Games"): chips to switch players in the
+  same position, a game still missing its score with Enter score, and RE-19's
+  own chart and recent games, reused through a shared `usePlayerLog`.
+- **Verification:** contract and browser tests (390 and 1440, light and dark);
+  full suites on the PR head are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** the bot merges. Then 24c, search.
+
+## 2026-11-10 - ADMIN-RE-15 Sponsors, one list
+
+- **Status:** `released` 2026-11-10. Migration `20261110150000` applied to
+  production from Christian's Mac at his request (`GATE-MIGRATE`), then PR #128
+  merged (`779bd327`) and deployed; smoke checks passed (every club domain
+  returns 200 with no `UNKNOWN_TENANT`; Diverse City `/programs`, `/roster`,
+  `/shop` 200). Sponsor rows match the expected counts; visitors see the same
+  sponsors in the same order. No change to `lib/club-context.ts`.
+- **What it adds:** each sponsor is one row with Homepage and Footer switches
+  and an optional website; a logo uploaded twice (once per place) becomes one
+  row. On the new admin, `/admin/sponsors` is the one-list page (design
+  `cd-sponsors-final`): limits 10 and 6 with the full place greyed, Move left /
+  right in the ⋯ menu, "Their website", the blurry-logo note, one Save. The
+  Footer switch shows only where the club's footer shows sponsors (from the
+  site definition). Diverse City's classic Sponsors page keeps working on the
+  same rows. Sponsors with a website are links on the public site (nobody has
+  one at merge). Names stop at 60 (database CHECK).
+- **Visitors saw at merge:** the same logos in the same order in both places
+  (Christian's order check before the gate: 0 moves for every club).
+- **Production counts (Christian, 2026-11-10):** all clean. At the gate Rose
+  City's 12 sponsor rows become 7 and Diverse City's 4 become 3; Lions stays at
+  6 (rows without a file record are never merged by link, decided here).
+- **Verification:** database, unit, contract and browser tests; full suites on
+  the PR head, with the tested commit, are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** none for RE-15. `placement` is dropped in a later
+  migration once both clubs accept the page. The Rose City 2027 branch should
+  set `sponsors.showFooterPlacement` to `false` when it merges.
+
 ## 2026-11-10 - Add a game asks "Which competition?" (Diverse City only)
 
 - **Status:** `in_progress`, draft PR open (Christian decides when it is ready).
@@ -38,6 +80,7 @@
 - **Verification:** unit, contract and browser tests; full suites on the PR
   head, with the tested commit, are in the PR body. Details in `STATUS.md`.
 - **Exact next step:** the bot merges. Then 24c, search.
+
 
 ## 2026-11-10 - ADMIN-RE-11b League table per season, our row updates itself
 
