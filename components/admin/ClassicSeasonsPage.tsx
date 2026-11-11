@@ -31,10 +31,11 @@ async function getSeasonDeleteState(
 ): Promise<SeasonDeleteState> {
   const [matchesResult, fieldResult, gkResult] = await Promise.all([
     supabase.from("matches").select("id", { count: "exact", head: true }).eq("season_id", seasonId),
-    supabase.from("player_season_stats")
+    // ADMIN-RE-11c: the totals as visitors see them (match stats added up plus what was added by hand).
+    supabase.from("player_season_totals")
       .select("player_id, season_id, goals, assists, tackles, offsides, fouls, fouls_suffered, starts, yellow, red, mins")
       .eq("season_id", seasonId),
-    supabase.from("goalkeeper_season_stats")
+    supabase.from("goalkeeper_season_totals")
       .select("player_id, season_id, goals_against, saves, clean_sheets, starts, yellow, red, mins")
       .eq("season_id", seasonId),
   ]);

@@ -26,6 +26,8 @@ const CHILD_TABLES = [
   "player_photos",
   "player_match_stats",
   "goalkeeper_match_stats",
+  "player_season_adjustments",
+  "goalkeeper_season_adjustments",
   "player_season_stats",
   "goalkeeper_season_stats",
   "homepage_slideshow_photos",

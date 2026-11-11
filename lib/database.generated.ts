@@ -695,6 +695,7 @@ export type Database = {
           id: string
           match_id: string
           mins: number
+          played: boolean
           player_id: string
           rating: number | null
           red: number
@@ -711,6 +712,7 @@ export type Database = {
           id?: string
           match_id: string
           mins?: number
+          played?: boolean
           player_id: string
           rating?: number | null
           red?: number
@@ -727,6 +729,7 @@ export type Database = {
           id?: string
           match_id?: string
           mins?: number
+          played?: boolean
           player_id?: string
           rating?: number | null
           red?: number
@@ -756,6 +759,70 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      goalkeeper_season_adjustments: {
+        Row: {
+          clean_sheets: number
+          club_id: string
+          goals_against: number
+          mins: number
+          player_id: string
+          red: number
+          saves: number
+          season_id: string
+          starts: number
+          updated_at: string
+          yellow: number
+        }
+        Insert: {
+          clean_sheets?: number
+          club_id: string
+          goals_against?: number
+          mins?: number
+          player_id: string
+          red?: number
+          saves?: number
+          season_id: string
+          starts?: number
+          updated_at?: string
+          yellow?: number
+        }
+        Update: {
+          clean_sheets?: number
+          club_id?: string
+          goals_against?: number
+          mins?: number
+          player_id?: string
+          red?: number
+          saves?: number
+          season_id?: string
+          starts?: number
+          updated_at?: string
+          yellow?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goalkeeper_season_adjustments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goalkeeper_season_adjustments_club_id_player_id_season_id_fkey"
+            columns: ["club_id", "player_id", "season_id"]
+            isOneToOne: true
+            referencedRelation: "goalkeeper_season_stats"
+            referencedColumns: ["club_id", "player_id", "season_id"]
+          },
+          {
+            foreignKeyName: "goalkeeper_season_adjustments_club_id_player_id_season_id_fkey"
+            columns: ["club_id", "player_id", "season_id"]
+            isOneToOne: true
+            referencedRelation: "goalkeeper_season_totals"
+            referencedColumns: ["club_id", "player_id", "season_id"]
           },
         ]
       }
@@ -1333,6 +1400,7 @@ export type Database = {
           match_id: string
           mins: number
           offsides: number
+          played: boolean
           player_id: string
           rating: number | null
           red: number
@@ -1352,6 +1420,7 @@ export type Database = {
           match_id: string
           mins?: number
           offsides?: number
+          played?: boolean
           player_id: string
           rating?: number | null
           red?: number
@@ -1371,6 +1440,7 @@ export type Database = {
           match_id?: string
           mins?: number
           offsides?: number
+          played?: boolean
           player_id?: string
           rating?: number | null
           red?: number
@@ -1452,6 +1522,79 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      player_season_adjustments: {
+        Row: {
+          assists: number
+          club_id: string
+          fouls: number
+          fouls_suffered: number
+          goals: number
+          mins: number
+          offsides: number
+          player_id: string
+          red: number
+          season_id: string
+          starts: number
+          tackles: number
+          updated_at: string
+          yellow: number
+        }
+        Insert: {
+          assists?: number
+          club_id: string
+          fouls?: number
+          fouls_suffered?: number
+          goals?: number
+          mins?: number
+          offsides?: number
+          player_id: string
+          red?: number
+          season_id: string
+          starts?: number
+          tackles?: number
+          updated_at?: string
+          yellow?: number
+        }
+        Update: {
+          assists?: number
+          club_id?: string
+          fouls?: number
+          fouls_suffered?: number
+          goals?: number
+          mins?: number
+          offsides?: number
+          player_id?: string
+          red?: number
+          season_id?: string
+          starts?: number
+          tackles?: number
+          updated_at?: string
+          yellow?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_season_adjustments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_season_adjustments_club_id_player_id_season_id_fkey"
+            columns: ["club_id", "player_id", "season_id"]
+            isOneToOne: true
+            referencedRelation: "player_season_stats"
+            referencedColumns: ["club_id", "player_id", "season_id"]
+          },
+          {
+            foreignKeyName: "player_season_adjustments_club_id_player_id_season_id_fkey"
+            columns: ["club_id", "player_id", "season_id"]
+            isOneToOne: true
+            referencedRelation: "player_season_totals"
+            referencedColumns: ["club_id", "player_id", "season_id"]
           },
         ]
       }
@@ -2904,7 +3047,85 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      goalkeeper_season_totals: {
+        Row: {
+          clean_sheets: number | null
+          club_id: string | null
+          games_played: number | null
+          goals_against: number | null
+          mins: number | null
+          player_id: string | null
+          red: number | null
+          saves: number | null
+          season_id: string | null
+          starts: number | null
+          yellow: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goalkeeper_season_stats_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goalkeeper_season_stats_club_id_player_id_fkey"
+            columns: ["club_id", "player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "goalkeeper_season_stats_club_id_season_id_fkey"
+            columns: ["club_id", "season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      player_season_totals: {
+        Row: {
+          assists: number | null
+          club_id: string | null
+          fouls: number | null
+          fouls_suffered: number | null
+          games_played: number | null
+          goals: number | null
+          mins: number | null
+          offsides: number | null
+          player_id: string | null
+          red: number | null
+          season_id: string | null
+          starts: number | null
+          tackles: number | null
+          yellow: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_season_stats_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_season_stats_club_id_player_id_fkey"
+            columns: ["club_id", "player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "player_season_stats_club_id_season_id_fkey"
+            columns: ["club_id", "season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
     }
     Functions: {
       apply_registration_checkout_event: {

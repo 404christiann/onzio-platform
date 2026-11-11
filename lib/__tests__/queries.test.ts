@@ -661,7 +661,7 @@ describe('fetchPlayerMatchLog', () => {
     expect(q.eq).toHaveBeenCalledWith('player_id', PLAYER_ID)
   })
 
-  it('passes gt mins=0 filter to the stats query to exclude non-appearances', async () => {
+  it('keeps only games the player played in (ADMIN-RE-11c: played, not minutes above 0)', async () => {
     const q = chain({ data: [], error: null })
     mockFrom
       .mockReturnValueOnce(q)
@@ -669,7 +669,8 @@ describe('fetchPlayerMatchLog', () => {
 
     await fetchPlayerMatchLog(PLAYER_ID, false, SEASON_ID)
 
-    expect(q.gt).toHaveBeenCalledWith('mins', 0)
+    expect(q.eq).toHaveBeenCalledWith('played', true)
+    expect(q.gt).not.toHaveBeenCalled()
   })
 })
 
@@ -705,8 +706,8 @@ describe('fetchRoster (season-aware)', () => {
     // historical season: only inactivePlayer has stats
     mockFrom
       .mockReturnValueOnce(chain({ data: [activeSeason, historicalSeason], error: null })) // seasons
-      .mockReturnValueOnce(chain({ data: historicalStats, error: null }))  // player_season_stats
-      .mockReturnValueOnce(chain({ data: [], error: null }))               // goalkeeper_season_stats
+      .mockReturnValueOnce(chain({ data: historicalStats, error: null }))  // player_season_totals
+      .mockReturnValueOnce(chain({ data: [], error: null }))               // goalkeeper_season_totals
       .mockReturnValueOnce(chain({ data: [inactivePlayer], error: null })) // players (by id, no active filter)
       .mockReturnValueOnce(chain({ data: [], error: null }))               // player_photos
 
@@ -797,8 +798,8 @@ describe('fetchRoster (season-aware)', () => {
     expect(result.midfielders).toEqual([])
     expect(result.forwards).toEqual([])
     // Must never send season_id=eq.<empty string> against these uuid columns.
-    expect(calledTables).not.toContain('player_season_stats')
-    expect(calledTables).not.toContain('goalkeeper_season_stats')
+    expect(calledTables).not.toContain('player_season_totals')
+    expect(calledTables).not.toContain('goalkeeper_season_totals')
   })
 
   it('excludes a deactivated player from the active season even when their season stats remain', async () => {

@@ -1,3 +1,25 @@
+## 2026-11-10 - ADMIN-RE-11c-1 Season totals add up from player numbers (migration)
+
+- **Status:** `in_progress`, PR open, needs `GATE-MIGRATE` (Christian approves).
+  Part 1 of 2; part 2 (the "Who played and scored?" step) has no migration.
+- **What it changes:** a player's season totals are now their saved player
+  numbers added up over the season's games, plus a hand-entered adjustment
+  (decision 0001). New adjustment tables and totals views; `played` on player
+  numbers. Every reader of totals moved to the views: public roster, Seasons
+  hub, analytics, the classic Season stats page and roster panel (those two now
+  save what is typed as the adjustment).
+- **Visitors see at merge:** the same totals as today. Christian's decision
+  ("Keep today's numbers"): adjustment = typed − games, negative allowed, so
+  nothing moves. From then on, entering a game's player numbers adds to the
+  totals. The public match log lists games a player played in (same 9 rows on
+  production either way).
+- **Not touched:** the typed numbers in `*_season_stats` (kept for rollback;
+  dropped once both clubs accept), `lib/club-context.ts`.
+- **Verification:** database (with a migration replay), unit, contract and
+  browser tests; results with the tested commit in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** review bot, `GATE-MIGRATE`, merge; then 11c-2.
+
 ## 2026-11-10 - ADMIN-RE-12b Programs and tryouts take their state from the sign-up way and the date
 
 - **Status:** `released` 2026-11-11. Migration `20261110180000` was applied to

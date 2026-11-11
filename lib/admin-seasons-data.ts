@@ -204,8 +204,8 @@ export async function loadSeasonsHub(
         .eq("season_id", viewed.id)
         .not("rose_city_score", "is", null)
         .not("opponent_score", "is", null),
-      onzio.from("player_season_stats").select(FIELD_STAT_COLUMNS).eq("club_id", clubId).eq("season_id", viewed.id),
-      onzio.from("goalkeeper_season_stats").select(KEEPER_STAT_COLUMNS).eq("club_id", clubId).eq("season_id", viewed.id),
+      onzio.from("player_season_totals").select(FIELD_STAT_COLUMNS).eq("club_id", clubId).eq("season_id", viewed.id),
+      onzio.from("goalkeeper_season_totals").select(KEEPER_STAT_COLUMNS).eq("club_id", clubId).eq("season_id", viewed.id),
     ]);
     if (league.error || total.error || played.error || field.error || keepers.error) {
       return { status: "error" };
