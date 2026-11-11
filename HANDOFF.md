@@ -20,6 +20,11 @@
 - **Review-bot Mediums fixed:** the Storage outcome now has its own
   `hard_purge_storage` audit event (removed or failed; the main event says
   `pending`), and `lib/database.generated.ts` has the new function.
+- **Bot re-review (0 High, 0 Medium) Lows fixed 2026-11-11:** a record that
+  can't be written after a successful Storage removal is now
+  `PURGE_STORAGE_UNRECORDED`; the domain, subscription, Connect and export
+  checks run after the table locks. Merged `main` with RE-12b; its new
+  private receipts table is in the purge test's fixture.
 - **Exact next step:** bot review, `GATE-MIGRATE` on Christian's go, merge.
 
 ## 2026-11-10 - ADMIN-RE-12b Programs and tryouts take their state from the sign-up way and the date

@@ -364,6 +364,16 @@ describe("hard purge database and Storage order", () => {
     ]);
   });
 
+  it("reports PURGE_STORAGE_UNRECORDED when the files are removed but the record can't be written", async () => {
+    const fake = fakeClient({
+      rpc: { data: { status: "purged", club_slug: clubs.alpha.slug }, error: null },
+      storage: media,
+      auditError: "audit insert failed",
+    });
+    await expectContractError(() => purge(fake.client), "PURGE_STORAGE_UNRECORDED");
+    expect(fake.removed).toHaveLength(3);
+  });
+
   it("still reports PURGE_STORAGE_FAILED when the failure can't be recorded", async () => {
     const fake = fakeClient({
       rpc: { data: { status: "purged", club_slug: clubs.alpha.slug }, error: null },

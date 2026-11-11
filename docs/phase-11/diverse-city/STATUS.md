@@ -78,6 +78,30 @@ whichever PR merges second must add fixture rows for them to the purge test
   `provisioning-migration` 36/36, tsc and ESLint clean. The unit and contract
   totals are in the PR body.
 
+**After the bot's re-review at `5755d30` (0 High, 0 Medium; 2026-11-11):**
+
+- Merged `main` `9e18c143` (RE-12b, migration `20261110180000` already on
+  production). Its new `onzio_private.sign_up_settings_receipts` cascades
+  with the club; the purge test caught the missing fixture row as designed,
+  and it now has one. The RE-11b and RE-15 migration-order lists now name
+  both RE-12b's and this migration.
+- Low 1: if the files are removed but the `hard_purge_storage` record can't
+  be written, `purgeClub` now raises `PURGE_STORAGE_UNRECORDED` (a contract
+  error that says the purge worked and a rerun records it), not a plain
+  `Error`. Contract test added.
+- Low 2: the checks that read other tables (active domain, live
+  subscription, Connect `charges_enabled`, verified export) now run after
+  the table locks, so nothing they read can change before the deletes. The
+  slug and archived checks stay before the locks, on the locked club row.
+- Not changed: a `statement_timeout` set on the function would not apply to
+  the statement already running it; the caller's role timeout still bounds
+  the call, and a timeout rolls the whole purge back. The Connect guard rule
+  is still Christian's call.
+- Verification: purge database test 11/11 (private database with every
+  migration on the branch), types regenerated and identical, contract tests
+  61/61 for the three touched files, tsc clean. Full unit and contract
+  totals in the PR body.
+
 **Exact next step:** bot review; `GATE-MIGRATE` on Christian's go, then merge.
 No purge runs on production without Christian's go.
 

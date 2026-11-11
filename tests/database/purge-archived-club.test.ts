@@ -111,6 +111,7 @@ begin
   insert into onzio_private.contact_editor_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
   insert into onzio_private.contact_editor_revisions (club_id) values (c) on conflict do nothing;
   insert into onzio_private.homepage_assignment_epochs (club_id) values (c) on conflict do nothing;
+  insert into onzio_private.sign_up_settings_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
   insert into onzio_private.homepage_revisions (club_id) values (c) on conflict do nothing;
   insert into onzio_private.homepage_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
   insert into onzio_private.program_directory_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);

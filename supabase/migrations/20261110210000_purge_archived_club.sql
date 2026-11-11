@@ -12,12 +12,13 @@
 -- by service_role only (the operator boundary in lib/operator). In one
 -- transaction it:
 --   1. locks the club row and checks: the club exists, the confirmation is
---      its slug, it is archived, no domain is active, no Stripe subscription
---      is live, no linked Stripe Connect account can still take payments
---      (charges_enabled), and the export is verified for this club and slug;
+--      its slug, and it is archived;
 --   2. locks every club table (and onzio.clubs) against writes until commit,
---      so the "other clubs unchanged" check below can't be upset by another
---      club saving at the same moment; reads are not blocked;
+--      so neither the checks below nor the "other clubs unchanged" check can
+--      be upset by another session writing at the same moment; reads are not
+--      blocked. Then checks: no domain is active, no Stripe subscription is
+--      live, no linked Stripe Connect account can still take payments
+--      (charges_enabled), and the export is verified for this club and slug;
 --   3. deletes the club's rows children first, lifting the presentation
 --      immutability triggers for this transaction only;
 --   4. refuses (and rolls back) when a club table it does not know about
@@ -159,6 +160,23 @@ begin
   if v_club.lifecycle <> 'archived' then
     raise exception 'CLUB_NOT_ARCHIVED';
   end if;
+
+  -- Every table that holds club rows, in a fixed order for the locks.
+  select array_agg(format('%I.%I', c.table_schema, c.table_name)
+                   order by c.table_schema, c.table_name)
+  into v_tables
+  from information_schema.columns c
+  join information_schema.tables t
+    on t.table_schema = c.table_schema and t.table_name = c.table_name
+  where c.column_name = 'club_id'
+    and t.table_type = 'BASE TABLE'
+    and c.table_schema in ('onzio', 'onzio_private', 'public');
+
+  execute 'lock table onzio.clubs, ' || array_to_string(v_tables, ', ')
+    || ' in share row exclusive mode';
+
+  -- Checks on other tables run after the locks, so nothing they read can
+  -- change before the deletes.
   if exists (
     select 1 from onzio.club_domains d where d.club_id = p_club_id and d.active
   ) then
@@ -192,20 +210,6 @@ begin
   if not found then
     raise exception 'EXPORT_REQUIRED';
   end if;
-
-  -- Every table that holds club rows, in a fixed order for the locks.
-  select array_agg(format('%I.%I', c.table_schema, c.table_name)
-                   order by c.table_schema, c.table_name)
-  into v_tables
-  from information_schema.columns c
-  join information_schema.tables t
-    on t.table_schema = c.table_schema and t.table_name = c.table_name
-  where c.column_name = 'club_id'
-    and t.table_type = 'BASE TABLE'
-    and c.table_schema in ('onzio', 'onzio_private', 'public');
-
-  execute 'lock table onzio.clubs, ' || array_to_string(v_tables, ', ')
-    || ' in share row exclusive mode';
 
   select count(*) into v_n from onzio.clubs where id <> p_club_id;
   v_before := jsonb_build_object('onzio.clubs', v_n);

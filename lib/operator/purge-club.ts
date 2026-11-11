@@ -174,7 +174,17 @@ export async function purgeClub(
       }; run the purge again with the same export to retry Storage. ${message}`,
     );
   }
-  const storageAuditEventId = await recordStorage({ status: "removed" });
+  let storageAuditEventId: number;
+  try {
+    storageAuditEventId = await recordStorage({ status: "removed" });
+  } catch (auditError) {
+    failContract(
+      "PURGE_STORAGE_UNRECORDED",
+      `Club rows and files are removed, but the hard_purge_storage record could not be written (the trail still says pending); run the purge again with the same export to record it. ${
+        auditError instanceof Error ? auditError.message : String(auditError)
+      }`,
+    );
+  }
   const storageObjectsRemoved = progress.removed;
 
   return {
