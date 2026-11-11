@@ -19,8 +19,6 @@
   `STATUS.md`.
 - **Exact next step:** bot review and merge.
 
-## 2026-11-10 - Operator hard purge made safe
-
 ## 2026-11-11 - Operator hard purge made safe (released)
 
 - **Status:** `released` 2026-11-11. Migration
