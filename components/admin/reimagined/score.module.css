@@ -533,3 +533,86 @@
     transform: none;
   }
 }
+
+/* ADMIN-RE-11c-2: the next step after a score is saved (design cd-after-game). */
+.next {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--score-tint);
+  color: hsl(var(--foreground));
+}
+
+.nextTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.nextRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.nextMain,
+.nextLater {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: transform 160ms ease;
+}
+
+.nextMain {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.nextLater {
+  border: 0;
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+}
+
+.nextMain:active,
+.nextLater:active {
+  transform: scale(0.97);
+}
+
+.nextMain:focus-visible,
+.nextLater:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.nextHint {
+  margin: 0;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nextMain:hover {
+    background: hsl(var(--primary) / 0.9);
+  }
+
+  .nextLater:hover {
+    background: hsl(var(--background) / 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nextMain,
+  .nextLater {
+    transition: none;
+  }
+}

@@ -62,9 +62,10 @@ export default async function SeasonsPage({
       savedText={savedLabel(websiteState(club))}
       links={{
         league: getAdminRouteHref("standings"),
-        // The combined stats page, on its season view (/admin/season-stats redirects there).
-        totals: `${getAdminRouteHref("match-stats")}?view=season`,
+        // ADMIN-RE-11c-2: the Season totals page (design cd-season-totals), games added up plus what is added by hand.
+        totals: `${getAdminRouteHref("seasons")}/totals`,
         games: getAdminRouteHref("schedule"),
+        playerNumbers: getAdminRouteHref("score"),
       }}
     />
   );

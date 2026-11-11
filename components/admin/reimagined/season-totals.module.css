@@ -1,0 +1,534 @@
+/* ADMIN-RE-11c-2: Season totals (design cd-season-totals). Laptop (760 px and
+   up): one table per position, the player column first. Phone: one card per
+   player, each number with its label. Names wrap to two lines, then "…". The
+   Adjust sheet is a bottom sheet on a phone and a centered panel on a laptop.
+   Colors come from the admin theme tokens; magenta is This season's hue. */
+
+.page {
+  --tt-tint: #fbe4f2;
+  --tt-deep: #a3196f;
+  --tt-ok: #187a43;
+  display: grid;
+  gap: 20px;
+  margin: 0 auto;
+  max-width: 1120px;
+}
+
+:global([data-admin-theme="dark"]) .page {
+  --tt-tint: #3d1630;
+  --tt-deep: #f59fd3;
+  --tt-ok: #7ddca1;
+}
+
+.head {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.backLink {
+  justify-self: start;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.season {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offSite {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.lead {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: hsl(var(--muted-foreground));
+}
+
+.saved {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tt-ok) 15%, transparent);
+  color: var(--tt-ok);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.notice {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px dashed hsl(var(--border));
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+}
+
+.empty {
+  padding: 24px 16px;
+  border-radius: 16px;
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+}
+
+.group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.groupHead {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.table {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.headRow {
+  display: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 8px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.who {
+  display: flex;
+  min-width: 0;
+  grid-column: 1 / -1;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.shirt {
+  flex: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  font-variant-numeric: tabular-nums;
+}
+
+.name,
+.sheetWho {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 21px;
+}
+
+.cell {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cellLabel {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+}
+
+.cellValue {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell[data-hand] .cellValue {
+  color: var(--tt-deep);
+}
+
+.adjustCell {
+  display: flex;
+  grid-column: 1 / -1;
+}
+
+.adjust {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+
+.adjust:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.adjust:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hand {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 2px;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  overflow-wrap: anywhere;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.backLink:focus-visible,
+.adjust:focus-visible,
+.moreButton:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(0 0 0 / 0.3);
+}
+
+.sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: grid;
+  gap: 12px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 20px 16px calc(16px + var(--admin-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  border-radius: 20px 20px 0 0;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 -12px 40px rgb(0 0 0 / 0.2);
+}
+
+.sheetTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.sheetText {
+  margin: 0;
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+}
+
+.steps {
+  display: grid;
+  gap: 12px;
+}
+
+.step {
+  display: grid;
+  gap: 4px;
+}
+
+.stepLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stepNote {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  min-height: 48px;
+  border-radius: 12px;
+  background: hsl(var(--muted) / 0.5);
+}
+
+.stepper [data-slot="number-stepper-decrement"],
+.stepper [data-slot="number-stepper-increment"] {
+  display: grid;
+  min-height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+}
+
+.stepper [data-slot="number-stepper-increment"] {
+  color: var(--tt-deep);
+}
+
+.stepper [data-slot="number-stepper-decrement"]:disabled,
+.stepper [data-slot="number-stepper-increment"]:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.stepper [data-slot="number-stepper-input"] {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper [data-slot="number-stepper-decrement"]:focus-visible,
+.stepper [data-slot="number-stepper-increment"]:focus-visible,
+.stepper [data-slot="number-stepper-input"]:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+
+.moreButton {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.moreCaret {
+  width: 16px;
+  height: 16px;
+  transition: transform 160ms ease;
+}
+
+.moreCaret[data-open] {
+  transform: rotate(90deg);
+}
+
+.problem {
+  margin: 0;
+  font-size: 14px;
+  color: hsl(var(--destructive));
+}
+
+.sheetActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.secondary {
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (min-width: 760px) {
+  .table {
+    --tt-cols: minmax(180px, 2fr) repeat(6, minmax(56px, 1fr)) 96px;
+    gap: 0;
+    overflow: hidden;
+    border-radius: 14px;
+    background: hsl(var(--card));
+    box-shadow: 0 0 0 1px hsl(var(--border));
+  }
+
+  .headRow,
+  .row {
+    display: grid;
+    grid-template-columns: var(--tt-cols);
+    align-items: center;
+    gap: 0 8px;
+    padding: 10px 16px;
+  }
+
+  .headRow[data-keeper],
+  .row[data-keeper] {
+    grid-template-columns: minmax(180px, 2fr) repeat(5, minmax(56px, 1fr)) 96px;
+  }
+
+  .headRow {
+    font-size: 13px;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .headRow > span:not(:first-child) {
+    text-align: end;
+  }
+
+  .row {
+    border-radius: 0;
+    box-shadow: none;
+    border-top: 1px solid hsl(var(--border));
+  }
+
+  .who {
+    grid-column: auto;
+  }
+
+  .cell {
+    text-align: end;
+  }
+
+  .cellLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .cellValue {
+    font-size: 16px;
+  }
+
+  .adjustCell {
+    grid-column: auto;
+    justify-content: flex-end;
+  }
+
+  .hand {
+    grid-column: 1 / -1;
+    padding-top: 4px;
+  }
+
+  .sheet {
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    width: min(460px, calc(100vw - 48px));
+    max-height: min(720px, calc(100dvh - 48px));
+    padding: 24px;
+    border-radius: 20px;
+    box-shadow: 0 16px 48px rgb(0 0 0 / 0.2);
+    transform: translate(-50%, -50%);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .adjust:hover:not(:disabled),
+  .moreButton:hover {
+    background: hsl(var(--accent));
+  }
+
+  .primary:hover:not(:disabled) {
+    background: hsl(var(--primary) / 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adjust,
+  .moreCaret {
+    transition: none;
+  }
+}

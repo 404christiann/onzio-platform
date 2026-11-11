@@ -47,8 +47,59 @@ export type SeasonsHubData =
       players: number;
       gamesPlayed: number;
       gamesTotal: number;
+      /** ADMIN-RE-11c-2: games with a score where nobody is marked as played yet. */
+      needNumbers: number;
+      /** The newest of those, which "Add player numbers" opens. */
+      nextNeedsNumbers: NeedsNumbersGame | null;
       deleteVerdict: DeleteVerdict | null;
     };
+
+export type NeedsNumbersGame = { id: string; opponent: string; home: boolean; date: string };
+
+type ScoredGameRow = NeedsNumbersGame & { time: string | null };
+
+/**
+ * ADMIN-RE-11c-2 (group 1 decision 11): a game needs player numbers once it has
+ * a score and nobody is marked as played in it. Newest first.
+ */
+export function gamesNeedingNumbers(
+  scored: readonly ScoredGameRow[],
+  withPlayers: ReadonlySet<string>,
+): NeedsNumbersGame[] {
+  return scored
+    .filter((game) => !withPlayers.has(game.id))
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.time ?? "").localeCompare(a.time ?? ""))
+    .map(({ id, opponent, home, date }) => ({ id, opponent, home, date }));
+}
+
+const PAGE = 1000;
+
+/** Every match id in `ids` with at least one player marked as played, both lists. */
+async function matchesWithPlayers(
+  onzio: ReturnType<SupabaseClient["schema"]>,
+  clubId: string,
+  ids: readonly string[],
+): Promise<Set<string> | null> {
+  const found = new Set<string>();
+  if (ids.length === 0) return found;
+  for (const table of ["player_match_stats", "goalkeeper_match_stats"] as const) {
+    for (let from = 0; ; from += PAGE) {
+      const page = await onzio
+        .from(table)
+        .select("match_id")
+        .eq("club_id", clubId)
+        .eq("played", true)
+        .in("match_id", ids as string[])
+        .order("match_id")
+        .range(from, from + PAGE - 1);
+      if (page.error) return null;
+      const rows = (page.data ?? []) as { match_id: string }[];
+      for (const row of rows) found.add(row.match_id);
+      if (rows.length < PAGE) break;
+    }
+  }
+  return found;
+}
 
 type SeasonRow = {
   id: string;
@@ -186,7 +237,16 @@ export async function loadSeasonsHub(
       suggestion: suggestionFor(seasons, today),
     };
     if (!viewed) {
-      return { ...base, league: null, players: 0, gamesPlayed: 0, gamesTotal: 0, deleteVerdict: null };
+      return {
+        ...base,
+        league: null,
+        players: 0,
+        gamesPlayed: 0,
+        gamesTotal: 0,
+        needNumbers: 0,
+        nextNeedsNumbers: null,
+        deleteVerdict: null,
+      };
     }
 
     const [league, total, played, field, keepers] = await Promise.all([
@@ -199,17 +259,23 @@ export async function loadSeasonsHub(
       onzio.from("matches").select("id", { count: "exact", head: true }).eq("club_id", clubId).eq("season_id", viewed.id),
       onzio
         .from("matches")
-        .select("id", { count: "exact", head: true })
+        .select("id,opponent,home,date,time")
         .eq("club_id", clubId)
         .eq("season_id", viewed.id)
         .not("rose_city_score", "is", null)
-        .not("opponent_score", "is", null),
+        .not("opponent_score", "is", null)
+        .limit(PAGE),
       onzio.from("player_season_totals").select(FIELD_STAT_COLUMNS).eq("club_id", clubId).eq("season_id", viewed.id),
       onzio.from("goalkeeper_season_totals").select(KEEPER_STAT_COLUMNS).eq("club_id", clubId).eq("season_id", viewed.id),
     ]);
     if (league.error || total.error || played.error || field.error || keepers.error) {
       return { status: "error" };
     }
+
+    const scored = (played.data ?? []) as ScoredGameRow[];
+    const withPlayers = await matchesWithPlayers(onzio, clubId, scored.map((game) => game.id));
+    if (!withPlayers) return { status: "error" };
+    const needing = gamesNeedingNumbers(scored, withPlayers);
 
     const statRows = [
       ...((field.data ?? []) as unknown as Record<string, unknown>[]),
@@ -228,8 +294,10 @@ export async function loadSeasonsHub(
       ...base,
       league: leagueSummary(tableRows),
       players: counts.statRows,
-      gamesPlayed: played.count ?? 0,
+      gamesPlayed: scored.length,
       gamesTotal: counts.matches,
+      needNumbers: needing.length,
+      nextNeedsNumbers: needing[0] ?? null,
       deleteVerdict: deleteVerdict(viewed, counts),
     };
   } catch {
