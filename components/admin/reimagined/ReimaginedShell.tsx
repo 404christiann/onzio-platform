@@ -234,7 +234,15 @@ function Frame({
         </main>
       </div>
 
-      <SearchDialog items={search} open={searching} onOpenChange={setSearching} />
+      <SearchDialog
+        items={search}
+        open={searching}
+        onOpenChange={setSearching}
+        onNavigate={(href) => {
+          // Like a tab: a page with unsaved changes asks before it is left.
+          if (!leave(href)) router.push(href);
+        }}
+      />
       <nav aria-label="Club admin" className={styles.tabBar} data-count={tabs.length} hidden={editing}>
         {tabs.map((tab) => tabLink(tab, "bar"))}
       </nav>

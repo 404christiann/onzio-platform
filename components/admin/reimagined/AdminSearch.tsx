@@ -94,10 +94,16 @@ export function SearchDialog({
   items,
   open,
   onOpenChange,
+  onNavigate,
 }: {
   items: readonly AdminSearchItem[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Goes to a result the same way a tab does, so a page with unsaved changes
+   * can ask first (bot Medium on #132). Defaults to a plain navigation.
+   */
+  onNavigate?: (href: string) => void;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -116,7 +122,8 @@ export function SearchDialog({
   };
   const go = (item: AdminSearchItem) => {
     change(false);
-    router.push(item.href);
+    if (onNavigate) onNavigate(item.href);
+    else router.push(item.href);
   };
 
   return (

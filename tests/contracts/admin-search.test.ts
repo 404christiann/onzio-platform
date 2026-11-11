@@ -119,6 +119,16 @@ describe("search component", () => {
     expect(read("package.json")).toContain('"cmdk": "1.1.1"');
   });
 
+  it("leaves through the page's own guard, like a tab (bot Medium on #132)", () => {
+    expect(view).toContain("if (onNavigate) onNavigate(item.href);");
+    const shell = read("components/admin/reimagined/ReimaginedShell.tsx");
+    expect(shell).toMatch(/onNavigate=\{\(href\) => \{[\s\S]*?if \(!leave\(href\)\) router\.push\(href\);/);
+  });
+
+  it("lists players only while a season is shown, since their pages need one", () => {
+    expect(extras).toContain("players: players.error || !seasonId");
+  });
+
   it("opens from ⌘K and from both triggers, with no animation", () => {
     expect(view).toMatch(/event\.metaKey \|\| event\.ctrlKey/);
     const css = read("components/admin/reimagined/search.module.css");

@@ -68,7 +68,8 @@ export const readSearchExtras = cache(
             .limit(5)
         : { data: [], error: null };
       return {
-        players: players.error
+        // A player's page needs a shown season; without one, search lists no players.
+        players: players.error || !seasonId
           ? []
           : ((players.data ?? []) as { id: string; name: string; number: number | null; position: string }[])
               .filter((player) => POSITIONS.has(player.position))

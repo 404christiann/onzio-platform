@@ -22,6 +22,10 @@ migration, no hosted action.
 - cmdk's fuzzy filter is replaced by `plainFilter`: the start of a name, then
   the start of any word, then anywhere; other words only weakly. "sam" finds
   Sam Okafor and not "Sign-up forms".
+- From the bot's review of #132: picking a search result now goes through the
+  same unsaved-changes check as the tabs (Your club, Sponsors and the homepage
+  editor ask first), and players are listed only while a season is shown,
+  since their pages need one.
 
 **Files changed:** `lib/admin-search.ts` (new), `lib/admin-tab-page.ts`
 (`readSearchExtras`), `app/admin/(protected)/layout.tsx`,
