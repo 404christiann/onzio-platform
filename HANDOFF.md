@@ -1,3 +1,19 @@
+## 2026-11-11 - ADMIN-RE-11c-2 Who played and scored?, games that need player numbers, Season totals
+
+- **Status:** `in_progress`, PR open. Part 2 of 2 of RE-11c; **no migration** (it uses
+  11c-1's tables and views). No change to `lib/club-context.ts`.
+- **What it adds:** after a score saves, "Who played and scored?" leads to the game's
+  Player numbers (`/admin/score/<game>`): Played switches, Goals/Assists up front,
+  cards and "More numbers" once a player has played, "2 of 3 goals added" with "Own
+  goal or not sure". This season's Games card says "N games need player numbers". The
+  new Season totals page (`/admin/seasons/totals`) shows each total with "5 from games ·
+  2 added by hand" and an Adjust panel for games not in Onzio.
+- **Deliberate gap:** "Played" can't be adjusted by hand (Christian: leave it out; it
+  needs a migration).
+- **Verification:** contract and browser tests (390 and 1440, light and dark, worst-case
+  names); full suites on the PR head in the PR body. Details in `STATUS.md`.
+- **Exact next step:** the bot reviews and merges.
+
 ## 2026-11-10 - Operator hard purge made safe
 
 - **Status:** `in_progress`, PR open. **Has a migration**

@@ -209,6 +209,7 @@
 .adjustCell {
   display: flex;
   grid-column: 1 / -1;
+  order: 2;
 }
 
 .adjust {
@@ -236,6 +237,7 @@
 .hand {
   display: grid;
   grid-column: 1 / -1;
+  order: 1;
   gap: 2px;
   font-size: 13px;
   color: hsl(var(--muted-foreground));
@@ -493,11 +495,13 @@
 
   .adjustCell {
     grid-column: auto;
+    order: 0;
     justify-content: flex-end;
   }
 
   .hand {
     grid-column: 1 / -1;
+    order: 0;
     padding-top: 4px;
   }
 

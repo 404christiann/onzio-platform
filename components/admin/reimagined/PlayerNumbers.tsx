@@ -398,14 +398,16 @@ function PlayerRow({
             <Cell label="Assists" value={player.numbers.assists} name={label} disabled={disabled} onChange={set("assists")} />
           </>
         )}
+        {numbers.played ? (
+          <>
+            <Cell label="Yellow" value={numbers.yellow} name={label} max={2} disabled={disabled} onChange={set("yellow")} />
+            <Cell label="Red" value={numbers.red} name={label} max={1} disabled={disabled} onChange={set("red")} />
+          </>
+        ) : null}
       </div>
 
       {numbers.played ? (
         <div className={styles.extra}>
-          <div className={styles.cells}>
-            <Cell label="Yellow" value={numbers.yellow} name={label} max={2} disabled={disabled} onChange={set("yellow")} />
-            <Cell label="Red" value={numbers.red} name={label} max={1} disabled={disabled} onChange={set("red")} />
-          </div>
           <button
             type="button"
             className={styles.moreButton}

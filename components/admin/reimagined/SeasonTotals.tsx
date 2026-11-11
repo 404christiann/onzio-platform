@@ -115,8 +115,10 @@ export function SeasonTotals({
           {season.active ? null : <span className={styles.offSite}>Not on your website</span>}
         </p>
         <p className={styles.lead}>
-          Added up from {format.format(gamesEntered)} {noun(gamesEntered, "game’s", "games’")} player numbers. Use
-          Adjust for games that aren’t in Onzio.
+          {gamesEntered === 0
+            ? "No game has player numbers yet."
+            : `Added up from ${format.format(gamesEntered)} ${noun(gamesEntered, "game’s", "games’")} player numbers.`}{" "}
+          Use Adjust for games that aren’t in Onzio.
         </p>
       </header>
 
