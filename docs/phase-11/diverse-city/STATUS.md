@@ -1,6 +1,40 @@
 # Diverse City FC Status
 
-## 2026-11-11 - GATE-FLIP-DC: Diverse City switched to the new admin
+## 2026-11-11 - GATE-FLIP-DC undone: Diverse City back on the classic admin
+
+**Agent/package:** Claude Code, `GATE-FLIP-DC` rollback, asked by the admin-redesign
+orchestrator. It was Christian's decision ("Lets undo the new admin for diverse city
+actually"), and he gave the go in this session ("Yes, switch back").
+**Status:** `released`. Diverse City ran the new admin from 20:37:29Z to 20:51:29Z on
+2026-11-11, and is now `classic`. The switch can be turned on again whenever Christian
+says go (the same `GATE-FLIP-DC` command). Only `onzio.clubs.admin_portal` and one audit
+row changed. No migration, deploy or env change.
+
+**Completed work:**
+
+- **Dry run (read-only),** from a clean worktree on `main` `e37b0048`, with only the
+  production URL and key in a mode-700 temporary folder, deleted right after:
+  `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=classic`.
+  - Current: `reimagined`, flags `{}`, `America/Chicago`, set at
+    `2026-11-08T15:19:31.133905+00:00`.
+  - Target: `classic`, `{}`, `America/Chicago`. `needsUpdate: true`.
+- **The switch back,** at 2026-11-11T20:51:29Z:
+  `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`.
+  It reconciled `admin_portal = classic`, `admin_flags = {}`, `time_zone = America/Chicago`,
+  with `time_zone_set_at` unchanged.
+- **Readback:** `needsUpdate: false`.
+- **Smoke checks** on `diversecityfc.com`, `www.diversecityfc.com` and
+  `diverse-city-fc-private.vercel.app`: `/`, `/programs`, `/roster`, `/shop`, `/schedule`
+  and `/admin/login` all 200, with no `UNKNOWN_TENANT` (18/18).
+
+**Files changed:** this file, `HANDOFF.md`, `docs/admin-portal-production-release.md`.
+
+**Not verified:** the signed-in classic admin on production (no owner session for an agent).
+
+**Exact next step:** none for Diverse City until Christian says go again. To switch it on
+again: `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=reimagined --execute --confirm-project=ioalthwsdrlzrubomrow`.
+
+## 2026-11-11 - GATE-FLIP-DC: Diverse City switched to the new admin (switched back at 20:51:29Z, see above)
 
 **Agent/package:** Claude Code, `GATE-FLIP-DC` (`ADMIN-RE-10` in
 `docs/admin-portal-redesign-plan.md`), asked by the admin-redesign orchestrator.

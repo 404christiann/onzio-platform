@@ -81,6 +81,8 @@ Smoke checks on `diversecityfc.com`, `www.diversecityfc.com` and `diverse-city-f
 
 **Switching back:** `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`.
 
+**Switched back, 2026-11-11T20:51:29Z.** It was Christian's decision ("Lets undo the new admin for diverse city actually"), and he gave the go in the flip session. The dry run (same setup, `main` `e37b0048`) showed `reimagined`, `{}`, `America/Chicago` to `classic`. The command above then reconciled `admin_portal` `classic`, `admin_flags` `{}`, `time_zone` `America/Chicago`, with `time_zone_set_at` unchanged. The readback gave `needsUpdate: false`. On all three Diverse City domains, `/`, `/programs`, `/roster`, `/shop`, `/schedule` and `/admin/login` return 200, with no `UNKNOWN_TENANT`. Diverse City is on the classic admin again. It can be switched on again with the `--portal=reimagined` command above, only on Christian's go.
+
 ## Notes for the walk-through
 
 - "Saved · on your website" labels are hold-aware (decision 2): while Rose City's public site is held, the new admin says the change is saved but not yet on the website.
