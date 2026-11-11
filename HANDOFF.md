@@ -1,3 +1,23 @@
+## 2026-11-11 - GATE-FLIP-DC Diverse City switched to the new admin
+
+- **Status:** `released` 2026-11-11T20:37:29Z, on Christian's go in the flip
+  session ("Dry run, then flip"). Diverse City's `admin_portal` is
+  `reimagined`. Flags are still `{}` (no `sponsor_insights`), and the time
+  zone is still `America/Chicago`. Read back with `needsUpdate: false`.
+- **Changed:** only that club column and one audit row. No migration, deploy
+  or env change.
+- **Smoke checks:** every Diverse City domain's `/`, `/programs`, `/roster`,
+  `/shop` and `/schedule` return 200. Admin pages send you to login (200).
+  No `UNKNOWN_TENANT`.
+- **Rollback:** `npx tsx scripts/set-club-admin-portal.ts diverse-city
+  --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`, with no
+  deploy.
+- **Not verified:** the signed-in admin on production, including the 0-games
+  empty states. Details in `STATUS.md` and
+  `docs/admin-portal-production-release.md`.
+- **Exact next step:** Christian or the owner walks
+  `https://diversecityfc.com/admin`. Findings become `ADMIN-RE-10x` PRs.
+
 ## 2026-11-11 - ADMIN-RE-11c-2 Who played and scored?, games that need player numbers, Season totals
 
 - **Status:** `in_progress`, PR open. Part 2 of 2 of RE-11c; **no migration** (it uses

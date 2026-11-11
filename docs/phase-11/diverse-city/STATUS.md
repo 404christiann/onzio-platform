@@ -1,5 +1,56 @@
 # Diverse City FC Status
 
+## 2026-11-11 - GATE-FLIP-DC: Diverse City switched to the new admin
+
+**Agent/package:** Claude Code, `GATE-FLIP-DC` (`ADMIN-RE-10` in
+`docs/admin-portal-redesign-plan.md`), asked by the admin-redesign orchestrator.
+Christian's go was given in this session: "Dry run, then flip". Picking that option
+also confirmed that the Diverse City owner has been told or doesn't need to be.
+**Status:** `released`. Only `onzio.clubs.admin_portal` for Diverse City and one audit
+row changed. No migration, deploy, seed, Stripe, DNS, email or environment change.
+
+**Completed work:**
+
+- **What the command does:** it sets only `--portal=reimagined`. The only flag the code
+  reads is `sponsor_insights` (the Insights tab), and it stays off. Chicago was already
+  set and confirmed by RE-01, so no `--time-zone` was passed.
+- **Dry run (read-only),** from a clean worktree on `main` `a2575ef4`, with only the
+  production URL and service-role key in a mode-700 temporary folder, deleted right
+  after:
+  `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=reimagined`.
+  - Club `d7a41762-5158-496e-b415-c83c01ab5c70`, `kind = customer`, `lifecycle = active`.
+  - Current: `adminPortal: classic`, `adminFlags: {}`, `timeZone: America/Chicago`,
+    `timeZoneSetAt: 2026-11-08T15:19:31.133905+00:00`.
+  - Target: `reimagined`, `{}`, `America/Chicago`. `needsUpdate: true`.
+  - Nothing surprising.
+- **The switch,** at 2026-11-11T20:37:29Z:
+  `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=reimagined --execute --confirm-project=ioalthwsdrlzrubomrow`.
+  It reconciled `admin_portal = reimagined`, `admin_flags = {}`,
+  `time_zone = America/Chicago`, with `time_zone_set_at` unchanged.
+- **Readback:** the dry run again gave `current.adminPortal: reimagined` and
+  `needsUpdate: false`.
+- **Smoke checks** on `diversecityfc.com`, `www.diversecityfc.com` and
+  `diverse-city-fc-private.vercel.app`:
+  - `/`, `/programs`, `/roster`, `/shop` and `/schedule` all 200.
+  - `/admin/login` 200. `/admin`, `/admin/games`, `/admin/score` and `/admin/add-game`
+    send you to login (200).
+  - No `UNKNOWN_TENANT` anywhere (30/30).
+
+**Rollback:** `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`.
+It works on the next request, needs no deploy and loses no data.
+
+**Files changed:** this file, `HANDOFF.md`, `docs/admin-portal-production-release.md`.
+
+**Not verified:** the signed-in new admin on production. No owner session is
+available to an agent, and signing in is the owner's or Christian's job. That includes
+how the empty states read with 0 games: the owner deleted their only game, so 0 games is
+expected.
+
+**Exact next step:** Christian, or the Diverse City owner, signs in at
+`https://diversecityfc.com/admin` and checks the home, Games, Programs and Website tabs
+on a phone and a laptop. The empty game states should read as empty, not as broken. Any
+finding becomes an `ADMIN-RE-10x` fix PR. Switch back with the rollback line if needed.
+
 ## 2026-11-11 - ADMIN-RE-11c-2: Who played and scored?, games that need player numbers, Season totals
 
 **Agent/package:** Claude Code, `ADMIN-RE-11c` part 2 of 2 (screens; 11c-1, #137, is
