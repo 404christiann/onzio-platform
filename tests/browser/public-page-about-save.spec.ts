@@ -18,6 +18,19 @@ async function write(page:Page,baseline:Awaited<ReturnType<typeof snapshot>>,con
  const response=await page.request.post("/api/admin/about-editor",{data:{page:baseline.page,content,operationId:crypto.randomUUID(),expectedRevision:current.revision,designRevision:current.designRevision}});
  expect(response.ok(),await response.text()).toBe(true);
 }
+const ALPHA_CLUB_ID="11111111-1111-4111-8111-111111111111";
+const localDb=()=>new Client({host:"127.0.0.1",port:54322,user:"postgres",password:"postgres",database:"postgres"});
+// Seeded Alpha has no About or Logo row, so a baseline snapshot can have null
+// content. Saving EMPTY content back would not restore "no row", and the API
+// rightly refuses its "" closing button. Delete the row instead.
+async function restore(page:Page,baseline:Awaited<ReturnType<typeof snapshot>>){
+ if(baseline.content){await write(page,baseline);return;}
+ const db=localDb();await db.connect();
+ try{await db.query(`delete from onzio.${baseline.page==="about"?"about_page_content":"club_logo_page_content"} where club_id=$1`,[ALPHA_CLUB_ID]);}
+ finally{await db.end();}
+}
+// Academy (Alpha's seeded design) fixes the closing button to the Schedule page.
+const ACADEMY_CLOSING_CTA_HREF="/schedule";
 async function story(page:Page){
  await page.goto("/admin/about");await page.frameLocator(".aep-frame").locator('[data-about-editor-section="story"]').first().click();return page.getByRole("textbox",{name:"Story Paragraphs",exact:true});
 }
@@ -44,19 +57,19 @@ for(const failure of ["committed-500","committed-network-loss","unavailable-rece
    await expect(field).toBeEnabled();expect(probes).toContain((submitted[0] as {operationId:string}).operationId);
    await page.unrouteAll({behavior:"wait"});expect((await snapshot(page)).content.story_paragraphs).toEqual([marker]);
    await page.reload();await page.frameLocator(".aep-frame").locator('[data-about-editor-section="story"]').first().click();await expect(page.getByRole("textbox",{name:"Story Paragraphs",exact:true})).toHaveValue(marker);
-  }finally{await page.unrouteAll({behavior:"wait"});await write(page,baseline);}
+  }finally{await page.unrouteAll({behavior:"wait"});await restore(page,baseline);}
  });
 }
 test("About concurrent save preserves draft and requires reviewing/reloading latest",async({page})=>{
  await page.setViewportSize({width:1440,height:900});const baseline=await snapshot(page);
  try{
  const field=await story(page);await field.fill("Unsaved local story");
- await write(page,baseline,{...editable(baseline),story_paragraphs:["Another administrator's story"]});
+ await write(page,baseline,{...editable(baseline),closing_cta_href:ACADEMY_CLOSING_CTA_HREF,story_paragraphs:["Another administrator's story"]});
  await page.locator(".aep-inspector-save button").click();await expect(field).toBeDisabled();await expect(field).toHaveValue("Unsaved local story");
  expect((await snapshot(page)).content.story_paragraphs).toEqual(["Another administrator's story"]);
  page.once("dialog",dialog=>dialog.accept());await page.getByRole("button",{name:"Reload latest page",exact:true}).click();
  await expect(field).toBeEnabled();await expect(field).toHaveValue("Another administrator's story");
- }finally{await write(page,baseline);}
+ }finally{await restore(page,baseline);}
 });
 async function saveSelected(page:Page){
  const response=page.waitForResponse(result=>result.request().method()==="POST"&&new URL(result.url()).pathname==="/api/admin/about-editor");
@@ -67,8 +80,6 @@ async function saveSelected(page:Page){
 // seeded design) deliberately has no Logo page. So each case temporarily
 // publishes Clubhouse for Alpha and restores the seeded presentation after.
 // The first case still asserts its empty-collection prerequisites.
-const ALPHA_CLUB_ID="11111111-1111-4111-8111-111111111111";
-const localDb=()=>new Client({host:"127.0.0.1",port:54322,user:"postgres",password:"postgres",database:"postgres"});
 let restorePresentation:(()=>Promise<void>)|null=null;
 async function publishClubhouseForAlpha(){
  const db=localDb();await db.connect();
@@ -103,13 +114,17 @@ test("empty About values and Logo features/colors can be created; Logo save pres
  await preview.locator('[data-about-editor-section="colors"]').first().click();await page.getByRole("button",{name:"Add color card",exact:true}).click();await page.getByLabel("Color label",{exact:true}).fill("First color");
  await saveSelected(page);await expect(page.locator(".aep-inspector-save button")).toBeDisabled();
  expect((await snapshot(page,"logo")).content.features[0].title).toBe("First feature");expect((await snapshot(page)).content?.values??[]).toEqual([]);
- await page.getByRole("button",{name:/^About page/}).click();await preview.locator('[data-about-editor-section="values"]').click();await expect(page.getByLabel("Value 1 Title",{exact:true})).toHaveValue("First value");
+ await page.getByRole("button",{name:/^About page/}).click();
+ // Clubhouse has no fixed closing button, so with no About row Save stays off
+ // until the admin picks where it goes, as the editor tells them to.
+ if(!about.content){await preview.locator('[data-about-editor-section="closing"]').click();await page.getByLabel("Button goes to",{exact:true}).selectOption("/schedule");}
+ await preview.locator('[data-about-editor-section="values"]').click();await expect(page.getByLabel("Value 1 Title",{exact:true})).toHaveValue("First value");
  await saveSelected(page);expect((await snapshot(page)).content.values[0].title).toBe("First value");
  await page.getByRole("button",{name:"Remove value 1",exact:true}).click();await saveSelected(page);expect((await snapshot(page)).content.values).toEqual([]);
  await page.getByRole("button",{name:/^Club Logo page/}).click();await preview.locator('[data-about-editor-section="features"]').first().click();await page.getByRole("button",{name:"Remove crest feature",exact:true}).click();
  await preview.locator('[data-about-editor-section="colors"]').first().click();await page.getByRole("button",{name:"Remove color card",exact:true}).click();await saveSelected(page);
  expect((await snapshot(page,"logo")).content).toMatchObject({features:[],color_cards:[]});
- }finally{await write(page,about);await write(page,logo);}
+ }finally{await restore(page,about);await restore(page,logo);}
 });
 
 test("removing newly uploaded Logo items queues their images only for the Logo Save",async({page})=>{
