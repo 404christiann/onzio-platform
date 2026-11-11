@@ -111,9 +111,32 @@ No purge runs on production without Christian's go.
 **Agent/package:** Claude Code, `ADMIN-RE-11c` part 1 of 2 (11c-1 migration, no new
 screens; 11c-2 the "Who played and scored?" step, no migration). Branch
 `claude/admin-re-11c-totals` from `main` `8fa59263`.
-**Status:** `in_progress`, PR open. Migration `20261110220000_season_totals_add_up.sql`
-needs `GATE-MIGRATE` before the merge; Christian approves it himself. Nothing added to
-the tenant select in `lib/club-context.ts`. No hosted action, no new dependency.
+**Status:** `released` 2026-11-11 (PR #137, merge `48089c29`). **Carried a migration**
+(`20261110220000_season_totals_add_up.sql`), applied to production before the merge.
+Nothing added to the tenant select in `lib/club-context.ts`. No new dependency.
+
+**Release record:** `GATE-MIGRATE` ran from Christian's Mac at his explicit request
+("Yes, gate then merge"), following `docs/agents/review-bot-supabase.md`, on the reviewed
+head `2e8fe468` (onzio-coder: no High or Medium issues; the Evidence table's tested
+revision was the same head). Before: the ledger had only this migration pending; the
+read-only snapshot was clubs 2, verified production domains 4, audit events 955, season
+rows 41 + 5, game rows 81 + 11 (9 with anything entered), and typed-total checksums
+15,152 / 1,569; recovery point: completed physical backup `2224451539` (2026-11-10
+11:20 UTC) plus restricted logical dumps of `onzio` and `onzio_private` (SHA-256 on
+#137), deleted after the checks passed; code rollback target
+`dpl_4RrG8ye8p1fFMpqK7PoJgQxyKwAT`; the dry run listed only this migration. Applied
+with `supabase db push --linked --skip-vault` (CLI 2.122.0) at 06:57 UTC, 2026-11-11.
+After: the ledger matches, a second dry run says up to date, and the history row is
+present. Counts and checksums are unchanged. `played` is set on the 9 rows with anything
+entered. Adjustments are 37 + 4, matching the production check, and 0 totals moved
+(every totals-view row equals the typed totals). Audit events rose by 50 (41 inserts + 9
+updates). The linked types match the committed file apart from the newer CLI's
+formatting. #137 was merged at 06:58 UTC, pinned to the migrated head. Production
+deployment `dpl_E8FrTaTvXn4YGaGF5uKsXdSBBpjM` was Ready. Smoke checks passed: all three
+Diverse City domains return 200 with no `UNKNOWN_TENANT`; `/programs`, `/roster` and
+`/shop` return 200, and the live roster renders the same totals as before. Rose City's
+`/` is 404 from the public-site hold (by design) and its `/admin/login` returns 200.
+`hold` removed after the checks.
 
 **Decision 0001, as built:** a player's season totals are the sum of their saved
 player numbers for the season's games plus a hand-entered adjustment.
@@ -189,11 +212,15 @@ migration was `20261110160000_season_totals_add_up.sql`; production already has 
 PR #138's `20261110210000`, so the order holds whichever merges first. Contents unchanged.
 `main` `cbb751b4` (#139) merged in.
 
-**Blockers/decisions:** `GATE-MIGRATE` (Christian). Not done here: the old Match stats
+**Blockers/decisions:** none open. Not done here: the old Match stats
 page leaves `played` set when every number of a row is put back to 0 (it never sends
 `played`); the new step in 11c-2 sets it explicitly.
 
-**Next step:** clear the review bot, then `GATE-MIGRATE` and merge; then 11c-2.
+**Next step:** 11c-2 (no migration): the "Who played and scored?" step after Enter a
+score (design `cd-after-game`), saving `played` explicitly; the "2 of 3 goals added"
+warning with "Own goal or not sure"; "Later" leaves the game in the hub's Games card
+("N games need player numbers", group 1 decision 11); "7 goals: 5 from games, 2 added by
+hand" with an adjustment editor on the new admin (decision 3).
 
 
 ## 2026-11-10 - ADMIN-RE-12b: programs and tryouts take their state from the sign-up way and the date
