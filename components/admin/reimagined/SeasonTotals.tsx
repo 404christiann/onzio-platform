@@ -8,7 +8,15 @@ import { ChevronRight, IconAdd, IconRemove, IconSuccess } from "@/components/adm
 import { NumberStepper } from "@/components/ui/number-stepper";
 import type { TotalsPlayer, TotalsSeason } from "@/lib/admin-season-totals-data";
 import { GROUP_LABELS, GROUP_ORDER } from "@/lib/player-numbers";
-import { SEASON_ADJUSTMENT_LIMIT, type TotalKey } from "@/lib/season-totals";
+import {
+  adjustmentMin,
+  adjustmentSaveProblem,
+  clampAdjustment,
+  FIELD_TOTAL_KEYS,
+  KEEPER_TOTAL_KEYS,
+  SEASON_ADJUSTMENT_LIMIT,
+  type TotalKey,
+} from "@/lib/season-totals";
 import { TopBarTitle } from "./TopBar";
 import styles from "./season-totals.module.css";
 
@@ -263,7 +271,12 @@ function AdjustSheet({
   onSaved: () => void;
 }) {
   const router = useRouter();
-  const [added, setAdded] = useState<Record<string, number>>({ ...(player.added as Record<string, number>) });
+  // Start from what visitors see: an old adjustment that now takes more off than the games give is raised.
+  const [added, setAdded] = useState<Record<string, number>>(() =>
+    player.keeper
+      ? { ...clampAdjustment(player.added, player.fromGames, KEEPER_TOTAL_KEYS) }
+      : { ...clampAdjustment(player.added, player.fromGames, FIELD_TOTAL_KEYS) },
+  );
   const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -289,9 +302,12 @@ function AdjustSheet({
           payload: [{ player_id: player.id, season_id: seasonId, ...added }],
         }),
       });
-      const body = (await response.json().catch(() => null)) as { data?: unknown } | null;
+      const body = (await response.json().catch(() => null)) as {
+        data?: unknown;
+        error?: { message?: string } | null;
+      } | null;
       if (!response.ok || !Array.isArray(body?.data) || body.data.length !== 1) {
-        setProblem("The numbers weren’t saved. Check your connection and try again.");
+        setProblem(adjustmentSaveProblem(body?.error?.message));
         setBusy(false);
         return;
       }
@@ -314,7 +330,7 @@ function AdjustSheet({
           className={styles.stepper}
           value={current}
           // A total never goes below 0: take off at most what the games give.
-          min={Math.max(-SEASON_ADJUSTMENT_LIMIT, -games)}
+          min={adjustmentMin(games)}
           max={SEASON_ADJUSTMENT_LIMIT}
           disabled={busy}
           onChange={(next) => setAdded((prev) => ({ ...prev, [column.key]: next }))}
@@ -325,7 +341,7 @@ function AdjustSheet({
           incrementIcon={<IconAdd className="size-5" aria-hidden="true" />}
         />
         <span className={styles.stepNote}>
-          Total {format.format(games + current)} · {format.format(games)} from games
+          Total {format.format(Math.max(0, games + current))} · {format.format(games)} from games
         </span>
       </div>
     );

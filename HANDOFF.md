@@ -14,8 +14,6 @@
   names); full suites on the PR head in the PR body. Details in `STATUS.md`.
 - **Exact next step:** the bot reviews and merges.
 
-## 2026-11-10 - Operator hard purge made safe
-
 ## 2026-11-11 - Operator hard purge made safe (released)
 
 - **Status:** `released` 2026-11-11. Migration

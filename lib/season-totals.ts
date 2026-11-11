@@ -91,3 +91,36 @@ export function adjustmentProblem<K extends TotalKey>(adjustment: Numbers<K>, ke
   }
   return null;
 }
+
+/**
+ * What the Adjust panel starts from: each saved adjustment, raised where it now
+ * takes more off than the season's games give (after a game's numbers went
+ * down). The panel then shows the total visitors see (the views never go below
+ * 0), and saving it can never be refused for a number the owner didn't touch.
+ */
+export function clampAdjustment<K extends TotalKey>(
+  added: Numbers<K>,
+  fromGames: Numbers<K>,
+  keys: readonly K[],
+): Numbers<K> {
+  const clamped = { ...added };
+  // 0 - x, not -x: a 0 stays 0, never -0.
+  for (const key of keys) clamped[key] = Math.max(added[key], 0 - fromGames[key], 0 - SEASON_ADJUSTMENT_LIMIT);
+  return clamped;
+}
+
+/** The lowest an adjustment may go: take off no more than the games give. */
+export function adjustmentMin(fromGames: number): number {
+  return Math.max(0 - SEASON_ADJUSTMENT_LIMIT, 0 - Math.max(0, fromGames));
+}
+
+/** The words for a refused adjustment save, from the data route's error message. */
+export function adjustmentSaveProblem(message: string | null | undefined): string {
+  if (message && message.includes("SEASON_TOTAL_BELOW_ZERO")) {
+    return "A total can’t go below 0. Take off no more than the games give, then save again.";
+  }
+  if (message && /_check\b/.test(message)) {
+    return `Numbers added by hand stop at ${SEASON_ADJUSTMENT_LIMIT.toLocaleString("en-US")}.`;
+  }
+  return "The numbers weren’t saved. Check your connection and try again.";
+}

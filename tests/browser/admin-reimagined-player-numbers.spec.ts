@@ -314,6 +314,38 @@ for (const width of [390, 1440]) {
   }
 }
 
+test("Adjust opens from what visitors see when the games went down, and still saves", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const { season, people } = await seed(SQUAD);
+  const game = await addGame(season, "Riverside FC", 2, 1, 0);
+  // 1 goal from the game, 1 taken off by hand: total 0. Then the game's numbers are cleared.
+  await sql(
+    "insert into onzio.player_match_stats (club_id, player_id, match_id, goals, played) values ($1,$2,$3,1,true)",
+    [ALPHA, people.ana, game],
+  );
+  await sql(
+    "insert into onzio.player_season_adjustments (club_id, player_id, season_id, goals) values ($1,$2,$3,-1)",
+    [ALPHA, people.ana, season],
+  );
+  await sql("update onzio.player_match_stats set goals=0, played=false where player_id=$1 and match_id=$2", [people.ana, game]);
+
+  await page.goto("/admin/seasons/totals");
+  const ana = row(page, people.ana);
+  await expect(ana.getByTestId("total-goals")).toHaveText("0");
+  await ana.getByRole("button", { name: "Adjust Ana Ruiz" }).click();
+  const sheet = page.getByRole("dialog", { name: "Add numbers for games that aren’t in Onzio" });
+  await expect(sheet.getByRole("group", { name: "Goals added by hand" })).toContainText("Total 0 · 0 from games");
+  await sheet.getByRole("button", { name: "Add one to assists for Ana Ruiz" }).click();
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(ana.getByTestId("total-assists")).toHaveText("1");
+  const [saved] = await sql<{ goals: number; assists: number }>(
+    "select goals, assists from onzio.player_season_adjustments where player_id=$1 and season_id=$2",
+    [people.ana, season],
+  );
+  expect(saved).toEqual({ goals: 0, assists: 1 });
+});
+
 test("an empty season says so on both pages", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   const { season } = await seed([]);

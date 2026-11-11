@@ -17,6 +17,12 @@ import {
   type NumbersPlayer,
 } from "@/lib/player-numbers";
 import { handLines } from "@/components/admin/reimagined/SeasonTotals";
+import {
+  adjustmentMin,
+  adjustmentSaveProblem,
+  clampAdjustment,
+  FIELD_TOTAL_KEYS,
+} from "@/lib/season-totals";
 import type { TotalsPlayer } from "@/lib/admin-season-totals-data";
 
 // ADMIN-RE-11c-2 (design cd-after-game, cd-season-totals; group 1 decisions 2, 3,
@@ -118,6 +124,32 @@ describe("Season totals: from games and added by hand (decision 3)", () => {
     fromGames: { goals: 5, assists: 2, tackles: 0, starts: 5, yellow: 0, red: 0, mins: 450, offsides: 0, fouls: 0, fouls_suffered: 0 },
     added: { goals: 2, assists: -1, tackles: 0, starts: 0, yellow: 0, red: 0, mins: 0, offsides: 0, fouls: 0, fouls_suffered: 0 },
   };
+
+  it("never lets Adjust take off more than the games give (a total never goes below 0)", () => {
+    expect(adjustmentMin(5)).toBe(-5);
+    expect(adjustmentMin(0)).toBe(0);
+    expect(adjustmentMin(20_000)).toBe(-9999);
+  });
+
+  it("opens Adjust from what visitors see: an old adjustment past the games is raised, the rest kept", () => {
+    // 1 goal was taken off when the games gave 1; that game's numbers were then cleared.
+    const stale = { ...ana.added, goals: -1, assists: 2 };
+    const games = { ...ana.fromGames, goals: 0, assists: 0 };
+    const opened = clampAdjustment(stale, games, FIELD_TOTAL_KEYS);
+    expect(opened.goals).toBe(0);
+    expect(opened.assists).toBe(2);
+    expect(clampAdjustment(ana.added, ana.fromGames, FIELD_TOTAL_KEYS)).toEqual(ana.added);
+  });
+
+  it("says a refused save in plain words, not as a connection problem", () => {
+    expect(adjustmentSaveProblem('SEASON_TOTAL_BELOW_ZERO')).toBe(
+      "A total can’t go below 0. Take off no more than the games give, then save again.",
+    );
+    expect(adjustmentSaveProblem('new row violates check constraint "player_season_adjustments_goals_check"')).toBe(
+      "Numbers added by hand stop at 9,999.",
+    );
+    expect(adjustmentSaveProblem(undefined)).toBe("The numbers weren’t saved. Check your connection and try again.");
+  });
 
   it("says what came from games and what was added or taken off by hand", () => {
     expect(handLines(ana)).toEqual(["Goals: 5 from games · 2 added by hand", "Assists: 2 from games · 1 taken off by hand"]);
