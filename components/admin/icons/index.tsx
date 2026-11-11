@@ -448,6 +448,29 @@ function Drawing48({ size = 24, ...props }: AdminIconProps) {
   );
 }
 
+function Drawing49({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M3.41431 3.00005C3.02379 2.60952 2.39062 2.60952 2.0001 3.00005C1.60958 3.39057 1.60958 4.02374 2.0001 4.41426L4.63205 7.04621C2.99403 8.55552 1.92448 10.2572 1.39435 11.2219C1.12571 11.7108 1.12571 12.2893 1.39435 12.7782C2.49915 14.7886 5.94677 20.0001 12.0001 20.0001C13.7147 20.0001 15.2202 19.5819 16.5227 18.9369L19.5859 22.0001C19.9764 22.3906 20.6096 22.3906 21.0001 22.0001C21.3906 21.6095 21.3906 20.9764 21.0001 20.5858L18.2746 17.8604M3.25071 12C3.75923 11.1073 4.69194 9.69405 6.04764 8.4618L8.23423 10.6484C8.08267 11.0706 8.0001 11.5257 8.0001 12C8.0001 14.2092 9.79096 16.0001 12.0001 16.0001C12.4745 16.0001 12.9295 15.9175 13.3518 15.7659L15.0097 17.4239C14.104 17.7849 13.1028 18.0001 12.0001 18.0001C9.59297 18.0001 7.66981 16.9749 6.16676 15.6451C4.74644 14.3885 3.77399 12.9187 3.25071 12Z" fill="currentColor" />
+      <path d="M3.41431 3.00005L6.21165 5.79738L3.41431 3.00005Z" fill="currentColor" />
+      <path d="M6.21165 5.79738L7.65919 7.24486L6.21165 5.79738Z" fill="currentColor" />
+      <path d="M16.842 16.4278L18.2746 17.8604L16.842 16.4278Z" fill="currentColor" />
+      <path d="M15.9396 12.6969L11.3033 8.06053C11.5296 8.02078 11.7624 8.00005 12.0001 8.00005C14.2092 8.00005 16.0001 9.79091 16.0001 12C16.0001 12.2377 15.9794 12.4706 15.9396 12.6969Z" fill="currentColor" />
+      <path d="M18.3767 15.1339C19.5046 14.0071 20.2958 12.7964 20.7495 12C20.2262 11.0814 19.2538 9.61157 17.8334 8.35498C16.3304 7.0252 14.4072 6.00005 12.0001 6.00005C11.1401 6.00005 10.3419 6.1309 9.60251 6.35975L8.04522 4.80245C9.21217 4.30774 10.5292 4.00004 12.0001 4.00004C18.0534 4.00004 21.501 9.21146 22.6058 11.2219C22.8745 11.7108 22.8745 12.2893 22.6058 12.7782C22.1228 13.6573 21.1918 15.1483 19.7909 16.5481L18.3767 15.1339Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function Drawing50({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M10 7C10 7.55229 9.55229 8 9 8H6C3.79086 8 2 9.79086 2 12C2 14.2091 3.79086 16 6 16H9C9.55229 16 10 16.4477 10 17C10 17.5523 9.55229 18 9 18H6C2.68629 18 0 15.3137 0 12C0 8.68629 2.68629 6 6 6H9C9.55229 6 10 6.44772 10 7Z" fill="currentColor" />
+      <path d="M15 8C14.4477 8 14 7.55229 14 7C14 6.44772 14.4477 6 15 6H18C21.3137 6 24 8.68629 24 12C24 15.3137 21.3137 18 18 18H15C14.4477 18 14 17.5523 14 17C14 16.4477 14.4477 16 15 16H18C20.2091 16 22 14.2091 22 12C22 9.79086 20.2091 8 18 8H15Z" fill="currentColor" />
+      <path d="M18 12C18 12.5523 17.5523 13 17 13H7C6.44772 13 6 12.5523 6 12C6 11.4477 6.44772 11 7 11H17C17.5523 11 18 11.4477 18 12Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 function DrawingTab0({ size = 24, ...props }: AdminIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
@@ -576,6 +599,9 @@ export const IconMapPin = Drawing45;
 export const IconMail = Drawing46;
 export const IconPhone = Drawing47;
 export const IconUser = Drawing48;
+// ADMIN-RE-12c: "Programs and tryouts" (hidden from your website; a link to another site).
+export const IconEyeSlash = Drawing49;
+export const IconLink = Drawing50;
 // ADMIN-RE-24: the tabs (globe and settings outline; the selected tab is solid).
 export const IconGlobe = DrawingTab0;
 export const IconSettings = DrawingTab1;

@@ -43,12 +43,13 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(22);
+    // ADMIN-RE-12c (deliberate): Programs and tryouts is the 23rd.
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(23);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      22,
+      23,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      22,
+      23,
     );
   });
 
@@ -290,8 +291,8 @@ describe("reimagined home jobs and More rows", () => {
       ["Games", "schedule"],
       ["Player numbers", "match-stats"],
       ["League table", "standings"],
-      ["Programs", "programs"],
-      ["Tryouts", "tryouts"],
+      // ADMIN-RE-12c (deliberate): one row for both (group 2 decision 1).
+      ["Programs and tryouts", "programs-and-tryouts"],
       ["Homepage", "homepage"],
       ["About page", "about"],
       ["Contact page", "contact"],
@@ -309,8 +310,7 @@ describe("reimagined home jobs and More rows", () => {
       "/admin/schedule",
       "/admin/stats",
       "/admin/standings",
-      "/admin/programs",
-      "/admin/tryouts",
+      "/admin/programs-and-tryouts",
       "/admin/about",
       "/admin/contact",
       "/admin/sponsors",
@@ -359,8 +359,7 @@ describe("reimagined home jobs and More rows", () => {
       "games",
       "player-numbers",
       "league-table",
-      "programs",
-      "tryouts",
+      "programs-and-tryouts",
       "homepage",
       "about-page",
       "contact-page",
@@ -396,9 +395,15 @@ describe("reimagined home jobs and More rows", () => {
       // onward) are reached through their own tiles when those apply.
       // ADMIN-RE-14 (deliberate): Your club replaces the classic Branding page
       // for the same data (decision 0006), so Branding is no longer a row.
+      // ADMIN-RE-12c (deliberate): the classic Programs and Tryouts pages are
+      // opened from Programs and tryouts ("Edit the page", and the page-wide
+      // words links), not from More.
+      const fromProgramsAndTryouts = fromHome.has("/admin/programs-and-tryouts")
+        ? ["/admin/programs", "/admin/tryouts"]
+        : [];
       const missing = getVisibleAdminRoutes({ ...context, adminPortal: "classic" })
         .map((route) => route.href)
-        .filter((href) => !fromHome.has(href) && href !== "/admin/branding");
+        .filter((href) => !fromHome.has(href) && href !== "/admin/branding" && !fromProgramsAndTryouts.includes(href));
       expect(missing).toEqual([]);
       expect(fromHome.has("/admin/your-club")).toBe(true);
     }
@@ -413,12 +418,17 @@ describe("reimagined home jobs and More rows", () => {
     expect(rowIds({ ...REIMAGINED, isBillingAuthorized: false })).toContain("who-can-sign-in");
   });
 
-  it("follows codeSiteAdminFor: Programs, Tryouts and Contact page rows only where the website has those pages", () => {
-    expect(rowIds(REIMAGINED)).toEqual(expect.arrayContaining(["programs", "tryouts", "contact-page"]));
+  it("follows codeSiteAdminFor: Programs and tryouts and Contact page rows only where the website has those pages", () => {
+    expect(rowIds(REIMAGINED)).toEqual(expect.arrayContaining(["programs-and-tryouts", "contact-page"]));
+    expect(getVisibleAdminMoreRows(REIMAGINED).find((row) => row.id === "programs-and-tryouts")).toEqual({
+      id: "programs-and-tryouts",
+      label: "Programs and tryouts",
+      href: "/admin/programs-and-tryouts",
+      iconKey: "tryouts",
+    });
     for (const presentationTemplateKey of ["clubhouse@1", null, "future-template@1"] as const) {
       const ids = rowIds({ ...REIMAGINED, presentationTemplateKey });
-      expect(ids).not.toContain("programs");
-      expect(ids).not.toContain("tryouts");
+      expect(ids).not.toContain("programs-and-tryouts");
       expect(ids).not.toContain("contact-page");
       expect(ids).toEqual(expect.arrayContaining(["team-roster", "about-page", "player-numbers"]));
     }

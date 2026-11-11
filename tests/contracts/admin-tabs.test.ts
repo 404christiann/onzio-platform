@@ -104,7 +104,8 @@ describe("every page sits under exactly one tab", () => {
   });
 
   it("puts the roster with Programs where there is a Programs tab, otherwise with Games", () => {
-    expect(rowIds("programs", ACADEMY)).toEqual(["programs", "tryouts", "team-roster", "sign-up-forms"]);
+    // ADMIN-RE-12c (deliberate): one "Programs and tryouts" row replaces the two.
+    expect(rowIds("programs", ACADEMY)).toEqual(["programs-and-tryouts", "team-roster", "sign-up-forms"]);
     expect(rowIds("games", ACADEMY)).toEqual([
       "games",
       "this-season",

@@ -57,7 +57,8 @@ export type AdminRouteId =
   | "payments"
   | "sign-ups"
   | "add-game"
-  | "your-club";
+  | "your-club"
+  | "programs-and-tryouts";
 
 export type AdminRouteIconKey =
   | "dashboard"
@@ -321,6 +322,17 @@ export const ADMIN_ROUTE_MANIFEST = [
     groupId: null,
     reimaginedOnly: true,
   },
+  // ADMIN-RE-12c: programs and tryouts on one list, with whether families can
+  // sign up (group 2 decision 1). The two classic pages stay: a program's page
+  // is still edited on /admin/programs ("Edit the page").
+  {
+    id: "programs-and-tryouts",
+    label: "Programs and tryouts",
+    href: "/admin/programs-and-tryouts",
+    iconKey: "tryouts",
+    groupId: null,
+    reimaginedOnly: true,
+  },
 ] as const satisfies readonly AdminRouteDefinition[];
 
 export const ADMIN_NAVIGATION_MANIFEST = [
@@ -425,6 +437,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   "sign-ups": ["registrations", "sign-ups", "registrants", "players", "guardians", "download list"],
   "add-game": ["schedule", "fixtures", "add a game", "new match"],
   "your-club": ["club settings", "logo", "social pages", "footer", "email", "phone", "hours", "contact details"],
+  "programs-and-tryouts": ["programs", "tryouts", "sign-ups", "camps", "evaluations", "registration"],
 } as const satisfies Record<AdminRouteId, readonly string[]>;
 
 const ROUTE_BY_ID = new Map<AdminRouteId, AdminRouteDefinition>(
@@ -446,6 +459,10 @@ export function isAdminRouteVisible(
   const siteAdmin = codeSiteAdminFor(context);
   if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
   if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible) return false;
+  // A club whose website has neither sees no row (decision 0005).
+  if (route.id === "programs-and-tryouts" && !siteAdmin?.programs.routeVisible && !siteAdmin?.tryouts.routeVisible) {
+    return false;
+  }
   // Only designs that publish a Contact page get the Contact editor; its
   // details are used nowhere else on other designs.
   if (route.id === "contact" && !siteAdmin?.contact.routeVisible) return false;
@@ -636,8 +653,7 @@ export type AdminMoreRowId =
   | "games"
   | "player-numbers"
   | "league-table"
-  | "programs"
-  | "tryouts"
+  | "programs-and-tryouts"
   | "homepage"
   | "about-page"
   | "contact-page"
@@ -667,8 +683,9 @@ export type AdminMoreRow = Readonly<{
   iconKey: AdminRouteIconKey;
 }>;
 
-// Programs and Tryouts stay two rows while they are two pages; a club whose
-// website has only one of them sees only that row (decision 0005). Every old
+// Programs and tryouts are one row (ADMIN-RE-12c, group 2 decision 1). A club
+// whose website has only one of them sees it named for that one (decision
+// 0005; see programsTryoutsLabel). Every old
 // page stays reachable from the home: About, Contact and Player numbers until
 // Edit my website and Enter a score cover them (RE-13, RE-06), Games always
 // (ADMIN-RE-07: no job opens the old schedule page any more, and it is still
@@ -680,8 +697,7 @@ export const ADMIN_MORE_ROWS = [
   { id: "games", label: "Games", routeId: "schedule" },
   { id: "player-numbers", label: "Player numbers", routeId: "match-stats" },
   { id: "league-table", label: "League table", routeId: "standings" },
-  { id: "programs", label: "Programs", routeId: "programs" },
-  { id: "tryouts", label: "Tryouts", routeId: "tryouts" },
+  { id: "programs-and-tryouts", label: "Programs and tryouts", routeId: "programs-and-tryouts" },
   { id: "homepage", label: "Homepage", routeId: "homepage", onlyWhileContentPaused: true },
   { id: "about-page", label: "About page", routeId: "about" },
   { id: "contact-page", label: "Contact page", routeId: "contact" },
@@ -695,6 +711,15 @@ export const ADMIN_MORE_ROWS = [
   // page; building, opening and closing forms stay on the old page.
   { id: "sign-up-forms", label: "Sign-up forms", routeId: "registrations" },
 ] as const satisfies readonly AdminMoreRowDefinition[];
+
+/** "Programs and tryouts", or just the one the club's website has (decision 0005). */
+function programsTryoutsLabel(routes: ReadonlyMap<AdminRouteId, AdminRouteDefinition>): string {
+  const programs = routes.has("programs");
+  const tryouts = routes.has("tryouts");
+  if (programs && !tryouts) return "Programs";
+  if (tryouts && !programs) return "Tryouts";
+  return "Programs and tryouts";
+}
 
 function isReimagined(context: AdminRouteAccessContext): boolean {
   return context.adminPortal === "reimagined";
@@ -755,7 +780,8 @@ export function getVisibleAdminMoreRows(
     const route = routes.get(row.routeId);
     if (!route) return [];
     if (row.onlyWhileContentPaused && context.canMutateContent) return [];
-    return [{ id: row.id, label: row.label, href: route.href, iconKey: route.iconKey }];
+    const label = row.id === "programs-and-tryouts" ? programsTryoutsLabel(routes) : row.label;
+    return [{ id: row.id, label, href: route.href, iconKey: route.iconKey }];
   });
 }
 
