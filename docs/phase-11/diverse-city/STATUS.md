@@ -75,6 +75,63 @@ page leaves `played` set when every number of a row is put back to 0 (it never s
 
 **Next step:** clear the review bot, then `GATE-MIGRATE` and merge; then 11c-2.
 
+## 2026-11-10 - Lions removed (production data, then repo code)
+
+**Agent/package:** Claude Code, Lions removal (not an ADMIN-RE package; asked
+for by Christian on 2026-11-10 because Lions is not a customer). Branch
+`claude/remove-lions-code` from `main` `8fa5926`.
+**Status:** production removal `done`; repo cleanup `in_progress`, PR open.
+No migration, no deploy, no hosted change from this PR.
+
+**Completed work:**
+
+- Production: read-only counts, backup on Christian's Mac, one guarded SQL
+  transaction (audit event 961, 94 rows plus the club, counts equal to the
+  read-only counts), 13 Storage photos deleted after checking them against the
+  backup, clean post-check and smoke checks. Details in `HANDOFF.md`.
+- Repo: removed the Lions importers, planner, standings seed, four package
+  scripts, two contract tests, an unconfigured browser spec and two Lions docs.
+  Clubhouse copy uses the club's name or neutral wording instead of Lions,
+  Columbus, Capital City, Scioto Field and Founded 2014. `Nav.tsx` constants
+  renamed to `clubhouseNavLinks` and `clubhouseAffiliations`.
+
+**Files changed:** `components/{ClubhouseAboutPage,ClubhouseHomePage,ClubhousePlayerProfilePage,ClubhouseShopPage,ClubhouseSponsorsPage,Nav}.tsx`,
+`lib/__tests__/admin-data-contract.test.ts` (fixture wording), `package.json`,
+`HANDOFF.md`, this file. Deleted: `lib/migration/lions-media-{local-import,plan}.ts`,
+`scripts/{import-lions-media-local,import-lions-media-staging,plan-lions-media-import,seed-lions-standings-local}.ts`,
+`tests/contracts/lions-media-{import-plan,local-import}.test.ts`,
+`tests/browser/lions-roster.spec.ts`, `docs/lions-fc-launch-plan.md`,
+`docs/phase-9/lions-media-import-plan.json`.
+
+**Verification:** tested revision `1326604c` (code); the head adds only this
+ledger and `HANDOFF.md`, which no test reads. Run in this worktree; browser
+runs under `scripts/with-local-db-lock.sh` against a production build at
+`http://alpha.localhost:3110`, local database reset to this branch first.
+
+- TypeScript `npx tsc --noEmit`: pass.
+- ESLint on `app`, `components`, `lib`, `packages` (with `--no-eslintrc -c
+  .eslintrc.json`, since `npm run lint` refuses to run from a nested worktree):
+  0 errors, 1 warning in untouched `app/(public)/sponsors/page.tsx`.
+- Unit and contract `npx vitest run --exclude 'tests/database/**'`: 232 files,
+  3,101 passed, 1 skipped, 12 failed. All 12 were 15 s timeouts in
+  `pilot-accepted-build-identity` and `pilot-owned-scope` while the machine's
+  load average was 24 to 54. Those two files rerun alone at lower load: 47/47.
+- Production build `npm run build`: pass.
+- Homepage browser (`playwright.homepage.config.ts`): 62 passed, 1 failed
+  (`resizing an open tablet navigation...`, preview heading not visible within
+  5 s); that test passed on rerun.
+- Page editors browser (`playwright.public-page-editors.config.ts`): 36 passed,
+  1 failed (`About reconciles committed-500...`: its cleanup write is refused
+  with `INVALID_ABOUT_DESTINATION`). It fails the same way on a clean `main`
+  `8fa5926` build, so it is not from this PR.
+- Database suite: not run; no migration, seed or SQL change.
+
+**Blockers / decisions:** staging's own Lions tenant waits for Christian's go.
+`lib/operator/purge-club.ts` is out of date (Phase 2 table list, Storage first,
+not transactional) and should be fixed before it is used for any club.
+
+**Exact next step:** the bot reviews the PR.
+
 ## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so
