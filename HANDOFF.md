@@ -1,3 +1,33 @@
+## 2026-11-10 - Operator hard purge made safe
+
+- **Status:** `in_progress`, PR open. **Has a migration**
+  (`20261111080000_purge_archived_club.sql`, two functions, no table or row
+  change), so `GATE-MIGRATE` before merge. Nothing hosted touched.
+- **What changed:** `purgeClub` now calls one security-definer function that
+  does the whole database purge in one transaction (the Lions transaction,
+  reusable): guards under lock, every club table locked against writes,
+  children-first deletes with the presentation triggers lifted for that
+  transaction only, refusal on an unknown club table, other clubs' counts
+  checked, export marked purged, one `hard_purge` audit event. Storage is
+  removed only after commit; a Storage failure can be retried by running the
+  purge again (`already_purged`).
+- **Verification:** new database test 11/11 on a private throwaway database
+  (every club table filled, other clubs byte-identical), contract tests 35/35,
+  tsc and ESLint clean. Details in `STATUS.md` and the PR body.
+- **Decided (Christian, 2026-11-11):** a linked Stripe Connect account blocks
+  the purge only while it can take payments (`charges_enabled`).
+- **Open:** RE-11c's season adjustment tables need fixture rows in the purge
+  test once both PRs are in.
+- **Review-bot Mediums fixed:** the Storage outcome now has its own
+  `hard_purge_storage` audit event (removed or failed; the main event says
+  `pending`), and `lib/database.generated.ts` has the new function.
+- **Bot re-review (0 High, 0 Medium) Lows fixed 2026-11-11:** a record that
+  can't be written after a successful Storage removal is now
+  `PURGE_STORAGE_UNRECORDED`; the domain, subscription, Connect and export
+  checks run after the table locks. Merged `main` with RE-12b; its new
+  private receipts table is in the purge test's fixture.
+- **Exact next step:** bot review, `GATE-MIGRATE` on Christian's go, merge.
+
 ## 2026-11-10 - ADMIN-RE-11c-1 Season totals add up from player numbers (migration)
 
 - **Status:** `released` 2026-11-11. Migration
@@ -31,6 +61,7 @@
   adjustment editor; no migration. The typed numbers in `*_season_stats` are
   dropped in a later migration once both clubs accept.
 
+
 ## 2026-11-10 - ADMIN-RE-12b Programs and tryouts take their state from the sign-up way and the date
 
 - **Status:** `released` 2026-11-11. Migration `20261110180000` was applied to
@@ -59,6 +90,7 @@
   RE-11c-1 (#137, migration `20261110160000`) must re-time its file to sort
   after `20261110180000` before its own gate.
 
+
 ## 2026-11-10 - ADMIN-RE-24c Search on the new admin
 
 - **Status:** `in_progress`, PR open. Last PR of `ADMIN-RE-24`. **New dependency:
@@ -72,6 +104,7 @@
   `STATUS.md`.
 - **Exact next step:** the bot merges. Christian walks the new home and tabs
   on Rose City.
+
 
 ## 2026-11-10 - ADMIN-RE-12a The Programs words browser test, made steady
 

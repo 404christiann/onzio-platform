@@ -1,5 +1,111 @@
 # Diverse City FC Status
 
+## 2026-11-10 - Operator hard purge made safe (one transaction, Storage after commit)
+
+**Agent/package:** Claude Code, operator purge fix (not an ADMIN-RE package;
+follow-up to the Lions removal, which found `lib/operator/purge-club.ts`
+unusable). Branch `claude/sweet-cohen-eea328` from `main` `428a1590`, merged with `main` `29c2da89`.
+**Status:** `in_progress`, PR open. **Has a migration**
+(`20261111080000_purge_archived_club.sql`), so it needs `GATE-MIGRATE` before
+merge. Adds two functions; changes no table and no row. Nothing hosted was
+touched.
+
+**What was wrong:** the purge deleted Storage first, then one table at a time
+over PostgREST, from Phase 2 table lists. Newer club tables have RESTRICT keys
+to `onzio.clubs` and the presentation history refuses deletes, so it would
+stop half way with the media already gone. Its contract test covered only the
+simulation path.
+
+**Completed work:**
+
+- `onzio_private.purge_archived_club` (security definer, empty search path,
+  service_role only through the `onzio.purge_archived_club` wrapper): the
+  Lions transaction made reusable. One transaction: lock the club row; check
+  slug confirmation, archived, no active domain, no live Stripe subscription,
+  no Connect account that can take payments (`charges_enabled`), verified
+  export for this club and slug; lock every club table against writes (reads
+  continue) so the other-clubs check holds on a live database; delete children
+  first with the presentation immutability triggers lifted for the
+  transaction only; refuse on an unknown club table holding rows; delete the
+  club (private receipts cascade, audit and Stripe history kept with club_id
+  null); check nothing is left and every other club's per-table count is
+  unchanged; mark the export purged; write one `hard_purge` audit event with
+  per-table counts.
+- `lib/operator/purge-club.ts`: keeps its guards (export id, direct operator
+  invocation, operator TOTP session), calls the function once, then removes
+  `<club_id>/` from both buckets. A Storage failure after commit reports
+  `PURGE_STORAGE_FAILED`; running the purge again with the same export and
+  slug returns `already_purged` from the database and retries only Storage.
+- Tests: `tests/database/purge-archived-club.test.ts` (fills every club table
+  for an archived club, purges as service_role, proves every table empty,
+  ledgers kept, one audit event, other clubs' rows byte-identical by digest,
+  triggers back on; each guard; unknown table; a trigger leaking into another
+  club; browser roles refused; the retry). Contract tests now cover the real
+  path with a fake client (one RPC, refusals pass through with Storage
+  untouched, Storage only after commit, the retry).
+- `admin-reimagined-league.test.ts` and `admin-reimagined-sponsors.test.ts`
+  list the migrations allowed after theirs; the new one is added (the same
+  as RE-15 did in #128).
+
+**Verification:** on a private throwaway database (`supabase/postgres:15.8.1.085`,
+port 54998, all 63 migrations plus seed; the shared contracts database was
+being reset by other sessions): `purge-archived-club.test.ts` 11/11.
+`provisioning-migration.test.ts` 35/35. `tsc --noEmit` clean; ESLint clean
+on the changed files. Wider suites are in the PR body.
+
+**Blockers / decisions:** (1) the Connect guard blocks only when
+`charges_enabled`. Christian decided on 2026-11-11 to keep it that way: a
+linked account that can't take payments is purged with the club.
+(2) RE-11c's unmerged migration `20261110160000_season_totals_add_up.sql`
+adds `player_season_adjustments` and `goalkeeper_season_adjustments`. They
+cascade from the season stats rows, so the purge still empties them, but
+whichever PR merges second must add fixture rows for them to the purge test
+(and may list them in `v_order` before the season stats).
+
+**Review-bot Mediums on #138 (fixed):**
+
+- M1: the `hard_purge` event said Storage was removed before it was. It now
+  records `storage: pending`. `purgeClub` writes a `hard_purge_storage` audit
+  event (club_id null, resource_id the club) after the files go
+  (`status: removed`, `objects_removed`). If the removal fails, it writes
+  `status: failed` with the objects removed so far and the error before
+  raising `PURGE_STORAGE_FAILED`, so "purged but files still up" can be found
+  by query. Contract tests cover the removed record, the failed record, and
+  a failure that can't be recorded.
+- M2: `lib/database.generated.ts` regenerated from the private database with
+  the migration applied (`supabase gen types typescript --db-url ... --schema
+  onzio`). The diff is only the new `purge_archived_club` entry.
+- Verification after the fixes: database test 11/11 (private database),
+  `provisioning-migration` 36/36, tsc and ESLint clean. The unit and contract
+  totals are in the PR body.
+
+**After the bot's re-review at `5755d30` (0 High, 0 Medium; 2026-11-11):**
+
+- Merged `main` `9e18c143` (RE-12b, migration `20261110180000` already on
+  production). Its new `onzio_private.sign_up_settings_receipts` cascades
+  with the club; the purge test caught the missing fixture row as designed,
+  and it now has one. The RE-11b and RE-15 migration-order lists now name
+  both RE-12b's and this migration.
+- Low 1: if the files are removed but the `hard_purge_storage` record can't
+  be written, `purgeClub` now raises `PURGE_STORAGE_UNRECORDED` (a contract
+  error that says the purge worked and a rerun records it), not a plain
+  `Error`. Contract test added.
+- Low 2: the checks that read other tables (active domain, live
+  subscription, Connect `charges_enabled`, verified export) now run after
+  the table locks, so nothing they read can change before the deletes. The
+  slug and archived checks stay before the locks, on the locked club row.
+- Not changed: a `statement_timeout` set on the function would not apply to
+  the statement already running it; the caller's role timeout still bounds
+  the call, and a timeout rolls the whole purge back. The Connect guard rule
+  stays as is (Christian, 2026-11-11: block only while it can take payments).
+- Verification: purge database test 11/11 (private database with every
+  migration on the branch), types regenerated and identical, contract tests
+  61/61 for the three touched files, tsc clean. Full unit and contract
+  totals in the PR body.
+
+**Exact next step:** bot review; `GATE-MIGRATE` on Christian's go, then merge.
+No purge runs on production without Christian's go.
+
 ## 2026-11-10 - ADMIN-RE-11c-1: season totals add up from player numbers (migration)
 
 **Agent/package:** Claude Code, `ADMIN-RE-11c` part 1 of 2 (11c-1 migration, no new
@@ -115,6 +221,7 @@ score (design `cd-after-game`), saving `played` explicitly; the "2 of 3 goals ad
 warning with "Own goal or not sure"; "Later" leaves the game in the hub's Games card
 ("N games need player numbers", group 1 decision 11); "7 goals: 5 from games, 2 added by
 hand" with an adjustment editor on the new admin (decision 3).
+
 
 ## 2026-11-10 - ADMIN-RE-12b: programs and tryouts take their state from the sign-up way and the date
 
@@ -236,6 +343,7 @@ sort after `20261110180000` and re-run `test:db` before its own gate.
 orchestrator says go. The drafts are in the shared notes folder
 (`re-12c-draft/`).
 
+
 ## 2026-11-10 - About/Logo save browser test: clean-up restores "no row"
 
 **Agent/package:** Claude Code, test fix found while checking the Lions PR
@@ -275,6 +383,7 @@ row, and Alpha ends with no About or Logo row both times. `tsc --noEmit` clean.
 **Blockers:** none.
 
 **Next step:** review and merge the PR.
+
 
 ## 2026-11-10 - ADMIN-RE-24c: search on the new admin
 
@@ -322,6 +431,7 @@ head, with the tested commit, are in the PR body.
 
 **Exact next step:** the bot merges 24c. Then ADMIN-RE-24 is built;
 Christian walks it on Rose City.
+
 
 ## 2026-11-10 - ADMIN-RE-12a: the Programs words browser test, made steady
 

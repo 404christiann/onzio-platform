@@ -5,7 +5,6 @@ import {
   assertOperator,
   getOperatorClient,
   isContractSimulation,
-  operatorNow,
   operatorAccessTokenSchema,
   parseOperatorInput,
   type OperatorClient,
@@ -22,36 +21,28 @@ const purgeSchema = z.object({
   invokedFromApplicationRoute: z.boolean().optional(),
 });
 
-const CHILD_TABLES = [
-  "player_photos",
-  "player_match_stats",
-  "goalkeeper_match_stats",
-  "player_season_adjustments",
-  "goalkeeper_season_adjustments",
-  "player_season_stats",
-  "goalkeeper_season_stats",
-  "homepage_slideshow_photos",
-  "league_standings",
-  "shop_kit_photos",
-  "shop_carousel_photos",
-] as const;
+// Refusals raised by onzio_private.purge_archived_club. Each one rolls the
+// whole database purge back, so nothing (rows or Storage) has been removed.
+const DATABASE_REFUSALS = new Set([
+  "INVALID_OPERATOR_INPUT",
+  "CLUB_NOT_FOUND",
+  "CONFIRMATION_MISMATCH",
+  "CLUB_NOT_ARCHIVED",
+  "EXPORT_REQUIRED",
+  "PURGE_BLOCKED",
+  "PURGE_UNKNOWN_CLUB_TABLE",
+  "PURGE_OTHER_CLUB_CHANGED",
+  "PURGE_INCOMPLETE",
+]);
 
-const CONTENT_TABLES = [
-  "players",
-  "staff",
-  "matches",
-  "seasons",
-  "site_branding",
-  "site_social_links",
-  "site_sponsor_logos",
-  "about_page_content",
-  "club_logo_page_content",
-  "behind_the_rose_section",
-  "homepage_slideshow_settings",
-  "league_standings_settings",
-  "shop_kit_section",
-  "shop_purchase_details",
-] as const;
+const STORAGE_BUCKETS = ["onzio-upload-staging", "onzio-media"] as const;
+
+type PurgeResult = {
+  status: "purged" | "already_purged";
+  club_slug: string;
+  audit_event_id?: number;
+  rows_deleted?: Record<string, number>;
+};
 
 async function listStoragePaths(
   client: OperatorClient,
@@ -65,7 +56,7 @@ async function listStoragePaths(
     const { data, error } = await client.storage
       .from(bucket)
       .list(prefix, { limit: 1000, offset });
-    if (error) failContract("PURGE_STORAGE_FAILED", error.message);
+    if (error) throw new Error(`${bucket}/${prefix}: ${error.message}`);
     const entries = data ?? [];
     for (const entry of entries) {
       const path = `${prefix}/${entry.name}`;
@@ -82,29 +73,21 @@ async function listStoragePaths(
   return paths;
 }
 
-async function removeStorage(client: OperatorClient, clubId: string) {
-  for (const bucket of ["onzio-upload-staging", "onzio-media"] as const) {
+// Counts into `progress` so a failure part way still reports what went.
+async function removeStorage(
+  client: OperatorClient,
+  clubId: string,
+  progress: { removed: number },
+): Promise<void> {
+  for (const bucket of STORAGE_BUCKETS) {
     const paths = await listStoragePaths(client, bucket, clubId);
     for (let index = 0; index < paths.length; index += 100) {
-      const { error } = await client.storage
-        .from(bucket)
-        .remove(paths.slice(index, index + 100));
-      if (error) failContract("PURGE_STORAGE_FAILED", error.message);
+      const batch = paths.slice(index, index + 100);
+      const { error } = await client.storage.from(bucket).remove(batch);
+      if (error) throw new Error(`${bucket}: ${error.message}`);
+      progress.removed += batch.length;
     }
   }
-}
-
-async function deleteClubRows(
-  client: OperatorClient,
-  table: string,
-  clubId: string,
-) {
-  const { error } = await client
-    .schema("onzio")
-    .from(table)
-    .delete()
-    .eq("club_id", clubId);
-  if (error) failContract("PURGE_DATABASE_FAILED", `${table}: ${error.message}`);
 }
 
 export async function purgeClub(
@@ -133,81 +116,86 @@ export async function purgeClub(
   }
 
   const client = getOperatorClient(dependencies);
-  const { data: club, error: clubError } = await client
+
+  // Every database check and delete happens in one transaction, including
+  // the export ledger update and the hard_purge audit event.
+  const { data, error } = await client
     .schema("onzio")
-    .from("clubs")
-    .select("id,slug,lifecycle")
-    .eq("id", input.clubId)
-    .maybeSingle();
-  if (clubError || !club) failContract("CLUB_NOT_FOUND");
-  if (input.confirmation !== club.slug) failContract("CONFIRMATION_MISMATCH");
-  if (club.lifecycle !== "archived") failContract("CLUB_NOT_ARCHIVED");
-
-  const { data: exportRecord, error: exportError } = await client
-    .schema("onzio")
-    .from("club_exports")
-    .select("id,club_id,status,checksum_sha256")
-    .eq("id", input.exportId)
-    .eq("club_id", input.clubId)
-    .eq("status", "verified")
-    .maybeSingle();
-  if (exportError || !exportRecord) failContract("EXPORT_REQUIRED");
-
-  await removeStorage(client, input.clubId);
-
-  for (const table of CHILD_TABLES) {
-    await deleteClubRows(client, table, input.clubId);
+    .rpc("purge_archived_club", {
+      p_club_id: input.clubId,
+      p_export_id: input.exportId,
+      p_confirmation: input.confirmation,
+      p_actor_id: actorId,
+    });
+  if (error) {
+    if (DATABASE_REFUSALS.has(error.message)) {
+      failContract(error.message, error.details ?? undefined);
+    }
+    failContract("PURGE_DATABASE_FAILED", error.message);
   }
-  for (const table of CONTENT_TABLES) {
-    await deleteClubRows(client, table, input.clubId);
-  }
-  for (const table of [
-    "media_cleanup_queue",
-    "media_assets",
-    "club_subscriptions",
-    "club_members",
-    "club_domains",
-  ]) {
-    await deleteClubRows(client, table, input.clubId);
-  }
+  const result = data as PurgeResult;
 
-  const clubDelete = await client
-    .schema("onzio")
-    .from("clubs")
-    .delete()
-    .eq("id", input.clubId)
-    .eq("lifecycle", "archived");
-  if (clubDelete.error) {
-    failContract("PURGE_DATABASE_FAILED", clubDelete.error.message);
-  }
+  // Storage only after the rows are gone for good. The hard_purge event
+  // records storage as pending; the outcome goes in its own
+  // hard_purge_storage event, so "purged but files still up" can be found
+  // by query. A failure leaves the database purge in place; calling
+  // purgeClub again with the same export and confirmation retries the
+  // Storage removal (already_purged).
+  const progress = { removed: 0 };
+  const recordStorage = (payload: Record<string, unknown>) =>
+    writeOperatorAudit(client, {
+      actorId,
+      clubId: null,
+      operation: "hard_purge_storage",
+      resourceType: "purged_club",
+      resourceId: input.clubId,
+      payload: {
+        export_id: input.exportId,
+        objects_removed: progress.removed,
+        ...payload,
+      },
+    });
 
-  const purgedAt = operatorNow(dependencies).toISOString();
-  const exportUpdate = await client
-    .schema("onzio")
-    .from("club_exports")
-    .update({ status: "purged", purged_at: purgedAt })
-    .eq("id", input.exportId);
-  if (exportUpdate.error) {
-    failContract("PURGE_FINALIZATION_FAILED", exportUpdate.error.message);
+  try {
+    await removeStorage(client, input.clubId, progress);
+  } catch (storageError) {
+    const message =
+      storageError instanceof Error ? storageError.message : String(storageError);
+    let recorded = true;
+    try {
+      await recordStorage({ status: "failed", error: message.slice(0, 500) });
+    } catch {
+      recorded = false;
+    }
+    failContract(
+      "PURGE_STORAGE_FAILED",
+      `Club rows are purged but its files are not all removed${
+        recorded ? " (recorded as hard_purge_storage failed)" : " and the failure could not be recorded"
+      }; run the purge again with the same export to retry Storage. ${message}`,
+    );
   }
-
-  await writeOperatorAudit(client, {
-    actorId,
-    clubId: null,
-    operation: "hard_purge",
-    resourceType: "purged_club",
-    resourceId: input.clubId,
-    payload: {
-      club_slug: club.slug,
-      export_id: input.exportId,
-      export_checksum: exportRecord.checksum_sha256,
-    },
-  });
+  let storageAuditEventId: number;
+  try {
+    storageAuditEventId = await recordStorage({ status: "removed" });
+  } catch (auditError) {
+    failContract(
+      "PURGE_STORAGE_UNRECORDED",
+      `Club rows and files are removed, but the hard_purge_storage record could not be written (the trail still says pending); run the purge again with the same export to record it. ${
+        auditError instanceof Error ? auditError.message : String(auditError)
+      }`,
+    );
+  }
+  const storageObjectsRemoved = progress.removed;
 
   return {
     clubId: input.clubId,
     purged: true,
+    alreadyPurged: result.status === "already_purged",
     exportId: input.exportId,
+    auditEventId: result.audit_event_id ?? null,
+    rowsDeleted: result.rows_deleted ?? {},
+    storageObjectsRemoved,
+    storageAuditEventId,
     finalAuditOutsideTenant: true,
   };
 }
