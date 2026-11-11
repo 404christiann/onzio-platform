@@ -48,8 +48,9 @@ async function fixtureReads(page: Page, override: ReadOverride = async () => und
       ];
     }
     if (!data && body.table === "players") data = [{ id: PLAYER, name: "Loading Fixture Player", number: 9, position: "Forward", active: true }];
-    if (!data && body.table === "player_season_stats") data = [fieldStats(0)];
-    if (!data && ["goalkeeper_season_stats", "player_match_stats", "goalkeeper_match_stats"].includes(body.table)) data = [];
+    // Match stats reads who is in the season from the totals rows; Season stats reads the totals (ADMIN-RE-11c).
+    if (!data && ["player_season_stats", "player_season_totals"].includes(body.table)) data = [fieldStats(0)];
+    if (!data && ["goalkeeper_season_stats", "goalkeeper_season_totals", "player_match_stats", "goalkeeper_match_stats"].includes(body.table)) data = [];
     if (!data) return route.continue();
     return route.fulfill({ json: { data, error: null, count: null } });
   });
@@ -104,7 +105,7 @@ test("Season Stats keeps old totals hidden while a new season loads and ignores 
   const firstSeason = gate();
   const firstRequested = gate();
   await fixtureReads(page, async (request) => {
-    if (request.table === "player_season_stats") {
+    if (request.table === "player_season_totals") {
       if (byFilter(request, "season_id") === SEASON_A) {
         firstRequested.release();
         await firstSeason.wait;
@@ -122,7 +123,7 @@ test("Season Stats keeps old totals hidden while a new season loads and ignores 
   const lateResponse = page.waitForResponse((response) => {
     if (!response.url().endsWith("/api/admin/data")) return false;
     const request = response.request().postDataJSON() as ReadRequest;
-    return request.table === "player_season_stats" && byFilter(request, "season_id") === SEASON_A;
+    return request.table === "player_season_totals" && byFilter(request, "season_id") === SEASON_A;
   });
   firstSeason.release();
   await (await lateResponse).finished();

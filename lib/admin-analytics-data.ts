@@ -252,7 +252,7 @@ export async function loadTeamAnalytics(supabase: SupabaseClient, clubId: string
       ),
       readAll<FieldSeasonRow>((from, to) =>
         onzio
-          .from("player_season_stats")
+          .from("player_season_totals")
           .select(FIELD_COLUMNS)
           .eq("club_id", clubId)
           .eq("season_id", season.id)
@@ -261,7 +261,7 @@ export async function loadTeamAnalytics(supabase: SupabaseClient, clubId: string
       ),
       readAll<KeeperSeasonRow>((from, to) =>
         onzio
-          .from("goalkeeper_season_stats")
+          .from("goalkeeper_season_totals")
           .select(KEEPER_COLUMNS)
           .eq("club_id", clubId)
           .eq("season_id", season.id)

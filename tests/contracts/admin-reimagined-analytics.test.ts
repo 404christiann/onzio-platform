@@ -81,10 +81,10 @@ describe("the page only reads, and only this club's rows (ADMIN-RE-19)", () => {
     const reads = data.match(/\.from\("[a-z_]+"\)/g) ?? [];
     expect(reads.sort()).toEqual(
       [
-        '.from("goalkeeper_season_stats")',
+        '.from("goalkeeper_season_totals")',
         '.from("matches")',
         '.from("player_match_stats")',
-        '.from("player_season_stats")',
+        '.from("player_season_totals")',
         '.from("players")',
         '.from("seasons")',
       ].sort(),

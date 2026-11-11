@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { Client } from "pg";
 import { CLUB_IDS } from "../fixtures/entities";
+import { KEEP_TYPED_TOTALS_SQL } from "../helpers/season-adjustments";
 
 // ADMIN-RE-19: "How the team is doing" on local Alpha (switched to 'reimagined'
 // by admin-reimagined.global-setup.ts), at phone and laptop width. Every row the
@@ -232,6 +233,8 @@ async function seed(games: Game[], people: Person[], options: { showSeason?: boo
       }
     }
   }
+  // ADMIN-RE-11c: keep the typed totals as the totals (adjustment = typed - games).
+  for (const statement of KEEP_TYPED_TOTALS_SQL) await sql(statement, [ALPHA, Object.values(byKey)]);
   return { people: byKey, games: ids, season: season.id };
 }
 

@@ -19,7 +19,7 @@ const client = createClient(url, process.env.SUPABASE_TEST_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false, autoRefreshToken: false },
   realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
 }).schema("onzio");
-const tables = ["seasons", "players", "matches", "player_match_stats", "goalkeeper_match_stats", "player_season_stats", "goalkeeper_season_stats", "league_standings", "registration_forms", "registration_form_fields", "registration_price_options", "registrations"];
+const tables = ["seasons", "players", "matches", "player_match_stats", "goalkeeper_match_stats", "player_season_stats", "goalkeeper_season_stats", "player_season_adjustments", "goalkeeper_season_adjustments", "league_standings", "registration_forms", "registration_form_fields", "registration_price_options", "registrations"];
 
 async function checkResult(result: { error: { message: string } | null }) {
   if (result.error) throw new Error(result.error.message);
@@ -86,11 +86,17 @@ async function fixtures() {
     await checkResult(await client.from("seasons").insert({ id: seasonId, club_id: clubId, label: seasonLabel, start_year: 2025, end_year: 2026, active: false }));
     await checkResult(await client.from("players").insert({ id: playerId, club_id: clubId, name: rowName, number: 77, age: 22, position: "Forward", active: true }));
     await checkResult(await client.from("player_season_stats").insert([
-      { club_id: clubId, player_id: playerId, season_id: activeSeason.id, goals: 3, assists: 2, starts: 2, mins: 150 },
-      { club_id: clubId, player_id: playerId, season_id: seasonId, goals: 1, assists: 1, starts: 1, mins: 80 },
+      { club_id: clubId, player_id: playerId, season_id: activeSeason.id },
+      { club_id: clubId, player_id: playerId, season_id: seasonId },
     ]));
     await checkResult(await client.from("matches").insert(matchIds.map((id, index) => ({ id, club_id: clubId, season_id: index === 2 ? seasonId : activeSeason.id, date: `2026-06-${index + 10}`, time: "18:00", opponent: `Guided QA Opponent ${index}`, home: true }))));
     await checkResult(await client.from("player_match_stats").insert(matchIds.map((matchId, index) => ({ club_id: clubId, player_id: playerId, match_id: matchId, goals: index + 1, assists: index, mins: 75, starts: true }))));
+    // ADMIN-RE-11c: season totals are the season's match stats plus an adjustment. These make
+    // the totals goals 3 / 1, assists 2 / 1, starts 2 / 1, minutes 150 / 80, as before.
+    await checkResult(await client.from("player_season_adjustments").insert([
+      { club_id: clubId, player_id: playerId, season_id: activeSeason.id, goals: 0, assists: 1, mins: 0 },
+      { club_id: clubId, player_id: playerId, season_id: seasonId, goals: -2, assists: -1, mins: 5 },
+    ]));
     await checkResult(await client.from("league_standings").insert({ id: standingId, club_id: clubId, team_name: `Guided QA team ${suffix}`, team_abbreviation: "QA", played: 3, wins: 2, draws: 1, losses: 0, goal_difference: 4, points: 7, sort_order: 77 }));
     await checkResult(await client.from("registration_forms").insert({ id: formId, club_id: clubId, slug: `guided-qa-${suffix}`, title: formTitle, status: "closed", participant_mode: "adult_only", waiver_text: "Synthetic browser consent fixture." }));
     await checkResult(await client.from("registration_price_options").insert({ id: priceId, club_id: clubId, form_id: formId, label: "QA fee", amount_cents: 1250, position: 0, active: true }));
@@ -240,7 +246,8 @@ for (const width of [390, 1440]) {
           if (route === "season-stats") {
             await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
             await selectStatsPlayer(page, fixture.rowName);
-            await expect(page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true })).toHaveValue("9");
+            // ADMIN-RE-11c: 9 saved by hand, then the match went from 3 to 8 goals: 9 + 5.
+            await expect(page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true })).toHaveValue("14");
           }
           if (route === "standings") await expect(page.getByRole("textbox", { name: "Team name", exact: true })).toHaveValue(`Guided QA team ${fixture.suffix}`);
           if (route === "analytics") {
