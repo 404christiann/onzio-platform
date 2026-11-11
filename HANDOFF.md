@@ -1,14 +1,21 @@
 ## 2026-11-10 - ADMIN-RE-11c-1 Season totals add up from player numbers (migration)
 
-- **Status:** `in_progress`, PR open, needs `GATE-MIGRATE` (Christian approves).
-  Part 1 of 2; part 2 (the "Who played and scored?" step) has no migration.
+- **Status:** `released` 2026-11-11. Migration
+  `20261110220000_season_totals_add_up.sql` applied to production from
+  Christian's Mac at his request (`GATE-MIGRATE`, 06:57 UTC), then PR #137
+  merged (`48089c29`) and deployed; smoke checks passed (every Diverse City
+  domain returns 200 with no `UNKNOWN_TENANT`; `/programs`, `/roster`, `/shop`
+  200; the live roster shows the same totals as before). No total moved. No
+  change to `lib/club-context.ts`. Part 1 of 2; part 2 (the "Who played and
+  scored?" step) has no migration.
 - **What it changes:** a player's season totals are now their saved player
   numbers added up over the season's games, plus a hand-entered adjustment
   (decision 0001). New adjustment tables and totals views; `played` on player
   numbers. Every reader of totals moved to the views: public roster, Seasons
   hub, analytics, the classic Season stats page and roster panel (those two now
   save what is typed as the adjustment).
-- **Visitors see at merge:** the same totals as today. Christian's decision
+- **Visitors saw at merge:** the same totals as before (checked on production:
+  0 totals moved). Christian's decision
   ("Keep today's numbers"): adjustment = typed − games, negative allowed, so
   nothing moves. From then on, entering a game's player numbers adds to the
   totals. The public match log lists games a player played in (same 9 rows on
@@ -18,7 +25,11 @@
 - **Verification:** database (with a migration replay), unit, contract and
   browser tests; results with the tested commit in the PR body. Details in
   `STATUS.md`.
-- **Exact next step:** review bot, `GATE-MIGRATE`, merge; then 11c-2.
+- **Exact next step:** 11c-2, the "Who played and scored?" step after Enter a
+  score (design `cd-after-game`), the "2 of 3 goals added" warning, "Later"
+  in the hub's Games card, and "N from games, N added by hand" with an
+  adjustment editor; no migration. The typed numbers in `*_season_stats` are
+  dropped in a later migration once both clubs accept.
 
 ## 2026-11-10 - ADMIN-RE-12b Programs and tryouts take their state from the sign-up way and the date
 
