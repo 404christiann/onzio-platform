@@ -137,6 +137,573 @@ projects ignore, so whichever lands second must switch it to `--project`
 **Exact next step:** Christian reviews the draft PR and decides whether to keep
 the workflow commit and whether the check is required.
 
+## 2026-11-10 - Operator hard purge made safe (one transaction, Storage after commit)
+
+**Agent/package:** Claude Code, operator purge fix (not an ADMIN-RE package;
+follow-up to the Lions removal, which found `lib/operator/purge-club.ts`
+unusable). Branch `claude/sweet-cohen-eea328` from `main` `428a1590`, merged with `main` `29c2da89`.
+**Status:** `in_progress`, PR open. **Has a migration**
+(`20261111080000_purge_archived_club.sql`), so it needs `GATE-MIGRATE` before
+merge. Adds two functions; changes no table and no row. Nothing hosted was
+touched.
+
+**What was wrong:** the purge deleted Storage first, then one table at a time
+over PostgREST, from Phase 2 table lists. Newer club tables have RESTRICT keys
+to `onzio.clubs` and the presentation history refuses deletes, so it would
+stop half way with the media already gone. Its contract test covered only the
+simulation path.
+
+**Completed work:**
+
+- `onzio_private.purge_archived_club` (security definer, empty search path,
+  service_role only through the `onzio.purge_archived_club` wrapper): the
+  Lions transaction made reusable. One transaction: lock the club row; check
+  slug confirmation, archived, no active domain, no live Stripe subscription,
+  no Connect account that can take payments (`charges_enabled`), verified
+  export for this club and slug; lock every club table against writes (reads
+  continue) so the other-clubs check holds on a live database; delete children
+  first with the presentation immutability triggers lifted for the
+  transaction only; refuse on an unknown club table holding rows; delete the
+  club (private receipts cascade, audit and Stripe history kept with club_id
+  null); check nothing is left and every other club's per-table count is
+  unchanged; mark the export purged; write one `hard_purge` audit event with
+  per-table counts.
+- `lib/operator/purge-club.ts`: keeps its guards (export id, direct operator
+  invocation, operator TOTP session), calls the function once, then removes
+  `<club_id>/` from both buckets. A Storage failure after commit reports
+  `PURGE_STORAGE_FAILED`; running the purge again with the same export and
+  slug returns `already_purged` from the database and retries only Storage.
+- Tests: `tests/database/purge-archived-club.test.ts` (fills every club table
+  for an archived club, purges as service_role, proves every table empty,
+  ledgers kept, one audit event, other clubs' rows byte-identical by digest,
+  triggers back on; each guard; unknown table; a trigger leaking into another
+  club; browser roles refused; the retry). Contract tests now cover the real
+  path with a fake client (one RPC, refusals pass through with Storage
+  untouched, Storage only after commit, the retry).
+- `admin-reimagined-league.test.ts` and `admin-reimagined-sponsors.test.ts`
+  list the migrations allowed after theirs; the new one is added (the same
+  as RE-15 did in #128).
+
+**Verification:** on a private throwaway database (`supabase/postgres:15.8.1.085`,
+port 54998, all 63 migrations plus seed; the shared contracts database was
+being reset by other sessions): `purge-archived-club.test.ts` 11/11.
+`provisioning-migration.test.ts` 35/35. `tsc --noEmit` clean; ESLint clean
+on the changed files. Wider suites are in the PR body.
+
+**Blockers / decisions:** (1) the Connect guard blocks only when
+`charges_enabled`. Christian decided on 2026-11-11 to keep it that way: a
+linked account that can't take payments is purged with the club.
+(2) RE-11c's unmerged migration `20261110160000_season_totals_add_up.sql`
+adds `player_season_adjustments` and `goalkeeper_season_adjustments`. They
+cascade from the season stats rows, so the purge still empties them, but
+whichever PR merges second must add fixture rows for them to the purge test
+(and may list them in `v_order` before the season stats).
+
+**Review-bot Mediums on #138 (fixed):**
+
+- M1: the `hard_purge` event said Storage was removed before it was. It now
+  records `storage: pending`. `purgeClub` writes a `hard_purge_storage` audit
+  event (club_id null, resource_id the club) after the files go
+  (`status: removed`, `objects_removed`). If the removal fails, it writes
+  `status: failed` with the objects removed so far and the error before
+  raising `PURGE_STORAGE_FAILED`, so "purged but files still up" can be found
+  by query. Contract tests cover the removed record, the failed record, and
+  a failure that can't be recorded.
+- M2: `lib/database.generated.ts` regenerated from the private database with
+  the migration applied (`supabase gen types typescript --db-url ... --schema
+  onzio`). The diff is only the new `purge_archived_club` entry.
+- Verification after the fixes: database test 11/11 (private database),
+  `provisioning-migration` 36/36, tsc and ESLint clean. The unit and contract
+  totals are in the PR body.
+
+**After the bot's re-review at `5755d30` (0 High, 0 Medium; 2026-11-11):**
+
+- Merged `main` `9e18c143` (RE-12b, migration `20261110180000` already on
+  production). Its new `onzio_private.sign_up_settings_receipts` cascades
+  with the club; the purge test caught the missing fixture row as designed,
+  and it now has one. The RE-11b and RE-15 migration-order lists now name
+  both RE-12b's and this migration.
+- Low 1: if the files are removed but the `hard_purge_storage` record can't
+  be written, `purgeClub` now raises `PURGE_STORAGE_UNRECORDED` (a contract
+  error that says the purge worked and a rerun records it), not a plain
+  `Error`. Contract test added.
+- Low 2: the checks that read other tables (active domain, live
+  subscription, Connect `charges_enabled`, verified export) now run after
+  the table locks, so nothing they read can change before the deletes. The
+  slug and archived checks stay before the locks, on the locked club row.
+- Not changed: a `statement_timeout` set on the function would not apply to
+  the statement already running it; the caller's role timeout still bounds
+  the call, and a timeout rolls the whole purge back. The Connect guard rule
+  stays as is (Christian, 2026-11-11: block only while it can take payments).
+- Verification: purge database test 11/11 (private database with every
+  migration on the branch), types regenerated and identical, contract tests
+  61/61 for the three touched files, tsc clean. Full unit and contract
+  totals in the PR body.
+
+**Exact next step:** bot review; `GATE-MIGRATE` on Christian's go, then merge.
+No purge runs on production without Christian's go.
+
+## 2026-11-10 - ADMIN-RE-11c-1: season totals add up from player numbers (migration)
+
+**Agent/package:** Claude Code, `ADMIN-RE-11c` part 1 of 2 (11c-1 migration, no new
+screens; 11c-2 the "Who played and scored?" step, no migration). Branch
+`claude/admin-re-11c-totals` from `main` `8fa59263`.
+**Status:** `released` 2026-11-11 (PR #137, merge `48089c29`). **Carried a migration**
+(`20261110220000_season_totals_add_up.sql`), applied to production before the merge.
+Nothing added to the tenant select in `lib/club-context.ts`. No new dependency.
+
+**Release record:** `GATE-MIGRATE` ran from Christian's Mac at his explicit request
+("Yes, gate then merge"), following `docs/agents/review-bot-supabase.md`, on the reviewed
+head `2e8fe468` (onzio-coder: no High or Medium issues; the Evidence table's tested
+revision was the same head). Before: the ledger had only this migration pending; the
+read-only snapshot was clubs 2, verified production domains 4, audit events 955, season
+rows 41 + 5, game rows 81 + 11 (9 with anything entered), and typed-total checksums
+15,152 / 1,569; recovery point: completed physical backup `2224451539` (2026-11-10
+11:20 UTC) plus restricted logical dumps of `onzio` and `onzio_private` (SHA-256 on
+#137), deleted after the checks passed; code rollback target
+`dpl_4RrG8ye8p1fFMpqK7PoJgQxyKwAT`; the dry run listed only this migration. Applied
+with `supabase db push --linked --skip-vault` (CLI 2.122.0) at 06:57 UTC, 2026-11-11.
+After: the ledger matches, a second dry run says up to date, and the history row is
+present. Counts and checksums are unchanged. `played` is set on the 9 rows with anything
+entered. Adjustments are 37 + 4, matching the production check, and 0 totals moved
+(every totals-view row equals the typed totals). Audit events rose by 50 (41 inserts + 9
+updates). The linked types match the committed file apart from the newer CLI's
+formatting. #137 was merged at 06:58 UTC, pinned to the migrated head. Production
+deployment `dpl_E8FrTaTvXn4YGaGF5uKsXdSBBpjM` was Ready. Smoke checks passed: all three
+Diverse City domains return 200 with no `UNKNOWN_TENANT`; `/programs`, `/roster` and
+`/shop` return 200, and the live roster renders the same totals as before. Rose City's
+`/` is 404 from the public-site hold (by design) and its `/admin/login` returns 200.
+`hold` removed after the checks.
+
+**Decision 0001, as built:** a player's season totals are the sum of their saved
+player numbers for the season's games plus a hand-entered adjustment.
+
+- New tables `onzio.player_season_adjustments` / `onzio.goalkeeper_season_adjustments`
+  (one row per player and season, keyed to the season's totals row, cascade with it;
+  RLS, grants, audit and `updated_at` triggers like the other roster tables).
+- New views `onzio.player_season_totals` / `onzio.goalkeeper_season_totals`
+  (`security_invoker`): every totals row, games added up plus the adjustment, never
+  below 0, plus `games_played`. Same column names as the totals tables.
+- `played` on `player_match_stats` / `goalkeeper_match_stats` (group 1 decision 7): any
+  number above 0 sets it (trigger); it can be set on its own. Backfilled true where
+  anything was entered. The public match log (and the new admin's player page, which
+  reuses it) lists games with `played`, not games with minutes above 0.
+- The typed numbers in `*_season_stats` are not changed. Their rows still say who is in
+  a season; the app no longer reads their numbers. Kept until the slice is accepted on
+  both clubs (plan risk 5), and old code between `GATE-MIGRATE` and the deploy keeps
+  showing the right totals.
+
+**Christian's decision (2026-11-10, "Keep today's numbers"):** adjustments may be
+negative. The migration sets each adjustment to typed − games, so every total visitors
+see stays exactly as it is; no test rows deleted. Limits: every number of an
+adjustment within ±9,999 (database CHECK and Zod; largest typed season minutes on
+production 990, largest other typed number 31). A save that would take a total below 0 is refused
+(`SEASON_TOTAL_BELOW_ZERO`, trigger); the views never show a total below 0.
+
+**Production check (read-only, Christian, 2026-11-10):** 7 player-seasons had a typed
+number below what their games give (Diverse City 2, Rose City 5); 83 of 92 saved
+player-number rows were all-zero "Save all" rows and only the 9 rows with minutes had
+any number, so the public match log shows the same games before and after.
+
+**Who reads totals now:** public roster (`fetchRoster`), the Seasons hub and its delete
+check, the new admin's analytics (and so the player page's chart), the classic Season
+stats page, the classic roster's per-player panel and the classic Seasons page's delete
+check (otherwise a season whose totals were typed after this change would look empty).
+
+**Who writes adjustments:** the classic Season stats page and the classic roster's
+per-player panel. They still show totals and let the owner type one; the save keeps
+typed − the season's match stats (read at save time) as the adjustment, and gives a
+player shown for the season their season row first, as before.
+
+**Files changed:** `supabase/migrations/20261110220000_season_totals_add_up.sql` (new),
+`lib/database.generated.ts`, `lib/season-totals.ts` (new), `lib/season-totals-save.ts`
+(new), `lib/admin-data-contract.ts` (totals views read-only, adjustment schemas),
+`lib/queries.ts`, `lib/admin-seasons-data.ts`, `lib/admin-analytics-data.ts`,
+`lib/operator/purge-club.ts`, `components/admin/reimagined/SeasonsHub.tsx`,
+`components/admin/stats/SeasonStatsEditor.tsx`, `components/admin/ClassicSeasonsPage.tsx`,
+`app/admin/(protected)/roster/page.tsx`,
+`scripts/import-rose-city-local.ts` (local import keeps the export's typed totals),
+`tests/database/season-totals-add-up.test.ts` (new),
+`tests/contracts/season-totals-add-up.test.ts` (new), `tests/helpers/season-adjustments.ts`
+(new), `tests/helpers/academy-coordination-content.ts`,
+`tests/contracts/admin-reimagined-{seasons,analytics}.test.ts`,
+`lib/__tests__/queries.test.ts`, `tests/browser/admin-guided-{management,stats-workspace,stats-discard}.spec.ts`,
+`tests/browser/admin-loading-stats.spec.ts`,
+`tests/browser/admin-reimagined-{players,analytics}.spec.ts`, this file, `HANDOFF.md`.
+
+**Verification:** see the PR body (results table with the tested commit). The database
+test replays the migration on production-shaped rows and pins that a typed total below
+what the games give stays the same.
+
+**Review bot (first pass on `082eabd9`):** one Medium, the results table was still
+"running" (filled in). Low 1 fixed: the two below-0 check functions are `security invoker`,
+so a refused save never tells a stranger anything about a club whose roster isn't public.
+Lows 2 and 3 left as they are: a player added to the season by a save whose adjustment is
+then refused keeps their season row (the error shows), and a classic Season stats edit
+made between `GATE-MIGRATE` and the deploy is lost (freeze admin edits during the gate).
+
+**Renamed (2026-11-10, Christian's "Yes, start it" via the new orchestrator):** the
+migration was `20261110160000_season_totals_add_up.sql`; production already has RE-12b's
+`20261110180000`, so `db push` would refuse an older name. It is now
+`20261110220000_season_totals_add_up.sql`, after RE-12b's `20261110180000` and the purge
+PR #138's `20261110210000`, so the order holds whichever merges first. Contents unchanged.
+`main` `cbb751b4` (#139) merged in.
+
+**Blockers/decisions:** none open. Not done here: the old Match stats
+page leaves `played` set when every number of a row is put back to 0 (it never sends
+`played`); the new step in 11c-2 sets it explicitly.
+
+**Next step:** 11c-2 (no migration): the "Who played and scored?" step after Enter a
+score (design `cd-after-game`), saving `played` explicitly; the "2 of 3 goals added"
+warning with "Own goal or not sure"; "Later" leaves the game in the hub's Games card
+("N games need player numbers", group 1 decision 11); "7 goals: 5 from games, 2 added by
+hand" with an adjustment editor on the new admin (decision 3).
+
+
+## 2026-11-10 - ADMIN-RE-12b: programs and tryouts take their state from the sign-up way and the date
+
+**Agent/package:** Claude Code, `ADMIN-RE-12b` (the second of three RE-12
+PRs; 12a #131 is the Programs words test, 12c the "Programs and tryouts"
+page). Branch `claude/admin-re-12b-sign-up-state` from `main` `428a1590`.
+**Status:** `released` 2026-11-11 (PR #139, merge `cbb751b4`). **Carried a
+migration** (`20261110180000_programs_tryouts_sign_up_state.sql`), applied to
+production before the merge. It rewrites no rows. No change to
+`lib/club-context.ts`.
+
+**Release record:** `GATE-MIGRATE` ran from Christian's Mac at his explicit
+request ("Yes, run the gate"; "Yes, finish it" for the wrap-up), following
+`docs/agents/review-bot-supabase.md`, on the reviewed head `5854b548`.
+
+- **Before the apply:**
+  - onzio-coder reported no High or Medium issues;
+  - the runner table's tested revision was that head, with `test:db` 1093
+    passed after a fresh reset;
+  - the ledger had only this migration pending;
+  - the read-only snapshot: clubs 2, verified domains 6, audit events 955,
+    tryouts 1, programs 4, forms 0, registrations 0;
+  - recovery point: completed physical backup `2224451539` (2026-11-10 11:20
+    UTC), plus restricted logical dumps of `onzio` and `onzio_private` (SHA-256
+    recorded on #139). The dumps were deleted after the checks passed;
+  - code rollback target: `dpl_6hsWd7yQUxViVH8KusMXY6Sdx88k`;
+  - the dry run listed only this migration.
+- **Apply:** `supabase db push --linked --skip-vault` (CLI 2.122.0) at
+  04:01:56 UTC, 2026-11-11.
+- **After the apply:**
+  - the ledger matches, and a second dry run says up to date;
+  - the history row is present, and the five new columns exist with no
+    non-default value;
+  - every snapshot count is unchanged;
+  - the linked types match the committed file apart from the newer CLI's
+    formatting.
+- **Merge and deploy:** merged pinned to `5854b548` as `cbb751b4`. Production
+  deployment `dpl_7duVwQ4RjzLuLKF7N39THgWCxC2r` is Ready; Vercel didn't report
+  its commit, and it was created at 04:03 UTC, a minute after the merge.
+- **After-deploy checks:**
+  - HTTP 200 with no `UNKNOWN_TENANT` from `diversecityfc.com`,
+    `www.diversecityfc.com`, `diverse-city-fc-private.vercel.app`, Diverse
+    City `/programs`, `/roster`, `/shop`, `/tryouts`, and
+    `onzio-platform.vercel.app/admin/login`;
+  - `onzio-platform.vercel.app/` returns 404 by design;
+  - Diverse City's past tryout ("UPSL Fall Tryouts 2026", Sept 3) shows
+    **closed**, with only "Contact the club".
+  - `hold` was removed from #139 afterwards.
+
+The full record is the gate comment on #139.
+
+**Completed work:**
+
+- **Migration**, additive:
+  - `tryouts.hidden`, `tryouts.sign_up_by_contact`,
+    `tryouts.stays_open_after_date` (cleared by a trigger when the date
+    changes);
+  - `programs.sign_ups_closed`, `programs.sign_up_by_contact`;
+  - a strictly advancing `tryouts.updated_at`, the same function programs use;
+  - the 500-tryout cap on every insert path (statement trigger);
+  - `onzio_private.club_today` (Los Angeles if the zone is unusable, like
+    `clubToday`);
+  - `onzio_private.registration_form_accepting` and a `before insert` trigger
+    on `registrations` that refuses a new pending sign-up while every program
+    or tryout using the form is hidden, closed or past its date. A form nobody
+    uses is unaffected; paid rows from imports are never refused;
+  - `onzio.registration_form_accepting` (security invoker, service role only);
+  - the RPCs for 12c (`save_tryout`, `save_program_sign_up`, `copy_program`,
+    `copy_tryout`, `delete_tryout`), each with a receipt table
+    (`onzio_private.sign_up_settings_receipts`), optimistic `updated_at`
+    checks, and decision 12 (a form used elsewhere is refused).
+  - The definer functions are all in `onzio_private` with `search_path=''`.
+- **Reads:**
+  - `lib/sign-up-state.ts`: the state rule, the price words and the date
+    order.
+  - `lib/queries.ts`: `mapTryout` takes the club's date. Closed (by the owner
+    or the date) drops the form and link and keeps the contact fallback. The
+    printed word follows the state. Cost is the form price with an open form.
+    `fetchTryouts` leaves hidden tryouts out and sorts by date.
+    `mapProgram`: closed hides the form and link; "They contact you" gives a
+    `contactCta`.
+  - `app/_clubs/[slug]/tryouts`: reads the club's time zone
+    (`readPublicClubTimeZone`).
+  - `AcademyProgramDetailPage`: the closed and contact bands.
+  - The classic tryouts preview and the legacy page pass the club's date.
+  - The classic dashboard leaves hidden tryouts out.
+- **Sign-ups:** `loadOpenRegistrationForm` asks
+  `registration_form_accepting` and answers `REGISTRATION_FORM_CLOSED`, so
+  the form page shows "Registration closed".
+- **Classic Tryouts editor:** "Status" becomes "Sign-ups": "Open, closes by
+  itself the day after its date" or "Closed". A tryout stored as Upcoming
+  shows as open and saves unchanged.
+- **Decision 7:** the cap stays. `save_tryouts_page` already refused more
+  than 500 events and must list every row, but `/api/admin/data` and direct
+  writes went around it, so the trigger closes those.
+
+**Christian's decisions (2026-11-10, through the orchestrator):**
+
+- The production check (read-only, counts only) found: no form stops taking
+  sign-ups, no badge word changes, no club near 500. **Two past tryouts close
+  at deploy** (1 Diverse City, 1 Lions): "Yes, close them". No reopen step is
+  needed after the deploy.
+- **Date order moves 2 of Lions' 3 tryouts.** Christian: "the lions page in
+  general is irrelevant as they are not current customers nor will they be
+  future customers. Lets remove them entirely later. But anything regarding
+  lions we shouldnt need to worry about it." No Lions-specific handling,
+  beyond not failing on its data.
+
+**Verification:** `tests/database/programs-tryouts-sign-up-state.test.ts` (19
+tests, on a fresh `supabase db reset --local`),
+`lib/__tests__/sign-up-state.test.ts` and the updated contracts. The full
+suites, with the commit they ran on, are in the PR body.
+
+**Blockers:** none. RE-11c-1 (#137, migration `20261110160000`) now sorts
+before a migration production already has, so it must re-time its file to
+sort after `20261110180000` and re-run `test:db` before its own gate.
+
+**Exact next step:** 12c (the "Programs and tryouts" page), when the
+orchestrator says go. The drafts are in the shared notes folder
+(`re-12c-draft/`).
+
+
+## 2026-11-10 - About/Logo save browser test: clean-up restores "no row"
+
+**Agent/package:** Claude Code, test fix found while checking the Lions PR
+(#134); no work-package ID. Branch `claude/busy-maxwell-fdae7f` from `main`
+`428a1590`.
+**Status:** `in_progress`, PR open. Test only: no product, API, migration or
+hosted change.
+
+**What was wrong:** `public-page-about-save.spec.ts`, case "About reconciles
+committed-500 ...", failed in its clean-up with `INVALID_ABOUT_DESTINATION`.
+Seeded Alpha has **no** About or Logo row, so the baseline snapshot's
+`content` is `null`. The test rebuilt it from `EMPTY_ABOUT_PAGE_CONTENT`,
+whose closing button is `""`, and the API (correctly) refuses that. `/schedule`
+was never a seeded row: it is Academy's fixed closing button
+(`components/sites/diverse-city/site-definition.ts`), which the editor always
+sends. The editor never sends `""`: without a fixed button it keeps Save off
+until a listed page is picked. So the API rule stays as it is. Only the first
+case failed because its failed clean-up left a `/schedule` row behind, which
+later cases then snapshot and restored. The first Logo case only passed
+because of that leftover row.
+
+**Completed work:** in `tests/browser/public-page-about-save.spec.ts`, a
+`restore()` helper deletes the page's row when the baseline had none and
+otherwise writes the baseline back. The concurrent case's "other admin" save
+uses Academy's `/schedule`. The first Logo case (Alpha on Clubhouse, no fixed
+button) picks "Button goes to" `/schedule` before saving About when no row
+exists, as an admin must.
+
+**Files changed:** `tests/browser/public-page-about-save.spec.ts`, this file.
+
+**Verification:** production build at `http://alpha.localhost:3110`, all runs
+under `scripts/with-local-db-lock.sh`, Alpha starting with no About/Logo row.
+Before (spec at `main`): 1 failed (`INVALID_ABOUT_DESTINATION`), 6 passed, and
+the run left an About row and a Logo row behind. After: 7 passed, twice in a
+row, and Alpha ends with no About or Logo row both times. `tsc --noEmit` clean.
+
+**Blockers:** none.
+
+**Next step:** review and merge the PR.
+
+
+## 2026-11-10 - ADMIN-RE-24c: search on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24c (last of four; built
+after 24d so players open their pages). Branch
+`claude/admin-re-24c-search-v2` from `main` `8fa5926` (24d #129 merged).
+**Status:** `in_progress`, PR open for the review bot. **One new dependency: `cmdk`
+1.1.1** (exact; the lock gains only cmdk and its own Radix packages). No
+migration, no hosted action.
+
+**Completed work:**
+
+- Search (design `admin-plain-search-two-clubs.html`): cmdk inside a Base UI
+  Dialog with `modal="trap-focus"`. A box at the top of the sidebar and ⌘K /
+  Ctrl+K on a laptop (a centered panel); the magnifier by the avatar on a phone
+  (full screen, Cancel). No animation; the query resets on close.
+- It lists every job, tab page and page the person can open (built from the
+  route manifest after its visibility rules, each page with its tab as a
+  hint), the club's players (opening their page under Games) and the next five
+  games (opening the Games page). Hidden pages never reach the browser.
+- cmdk's fuzzy filter is replaced by `plainFilter`: the start of a name, then
+  the start of any word, then anywhere; other words only weakly. "sam" finds
+  Sam Okafor and not "Sign-up forms".
+- From the bot's review of #132: picking a search result now goes through the
+  same unsaved-changes check as the tabs (Your club, Sponsors and the homepage
+  editor ask first), and players are listed only while a season is shown,
+  since their pages need one.
+
+**Files changed:** `lib/admin-search.ts` (new), `lib/admin-tab-page.ts`
+(`readSearchExtras`), `app/admin/(protected)/layout.tsx`,
+`components/admin/reimagined/AdminSearch.tsx` (new),
+`components/admin/reimagined/search.module.css` (new),
+`components/admin/reimagined/ReimaginedShell.tsx`, `package.json`,
+`package-lock.json`, `tests/contracts/admin-search.test.ts` (new),
+`tests/contracts/{admin-portal-switch,admin-reimagined-home}.test.ts`,
+`tests/browser/admin-reimagined-search.spec.ts` (new), this file,
+`HANDOFF.md`. The classic admin's `AdminRouteSearch` is unchanged.
+
+**Verification:** contract tests (ranking, "sam", visibility for helpers and
+other clubs, the dialog and filter wiring, server-built list) and browser
+tests at 390 and 1440, light and dark, plus a helper. Full suites on the PR
+head, with the tested commit, are in the PR body.
+
+**Blockers / decisions:** none new.
+
+**Exact next step:** the bot merges 24c. Then ADMIN-RE-24 is built;
+Christian walks it on Rose City.
+
+
+## 2026-11-10 - ADMIN-RE-12a: the Programs words browser test, made steady
+
+**Agent/package:** Claude Code, `ADMIN-RE-12a` (the first of three RE-12
+PRs; 12b is the sign-up state migration, 12c the "Programs and tryouts" page).
+Branch `claude/admin-re-12a-programs-words-test` from `main` `706620ef`.
+**Status:** `in_progress`, PR open for the review bot. Test and one editor
+focus fix only: no migration, no change to `lib/club-context.ts`, no hosted
+action.
+
+**What was wrong:** RE-22's "Programs page words are editable on the page"
+browser test at 1440 failed now and then. Two runs of 20 (40 tests each, both
+portals) on the unchanged test reproduced it three times, with two separate
+causes. Neither one is the editor losing what was typed. In every failed run
+the field held the headline right after typing.
+
+- **A slow save.** On a busy machine the page's first reads took 2.2 s and the
+  save took longer than the test's 5 s wait for "Page copy saved". The test
+  failed and its clean-up deleted the row. Then the slow save landed and wrote
+  the headline back. So the next run opened with the headline already stored,
+  typing it changed nothing, and Save stayed disabled until the 60 s timeout.
+- **The public page once showed the standard words 7 ms after the save.** The
+  trace shows the save answered with the headline stored before `/programs`
+  was requested, and the page rendered the defaults. 300 direct write-then-fetch
+  probes against the same build (with and without the owner's sign-in) never
+  reproduced it. Cause not found.
+- **A focus race in the editor, fixed.** A click on the page's heading focused
+  the first field of the words box one frame later. That field is "Eyebrow",
+  and during the panel switch it can even be the outgoing section's first
+  field. The late focus could land between Playwright focusing "Headline line
+  1" and typing into it.
+
+**Completed work:**
+
+- `app/admin/(protected)/programs/page.tsx`: after a click on the page's
+  heading or closing band, the words box takes the cursor in an effect that
+  runs once React has drawn the clicked section (no frame timer). The cursor
+  goes to that section's first field (`data-page-copy-section`), and never
+  away from a field in the words box that already has focus.
+- `tests/browser/admin-reimagined-diverse-city.spec.ts`:
+  - clears the stored words before it starts, as well as after;
+  - waits until the words box shows only the page header section and the
+    cursor is in its first field, then types;
+  - checks the typed value;
+  - waits up to 20 s for "Page copy saved", the same as the page's first load;
+  - checks the stored row in the database;
+  - then requires the public page to show the headline on its first render.
+    With the stored row proved, a failure there points straight at a stale
+    public page. Review-bot M1 on #131: an earlier version allowed one
+    reload, which could hide a real bug, so it was taken out.
+
+**Verification:**
+
+- On the unchanged test, two runs of 20 at 1440 (40 tests each, both portals)
+  gave 1 failure and then 2 failures, the causes described above.
+- The first version of the fix (with the one-reload allowance) went 40 of 40
+  at 1440, twice. The final version (no reload, focus by effect, the cursor
+  checked before typing) is repeated 20 times per portal at both 390 and 1440
+  on the PR head. Those counts, and the commit they ran on, are in the PR
+  body (review-bot M1 on `fd77598`).
+- tsc, lint on the changed files, vitest without `tests/database`, `npm run
+  build`, and the `admin-reimagined` and `admin-guided` browser configs. The
+  results, with the commit they ran on, are in the PR body.
+
+**Blockers:** none. **Open item:** the one public `/programs` render that
+showed the standard words 7 ms after a stored save (2026-11-10) is
+unexplained. The test now fails on it with a clear cause if it happens again;
+then check how `/programs` reads `fetchProgramsPageContent`
+(`lib/queries.ts`).
+
+**Exact next step:** bot review and merge (no gate).
+
+## 2026-11-10 - Lions removed (production data, then repo code)
+
+**Agent/package:** Claude Code, Lions removal (not an ADMIN-RE package; asked
+for by Christian on 2026-11-10 because Lions is not a customer). Branch
+`claude/remove-lions-code` from `main` `8fa5926`.
+**Status:** production removal `done`; repo cleanup `in_progress`, PR open.
+No migration, no deploy, no hosted change from this PR.
+
+**Completed work:**
+
+- Production: read-only counts, backup on Christian's Mac, one guarded SQL
+  transaction (audit event 961, 94 rows plus the club, counts equal to the
+  read-only counts), 13 Storage photos deleted after checking them against the
+  backup, clean post-check and smoke checks. Details in `HANDOFF.md`.
+- Repo: removed the Lions importers, planner, standings seed, four package
+  scripts, two contract tests, an unconfigured browser spec and two Lions docs.
+  Clubhouse copy uses the club's name or neutral wording instead of Lions,
+  Columbus, Capital City, Scioto Field and Founded 2014. `Nav.tsx` constants
+  renamed to `clubhouseNavLinks` and `clubhouseAffiliations`.
+
+**Files changed:** `components/{ClubhouseAboutPage,ClubhouseHomePage,ClubhousePlayerProfilePage,ClubhouseShopPage,ClubhouseSponsorsPage,Nav}.tsx`,
+`lib/__tests__/admin-data-contract.test.ts` (fixture wording), `package.json`,
+`HANDOFF.md`, this file. Deleted: `lib/migration/lions-media-{local-import,plan}.ts`,
+`scripts/{import-lions-media-local,import-lions-media-staging,plan-lions-media-import,seed-lions-standings-local}.ts`,
+`tests/contracts/lions-media-{import-plan,local-import}.test.ts`,
+`tests/browser/lions-roster.spec.ts`, `docs/lions-fc-launch-plan.md`,
+`docs/phase-9/lions-media-import-plan.json`.
+
+**Verification:** tested revision `1326604c` (code); the head adds only this
+ledger and `HANDOFF.md`, which no test reads. Run in this worktree; browser
+runs under `scripts/with-local-db-lock.sh` against a production build at
+`http://alpha.localhost:3110`, local database reset to this branch first.
+
+- TypeScript `npx tsc --noEmit`: pass.
+- ESLint on `app`, `components`, `lib`, `packages` (with `--no-eslintrc -c
+  .eslintrc.json`, since `npm run lint` refuses to run from a nested worktree):
+  0 errors, 1 warning in untouched `app/(public)/sponsors/page.tsx`.
+- Unit and contract `npx vitest run --exclude 'tests/database/**'`: 232 files,
+  3,101 passed, 1 skipped, 12 failed. All 12 were 15 s timeouts in
+  `pilot-accepted-build-identity` and `pilot-owned-scope` while the machine's
+  load average was 24 to 54. Those two files rerun alone at lower load: 47/47.
+- Production build `npm run build`: pass.
+- Homepage browser (`playwright.homepage.config.ts`): 62 passed, 1 failed
+  (`resizing an open tablet navigation...`, preview heading not visible within
+  5 s); that test passed on rerun.
+- Page editors browser (`playwright.public-page-editors.config.ts`): 36 passed,
+  1 failed (`About reconciles committed-500...`: its cleanup write is refused
+  with `INVALID_ABOUT_DESTINATION`). It fails the same way on a clean `main`
+  `8fa5926` build, so it is not from this PR.
+- Database suite: not run; no migration, seed or SQL change.
+
+**Follow-up (bot's Low notes on #134):** removed the empty
+`clubhouse-story-meta` box and its CSS (it drew a stray divider), and the
+Clubhouse About story mark falls back to empty instead of "14". Checked with
+`tsc`, ESLint, contracts 151 files / 1,945 tests, `npm run build`, and
+`homepage-editor-templates.spec.ts` 2/2 under the database lock.
+
+**Blockers / decisions:** staging's own Lions tenant waits for Christian's go.
+`lib/operator/purge-club.ts` is out of date (Phase 2 table list, Storage first,
+not transactional) and should be fixed before it is used for any club.
+
+**Exact next step:** the bot reviews the PR.
+
 ## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so

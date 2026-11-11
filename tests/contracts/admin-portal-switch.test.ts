@@ -79,7 +79,7 @@ describe("the admin reads the switch fail-safe", () => {
     expect(layout).toContain("const portal = await readAdminPortal(supabase, club.id);");
     expect(layout).toMatch(/let shell: [^\n]* \| null = null;\s*if \(portal\.portal === "reimagined"\) \{/);
     expect(layout).toMatch(
-      /<AdminPortalProvider settings=\{portal\} isOwner=\{club\.role === "owner"\}>[\s\S]*\{shell \? \(\s*<ReimaginedShell tabs=\{shell\.tabs\} targets=\{shell\.targets\} dots=\{shell\.dots\}>\s*\{children\}\s*<\/ReimaginedShell>\s*\) : \(\s*<AdminShell>\{children\}<\/AdminShell>\s*\)\}\s*<\/AdminPortalProvider>/,
+      /<AdminPortalProvider settings=\{portal\} isOwner=\{club\.role === "owner"\}>[\s\S]*\{shell \? \(\s*<ReimaginedShell tabs=\{shell\.tabs\} targets=\{shell\.targets\} dots=\{shell\.dots\} search=\{shell\.search\}>\s*\{children\}\s*<\/ReimaginedShell>\s*\) : \(\s*<AdminShell>\{children\}<\/AdminShell>\s*\)\}\s*<\/AdminPortalProvider>/,
     );
   });
 });

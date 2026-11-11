@@ -48,7 +48,7 @@ describe("DCFC-304 reusable public route acceptance", () => {
       "fetchPrograms(club.id, onzio)",
       "fetchProgramBySlug(club.id, programSlug, onzio)",
       "fetchContactContent(club.id, onzio)",
-      "fetchTryouts(club.id, onzio)",
+      "fetchTryouts(club.id, onzio, today)",
     ]) {
       expect(joined).toContain(query);
     }

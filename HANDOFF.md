@@ -104,6 +104,177 @@
   than the cumulative test time (43 s). Further speedups there were not
   investigated.
 
+## 2026-11-10 - Operator hard purge made safe
+
+- **Status:** `in_progress`, PR open. **Has a migration**
+  (`20261111080000_purge_archived_club.sql`, two functions, no table or row
+  change), so `GATE-MIGRATE` before merge. Nothing hosted touched.
+- **What changed:** `purgeClub` now calls one security-definer function that
+  does the whole database purge in one transaction (the Lions transaction,
+  reusable): guards under lock, every club table locked against writes,
+  children-first deletes with the presentation triggers lifted for that
+  transaction only, refusal on an unknown club table, other clubs' counts
+  checked, export marked purged, one `hard_purge` audit event. Storage is
+  removed only after commit; a Storage failure can be retried by running the
+  purge again (`already_purged`).
+- **Verification:** new database test 11/11 on a private throwaway database
+  (every club table filled, other clubs byte-identical), contract tests 35/35,
+  tsc and ESLint clean. Details in `STATUS.md` and the PR body.
+- **Decided (Christian, 2026-11-11):** a linked Stripe Connect account blocks
+  the purge only while it can take payments (`charges_enabled`).
+- **Open:** RE-11c's season adjustment tables need fixture rows in the purge
+  test once both PRs are in.
+- **Review-bot Mediums fixed:** the Storage outcome now has its own
+  `hard_purge_storage` audit event (removed or failed; the main event says
+  `pending`), and `lib/database.generated.ts` has the new function.
+- **Bot re-review (0 High, 0 Medium) Lows fixed 2026-11-11:** a record that
+  can't be written after a successful Storage removal is now
+  `PURGE_STORAGE_UNRECORDED`; the domain, subscription, Connect and export
+  checks run after the table locks. Merged `main` with RE-12b; its new
+  private receipts table is in the purge test's fixture.
+- **Exact next step:** bot review, `GATE-MIGRATE` on Christian's go, merge.
+
+## 2026-11-10 - ADMIN-RE-11c-1 Season totals add up from player numbers (migration)
+
+- **Status:** `released` 2026-11-11. Migration
+  `20261110220000_season_totals_add_up.sql` applied to production from
+  Christian's Mac at his request (`GATE-MIGRATE`, 06:57 UTC), then PR #137
+  merged (`48089c29`) and deployed; smoke checks passed (every Diverse City
+  domain returns 200 with no `UNKNOWN_TENANT`; `/programs`, `/roster`, `/shop`
+  200; the live roster shows the same totals as before). No total moved. No
+  change to `lib/club-context.ts`. Part 1 of 2; part 2 (the "Who played and
+  scored?" step) has no migration.
+- **What it changes:** a player's season totals are now their saved player
+  numbers added up over the season's games, plus a hand-entered adjustment
+  (decision 0001). New adjustment tables and totals views; `played` on player
+  numbers. Every reader of totals moved to the views: public roster, Seasons
+  hub, analytics, the classic Season stats page and roster panel (those two now
+  save what is typed as the adjustment).
+- **Visitors saw at merge:** the same totals as before (checked on production:
+  0 totals moved). Christian's decision
+  ("Keep today's numbers"): adjustment = typed − games, negative allowed, so
+  nothing moves. From then on, entering a game's player numbers adds to the
+  totals. The public match log lists games a player played in (same 9 rows on
+  production either way).
+- **Not touched:** the typed numbers in `*_season_stats` (kept for rollback;
+  dropped once both clubs accept), `lib/club-context.ts`.
+- **Verification:** database (with a migration replay), unit, contract and
+  browser tests; results with the tested commit in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** 11c-2, the "Who played and scored?" step after Enter a
+  score (design `cd-after-game`), the "2 of 3 goals added" warning, "Later"
+  in the hub's Games card, and "N from games, N added by hand" with an
+  adjustment editor; no migration. The typed numbers in `*_season_stats` are
+  dropped in a later migration once both clubs accept.
+
+
+## 2026-11-10 - ADMIN-RE-12b Programs and tryouts take their state from the sign-up way and the date
+
+- **Status:** `released` 2026-11-11. Migration `20261110180000` was applied to
+  production at 04:01:56 UTC from Christian's Mac, at his request
+  (`GATE-MIGRATE`). PR #139 then merged (`cbb751b4`) and deployed
+  (`dpl_7duVwQ4RjzLuLKF7N39THgWCxC2r`). After-deploy checks passed: every
+  Diverse City domain returns 200 with no `UNKNOWN_TENANT`, as do `/programs`,
+  `/roster`, `/shop`, `/tryouts` and the admin login. The past tryout shows
+  closed. Recovery point: physical backup `2224451539`; code rollback target:
+  `dpl_6hsWd7yQUxViVH8KusMXY6Sdx88k`. No change to `lib/club-context.ts`.
+- **What it adds:** a tryout's state is worked out from its sign-up way and
+  date. It closes itself the day after its date in club time; Reopen keeps it
+  open until the date changes. Programs and tryouts can be closed or hidden,
+  and then their sign-up form refuses new sign-ups at the database (a form
+  nobody uses is unaffected). Tryout cards print Open, Upcoming or Closed from
+  that state, show the form's price as the Cost, read by date, and leave
+  hidden tryouts out. The 500-tryout cap now holds on every write path. The
+  database functions the 12c page will use are included.
+- **Visitors saw at deploy:** Diverse City's past tryout (Sept 3) closed, with
+  only "Contact the club" left (Christian: "Yes, close them"). Lions was
+  removed before the gate (#134). Nothing else changed.
+- **Verification:** database, unit and contract tests; full suites and the
+  tested commit are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** 12c (the "Programs and tryouts" page) when the
+  orchestrator says go; drafts are in the shared notes folder.
+  RE-11c-1 (#137, migration `20261110160000`) must re-time its file to sort
+  after `20261110180000` before its own gate.
+
+
+## 2026-11-10 - ADMIN-RE-24c Search on the new admin
+
+- **Status:** `in_progress`, PR open. Last PR of `ADMIN-RE-24`. **New dependency:
+  `cmdk` 1.1.1.** No migration, no hosted action.
+- **What it adds:** search with cmdk inside a Base UI Dialog: the sidebar box
+  and ⌘K on a laptop, the magnifier on a phone. Every job, tab page, page,
+  player and upcoming game the person can open, from the manifest; plain
+  word-start matching instead of cmdk's fuzzy filter.
+- **Verification:** contract and browser tests (390 and 1440, light and dark,
+  and a helper); full suites on the PR head are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** the bot merges. Christian walks the new home and tabs
+  on Rose City.
+
+
+## 2026-11-10 - ADMIN-RE-12a The Programs words browser test, made steady
+
+- **Status:** `in_progress`, PR open. Test and one editor focus fix only: no
+  migration, no hosted action. The first of three RE-12 PRs (12b: sign-up
+  state migration; 12c: the "Programs and tryouts" page).
+- **What was wrong:** RE-22's "Programs page words are editable" test at 1440
+  failed now and then. In every failure the editor still held what was typed.
+  The causes: a save slower than the test's 5 s wait, whose late write then
+  broke the next run; one public page that showed the standard words 7 ms
+  after a stored save (cause not found, never reproduced in 300 direct
+  probes); and a focus race when the editor focused the words box one frame
+  after a click.
+- **What changed:** the editor puts the cursor in the clicked section's first
+  field once that section is drawn, and never takes it from a field already in
+  use. The test clears the words before and after, waits for the words box
+  and the cursor to settle, checks the stored row, allows the save 20 s, and
+  requires the public page to show the words on its first render (no reload:
+  review-bot M1 on #131). The one stale public render is an open item.
+- **Verification:** the first version of the fix went 40 of 40 at 1440,
+  twice. The final version is repeated 20 times per portal at both 390 and
+  1440, and the full suites run, on the PR head. The counts and the tested
+  commit are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** bot review and merge.
+
+## 2026-11-10 - Lions removed (production data, then repo code)
+
+- **Status:** production removal `done` 2026-11-10; repo cleanup `in_progress`,
+  PR open. No migration, no deploy.
+- **Production (done, on Christian's go):** Lions was archived since 11-02.
+  Christian ran a read-only count first, then Claude saved a backup on his Mac
+  (`~/lions-export.tgz`: a data-only dump of `onzio` and `onzio_private` plus
+  the 13 Lions photos; sha256 `8bd532f3…25534c3`). Christian pasted one guarded
+  transaction into the SQL editor at 23:01Z. It deleted 94 rows plus the club
+  in dependency order, every per-table count equal to the read-only count, and
+  wrote audit event 961 (`hard_purge`, club_id null). The 124 old Lions audit
+  rows and any Stripe events stay, with club_id null (by design since Phase 5).
+  Claude then deleted the 13 photos from `onzio-media` after checking each one
+  against the backup. Post-check: nothing left for the old id; clubs left are
+  `diverse-city` and `rose-city`. Smoke: Diverse City `/`, `/programs`,
+  `/roster`, `/shop` 200 with no `UNKNOWN_TENANT`; Rose City `/admin/login` 200
+  (its `/` is 404 by the public-site hold).
+- **Why not the operator purge:** `lib/operator/purge-club.ts` lists only the
+  Phase 2 tables, deletes Storage first and is not transactional, so it would
+  have stopped half way on the newer RESTRICT foreign keys. It still needs
+  updating before it is used for any club.
+- **Repo cleanup (this PR):** removed the Lions importers, planner, standings
+  seed, their four `package.json` scripts, two contract tests, the roster
+  browser spec no config ran, `docs/lions-fc-launch-plan.md` and the Lions media
+  plan JSON. The Clubhouse template now shows the club's own name and neutral
+  copy where it said Lions, Columbus, Capital City, Scioto Field or Founded
+  2014. Kept on purpose: migration comments, the template origin notes in
+  `packages/presentation` (provenance, like the Rose City and Deportivo Olimpico
+  notes), the `.vercelignore` line and older history entries.
+- **Follow-up (bot's Low notes on #134):** the empty story box under the
+  Clubhouse home story, which still drew a divider, is gone along with its
+  CSS, and the About page's big number no longer falls back to "14" (it
+  stays empty when the club's values have no year).
+- **Not done:** staging still has its own Lions tenant (separate go from
+  Christian); one auth user whose only club was Lions still exists.
+- **Verification:** on `1326604c` (`main` `8fa5926`): TypeScript and ESLint on app code pass; unit and contract 3,101 passed, 12 pilot tests timed out under heavy load and passed 47/47 when rerun alone; production build passes; Homepage browser 62/63 (the one failure passed on rerun) and page editors 36/37 (the About committed-500 case fails the same way on clean `main`). Full table in the PR body and `STATUS.md`.
+- **Exact next step:** the bot reviews and merges the PR. Then, on Christian's
+  go, staging's Lions tenant.
+
 ## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
 
 - **Status:** `in_progress`, PR open. PR 24d of `ADMIN-RE-24` (built before 24c so

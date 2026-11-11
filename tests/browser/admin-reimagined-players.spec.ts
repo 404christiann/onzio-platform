@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { Client } from "pg";
 import { CLUB_IDS } from "../fixtures/entities";
 import { clubToday } from "../../lib/club-time";
+import { KEEP_TYPED_TOTALS_SQL } from "../helpers/season-adjustments";
 
 // ADMIN-RE-24d: players in the Games tab on local Alpha (design:
 // admin-plain-search-two-clubs.html). A fixture season is shown for the run,
@@ -51,7 +52,9 @@ async function removeFixtures() {
 
 async function restore(saved: Saved) {
   await removeFixtures();
-  await sql("update onzio.seasons set active = (id = any($2::uuid[])) where club_id=$1", [ALPHA, saved.activeSeasons]);
+  // One active season per club is checked row by row: everything off first, then back on.
+  await sql("update onzio.seasons set active=false where club_id=$1", [ALPHA]);
+  await sql("update onzio.seasons set active=true where club_id=$1 and id = any($2::uuid[])", [ALPHA, saved.activeSeasons]);
   await sql("update onzio.players set active=true where club_id=$1 and id = any($2::uuid[])", [ALPHA, saved.activePlayers]);
 }
 
@@ -71,7 +74,8 @@ async function seed(): Promise<Record<string, string>> {
     "insert into onzio.seasons (club_id, label, start_year, end_year, active) values ($1,$2,2027,2027,false) returning id",
     [ALPHA, FIXTURE],
   );
-  await sql("update onzio.seasons set active = (id = $2) where club_id=$1", [ALPHA, season.id]);
+  await sql("update onzio.seasons set active=false where club_id=$1", [ALPHA]);
+  await sql("update onzio.seasons set active=true where club_id=$1 and id=$2", [ALPHA, season.id]);
   await sql("update onzio.players set active=false where club_id=$1 and caption is distinct from $2", [ALPHA, FIXTURE]);
   const games: string[] = [];
   for (const [offset, vs, us, them] of [[-24, "Prairie Fire FC", 2, 1], [-17, "Northgate Athletic", 4, 2], [-10, "Harbor City SC", 3, 2]] as const) {
@@ -107,6 +111,8 @@ async function seed(): Promise<Record<string, string>> {
       ]);
     }
   }
+  // ADMIN-RE-11c: keep the typed totals as the totals (adjustment = typed - games).
+  for (const statement of KEEP_TYPED_TOTALS_SQL) await sql(statement, [ALPHA, Object.values(ids)]);
   return ids;
 }
 
