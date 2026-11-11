@@ -4,7 +4,7 @@
 
 **Agent/package:** Claude Code, operator purge fix (not an ADMIN-RE package;
 follow-up to the Lions removal, which found `lib/operator/purge-club.ts`
-unusable). Branch `claude/sweet-cohen-eea328` from `main` `428a1590`.
+unusable). Branch `claude/sweet-cohen-eea328` from `main` `c767bab5`.
 **Status:** `in_progress`, PR open. **Has a migration**
 (`20261110210000_purge_archived_club.sql`), so it needs `GATE-MIGRATE` before
 merge. Adds two functions; changes no table and no row. Nothing hosted was
@@ -43,6 +43,9 @@ simulation path.
   club; browser roles refused; the retry). Contract tests now cover the real
   path with a fake client (one RPC, refusals pass through with Storage
   untouched, Storage only after commit, the retry).
+- `admin-reimagined-league.test.ts` and `admin-reimagined-sponsors.test.ts`
+  list the migrations allowed after theirs; the new one is added (the same
+  as RE-15 did in #128).
 
 **Verification:** on a private throwaway database (`supabase/postgres:15.8.1.085`,
 port 54998, all 63 migrations plus seed; the shared contracts database was

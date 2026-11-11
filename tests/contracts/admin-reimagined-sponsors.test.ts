@@ -109,7 +109,8 @@ describe("the migration", () => {
     expect(names).toContain(FILE);
     expect(FILE.slice(0, 14) > "20261110090000").toBe(true);
     expect(FILE.slice(0, 14) > "20261109210000").toBe(true);
-    expect(names.filter((name) => name > FILE)).toEqual([]);
+    // Later migrations: the operator purge.
+    expect(names.filter((name) => name > FILE)).toEqual(["20261110210000_purge_archived_club.sql"]);
   });
 
   it("does what the plan says, and keeps the old column for code deployed before it", () => {
