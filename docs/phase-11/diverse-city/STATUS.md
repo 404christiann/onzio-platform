@@ -54,7 +54,8 @@ being reset by other sessions): `purge-archived-club.test.ts` 11/11.
 on the changed files. Wider suites are in the PR body.
 
 **Blockers / decisions:** (1) the Connect guard blocks only when
-`charges_enabled`; Christian may prefer any linked account to block.
+`charges_enabled`. Christian decided on 2026-11-11 to keep it that way: a
+linked account that can't take payments is purged with the club.
 (2) RE-11c's unmerged migration `20261110160000_season_totals_add_up.sql`
 adds `player_season_adjustments` and `goalkeeper_season_adjustments`. They
 cascade from the season stats rows, so the purge still empties them, but
@@ -96,7 +97,7 @@ whichever PR merges second must add fixture rows for them to the purge test
 - Not changed: a `statement_timeout` set on the function would not apply to
   the statement already running it; the caller's role timeout still bounds
   the call, and a timeout rolls the whole purge back. The Connect guard rule
-  is still Christian's call.
+  stays as is (Christian, 2026-11-11: block only while it can take payments).
 - Verification: purge database test 11/11 (private database with every
   migration on the branch), types regenerated and identical, contract tests
   61/61 for the three touched files, tsc clean. Full unit and contract

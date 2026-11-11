@@ -14,9 +14,10 @@
 - **Verification:** new database test 11/11 on a private throwaway database
   (every club table filled, other clubs byte-identical), contract tests 35/35,
   tsc and ESLint clean. Details in `STATUS.md` and the PR body.
-- **Open:** Connect guard blocks only when `charges_enabled` (Christian may
-  want stricter). RE-11c's season adjustment tables need fixture rows in the
-  purge test once both PRs are in.
+- **Decided (Christian, 2026-11-11):** a linked Stripe Connect account blocks
+  the purge only while it can take payments (`charges_enabled`).
+- **Open:** RE-11c's season adjustment tables need fixture rows in the purge
+  test once both PRs are in.
 - **Review-bot Mediums fixed:** the Storage outcome now has its own
   `hard_purge_storage` audit event (removed or failed; the main event says
   `pending`), and `lib/database.generated.ts` has the new function.
