@@ -135,7 +135,8 @@ for (const width of [390, 1440]) {
         await expect(hub.getByText("Next season", { exact: true })).toBeVisible();
         // The three cards open the pages that hold their numbers.
         await expect(hub.getByRole("link", { name: "Update the table" })).toHaveAttribute("href", "/admin/standings");
-        await expect(hub.getByRole("link", { name: "See totals" })).toHaveAttribute("href", "/admin/stats?view=season");
+        // ADMIN-RE-11c-2: the Season totals page for the season on screen.
+        await expect(hub.getByRole("link", { name: "See totals" })).toHaveAttribute("href", `/admin/seasons/totals?season=${first.id}`);
         await expect(hub.getByRole("link", { name: "See games" })).toHaveAttribute("href", "/admin/schedule");
         // One season: the label is just a label, with nothing to open.
         await expect(page.getByTestId("season-switcher-static")).toHaveText(first.label);
