@@ -78,6 +78,93 @@ suites, with the commit they ran on, are in the PR body.
 **Exact next step:** bot review, then `GATE-MIGRATE`, then merge. Then 12c,
 the page.
 
+## 2026-11-10 - About/Logo save browser test: clean-up restores "no row"
+
+**Agent/package:** Claude Code, test fix found while checking the Lions PR
+(#134); no work-package ID. Branch `claude/busy-maxwell-fdae7f` from `main`
+`428a1590`.
+**Status:** `in_progress`, PR open. Test only: no product, API, migration or
+hosted change.
+
+**What was wrong:** `public-page-about-save.spec.ts`, case "About reconciles
+committed-500 ...", failed in its clean-up with `INVALID_ABOUT_DESTINATION`.
+Seeded Alpha has **no** About or Logo row, so the baseline snapshot's
+`content` is `null`. The test rebuilt it from `EMPTY_ABOUT_PAGE_CONTENT`,
+whose closing button is `""`, and the API (correctly) refuses that. `/schedule`
+was never a seeded row: it is Academy's fixed closing button
+(`components/sites/diverse-city/site-definition.ts`), which the editor always
+sends. The editor never sends `""`: without a fixed button it keeps Save off
+until a listed page is picked. So the API rule stays as it is. Only the first
+case failed because its failed clean-up left a `/schedule` row behind, which
+later cases then snapshot and restored. The first Logo case only passed
+because of that leftover row.
+
+**Completed work:** in `tests/browser/public-page-about-save.spec.ts`, a
+`restore()` helper deletes the page's row when the baseline had none and
+otherwise writes the baseline back. The concurrent case's "other admin" save
+uses Academy's `/schedule`. The first Logo case (Alpha on Clubhouse, no fixed
+button) picks "Button goes to" `/schedule` before saving About when no row
+exists, as an admin must.
+
+**Files changed:** `tests/browser/public-page-about-save.spec.ts`, this file.
+
+**Verification:** production build at `http://alpha.localhost:3110`, all runs
+under `scripts/with-local-db-lock.sh`, Alpha starting with no About/Logo row.
+Before (spec at `main`): 1 failed (`INVALID_ABOUT_DESTINATION`), 6 passed, and
+the run left an About row and a Logo row behind. After: 7 passed, twice in a
+row, and Alpha ends with no About or Logo row both times. `tsc --noEmit` clean.
+
+**Blockers:** none.
+
+**Next step:** review and merge the PR.
+
+## 2026-11-10 - ADMIN-RE-24c: search on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24c (last of four; built
+after 24d so players open their pages). Branch
+`claude/admin-re-24c-search-v2` from `main` `8fa5926` (24d #129 merged).
+**Status:** `in_progress`, PR open for the review bot. **One new dependency: `cmdk`
+1.1.1** (exact; the lock gains only cmdk and its own Radix packages). No
+migration, no hosted action.
+
+**Completed work:**
+
+- Search (design `admin-plain-search-two-clubs.html`): cmdk inside a Base UI
+  Dialog with `modal="trap-focus"`. A box at the top of the sidebar and ⌘K /
+  Ctrl+K on a laptop (a centered panel); the magnifier by the avatar on a phone
+  (full screen, Cancel). No animation; the query resets on close.
+- It lists every job, tab page and page the person can open (built from the
+  route manifest after its visibility rules, each page with its tab as a
+  hint), the club's players (opening their page under Games) and the next five
+  games (opening the Games page). Hidden pages never reach the browser.
+- cmdk's fuzzy filter is replaced by `plainFilter`: the start of a name, then
+  the start of any word, then anywhere; other words only weakly. "sam" finds
+  Sam Okafor and not "Sign-up forms".
+- From the bot's review of #132: picking a search result now goes through the
+  same unsaved-changes check as the tabs (Your club, Sponsors and the homepage
+  editor ask first), and players are listed only while a season is shown,
+  since their pages need one.
+
+**Files changed:** `lib/admin-search.ts` (new), `lib/admin-tab-page.ts`
+(`readSearchExtras`), `app/admin/(protected)/layout.tsx`,
+`components/admin/reimagined/AdminSearch.tsx` (new),
+`components/admin/reimagined/search.module.css` (new),
+`components/admin/reimagined/ReimaginedShell.tsx`, `package.json`,
+`package-lock.json`, `tests/contracts/admin-search.test.ts` (new),
+`tests/contracts/{admin-portal-switch,admin-reimagined-home}.test.ts`,
+`tests/browser/admin-reimagined-search.spec.ts` (new), this file,
+`HANDOFF.md`. The classic admin's `AdminRouteSearch` is unchanged.
+
+**Verification:** contract tests (ranking, "sam", visibility for helpers and
+other clubs, the dialog and filter wiring, server-built list) and browser
+tests at 390 and 1440, light and dark, plus a helper. Full suites on the PR
+head, with the tested commit, are in the PR body.
+
+**Blockers / decisions:** none new.
+
+**Exact next step:** the bot merges 24c. Then ADMIN-RE-24 is built;
+Christian walks it on Rose City.
+
 ## 2026-11-10 - ADMIN-RE-12a: the Programs words browser test, made steady
 
 **Agent/package:** Claude Code, `ADMIN-RE-12a` (the first of three RE-12

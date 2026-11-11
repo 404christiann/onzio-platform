@@ -8,6 +8,8 @@ import { getVisibleAdminTabs, type AdminTabId } from "@/lib/admin-tabs";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext, type ClubContext } from "@/lib/club-context";
 import type { CodeSiteInput } from "@/lib/code-site";
+import type { AdminSearchGame, AdminSearchPlayer } from "@/lib/admin-search";
+import { clubToday, formatClubDate } from "@/lib/club-time";
 import { createClient } from "@/lib/supabase-server";
 
 // ADMIN-RE-24: what every tab page and the shell need about the club. Same
@@ -34,6 +36,57 @@ export function canMutateClubContent(club: ClubContext): boolean {
 export const readAdminHomeCounts = cache(
   async (clubId: string, timeZone: string): Promise<AdminHomeData> =>
     loadAdminHomeData(await createClient(), clubId, timeZone),
+);
+
+const POSITIONS = new Set(["Goalkeeper", "Defender", "Midfielder", "Forward"]);
+
+/**
+ * ADMIN-RE-24c: the players (the ones with a page under Games) and the next
+ * five games, for search. Read once per request with the user-scoped client,
+ * scoped to the club; names, numbers and dates only. Any problem means search
+ * lists pages and jobs alone.
+ */
+export const readSearchExtras = cache(
+  async (clubId: string, timeZone: string): Promise<{ players: AdminSearchPlayer[]; games: AdminSearchGame[] }> => {
+    try {
+      const onzio = (await createClient()).schema("onzio");
+      const [players, season] = await Promise.all([
+        onzio.from("players").select("id,name,number,position,active").eq("club_id", clubId).eq("active", true).order("name").limit(300),
+        onzio.from("seasons").select("id").eq("club_id", clubId).eq("active", true).maybeSingle(),
+      ]);
+      const seasonId = (season.data as { id: string } | null)?.id;
+      const games = seasonId
+        ? await onzio
+            .from("matches")
+            .select("id,opponent,home,date")
+            .eq("club_id", clubId)
+            .eq("season_id", seasonId)
+            .is("rose_city_score", null)
+            .is("opponent_score", null)
+            .gte("date", clubToday(timeZone))
+            .order("date", { ascending: true })
+            .limit(5)
+        : { data: [], error: null };
+      return {
+        // A player's page needs a shown season; without one, search lists no players.
+        players: players.error || !seasonId
+          ? []
+          : ((players.data ?? []) as { id: string; name: string; number: number | null; position: string }[])
+              .filter((player) => POSITIONS.has(player.position))
+              .map(({ id, name, number, position }) => ({ id, name, number, position })),
+        games: games.error
+          ? []
+          : ((games.data ?? []) as { id: string; opponent: string; home: boolean | null; date: string }[]).map((game) => ({
+              id: game.id,
+              opponent: game.opponent,
+              home: game.home,
+              when: formatClubDate(game.date, "weekday-short") ?? game.date,
+            })),
+      };
+    } catch {
+      return { players: [], games: [] };
+    }
+  },
 );
 
 /** The access context the manifest and the tabs read, for a reimagined or classic club. */

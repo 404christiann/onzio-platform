@@ -139,7 +139,7 @@ describe("reimagined home (ADMIN-RE-05)", () => {
 describe("reimagined shell (ADMIN-RE-05, tabs since ADMIN-RE-24)", () => {
   it("is picked by the layout from the fail-safe portal read", () => {
     expect(layout).toContain('portal.portal === "reimagined"');
-    expect(layout).toContain("<ReimaginedShell tabs={shell.tabs} targets={shell.targets} dots={shell.dots}>");
+    expect(layout).toContain("<ReimaginedShell tabs={shell.tabs} targets={shell.targets} dots={shell.dots} search={shell.search}>");
     expect(layout).toContain("<AdminShell>{children}</AdminShell>");
     // Tabs and dots are worked out on the server; a failed count shows no dot.
     expect(layout).toContain("getVisibleAdminTabs(access)");
