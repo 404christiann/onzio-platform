@@ -246,11 +246,13 @@ grant select on onzio.player_season_totals to anon, authenticated, service_role;
 grant select on onzio.goalkeeper_season_totals to anon, authenticated, service_role;
 
 -- 4. An adjustment never takes a total below 0 ---------------------------------
+-- security invoker: the sums read only the match rows the saving person may read,
+-- so a refused save tells a stranger nothing about a club that isn't public.
 
 create or replace function onzio_private.check_field_adjustment_keeps_totals()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
@@ -289,7 +291,7 @@ $$;
 create or replace function onzio_private.check_goalkeeper_adjustment_keeps_totals()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare

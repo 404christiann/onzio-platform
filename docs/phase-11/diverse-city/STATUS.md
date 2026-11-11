@@ -69,6 +69,13 @@ player shown for the season their season row first, as before.
 test replays the migration on production-shaped rows and pins that a typed total below
 what the games give stays the same.
 
+**Review bot (first pass on `082eabd9`):** one Medium, the results table was still
+"running" (filled in). Low 1 fixed: the two below-0 check functions are `security invoker`,
+so a refused save never tells a stranger anything about a club whose roster isn't public.
+Lows 2 and 3 left as they are: a player added to the season by a save whose adjustment is
+then refused keeps their season row (the error shows), and a classic Season stats edit
+made between `GATE-MIGRATE` and the deploy is lost (freeze admin edits during the gate).
+
 **Blockers/decisions:** `GATE-MIGRATE` (Christian). Not done here: the old Match stats
 page leaves `played` set when every number of a row is put back to 0 (it never sends
 `played`); the new step in 11c-2 sets it explicitly.

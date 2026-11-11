@@ -139,5 +139,6 @@ describe("the migration", () => {
     expect(migration.match(/with \(security_invoker = true\)/g)).toHaveLength(2);
     expect(migration).toContain("greatest(0, g.mins + coalesce(a.mins, 0))");
     expect(migration.match(/raise exception 'SEASON_TOTAL_BELOW_ZERO'/g)).toHaveLength(2);
+    expect(migration.match(/security definer/g)).toBeNull();
   });
 });

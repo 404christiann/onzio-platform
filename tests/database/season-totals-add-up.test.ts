@@ -312,6 +312,17 @@ describe("who can read and write", () => {
     expect((await totals(player)).goals).toBe(3);
   });
 
+  it("works out the below-0 check with the saving person's own rights", async () => {
+    const definers = (await db.query(
+      `select proname, prosecdef from pg_proc
+       where proname in ('check_field_adjustment_keeps_totals','check_goalkeeper_adjustment_keeps_totals') order by proname`,
+    )).rows;
+    expect(definers).toEqual([
+      { proname: "check_field_adjustment_keeps_totals", prosecdef: false },
+      { proname: "check_goalkeeper_adjustment_keeps_totals", prosecdef: false },
+    ]);
+  });
+
   it("reads the views with the reader's own rights", async () => {
     const options = (await db.query(
       "select relname, reloptions from pg_class where relname in ('player_season_totals','goalkeeper_season_totals') order by relname",
