@@ -63,15 +63,62 @@ sends `played`.
 
 **Next step:** clear the review bot; the bot merges (no migration, no gate).
 
+## 2026-11-11 - Operator hard purge released
+
+**Agent/package:** Claude Code, operator purge fix (PR #138), `GATE-MIGRATE`
+and release. Notes branch `claude/purge-released` from `main` `ec0b9a28`.
+**Status:** `released`. **No purge has been run against any club.**
+
+**Release record (gate record comment on #138):**
+
+- Christian approved the gate in the PR's session ("Yes, gate #138").
+  Supabase CLI 2.122.0, linked to `ioalthwsdrlzrubomrow` only.
+- Preconditions at head `0c31556f`: bot review 0 High / 0 Medium; contains
+  `main` `846a3676`; adds only `20261111080000_purge_archived_club.sql`;
+  runner table all PASS at that head; `hold` taken for #138 only.
+- Ledger before: only `20261111080000` Local-only, nothing Remote-only.
+  Rollback target `dpl_45YLR1GrCPBLpxcbzJTw3ZPEQm6q`. Snapshot: 2 clubs,
+  4 verified production domains, 1,005 audit events (newest 06:57:12 UTC),
+  0 exports. Recovery point: physical backup `2234441219` (2026-11-11
+  11:24 UTC); no logical dump (no writes since, no row changes).
+- Dry run: exactly `20261111080000`. Applied 17:35:35 to 17:35:39 UTC.
+- Verify: ledger matches (65, nothing Local-only or Remote-only), second dry
+  run up to date, history row present, both functions present with the
+  right definer, `search_path` and `service_role`-only grants, presentation
+  triggers enabled, counts unchanged, generated types differ only in CLI
+  formatting.
+- Merged as `ec0b9a28` (pinned to `0c31556f`), production deployment
+  `dpl_7NPyj8ZXTPybTjM4sAqZWD6vMBef` Ready. Smoke: `diversecityfc.com`,
+  `www.diversecityfc.com`, `diverse-city-fc-private.vercel.app`, Diverse City
+  `/programs`, `/roster`, `/shop`, `onzio-platform.vercel.app/admin/login`
+  all 200 with no `UNKNOWN_TENANT`; `onzio-platform.vercel.app/` 404 by
+  design. `hold` removed.
+
+**Rename before release:** the gate at `953fb496` stopped before apply
+because RE-11c's `20261110220000` was already on production (Remote-only),
+and `20261110210000` would have needed `--include-all`. The migration was
+renamed to `20261111080000`, `main` merged (RE-11c, then its notes), RE-11c's
+two adjustment tables added to the delete order and the purge test.
+
+**During the gate, unrelated to the migration:** the 14 audit rows at
+17:35:39.343 UTC are Christian's intentional deletion, as a signed-in owner
+and for the club owner, of Diverse City's one game with its 11 player and 2
+goalkeeper match-stat rows. Diverse City having 0 games is expected
+(Christian confirmed). The migration changes no rows.
+
+**Blockers:** none.
+
+**Exact next step:** none for the purge. A real purge needs an archived
+club, a verified export and Christian's go.
+
 ## 2026-11-10 - Operator hard purge made safe (one transaction, Storage after commit)
 
 **Agent/package:** Claude Code, operator purge fix (not an ADMIN-RE package;
 follow-up to the Lions removal, which found `lib/operator/purge-club.ts`
 unusable). Branch `claude/sweet-cohen-eea328` from `main` `428a1590`, merged with `main` `29c2da89`.
-**Status:** `in_progress`, PR open. **Has a migration**
-(`20261111080000_purge_archived_club.sql`), so it needs `GATE-MIGRATE` before
-merge. Adds two functions; changes no table and no row. Nothing hosted was
-touched.
+**Status:** `released` 2026-11-11 (see the release entry above). Migration
+`20261111080000_purge_archived_club.sql` adds two functions; changes no
+table and no row.
 
 **What was wrong:** the purge deleted Storage first, then one table at a time
 over PostgREST, from Phase 2 table lists. Newer club tables have RESTRICT keys
@@ -119,11 +166,10 @@ on the changed files. Wider suites are in the PR body.
 **Blockers / decisions:** (1) the Connect guard blocks only when
 `charges_enabled`. Christian decided on 2026-11-11 to keep it that way: a
 linked account that can't take payments is purged with the club.
-(2) RE-11c's unmerged migration `20261110160000_season_totals_add_up.sql`
-adds `player_season_adjustments` and `goalkeeper_season_adjustments`. They
-cascade from the season stats rows, so the purge still empties them, but
-whichever PR merges second must add fixture rows for them to the purge test
-(and may list them in `v_order` before the season stats).
+(2) RE-11c (released as `20261110220000_season_totals_add_up.sql`) adds
+`player_season_adjustments` and `goalkeeper_season_adjustments`. Done in
+`5cf5bd09`: they are in `v_order` before the season stats and in the purge
+test's fixture.
 
 **Review-bot Mediums on #138 (fixed):**
 
