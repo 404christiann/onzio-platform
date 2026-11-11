@@ -451,7 +451,7 @@ async function ReimaginedHomeContent({
       jobs={jobs}
       board={board}
       held={held}
-      visitsHref={getAdminTab(tabs.some((tab) => tab.id === "insights") ? "insights" : "website").href}
+      visitsHref={tabs.some((tab) => tab.id === "insights") ? getAdminTab("insights").href : null}
       seasonHref={getAdminTab("games").href}
       addGameHref={jobHref("add-game")}
       contentPaused={!routeAccess.canMutateContent}
