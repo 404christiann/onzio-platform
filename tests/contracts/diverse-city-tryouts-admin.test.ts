@@ -421,7 +421,9 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
   it("exposes the approved event, state, association, media, and complete UX fields", () => {
     for (const label of [
       "Program association",
-      "Status",
+      // ADMIN-RE-12b: the state follows the sign-up way and the date; the
+      // owner only chooses whether it is closed.
+      "Sign-ups",
       // The merged single name field, stored in the existing `headline`
       // column. It replaced the Eyebrow + Headline pair.
       'label="Name"',

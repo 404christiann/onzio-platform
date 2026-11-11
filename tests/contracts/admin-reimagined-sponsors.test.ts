@@ -109,7 +109,8 @@ describe("the migration", () => {
     expect(names).toContain(FILE);
     expect(FILE.slice(0, 14) > "20261110090000").toBe(true);
     expect(FILE.slice(0, 14) > "20261109210000").toBe(true);
-    expect(names.filter((name) => name > FILE)).toEqual([]);
+    // Later packages' migrations sort after it (ADMIN-RE-12b).
+    expect(names.filter((name) => name > FILE)).toEqual(["20261110180000_programs_tryouts_sign_up_state.sql"]);
   });
 
   it("does what the plan says, and keeps the old column for code deployed before it", () => {
