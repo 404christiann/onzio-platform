@@ -89,6 +89,7 @@ export function tabForRoute(
       return programsTab ? "programs" : "games";
     case "programs":
     case "tryouts":
+    case "programs-and-tryouts":
       return "programs";
     case "registrations":
     case "sign-ups":
@@ -147,8 +148,7 @@ const PAGE_ORDER: readonly AdminMoreRowId[] = [
   "league-table",
   "player-numbers",
   "how-the-team-is-doing",
-  "programs",
-  "tryouts",
+  "programs-and-tryouts",
   "team-roster",
   "homepage",
   "about-page",

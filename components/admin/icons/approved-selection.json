@@ -54,7 +54,9 @@
     "phone": "communication/phone",
     "user": "communication/user",
     "globe": "navigation/globe",
-    "settings": "interface/settings"
+    "settings": "interface/settings",
+    "eye-slash": "content/eye-slash",
+    "link": "communication/link"
   },
   "weight": "medium",
   "navigationSize": 24,

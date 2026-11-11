@@ -52,6 +52,8 @@ export type SignUpsData =
       /** Every form with at least one paid or refunded sign-up, newest form first. */
       forms: SignUpForm[];
       tab: SignUpTab;
+      /** ADMIN-RE-12c: the one form the list is narrowed to (?form=), or null for all forms. */
+      form: { id: string; title: string } | null;
       rows: SignUpRow[];
       /** The open person's details; null when none is open or they could not be found. */
       detail: SignUpDetail | null;
@@ -64,6 +66,11 @@ export function parseSignUpTab(value: unknown): SignUpTab {
 
 export function parseSignUpPersonId(value: unknown): string | null {
   return typeof value === "string" && UUID.test(value) ? value : null;
+}
+
+/** ADMIN-RE-12c: ?form= narrows the list to one form; only a well-formed id is used. */
+export function parseSignUpFormId(value: unknown): string | null {
+  return parseSignUpPersonId(value);
 }
 
 const LIST_COLUMNS =
@@ -142,12 +149,13 @@ export function relativeSignUpDay(instant: string, timeZone: string, now: Date =
 
 type FormRecord = { id: string; title: string; archived_at: string | null; created_at: string };
 
-async function tallySignUps(
+export async function tallySignUps(
   onzio: Onzio,
   clubId: string,
-): Promise<{ counts: SignUpCounts; perForm: Map<string, number> }> {
+): Promise<{ counts: SignUpCounts; perForm: Map<string, number>; perFormCounts: Map<string, SignUpCounts> }> {
   const counts: SignUpCounts = { all: 0, paid: 0, refunded: 0 };
   const perForm = new Map<string, number>();
+  const perFormCounts = new Map<string, SignUpCounts>();
   for (let start = 0; ; start += COUNT_PAGE_SIZE) {
     // Stable ordering keeps successive .range() windows from skipping or
     // double-counting rows (the same rule as readAllPaidRegistrations).
@@ -164,8 +172,12 @@ async function tallySignUps(
       counts.all += 1;
       counts[row.status] += 1;
       perForm.set(row.form_id, (perForm.get(row.form_id) ?? 0) + 1);
+      const formCounts = perFormCounts.get(row.form_id) ?? { all: 0, paid: 0, refunded: 0 };
+      formCounts.all += 1;
+      formCounts[row.status] += 1;
+      perFormCounts.set(row.form_id, formCounts);
     }
-    if (page.length < COUNT_PAGE_SIZE) return { counts, perForm };
+    if (page.length < COUNT_PAGE_SIZE) return { counts, perForm, perFormCounts };
   }
 }
 
@@ -221,7 +233,7 @@ export async function loadSignUps(
   supabase: SupabaseClient,
   clubId: string,
   timeZone: string,
-  options: { tab?: SignUpTab; personId?: string | null; now?: Date } = {},
+  options: { tab?: SignUpTab; personId?: string | null; formId?: string | null; now?: Date } = {},
 ): Promise<SignUpsData> {
   const onzio = supabase.schema("onzio");
   const tab = options.tab ?? "all";
@@ -235,20 +247,28 @@ export async function loadSignUps(
     if (formsResult.error) return { status: "error" };
     const formRecords = (formsResult.data ?? []) as FormRecord[];
     const formTitles = new Map(formRecords.map((form) => [form.id, form.title]));
-    const currentFormIds = new Set(formRecords.filter((form) => !form.archived_at).map((form) => form.id));
+    // A form id that isn't the club's own is ignored, never queried as given.
+    const form = options.formId && formTitles.has(options.formId)
+      ? { id: options.formId, title: formTitles.get(options.formId)! }
+      : null;
+    const currentFormIds = form
+      ? new Set([form.id])
+      : new Set(formRecords.filter((record) => !record.archived_at).map((record) => record.id));
 
-    const list = onzio
+    let list = onzio
       .from("registrations")
       .select(LIST_COLUMNS)
       .eq("club_id", clubId)
-      .in("status", tab === "all" ? ["paid", "refunded"] : [tab])
+      .in("status", tab === "all" ? ["paid", "refunded"] : [tab]);
+    if (form) list = list.eq("form_id", form.id);
+    const listQuery = list
       .order("submitted_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(SIGN_UP_LIST_LIMIT);
 
     const [tally, listResult, newThisWeek, detail] = await Promise.all([
       tallySignUps(onzio, clubId),
-      list,
+      listQuery,
       currentFormIds.size
         ? countNewSignUps(onzio, clubId, currentFormIds, newSignUpsSince(timeZone, now)).catch(() => null)
         : Promise.resolve(0),
@@ -261,12 +281,13 @@ export async function loadSignUps(
     return {
       status: "ready",
       newThisWeek,
-      counts: tally.counts,
+      counts: form ? (tally.perFormCounts.get(form.id) ?? { all: 0, paid: 0, refunded: 0 }) : tally.counts,
       forms: formRecords.flatMap((form) => {
         const signUps = tally.perForm.get(form.id) ?? 0;
         return signUps ? [{ id: form.id, title: form.title, archived: Boolean(form.archived_at), signUps }] : [];
       }),
       tab,
+      form,
       rows: ((listResult.data ?? []) as unknown as ListRecord[]).map((record) =>
         toRow(record, formTitles, timeZone, now),
       ),

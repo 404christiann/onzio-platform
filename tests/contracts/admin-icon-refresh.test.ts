@@ -9,7 +9,7 @@ import { buildSync } from "esbuild";
 // The repository keeps Next's JSX-preserve setting. Compile only these real
 // components for SSR without changing the shared Vitest or application config.
 const compiled = buildSync({
-  stdin: { contents: 'export { NativeSelect } from "./components/ui/native-select"; export { IconCaretDown, IconClock, IconDashboard, IconMapPin, IconSponsors, IconMail, IconPhone, IconUser } from "./components/admin/icons";', resolveDir: process.cwd() },
+  stdin: { contents: 'export { NativeSelect } from "./components/ui/native-select"; export { IconCaretDown, IconClock, IconDashboard, IconMapPin, IconSponsors, IconMail, IconPhone, IconUser, IconEyeSlash, IconLink } from "./components/admin/icons";', resolveDir: process.cwd() },
   bundle: true,
   write: false,
   format: "cjs",
@@ -19,7 +19,7 @@ const compiled = buildSync({
 }).outputFiles[0].text;
 const compiledModule = { exports: {} as Record<string, Parameters<typeof createElement>[0]> };
 new Function("require", "module", "exports", compiled)(createRequire(import.meta.url), compiledModule, compiledModule.exports);
-const { NativeSelect, IconCaretDown, IconClock, IconDashboard, IconMapPin, IconSponsors, IconMail, IconPhone, IconUser } = compiledModule.exports;
+const { NativeSelect, IconCaretDown, IconClock, IconDashboard, IconMapPin, IconSponsors, IconMail, IconPhone, IconUser, IconEyeSlash, IconLink } = compiledModule.exports;
 
 const render = (component: Parameters<typeof createElement>[0], props = {}) =>
   renderToStaticMarkup(createElement(component, props));
@@ -96,6 +96,28 @@ describe("Add a game icons", () => {
   it.each([
     ["clock", "date-and-time/clock", () => IconClock],
     ["map-pin", "navigation/map-pin", () => IconMapPin],
+  ] as const)("approves %s and draws exactly its icons.download asset", (key, asset, icon) => {
+    expect(approved.weight).toBe("medium");
+    expect(approved.selections[key]).toBe(asset);
+    const svg = readFileSync(`components/admin/icons/assets/${asset}.svg`, "utf8");
+    const paths = [...svg.matchAll(/ d="([^"]+)"/g)].map((match) => match[1]);
+    expect(paths.length).toBeGreaterThan(0);
+    const markup = render(icon(), { className: "size-4" });
+    expect([...markup.matchAll(/ d="([^"]+)"/g)].map((match) => match[1])).toEqual(paths);
+    expect(markup).toContain('aria-hidden="true"');
+    expect(markup).toContain('fill="currentColor"');
+  });
+});
+
+// ADMIN-RE-12c: eye-slash ("Hidden from your website") and link ("A link to
+// another site") for Programs and tryouts, fetched with the icons-download
+// skill in the approved medium/outline/round style.
+describe("Programs and tryouts icons", () => {
+  const approved = JSON.parse(readFileSync("components/admin/icons/approved-selection.json", "utf8"));
+
+  it.each([
+    ["eye-slash", "content/eye-slash", () => IconEyeSlash],
+    ["link", "communication/link", () => IconLink],
   ] as const)("approves %s and draws exactly its icons.download asset", (key, asset, icon) => {
     expect(approved.weight).toBe("medium");
     expect(approved.selections[key]).toBe(asset);
