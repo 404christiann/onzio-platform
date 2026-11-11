@@ -21,6 +21,8 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 import { createClient } from "@/lib/admin-client";
 import type { DBContactProfile, DBProgram, DBRegistrationForm, DBTryout, DBTryoutsPageContent } from "@/lib/db-types";
 import { mapTryout } from "@/lib/queries";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import { clubToday } from "@/lib/club-time";
 import {
   buildTryoutMutationPayload, buildTryoutsPageMutationPayload, emptyTryoutDraft,
   emptyTryoutsPageDraft, moveTryout, tryoutDraftToRow, tryoutsPageToDraft,
@@ -82,6 +84,8 @@ export default function TryoutsPageEditor() {
 
 function TryoutsPageEditorContent() {
   const club = useClubContext();
+  // The preview closes past tryouts the way the public page does: by the club's date.
+  const today = clubToday(useAdminPortal().timeZone);
   const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;
   const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? true;
   const showsHeroImage = tryoutsPolicy?.showHeroImageField ?? false;
@@ -363,7 +367,7 @@ function TryoutsPageEditorContent() {
 
   const previewTryouts = events.map((event) => mapTryout(tryoutDraftToRow({
     ...event, id: event.id ?? event.clientKey,
-  }), contactEmail, event.registrationFormId ? nativeForms[event.registrationFormId] : undefined));
+  }), contactEmail, event.registrationFormId ? nativeForms[event.registrationFormId] : undefined, today));
   const previewPageContent = resolveTryoutsPageContent(
     buildTryoutsPageMutationPayload(pageCopy) as Partial<DBTryoutsPageContent>);
   const canEdit = !saving && !uploading && !unconfirmed;
@@ -411,7 +415,10 @@ function TryoutsPageEditorContent() {
             <Field label="Intro shown when none are published" error={pageErrors.introNoTryouts}><Textarea value={pageCopy.introNoTryouts} onChange={(event) => changePage("introNoTryouts", event.target.value)} maxLength={TRYOUTS_PAGE_LIMITS.introNoTryouts} className="min-h-28" /></Field>
           </fieldset> : selectedEvent ? <fieldset disabled={!canEdit} className="space-y-5 disabled:opacity-60">
             <Field label="Name" error={eventErrors[selectedEvent.clientKey]?.headline}><input className={ADMIN_INPUT_CLASS} value={selectedEvent.headline} onChange={(event) => changeEvent("headline",event.target.value)} maxLength={80} /></Field>
-            <Field label="Status"><NativeSelect chevronIcon={AdminSelectChevron} value={selectedEvent.status} onChange={(event) => changeEvent("status",event.target.value as TryoutDraft["status"])}><NativeSelectOption value="upcoming">Upcoming</NativeSelectOption><NativeSelectOption value="open">Open</NativeSelectOption><NativeSelectOption value="closed">Closed</NativeSelectOption></NativeSelect></Field>
+            {/* ADMIN-RE-12b: the card's word follows the sign-up way and the date, so
+                the only choice left is whether the owner closed it. A tryout
+                still saved as Upcoming shows as open here and saves unchanged. */}
+            <Field label="Sign-ups"><NativeSelect chevronIcon={AdminSelectChevron} value={selectedEvent.status === "closed" ? "closed" : "open"} onChange={(event) => changeEvent("status",event.target.value as TryoutDraft["status"])}><NativeSelectOption value="open">Open, closes by itself the day after its date</NativeSelectOption><NativeSelectOption value="closed">Closed</NativeSelectOption></NativeSelect></Field>
             {showsProgramAndHeroFields && <Field label="Program association"><NativeSelect chevronIcon={AdminSelectChevron} value={selectedEvent.programId ?? ""} onChange={(event) => changeEvent("programId",event.target.value || null)}><NativeSelectOption value="">General club tryout</NativeSelectOption>{programs.map((program) => <NativeSelectOption key={program.id} value={program.id}>{program.display_title}</NativeSelectOption>)}</NativeSelect></Field>}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1"><Field label="Event date" error={eventErrors[selectedEvent.clientKey]?.eventDate}><input type="date" className={ADMIN_INPUT_CLASS} value={selectedEvent.eventDate} onChange={(event) => changeEvent("eventDate",event.target.value)} /></Field><Field label="Location" error={eventErrors[selectedEvent.clientKey]?.location}><input className={ADMIN_INPUT_CLASS} value={selectedEvent.location} onChange={(event) => changeEvent("location",event.target.value)} maxLength={160} /></Field><Field label="Cost" error={eventErrors[selectedEvent.clientKey]?.costText}><input className={ADMIN_INPUT_CLASS} value={selectedEvent.costText} onChange={(event) => changeEvent("costText",event.target.value)} maxLength={120} /></Field></div>
             <p className="font-body text-xs leading-5 text-muted-foreground">Leave date, location, or cost blank to show TBA to visitors.</p>

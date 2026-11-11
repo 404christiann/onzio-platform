@@ -379,6 +379,8 @@ export function programDraftToContent(
     detailMediaUrl: draft.detailMediaPreviewUrl,
     externalCta: href && label ? { label, href } : null,
     nativeRegistration: null,
+    signUpsClosed: false,
+    contactCta: null,
     registration: resolveProgramRegistration({
       registration_enabled: draft.registrationEnabled,
       registration_eyebrow: String(payload.registration_eyebrow ?? ""),
