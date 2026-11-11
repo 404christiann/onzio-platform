@@ -1,5 +1,83 @@
 # Diverse City FC Status
 
+## 2026-11-10 - ADMIN-RE-12b: programs and tryouts take their state from the sign-up way and the date
+
+**Agent/package:** Claude Code, `ADMIN-RE-12b` (the second of three RE-12
+PRs; 12a #131 is the Programs words test, 12c the "Programs and tryouts"
+page). Branch `claude/admin-re-12b-sign-up-state` from `main` `8fa59263`.
+**Status:** `in_progress`, PR open for the review bot. **Carries a migration**
+(`20261110180000_programs_tryouts_sign_up_state.sql`, sorted after RE-15's
+`20261110150000` and RE-11c-1's `20261110160000`), so it needs `GATE-MIGRATE`
+with Christian's OK, one gate at a time. It rewrites no rows. No change to
+`lib/club-context.ts`.
+
+**Completed work:**
+
+- **Migration**, additive:
+  - `tryouts.hidden`, `tryouts.sign_up_by_contact`,
+    `tryouts.stays_open_after_date` (cleared by a trigger when the date
+    changes);
+  - `programs.sign_ups_closed`, `programs.sign_up_by_contact`;
+  - a strictly advancing `tryouts.updated_at`, the same function programs use;
+  - the 500-tryout cap on every insert path (statement trigger);
+  - `onzio_private.club_today` (Los Angeles if the zone is unusable, like
+    `clubToday`);
+  - `onzio_private.registration_form_accepting` and a `before insert` trigger
+    on `registrations` that refuses a new pending sign-up while every program
+    or tryout using the form is hidden, closed or past its date. A form nobody
+    uses is unaffected; paid rows from imports are never refused;
+  - `onzio.registration_form_accepting` (security invoker, service role only);
+  - the RPCs for 12c (`save_tryout`, `save_program_sign_up`, `copy_program`,
+    `copy_tryout`, `delete_tryout`), each with a receipt table
+    (`onzio_private.sign_up_settings_receipts`), optimistic `updated_at`
+    checks, and decision 12 (a form used elsewhere is refused).
+  - The definer functions are all in `onzio_private` with `search_path=''`.
+- **Reads:**
+  - `lib/sign-up-state.ts`: the state rule, the price words and the date
+    order.
+  - `lib/queries.ts`: `mapTryout` takes the club's date. Closed (by the owner
+    or the date) drops the form and link and keeps the contact fallback. The
+    printed word follows the state. Cost is the form price with an open form.
+    `fetchTryouts` leaves hidden tryouts out and sorts by date.
+    `mapProgram`: closed hides the form and link; "They contact you" gives a
+    `contactCta`.
+  - `app/_clubs/[slug]/tryouts`: reads the club's time zone
+    (`readPublicClubTimeZone`).
+  - `AcademyProgramDetailPage`: the closed and contact bands.
+  - The classic tryouts preview and the legacy page pass the club's date.
+  - The classic dashboard leaves hidden tryouts out.
+- **Sign-ups:** `loadOpenRegistrationForm` asks
+  `registration_form_accepting` and answers `REGISTRATION_FORM_CLOSED`, so
+  the form page shows "Registration closed".
+- **Classic Tryouts editor:** "Status" becomes "Sign-ups": "Open, closes by
+  itself the day after its date" or "Closed". A tryout stored as Upcoming
+  shows as open and saves unchanged.
+- **Decision 7:** the cap stays. `save_tryouts_page` already refused more
+  than 500 events and must list every row, but `/api/admin/data` and direct
+  writes went around it, so the trigger closes those.
+
+**Christian's decisions (2026-11-10, through the orchestrator):**
+
+- The production check (read-only, counts only) found: no form stops taking
+  sign-ups, no badge word changes, no club near 500. **Two past tryouts close
+  at deploy** (1 Diverse City, 1 Lions): "Yes, close them". No reopen step is
+  needed after the deploy.
+- **Date order moves 2 of Lions' 3 tryouts.** Christian: "the lions page in
+  general is irrelevant as they are not current customers nor will they be
+  future customers. Lets remove them entirely later. But anything regarding
+  lions we shouldnt need to worry about it." No Lions-specific handling,
+  beyond not failing on its data.
+
+**Verification:** `tests/database/programs-tryouts-sign-up-state.test.ts` (19
+tests, on a fresh `supabase db reset --local`),
+`lib/__tests__/sign-up-state.test.ts` and the updated contracts. The full
+suites, with the commit they ran on, are in the PR body.
+
+**Blockers:** `GATE-MIGRATE` (Christian), after any gate already running.
+
+**Exact next step:** bot review, then `GATE-MIGRATE`, then merge. Then 12c,
+the page.
+
 ## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so

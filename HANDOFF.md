@@ -1,3 +1,24 @@
+## 2026-11-10 - ADMIN-RE-12b Programs and tryouts take their state from the sign-up way and the date
+
+- **Status:** `in_progress`, PR open. **Carries a migration**
+  (`20261110180000_programs_tryouts_sign_up_state.sql`) that rewrites no rows
+  but changes what visitors see, so it needs `GATE-MIGRATE` with Christian's
+  OK. No change to `lib/club-context.ts`.
+- **What it adds:** a tryout's state is worked out from its sign-up way and
+  date. It closes itself the day after its date in club time; Reopen keeps it
+  open until the date changes. Programs and tryouts can be closed or hidden,
+  and then their sign-up form refuses new sign-ups at the database (a form
+  nobody uses is unaffected). Tryout cards print Open, Upcoming or Closed from
+  that state, show the form's price as the Cost, read by date, and leave
+  hidden tryouts out. The 500-tryout cap now holds on every write path. The
+  database functions the 12c page will use are included.
+- **Visitors see at deploy:** two past tryouts close (1 Diverse City, 1
+  Lions); Christian: "Yes, close them". Lions' tryouts reorder by date (Lions
+  doesn't need attention, Christian). Nothing else changes.
+- **Verification:** database, unit and contract tests; full suites and the
+  tested commit are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** bot review, `GATE-MIGRATE`, merge; then 12c.
+
 ## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
 
 - **Status:** `in_progress`, PR open. PR 24d of `ADMIN-RE-24` (built before 24c so
