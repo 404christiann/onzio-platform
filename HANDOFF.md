@@ -19,6 +19,69 @@
   tested commit are in the PR body. Details in `STATUS.md`.
 - **Exact next step:** bot review, `GATE-MIGRATE`, merge; then 12c.
 
+## 2026-11-10 - ADMIN-RE-12a The Programs words browser test, made steady
+
+- **Status:** `in_progress`, PR open. Test and one editor focus fix only: no
+  migration, no hosted action. The first of three RE-12 PRs (12b: sign-up
+  state migration; 12c: the "Programs and tryouts" page).
+- **What was wrong:** RE-22's "Programs page words are editable" test at 1440
+  failed now and then. In every failure the editor still held what was typed.
+  The causes: a save slower than the test's 5 s wait, whose late write then
+  broke the next run; one public page that showed the standard words 7 ms
+  after a stored save (cause not found, never reproduced in 300 direct
+  probes); and a focus race when the editor focused the words box one frame
+  after a click.
+- **What changed:** the editor puts the cursor in the clicked section's first
+  field once that section is drawn, and never takes it from a field already in
+  use. The test clears the words before and after, waits for the words box
+  and the cursor to settle, checks the stored row, allows the save 20 s, and
+  requires the public page to show the words on its first render (no reload:
+  review-bot M1 on #131). The one stale public render is an open item.
+- **Verification:** the first version of the fix went 40 of 40 at 1440,
+  twice. The final version is repeated 20 times per portal at both 390 and
+  1440, and the full suites run, on the PR head. The counts and the tested
+  commit are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** bot review and merge.
+
+## 2026-11-10 - Lions removed (production data, then repo code)
+
+- **Status:** production removal `done` 2026-11-10; repo cleanup `in_progress`,
+  PR open. No migration, no deploy.
+- **Production (done, on Christian's go):** Lions was archived since 11-02.
+  Christian ran a read-only count first, then Claude saved a backup on his Mac
+  (`~/lions-export.tgz`: a data-only dump of `onzio` and `onzio_private` plus
+  the 13 Lions photos; sha256 `8bd532f3…25534c3`). Christian pasted one guarded
+  transaction into the SQL editor at 23:01Z. It deleted 94 rows plus the club
+  in dependency order, every per-table count equal to the read-only count, and
+  wrote audit event 961 (`hard_purge`, club_id null). The 124 old Lions audit
+  rows and any Stripe events stay, with club_id null (by design since Phase 5).
+  Claude then deleted the 13 photos from `onzio-media` after checking each one
+  against the backup. Post-check: nothing left for the old id; clubs left are
+  `diverse-city` and `rose-city`. Smoke: Diverse City `/`, `/programs`,
+  `/roster`, `/shop` 200 with no `UNKNOWN_TENANT`; Rose City `/admin/login` 200
+  (its `/` is 404 by the public-site hold).
+- **Why not the operator purge:** `lib/operator/purge-club.ts` lists only the
+  Phase 2 tables, deletes Storage first and is not transactional, so it would
+  have stopped half way on the newer RESTRICT foreign keys. It still needs
+  updating before it is used for any club.
+- **Repo cleanup (this PR):** removed the Lions importers, planner, standings
+  seed, their four `package.json` scripts, two contract tests, the roster
+  browser spec no config ran, `docs/lions-fc-launch-plan.md` and the Lions media
+  plan JSON. The Clubhouse template now shows the club's own name and neutral
+  copy where it said Lions, Columbus, Capital City, Scioto Field or Founded
+  2014. Kept on purpose: migration comments, the template origin notes in
+  `packages/presentation` (provenance, like the Rose City and Deportivo Olimpico
+  notes), the `.vercelignore` line and older history entries.
+- **Follow-up (bot's Low notes on #134):** the empty story box under the
+  Clubhouse home story, which still drew a divider, is gone along with its
+  CSS, and the About page's big number no longer falls back to "14" (it
+  stays empty when the club's values have no year).
+- **Not done:** staging still has its own Lions tenant (separate go from
+  Christian); one auth user whose only club was Lions still exists.
+- **Verification:** on `1326604c` (`main` `8fa5926`): TypeScript and ESLint on app code pass; unit and contract 3,101 passed, 12 pilot tests timed out under heavy load and passed 47/47 when rerun alone; production build passes; Homepage browser 62/63 (the one failure passed on rerun) and page editors 36/37 (the About committed-500 case fails the same way on clean `main`). Full table in the PR body and `STATUS.md`.
+- **Exact next step:** the bot reviews and merges the PR. Then, on Christian's
+  go, staging's Lions tenant.
+
 ## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
 
 - **Status:** `in_progress`, PR open. PR 24d of `ADMIN-RE-24` (built before 24c so
