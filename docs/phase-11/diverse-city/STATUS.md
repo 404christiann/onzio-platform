@@ -1,5 +1,60 @@
 # Diverse City FC Status
 
+## 2026-11-11 - ADMIN-RE-10b: website numbers only with Sponsor Insights
+
+**Agent/package:** Claude Code, `ADMIN-RE-10b`, a fix from Christian's Diverse City
+walk-through on the new admin. Branch `claude/admin-re-10b-website-numbers` from `main`
+`d42ee852`. **Status:** `in_progress`, PR open for the review bot. No migration, no
+hosted action.
+
+**Finding (Christian):** "for diverse city they dont have Website numbers included". The
+Website tab showed a "Website numbers · Included" card (monthly summary plus a Sponsor
+Insights line), and the home's At a glance showed a Website card ("Not counted yet").
+
+**Completed work:**
+
+- `app/admin/(protected)/website/page.tsx`: the Website numbers card is gone for every
+  club. Clubs with the add-on already see their numbers on the Insights tab.
+- `components/admin/reimagined/Glance.tsx`: `WebsiteNumbers` removed (and its `.note` style
+  in `home.module.css`).
+- Home: `visitsHref` is the Insights tab for a club with `admin_flags.sponsor_insights`,
+  otherwise `null`, and `ReimaginedHome` draws the website card only when it is set. So
+  Diverse City sees only the season card under At a glance; a club with the add-on
+  (Rose City once its flag is on) keeps the card.
+- `docs/admin-portal-redesign-plan.md` RE-24b records the change.
+
+**Files changed:** `app/admin/(protected)/page.tsx`, `app/admin/(protected)/website/page.tsx`,
+`components/admin/reimagined/{Glance,ReimaginedHome}.tsx`, `home.module.css`,
+`tests/contracts/admin-reimagined-home.test.ts`, `tests/browser/admin-reimagined-home.spec.ts`,
+`tests/browser/admin-reimagined-tabs.spec.ts`, the plan, this file, `HANDOFF.md`.
+
+**Verification** (clean worktree, `npm ci`, every database and browser run inside
+`scripts/with-local-db-lock.sh`):
+
+- **Red first:** the new contract test failed on `main`'s code.
+- **Green:**
+  - types and lint pass
+  - vitest 237 files, 3,197 passed
+  - architecture 426 passed
+  - build passes
+  - `test:db` 1,122/1,122 before the browser run
+- **The changed browser tests:** 11/11 pass on their own (home At a glance, the programs
+  club's tabs at 390 and 1440 in light and dark, the Sponsor Insights club's tabs).
+- **The whole `admin-reimagined` suite:** 154 passed, 6 failed. The failures came from the
+  shared local database's state, not this change. It had just been restarted with a
+  fresh seed, so the test club showed "12 new this week" sign-ups and extra unscored
+  games. The failures were in home jobs, league, score, seasons and sign-ups, plus the
+  tabs red dot. Their serial specs skipped the rest of each file.
+- **After the browser run:** 15 `league-table-per-season` database tests failed on games
+  left on the test club.
+- **My mistake during this run:** a ledger check came back empty because `psql` isn't
+  installed. That triggered `supabase db reset`, which stopped the shared local database
+  and couldn't pull its image. It stayed down from about 20:59Z until another session
+  ran `supabase start` (about 23:40Z). Local only; no hosted system was touched.
+
+**Exact next step:** the bot reviews and merges; then Diverse City's Website tab and home
+show no website numbers.
+
 ## 2026-11-11 - GATE-FLIP-DC undone: Diverse City back on the classic admin
 
 **Agent/package:** Claude Code, `GATE-FLIP-DC` rollback, asked by the admin-redesign

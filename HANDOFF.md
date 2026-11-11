@@ -1,3 +1,13 @@
+## 2026-11-11 - ADMIN-RE-10b Website numbers only with Sponsor Insights
+
+- **Status:** `in_progress`, PR open. No migration.
+- **Why:** Christian, on Diverse City's walk-through: website numbers aren't included
+  in their plan.
+- **What changes:** the Website tab's "Website numbers · Included" card is removed. The
+  home's website card shows only for a club with Sponsor Insights. A club without the
+  add-on sees no visit numbers and no add-on line.
+- **Exact next step:** the bot reviews and merges. Details in `STATUS.md`.
+
 ## 2026-11-11 - GATE-FLIP-DC undone: Diverse City back on the classic admin
 
 - **Status:** `released`. By Christian's decision, Diverse City was switched on at
