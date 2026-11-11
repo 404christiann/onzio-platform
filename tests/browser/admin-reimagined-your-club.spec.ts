@@ -205,6 +205,15 @@ for (const width of [390, 1440]) {
         await signOut.getByRole("button", { name: "Keep editing" }).click();
         await expect(signOut).toBeHidden();
         await expect(page).toHaveURL(/\/admin\/your-club$/);
+        // ADMIN-RE-24c (bot Medium on #132): a search result asks first too.
+        await page.keyboard.press("ControlOrMeta+k");
+        await page.getByTestId("admin-search").getByRole("combobox").fill("league table");
+        await page.keyboard.press("Enter");
+        await expect(ask).toBeVisible();
+        await expect(page).toHaveURL(/\/admin\/your-club$/);
+        await ask.getByRole("button", { name: "Keep editing" }).click();
+        await expect(page).toHaveURL(/\/admin\/your-club$/);
+        await expect(main(page).getByRole("textbox", { name: "Hours", exact: true })).toHaveValue("Always open");
         // ADMIN-RE-24: on a laptop the sidebar's tabs ask first too.
         const sideHome = page.getByRole("navigation", { name: "Club admin" }).locator('[data-tab="home"]');
         if (await sideHome.isVisible()) {
