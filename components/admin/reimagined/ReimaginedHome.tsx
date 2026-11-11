@@ -42,7 +42,7 @@ export function ReimaginedHome({
   jobs: readonly HomeJobTile[];
   board: HomeBoard;
   held: boolean;
-  visitsHref: string;
+  visitsHref: string | null;
   seasonHref: string;
   addGameHref: string | null;
   contentPaused: boolean;
@@ -111,7 +111,8 @@ export function ReimaginedHome({
             </h2>
             <div className={styles.glance}>
               <SeasonGlance season={board.season} href={seasonHref} />
-              <VisitsGlance held={held} href={visitsHref} />
+              {/* ADMIN-RE-10b: website numbers come only with Sponsor Insights. */}
+              {visitsHref ? <VisitsGlance held={held} href={visitsHref} /> : null}
             </div>
           </section>
         </div>

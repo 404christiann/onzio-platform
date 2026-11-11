@@ -73,8 +73,22 @@ describe("reimagined home (ADMIN-RE-05)", () => {
     const glance = components["Glance.tsx"];
     expect(glance).toContain('"Not live yet"');
     expect(glance).toContain('"Not counted yet"');
-    expect(glance).toContain('"No visit numbers yet"');
     expect(glance).not.toMatch(/\b0 visits\b|visits: 0/);
+  });
+
+  // ADMIN-RE-10b (Christian, Diverse City walk-through 2026-11-11): website
+  // numbers aren't included in a club's plan. Only a club with the Sponsor
+  // Insights add-on sees them, on the home and on its Insights tab.
+  it("shows website numbers only to a club with Sponsor Insights", () => {
+    const home = components["ReimaginedHome.tsx"];
+    expect(home).toContain("visitsHref: string | null;");
+    expect(home).toMatch(/\{visitsHref \? <VisitsGlance held=\{held\} href=\{visitsHref\} \/> : null\}/);
+    expect(page).toContain('visitsHref={tabs.some((tab) => tab.id === "insights") ? getAdminTab("insights").href : null}');
+    expect(components["Glance.tsx"]).not.toContain("WebsiteNumbers");
+    expect(components["Glance.tsx"]).not.toMatch(/Included/);
+    const website = source("app/admin/(protected)/website/page.tsx");
+    expect(website).not.toContain("WebsiteNumbers");
+    expect(website).not.toContain("website-numbers");
   });
 
   it("reads the board server-side, user-scoped, club-scoped and free of personal details", () => {

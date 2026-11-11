@@ -119,9 +119,9 @@ for (const width of [390, 1440]) {
         await expect(main(page).getByTestId("admin-tab-status")).toHaveText("Your website is live");
         await expect(main(page).getByRole("link", { name: "Edit my website" })).toHaveAttribute("href", "/admin/homepage");
         await expect(main(page).getByTestId("admin-view-website")).toHaveAttribute("target", "_blank");
-        // ADMIN-RE-24b: the included monthly card, with no made-up numbers.
-        await expect(main(page).getByTestId("website-numbers")).toContainText("No visit numbers yet");
-        await expect(main(page).getByTestId("website-numbers")).toContainText("Sponsor Insights");
+        // ADMIN-RE-10b: website numbers aren't included without Sponsor Insights.
+        await expect(main(page).getByTestId("website-numbers")).toHaveCount(0);
+        await expect(main(page)).not.toContainText(/visit numbers|Sponsor Insights|Included/i);
         await page.screenshot({ path: `${SHOTS}/tabs-website-${width}-${theme}.png`, fullPage: true });
 
         await tabs(page).locator('[data-tab="club"]').click();

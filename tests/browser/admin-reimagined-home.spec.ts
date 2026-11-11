@@ -185,10 +185,12 @@ for (const width of [390, 1440]) {
       }
     });
 
-    test("At a glance: the season card opens Games and the website card never shows zeros", async ({ page }) => {
+    test("At a glance: the season card opens Games, and no website card without Sponsor Insights", async ({ page }) => {
       await page.goto("/admin");
-      await expect(main(page).getByTestId("glance-visits")).toContainText("Not counted yet");
-      await expect(main(page)).not.toContainText(/\b0 visits\b/);
+      // ADMIN-RE-10b: website numbers aren't included without the add-on.
+      await expect(main(page).getByTestId("glance-season")).toBeVisible();
+      await expect(main(page).getByTestId("glance-visits")).toHaveCount(0);
+      await expect(main(page)).not.toContainText(/\b0 visits\b|visit numbers/i);
       const season = main(page).getByTestId("glance-season");
       await expect(season).toBeVisible();
       await season.click();
