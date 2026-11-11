@@ -5,11 +5,50 @@
 **Agent/package:** Claude Code, `ADMIN-RE-12b` (the second of three RE-12
 PRs; 12a #131 is the Programs words test, 12c the "Programs and tryouts"
 page). Branch `claude/admin-re-12b-sign-up-state` from `main` `428a1590`.
-**Status:** `in_progress`, PR open for the review bot. **Carries a migration**
-(`20261110180000_programs_tryouts_sign_up_state.sql`, sorted after RE-15's
-`20261110150000` and RE-11c-1's `20261110160000`), so it needs `GATE-MIGRATE`
-with Christian's OK, one gate at a time. It rewrites no rows. No change to
+**Status:** `released` 2026-11-11 (PR #139, merge `cbb751b4`). **Carried a
+migration** (`20261110180000_programs_tryouts_sign_up_state.sql`), applied to
+production before the merge. It rewrites no rows. No change to
 `lib/club-context.ts`.
+
+**Release record:** `GATE-MIGRATE` ran from Christian's Mac at his explicit
+request ("Yes, run the gate"; "Yes, finish it" for the wrap-up), following
+`docs/agents/review-bot-supabase.md`, on the reviewed head `5854b548`.
+
+- **Before the apply:**
+  - onzio-coder reported no High or Medium issues;
+  - the runner table's tested revision was that head, with `test:db` 1093
+    passed after a fresh reset;
+  - the ledger had only this migration pending;
+  - the read-only snapshot: clubs 2, verified domains 6, audit events 955,
+    tryouts 1, programs 4, forms 0, registrations 0;
+  - recovery point: completed physical backup `2224451539` (2026-11-10 11:20
+    UTC), plus restricted logical dumps of `onzio` and `onzio_private` (SHA-256
+    recorded on #139). The dumps were deleted after the checks passed;
+  - code rollback target: `dpl_6hsWd7yQUxViVH8KusMXY6Sdx88k`;
+  - the dry run listed only this migration.
+- **Apply:** `supabase db push --linked --skip-vault` (CLI 2.122.0) at
+  04:01:56 UTC, 2026-11-11.
+- **After the apply:**
+  - the ledger matches, and a second dry run says up to date;
+  - the history row is present, and the five new columns exist with no
+    non-default value;
+  - every snapshot count is unchanged;
+  - the linked types match the committed file apart from the newer CLI's
+    formatting.
+- **Merge and deploy:** merged pinned to `5854b548` as `cbb751b4`. Production
+  deployment `dpl_7duVwQ4RjzLuLKF7N39THgWCxC2r` is Ready; Vercel didn't report
+  its commit, and it was created at 04:03 UTC, a minute after the merge.
+- **After-deploy checks:**
+  - HTTP 200 with no `UNKNOWN_TENANT` from `diversecityfc.com`,
+    `www.diversecityfc.com`, `diverse-city-fc-private.vercel.app`, Diverse
+    City `/programs`, `/roster`, `/shop`, `/tryouts`, and
+    `onzio-platform.vercel.app/admin/login`;
+  - `onzio-platform.vercel.app/` returns 404 by design;
+  - Diverse City's past tryout ("UPSL Fall Tryouts 2026", Sept 3) shows
+    **closed**, with only "Contact the club".
+  - `hold` was removed from #139 afterwards.
+
+The full record is the gate comment on #139.
 
 **Completed work:**
 
@@ -73,10 +112,13 @@ tests, on a fresh `supabase db reset --local`),
 `lib/__tests__/sign-up-state.test.ts` and the updated contracts. The full
 suites, with the commit they ran on, are in the PR body.
 
-**Blockers:** `GATE-MIGRATE` (Christian), after any gate already running.
+**Blockers:** none. RE-11c-1 (#137, migration `20261110160000`) now sorts
+before a migration production already has, so it must re-time its file to
+sort after `20261110180000` and re-run `test:db` before its own gate.
 
-**Exact next step:** bot review, then `GATE-MIGRATE`, then merge. Then 12c,
-the page.
+**Exact next step:** 12c (the "Programs and tryouts" page), when the
+orchestrator says go. The drafts are in the shared notes folder
+(`re-12c-draft/`).
 
 ## 2026-11-10 - About/Logo save browser test: clean-up restores "no row"
 
