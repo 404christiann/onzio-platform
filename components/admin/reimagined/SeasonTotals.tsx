@@ -317,8 +317,8 @@ function AdjustSheet({
           disabled={busy}
           onChange={(next) => setAdded((prev) => ({ ...prev, [column.key]: next }))}
           aria-label={`${column.label} added by hand for ${player.name}`}
-          decrementLabel={`One less ${word} for ${player.name}`}
-          incrementLabel={`One more ${word} for ${player.name}`}
+          decrementLabel={`Take one from ${word} for ${player.name}`}
+          incrementLabel={`Add one to ${word} for ${player.name}`}
           decrementIcon={<IconRemove className="size-5" aria-hidden="true" />}
           incrementIcon={<IconAdd className="size-5" aria-hidden="true" />}
         />

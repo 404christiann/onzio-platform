@@ -49,7 +49,9 @@ describe("where the hub runs", () => {
 
   it("links the cards to the manifest's paths, for pages every owner and administrator has", () => {
     expect(page).toContain('getAdminRouteHref("standings")');
-    expect(page).toContain('${getAdminRouteHref("match-stats")}?view=season');
+    // ADMIN-RE-11c-2: "See totals" opens the Season totals page; "Add player numbers" a game's list.
+    expect(page).toContain('totals: `${getAdminRouteHref("seasons")}/totals`');
+    expect(page).toContain('playerNumbers: getAdminRouteHref("score")');
     expect(page).toContain('getAdminRouteHref("schedule")');
     // None of those depends on the club's template (lib/admin-route-manifest.ts).
     expect(getAdminRouteHref("standings")).toBe("/admin/standings");

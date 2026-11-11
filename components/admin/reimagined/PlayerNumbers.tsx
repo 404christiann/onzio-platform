@@ -486,8 +486,8 @@ function Cell({
         disabled={disabled}
         onChange={onChange}
         aria-label={`${name}: ${word}`}
-        decrementLabel={`One less ${word} for ${name}`}
-        incrementLabel={`One more ${word} for ${name}`}
+        decrementLabel={`Take one from ${word} for ${name}`}
+        incrementLabel={`Add one to ${word} for ${name}`}
         decrementIcon={<IconRemove className="size-5" aria-hidden="true" />}
         incrementIcon={<IconAdd className="size-5" aria-hidden="true" />}
       />
