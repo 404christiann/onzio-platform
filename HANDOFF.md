@@ -42,8 +42,9 @@
   clean. `npm run lint` fails in this worktree only because it sits inside
   another checkout whose `.eslintrc.json` conflicts. ESLint with this repo's
   config alone reports 0 errors (one existing warning in
-  `app/(public)/sponsors/page.tsx`). Not run: `npm test` end to end, a Linux run
-  of the new workflow, and the production build. The full run table with load
+  `app/(public)/sponsors/page.tsx`). The first run of the new workflow on the PR
+  (ubuntu-latest, Node 22, commit `7cc58c74`) passed 227 files and 2,840 of 2,840
+  tests. Not run: `npm test` end to end and the production build. The full run table with load
   averages and tested commits is in the PR body.
 - **Interaction to fix:** the unmerged `agent/verify-faster` branch
   (`scripts/codex-loop-verify.sh`) skips the pilot files and avoids double runs
@@ -52,9 +53,9 @@
   stop skipping. Whichever of the two lands second should select files with
   `--project unit` and directories instead. Not checked by running that
   script.
-- **Exact next step:** Christian reviews the draft PR. After the first Linux
-  run of the `Unit tests` workflow, decide whether to keep that commit and
-  whether the check is required (branch protection is not touched here). The
+- **Exact next step:** Christian reviews the draft PR and decides whether to keep
+  the `Unit tests` workflow commit and whether the check is required (branch
+  protection is not touched here). The
   next lever is `tests/architecture/template-selectors.test.ts`. In three
   recorded `test:unit` runs the other 226 files finished by 13 to 14 seconds
   and this one finished last, at 26 to 30 seconds.

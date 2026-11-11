@@ -28,8 +28,9 @@ email change. One dev dependency removed.
   effect on the projects, and `--project '!db' --project '!pilot'` selects all
   three).
 - A `Unit tests` workflow (`.github/workflows/unit-tests.yml`, the last commit)
-  runs `npm run test:unit` on pull requests and pushes to `main`. Not yet run on
-  Linux.
+  runs `npm run test:unit` on pull requests and pushes to `main`. Its first run on
+  the PR (ubuntu-latest, Node 22, commit `7cc58c74`) passed 227 files and 2,840
+  of 2,840 tests, with 22.5 s of Vitest time.
 
 **Files changed:** `vitest.config.ts`, `package.json`, `package-lock.json`,
 new `tests/global-setup/serial-project-guard.ts`, new
@@ -57,16 +58,15 @@ this repo's config: 0 errors. `npm run lint` itself fails in this worktree
 because the worktree sits inside another checkout whose `.eslintrc.json`
 conflicts. Raw logs and JSON are outside the repository.
 
-**Blockers / decisions:** the `Unit tests` workflow has not run on Linux, and
-whether it is a required check is Christian's decision. `npm test` end to end,
-the production build and a Linux run were not run. The unmerged
+**Blockers / decisions:** whether the `Unit tests` workflow is a required check
+is Christian's decision. `npm test` end to end and the production build were
+not run, and pilot and database were not re-run after the rebase onto `8fa59263`. The unmerged
 `agent/verify-faster` branch skips pilot files with `--exclude=...`, which the
 projects ignore, so whichever lands second must switch it to `--project`
 (not checked by running that script).
 
 **Exact next step:** Christian reviews the draft PR and decides whether to keep
-the workflow commit. After the first Linux run, fix any Linux-only failure in
-its own change or drop the workflow commit.
+the workflow commit and whether the check is required.
 
 ## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
 
