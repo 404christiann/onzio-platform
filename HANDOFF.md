@@ -22,6 +22,35 @@
   `pending`), and `lib/database.generated.ts` has the new function.
 - **Exact next step:** bot review, `GATE-MIGRATE` on Christian's go, merge.
 
+## 2026-11-10 - ADMIN-RE-12b Programs and tryouts take their state from the sign-up way and the date
+
+- **Status:** `released` 2026-11-11. Migration `20261110180000` was applied to
+  production at 04:01:56 UTC from Christian's Mac, at his request
+  (`GATE-MIGRATE`). PR #139 then merged (`cbb751b4`) and deployed
+  (`dpl_7duVwQ4RjzLuLKF7N39THgWCxC2r`). After-deploy checks passed: every
+  Diverse City domain returns 200 with no `UNKNOWN_TENANT`, as do `/programs`,
+  `/roster`, `/shop`, `/tryouts` and the admin login. The past tryout shows
+  closed. Recovery point: physical backup `2224451539`; code rollback target:
+  `dpl_6hsWd7yQUxViVH8KusMXY6Sdx88k`. No change to `lib/club-context.ts`.
+- **What it adds:** a tryout's state is worked out from its sign-up way and
+  date. It closes itself the day after its date in club time; Reopen keeps it
+  open until the date changes. Programs and tryouts can be closed or hidden,
+  and then their sign-up form refuses new sign-ups at the database (a form
+  nobody uses is unaffected). Tryout cards print Open, Upcoming or Closed from
+  that state, show the form's price as the Cost, read by date, and leave
+  hidden tryouts out. The 500-tryout cap now holds on every write path. The
+  database functions the 12c page will use are included.
+- **Visitors saw at deploy:** Diverse City's past tryout (Sept 3) closed, with
+  only "Contact the club" left (Christian: "Yes, close them"). Lions was
+  removed before the gate (#134). Nothing else changed.
+- **Verification:** database, unit and contract tests; full suites and the
+  tested commit are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** 12c (the "Programs and tryouts" page) when the
+  orchestrator says go; drafts are in the shared notes folder.
+  RE-11c-1 (#137, migration `20261110160000`) must re-time its file to sort
+  after `20261110180000` before its own gate.
+
+
 ## 2026-11-10 - ADMIN-RE-24c Search on the new admin
 
 - **Status:** `in_progress`, PR open. Last PR of `ADMIN-RE-24`. **New dependency:

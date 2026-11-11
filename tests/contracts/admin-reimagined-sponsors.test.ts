@@ -109,8 +109,11 @@ describe("the migration", () => {
     expect(names).toContain(FILE);
     expect(FILE.slice(0, 14) > "20261110090000").toBe(true);
     expect(FILE.slice(0, 14) > "20261109210000").toBe(true);
-    // Later migrations: the operator purge.
-    expect(names.filter((name) => name > FILE)).toEqual(["20261110210000_purge_archived_club.sql"]);
+    // Later packages' migrations sort after it (ADMIN-RE-12b, then the operator purge).
+    expect(names.filter((name) => name > FILE)).toEqual([
+      "20261110180000_programs_tryouts_sign_up_state.sql",
+      "20261110210000_purge_archived_club.sql",
+    ]);
   });
 
   it("does what the plan says, and keeps the old column for code deployed before it", () => {

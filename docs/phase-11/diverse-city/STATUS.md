@@ -81,6 +81,127 @@ whichever PR merges second must add fixture rows for them to the purge test
 **Exact next step:** bot review; `GATE-MIGRATE` on Christian's go, then merge.
 No purge runs on production without Christian's go.
 
+## 2026-11-10 - ADMIN-RE-12b: programs and tryouts take their state from the sign-up way and the date
+
+**Agent/package:** Claude Code, `ADMIN-RE-12b` (the second of three RE-12
+PRs; 12a #131 is the Programs words test, 12c the "Programs and tryouts"
+page). Branch `claude/admin-re-12b-sign-up-state` from `main` `428a1590`.
+**Status:** `released` 2026-11-11 (PR #139, merge `cbb751b4`). **Carried a
+migration** (`20261110180000_programs_tryouts_sign_up_state.sql`), applied to
+production before the merge. It rewrites no rows. No change to
+`lib/club-context.ts`.
+
+**Release record:** `GATE-MIGRATE` ran from Christian's Mac at his explicit
+request ("Yes, run the gate"; "Yes, finish it" for the wrap-up), following
+`docs/agents/review-bot-supabase.md`, on the reviewed head `5854b548`.
+
+- **Before the apply:**
+  - onzio-coder reported no High or Medium issues;
+  - the runner table's tested revision was that head, with `test:db` 1093
+    passed after a fresh reset;
+  - the ledger had only this migration pending;
+  - the read-only snapshot: clubs 2, verified domains 6, audit events 955,
+    tryouts 1, programs 4, forms 0, registrations 0;
+  - recovery point: completed physical backup `2224451539` (2026-11-10 11:20
+    UTC), plus restricted logical dumps of `onzio` and `onzio_private` (SHA-256
+    recorded on #139). The dumps were deleted after the checks passed;
+  - code rollback target: `dpl_6hsWd7yQUxViVH8KusMXY6Sdx88k`;
+  - the dry run listed only this migration.
+- **Apply:** `supabase db push --linked --skip-vault` (CLI 2.122.0) at
+  04:01:56 UTC, 2026-11-11.
+- **After the apply:**
+  - the ledger matches, and a second dry run says up to date;
+  - the history row is present, and the five new columns exist with no
+    non-default value;
+  - every snapshot count is unchanged;
+  - the linked types match the committed file apart from the newer CLI's
+    formatting.
+- **Merge and deploy:** merged pinned to `5854b548` as `cbb751b4`. Production
+  deployment `dpl_7duVwQ4RjzLuLKF7N39THgWCxC2r` is Ready; Vercel didn't report
+  its commit, and it was created at 04:03 UTC, a minute after the merge.
+- **After-deploy checks:**
+  - HTTP 200 with no `UNKNOWN_TENANT` from `diversecityfc.com`,
+    `www.diversecityfc.com`, `diverse-city-fc-private.vercel.app`, Diverse
+    City `/programs`, `/roster`, `/shop`, `/tryouts`, and
+    `onzio-platform.vercel.app/admin/login`;
+  - `onzio-platform.vercel.app/` returns 404 by design;
+  - Diverse City's past tryout ("UPSL Fall Tryouts 2026", Sept 3) shows
+    **closed**, with only "Contact the club".
+  - `hold` was removed from #139 afterwards.
+
+The full record is the gate comment on #139.
+
+**Completed work:**
+
+- **Migration**, additive:
+  - `tryouts.hidden`, `tryouts.sign_up_by_contact`,
+    `tryouts.stays_open_after_date` (cleared by a trigger when the date
+    changes);
+  - `programs.sign_ups_closed`, `programs.sign_up_by_contact`;
+  - a strictly advancing `tryouts.updated_at`, the same function programs use;
+  - the 500-tryout cap on every insert path (statement trigger);
+  - `onzio_private.club_today` (Los Angeles if the zone is unusable, like
+    `clubToday`);
+  - `onzio_private.registration_form_accepting` and a `before insert` trigger
+    on `registrations` that refuses a new pending sign-up while every program
+    or tryout using the form is hidden, closed or past its date. A form nobody
+    uses is unaffected; paid rows from imports are never refused;
+  - `onzio.registration_form_accepting` (security invoker, service role only);
+  - the RPCs for 12c (`save_tryout`, `save_program_sign_up`, `copy_program`,
+    `copy_tryout`, `delete_tryout`), each with a receipt table
+    (`onzio_private.sign_up_settings_receipts`), optimistic `updated_at`
+    checks, and decision 12 (a form used elsewhere is refused).
+  - The definer functions are all in `onzio_private` with `search_path=''`.
+- **Reads:**
+  - `lib/sign-up-state.ts`: the state rule, the price words and the date
+    order.
+  - `lib/queries.ts`: `mapTryout` takes the club's date. Closed (by the owner
+    or the date) drops the form and link and keeps the contact fallback. The
+    printed word follows the state. Cost is the form price with an open form.
+    `fetchTryouts` leaves hidden tryouts out and sorts by date.
+    `mapProgram`: closed hides the form and link; "They contact you" gives a
+    `contactCta`.
+  - `app/_clubs/[slug]/tryouts`: reads the club's time zone
+    (`readPublicClubTimeZone`).
+  - `AcademyProgramDetailPage`: the closed and contact bands.
+  - The classic tryouts preview and the legacy page pass the club's date.
+  - The classic dashboard leaves hidden tryouts out.
+- **Sign-ups:** `loadOpenRegistrationForm` asks
+  `registration_form_accepting` and answers `REGISTRATION_FORM_CLOSED`, so
+  the form page shows "Registration closed".
+- **Classic Tryouts editor:** "Status" becomes "Sign-ups": "Open, closes by
+  itself the day after its date" or "Closed". A tryout stored as Upcoming
+  shows as open and saves unchanged.
+- **Decision 7:** the cap stays. `save_tryouts_page` already refused more
+  than 500 events and must list every row, but `/api/admin/data` and direct
+  writes went around it, so the trigger closes those.
+
+**Christian's decisions (2026-11-10, through the orchestrator):**
+
+- The production check (read-only, counts only) found: no form stops taking
+  sign-ups, no badge word changes, no club near 500. **Two past tryouts close
+  at deploy** (1 Diverse City, 1 Lions): "Yes, close them". No reopen step is
+  needed after the deploy.
+- **Date order moves 2 of Lions' 3 tryouts.** Christian: "the lions page in
+  general is irrelevant as they are not current customers nor will they be
+  future customers. Lets remove them entirely later. But anything regarding
+  lions we shouldnt need to worry about it." No Lions-specific handling,
+  beyond not failing on its data.
+
+**Verification:** `tests/database/programs-tryouts-sign-up-state.test.ts` (19
+tests, on a fresh `supabase db reset --local`),
+`lib/__tests__/sign-up-state.test.ts` and the updated contracts. The full
+suites, with the commit they ran on, are in the PR body.
+
+**Blockers:** none. RE-11c-1 (#137, migration `20261110160000`) now sorts
+before a migration production already has, so it must re-time its file to
+sort after `20261110180000` and re-run `test:db` before its own gate.
+
+**Exact next step:** 12c (the "Programs and tryouts" page), when the
+orchestrator says go. The drafts are in the shared notes folder
+(`re-12c-draft/`).
+
+
 ## 2026-11-10 - About/Logo save browser test: clean-up restores "no row"
 
 **Agent/package:** Claude Code, test fix found while checking the Lions PR
