@@ -9,7 +9,7 @@ export default function ClubhouseAboutPage({
   content: DBAboutPageContent;
   sponsors: DBSiteSponsorLogo[];
 }) {
-  const storyMark = content.values[0]?.title.match(/\b(20\d{2})\b/)?.[1]?.slice(-2) ?? "14";
+  const storyMark = content.values[0]?.title.match(/\b(20\d{2})\b/)?.[1]?.slice(-2) ?? "";
   const paragraphs = content.story_paragraphs.filter(Boolean);
   const mission = content.closing_text || "One club, one community.";
 

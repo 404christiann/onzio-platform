@@ -51,6 +51,10 @@
   2014. Kept on purpose: migration comments, the template origin notes in
   `packages/presentation` (provenance, like the Rose City and Deportivo Olimpico
   notes), the `.vercelignore` line and older history entries.
+- **Follow-up (bot's Low notes on #134):** the empty story box under the
+  Clubhouse home story, which still drew a divider, is gone along with its
+  CSS, and the About page's big number no longer falls back to "14" (it
+  stays empty when the club's values have no year).
 - **Not done:** staging still has its own Lions tenant (separate go from
   Christian); one auth user whose only club was Lions still exists.
 - **Verification:** on `1326604c` (`main` `8fa5926`): TypeScript and ESLint on app code pass; unit and contract 3,101 passed, 12 pilot tests timed out under heavy load and passed 47/47 when rerun alone; production build passes; Homepage browser 62/63 (the one failure passed on rerun) and page editors 36/37 (the About committed-500 case fails the same way on clean `main`). Full table in the PR body and `STATUS.md`.
