@@ -392,7 +392,7 @@ test("ADMIN-RE-11c: a season total that needs more than 9,999 minutes added by h
     await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { mins: 10149 });
     await minutes.fill("10150");
     await page.getByRole("button", { name: "Save season totals", exact: true }).click();
-    await expect(page.getByRole("alert")).toContainText("Minutes added by hand stop at 9,999.");
+    await expect(page.getByRole("alert").filter({ hasText: "Minutes added by hand stop at 9,999." }).first()).toBeVisible();
     await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { mins: 10149 });
   } finally { await fixture.restore(); }
 });
