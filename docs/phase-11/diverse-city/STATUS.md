@@ -47,6 +47,77 @@ head, with the tested commit, are in the PR body.
 **Exact next step:** the bot merges 24c. Then ADMIN-RE-24 is built;
 Christian walks it on Rose City.
 
+## 2026-11-10 - ADMIN-RE-12a: the Programs words browser test, made steady
+
+**Agent/package:** Claude Code, `ADMIN-RE-12a` (the first of three RE-12
+PRs; 12b is the sign-up state migration, 12c the "Programs and tryouts" page).
+Branch `claude/admin-re-12a-programs-words-test` from `main` `706620ef`.
+**Status:** `in_progress`, PR open for the review bot. Test and one editor
+focus fix only: no migration, no change to `lib/club-context.ts`, no hosted
+action.
+
+**What was wrong:** RE-22's "Programs page words are editable on the page"
+browser test at 1440 failed now and then. Two runs of 20 (40 tests each, both
+portals) on the unchanged test reproduced it three times, with two separate
+causes. Neither one is the editor losing what was typed. In every failed run
+the field held the headline right after typing.
+
+- **A slow save.** On a busy machine the page's first reads took 2.2 s and the
+  save took longer than the test's 5 s wait for "Page copy saved". The test
+  failed and its clean-up deleted the row. Then the slow save landed and wrote
+  the headline back. So the next run opened with the headline already stored,
+  typing it changed nothing, and Save stayed disabled until the 60 s timeout.
+- **The public page once showed the standard words 7 ms after the save.** The
+  trace shows the save answered with the headline stored before `/programs`
+  was requested, and the page rendered the defaults. 300 direct write-then-fetch
+  probes against the same build (with and without the owner's sign-in) never
+  reproduced it. Cause not found.
+- **A focus race in the editor, fixed.** A click on the page's heading focused
+  the first field of the words box one frame later. That field is "Eyebrow",
+  and during the panel switch it can even be the outgoing section's first
+  field. The late focus could land between Playwright focusing "Headline line
+  1" and typing into it.
+
+**Completed work:**
+
+- `app/admin/(protected)/programs/page.tsx`: after a click on the page's
+  heading or closing band, the words box takes the cursor in an effect that
+  runs once React has drawn the clicked section (no frame timer). The cursor
+  goes to that section's first field (`data-page-copy-section`), and never
+  away from a field in the words box that already has focus.
+- `tests/browser/admin-reimagined-diverse-city.spec.ts`:
+  - clears the stored words before it starts, as well as after;
+  - waits until the words box shows only the page header section and the
+    cursor is in its first field, then types;
+  - checks the typed value;
+  - waits up to 20 s for "Page copy saved", the same as the page's first load;
+  - checks the stored row in the database;
+  - then requires the public page to show the headline on its first render.
+    With the stored row proved, a failure there points straight at a stale
+    public page. Review-bot M1 on #131: an earlier version allowed one
+    reload, which could hide a real bug, so it was taken out.
+
+**Verification:**
+
+- On the unchanged test, two runs of 20 at 1440 (40 tests each, both portals)
+  gave 1 failure and then 2 failures, the causes described above.
+- The first version of the fix (with the one-reload allowance) went 40 of 40
+  at 1440, twice. The final version (no reload, focus by effect, the cursor
+  checked before typing) is repeated 20 times per portal at both 390 and 1440
+  on the PR head. Those counts, and the commit they ran on, are in the PR
+  body (review-bot M1 on `fd77598`).
+- tsc, lint on the changed files, vitest without `tests/database`, `npm run
+  build`, and the `admin-reimagined` and `admin-guided` browser configs. The
+  results, with the commit they ran on, are in the PR body.
+
+**Blockers:** none. **Open item:** the one public `/programs` render that
+showed the standard words 7 ms after a stored save (2026-11-10) is
+unexplained. The test now fails on it with a clear cause if it happens again;
+then check how `/programs` reads `fetchProgramsPageContent`
+(`lib/queries.ts`).
+
+**Exact next step:** bot review and merge (no gate).
+
 ## 2026-11-10 - Lions removed (production data, then repo code)
 
 **Agent/package:** Claude Code, Lions removal (not an ADMIN-RE package; asked
@@ -97,6 +168,12 @@ runs under `scripts/with-local-db-lock.sh` against a production build at
   with `INVALID_ABOUT_DESTINATION`). It fails the same way on a clean `main`
   `8fa5926` build, so it is not from this PR.
 - Database suite: not run; no migration, seed or SQL change.
+
+**Follow-up (bot's Low notes on #134):** removed the empty
+`clubhouse-story-meta` box and its CSS (it drew a stray divider), and the
+Clubhouse About story mark falls back to empty instead of "14". Checked with
+`tsc`, ESLint, contracts 151 files / 1,945 tests, `npm run build`, and
+`homepage-editor-templates.spec.ts` 2/2 under the database lock.
 
 **Blockers / decisions:** staging's own Lions tenant waits for Christian's go.
 `lib/operator/purge-club.ts` is out of date (Phase 2 table list, Storage first,

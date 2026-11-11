@@ -273,8 +273,6 @@ function ClubhouseClubStory() {
       </header>
       <div className="clubhouse-story-copy">
         <p {...storyPiece}>{story}</p>
-        <div className="clubhouse-story-meta">
-        </div>
         <Link href="/club/about">Our story</Link>
       </div>
       {values.length > 0 && (
