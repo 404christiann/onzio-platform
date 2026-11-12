@@ -1,6 +1,7 @@
 ## 2026-11-12 - Classic admin design phase: picks and build order (design only)
 
-- **Status:** `design picked, not built`. No code, no PR, nothing pushed, production not touched.
+- **Status:** `design picked, not built`. No code changed and production not touched. The prototypes
+  are not pushed; this notes-only PR is the only thing pushed.
   The reimagined admin stays paused as a parts bin.
 - **Christian's direction:** keep the classic sidebar, make it "a better iteration of the
   existing one", start with cramped text editing. Picks: dialog editors (two-pane for the

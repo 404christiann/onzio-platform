@@ -4,7 +4,8 @@
 
 **Agent/package:** Claude Code design session for the classic admin Diverse City uses today,
 asked by the admin-redesign orchestrator. No work-package ID was assigned. This is a design
-phase: nothing was built in the app, merged, pushed or deployed, and production was not
+phase: nothing was built in the app or deployed, the prototypes are not pushed (this notes-only
+PR is the only push), and production was not
 touched or read. The reimagined admin (ADMIN-RE-*) stays paused as a parts bin.
 **Status:** `design picked, not built`. Christian picked a direction for five screens and
 the order below is a recommendation, not a go for any build.
@@ -67,9 +68,10 @@ as a quiet line under Saved. Not worth keeping: the five-tab frame, the More lis
 
 **Completed work:**
 
-- The audit page, a private Artifact: https://claude.ai/artifact/7bhdGrXZBRnCZsTuFqXt9C
-  (152 full-page screenshots, 80 loading frames and timing numbers on the branch below, not
-  committed).
+- The audit page, a private Artifact named "Classic Admin Audit". Its link is in the shared
+  side-session notes folder, not in this public repo. It shows about 10 curated screenshots;
+  the full set (152 full-page screenshots, 80 loading frames and the timing numbers) is on disk
+  in the design worktree, not committed.
 - Seven throwaway prototypes behind the prototype-skill picker, in
   `design-previews/classic-admin/` on branch `claude/classic-admin-design-0caa5d`
   (local commits only, nothing pushed): `about-editor`, `dialog-everywhere`, `registrations`,
