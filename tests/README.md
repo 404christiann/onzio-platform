@@ -32,6 +32,10 @@ and publications. Only rows created after the run started are removed. The `rost
 configs can point at a hosted app, so they are not wired in. Stored uploads are not cleaned
 automatically: a test that uploads a file must remove it itself (`program-media.test.ts` does).
 
+The vitest cleanup belongs to the `db` project only (see [Vitest projects](#vitest-projects)), so it
+runs only when a run selects database files. `npm run test:unit`, `test:legacy` and `test:contracts`
+never start it.
+
 `tests/architecture/database-test-audit-snapshots.test.ts` rejects database test snapshots that
 aggregate every audit row. Use `count(*)||':'||max(id)`.
 
@@ -70,11 +74,16 @@ and live Stripe values.
 
 Commands:
 
-- `npm test` — legacy regressions plus all platform contracts
-- `npm run test:legacy` — copied Rose City regression suite; must stay green
-- `npm run test:contracts` — TypeScript behavior contracts
-- `npm run test:db` — local Supabase/RLS contracts
-- `npm run test:architecture` — static architecture contracts
+- `npm test` — all three Vitest projects in order: `unit`, then `db`, then `pilot`. The `db`
+  project needs the local Supabase stack and the exported `.env.test`.
+- `npm run test:unit` — every test file except `tests/database` and the `pilot-*` architecture
+  files; files run in parallel
+- `npm run test:legacy` — copied Rose City regression suite; must stay green; files run in parallel
+- `npm run test:contracts` — TypeScript behavior contracts; files run in parallel
+- `npm run test:db` — local Supabase/RLS contracts; one file at a time
+- `npm run test:architecture` — static architecture contracts; the `pilot-*` files run one at a
+  time, the others in parallel
+- `npm run test:pilot` — the `tests/architecture/pilot-*.test.ts` proofs; one file at a time
 - `npx vitest run tests/contracts/admin-roster-player-editor.test.ts
   tests/contracts/diverse-city-admin-punch-list.test.ts
   tests/contracts/editorial-admin-surface.test.ts` — mobile-first player editor
@@ -114,6 +123,41 @@ Run database and browser suites serially. They share deterministic local
 fixtures, so concurrent writers can invalidate each other's assertions and
 cleanup. The prepared VM's `onzio test` command exports `.env.test` automatically;
 see the [VM guide](../docs/vm-development.md).
+
+## Vitest projects
+
+`vitest.config.ts` splits the test files into three projects. They run in this order, so parallel
+files never overlap the serial ones.
+
+- `unit` holds every test file except the two groups below and runs files in parallel worker
+  threads. It is the catch-all, so a test file in a new directory runs without a config change.
+- `db` holds `tests/database/**`. It runs one file at a time in forked processes, and its
+  `globalSetup` runs the local test data cleanup.
+- `pilot` holds `tests/architecture/pilot-*.test.ts`. It runs one file at a time in forked
+  processes.
+
+The `db` and `pilot` files share state outside their own process. Database files share the tenant
+singleton fixtures. Pilot proofs start servers and own process groups, and parallel files collide
+on ports and processes (see `HANDOFF.md`, 2026-11-01). `tests/global-setup/serial-project-guard.ts`
+makes both projects fail before any test runs when the command line sets `--fileParallelism` or
+`--isolate=false`, instead of racing. Do not set `isolate: false` on `unit` either. Two runs with
+`--project unit --isolate=false` failed 55 tests in 7 files, then 28 tests in 4 other files, and
+were no faster.
+
+A file runs its tests one after another, so one file of slow synchronous tests sets the floor
+for `test:unit`. Split such a file by describe block, keep every title unchanged, and put the
+shared setup in `tests/helpers`. `tests/architecture/template-selector-*.test.ts` came out of
+`template-selectors.test.ts` this way.
+
+Two limits of Vitest 4.1.10 apply to the command line.
+
+- `--exclude` has no effect on the projects. `vitest run --exclude 'tests/contracts/**'` runs more
+  files, never fewer. Name the files to run, or pick a project.
+- Repeated negations do not combine. `--project '!db' --project '!pilot'` selects all three
+  projects. Use `--project unit`.
+
+`vitest.config.ts` resolves `tsconfig.json` paths with Vite's `resolve.tsconfigPaths` option, so the
+`vite-tsconfig-paths` package is not a dependency.
 
 ## Local site assignment and rollback proof
 
@@ -406,6 +450,14 @@ browser pass under the shared database lock, as with the homepage suites above.
 It stops new code from branching on the presentation template while SITE-08
 retires the existing branches. A club-specific behavior belongs in that club's
 site module, not in a template branch.
+
+The tests that build a temporary git repository live in
+`template-selector-retirement.test.ts`, `template-selector-baseline.test.ts` and
+`template-selector-baseline-history.test.ts`, so Vitest runs them on separate workers.
+They share `tests/helpers/selector-repository.ts`, which builds one starting repository per
+test file and copies it for each test. The retirement test copies
+`template-selectors.test.ts` into its temporary repository by path and runs the tests whose
+names start with `template selector ratchet`, so keep that file and that describe name.
 
 The check parses every TypeScript and JavaScript file that git does not ignore, including
 untracked source and new top-level directories.

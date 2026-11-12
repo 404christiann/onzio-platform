@@ -6,6 +6,8 @@ import ts from "typescript";
 export type SelectorCounts = Record<string, number>;
 export type SelectorTable = Record<string, SelectorCounts>;
 
+export const ALLOWLIST_PATH = "tests/architecture/template-selector-allowlist.json";
+
 export const TEMPLATE_IDS = ["cinematic", "heritage", "clubhouse", "academy", "editorial"];
 const TEMPLATE_KEY_LITERAL = new RegExp(`^(?:${TEMPLATE_IDS.join("|")})@\\d+$`);
 const TEMPLATE_READ_NAMES = new Set([

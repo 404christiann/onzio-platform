@@ -1,3 +1,124 @@
+## 2026-11-10 - Unit tests run in parallel: test:contracts and test:legacy about 5 times faster
+
+- **Status:** `in_progress`, draft PR open, merged with `main` and verified in full
+  (Christian decides when it is ready).
+  Test infrastructure only, no work package. No application code, migration,
+  hosted action or new dependency (one dependency is removed).
+- **What changed:** `vitest.config.ts` splits the test files into three
+  projects. `unit` (every file except the two groups below) runs files in
+  parallel threads. `db` (`tests/database/**`) and `pilot`
+  (`tests/architecture/pilot-*.test.ts`) still run one file at a time in forked
+  processes. `tests/global-setup/serial-project-guard.ts` stops those two
+  projects before any test runs if the command line sets `--fileParallelism` or
+  `--isolate=false`. New scripts `test:unit` and `test:pilot` exist, and
+  `test:db` now selects the `db` project. The local test data cleanup is the `db` project's
+  `globalSetup`, so it runs only when database files are selected. Vite's
+  `resolve.tsconfigPaths` replaces the `vite-tsconfig-paths` plugin, and the
+  package and its two private dependencies are removed from the lockfile. A
+  `Unit tests` workflow (last commit, droppable on its own) runs
+  `npm run test:unit` on pull requests and pushes to `main`.
+- **What did not change:** no test was edited, skipped, deleted or mocked, and
+  `isolate: false` is not enabled (two experimental runs with
+  `--project unit --isolate=false` failed 55 tests in 7 files, then 28 tests in
+  4 other files, and were no faster). The test list is identical before and
+  after: 3,907 tests in 279 non-pilot files, plus 281 pilot tests in 7 files.
+  `npm test` as a whole improves only about 5 to 10%, because the pilot files
+  take 1,346 to 1,373 seconds on this loaded Mac and still run one at a time.
+- **Verification (measured at `706620ef`, then `test:unit` and `tsc` re-run on the
+  branch rebased onto `8fa59263`: 227 files, 2,840 of 2,840 passed, the same
+  286-file list; a shared Mac with a one-minute load average of 9 to 21 during
+  the timing runs):** medians of three runs, old config and new
+  config interleaved. `test:contracts` 56.4s to 10.7s, `test:legacy` 26.6s to
+  5.1s, `test:unit` 128.4s to 51.6s (2.5 times). Five later `test:unit` runs at
+  lower load took 27.6 to 32.3s. Seven consecutive `test:unit` runs passed
+  2,833/2,833 (five plain, one with `.env.test` exported, one with `TZ=UTC`),
+  and one run with no env files and a bare environment passed too. Pilot, old
+  config then new config: 281 tests each, 275 then 279 passed, the one test that
+  failed after is among the 5 that failed before (all `Test timed out in
+  15000ms` under load), and 1 is skipped in both. Database: 52 files, 1,074 of
+  1,074 passed before (old config) and after, each under the lock. After the
+  change the local test data cleanup ran from the `db` project and removed 991
+  audit rows, 23 Stripe events, 1 email delivery event, 103 auth log entries, 1
+  presentation publication and 5 presentation documents. `npx tsc --noEmit` is
+  clean. `npm run lint` fails in this worktree only because it sits inside
+  another checkout whose `.eslintrc.json` conflicts. ESLint with this repo's
+  config alone reports 0 errors (one existing warning in
+  `app/(public)/sponsors/page.tsx`). The first run of the new workflow on the PR
+  (ubuntu-latest, Node 22, commit `7cc58c74`) passed 227 files and 2,840 of 2,840
+  tests. Not run: `npm test` end to end and the production build. The full run table with load
+  averages and tested commits is in the PR body.
+- **Interaction to fix:** the unmerged `agent/verify-faster` branch
+  (`scripts/codex-loop-verify.sh`) skips the pilot files and avoids double runs
+  with `--exclude=...`. The projects ignore `--exclude`, so on top of this
+  change those rows would run more files, never fewer, and the pilot skip would
+  stop skipping. Whichever of the two lands second should select files with
+  `--project unit` and directories instead. Not checked by running that
+  script.
+- **Follow-up, `template-selectors.test.ts` split (commit `336879a3`):** that
+  file was the long pole of `test:unit`, at 17.4 to 19.4 seconds of test time in
+  the runs below (35 seconds in a profile run at load 21). 108 of its 116 tests
+  take under 40 milliseconds. The other eight each build a git repository, and
+  the `git` on this Mac's PATH is the Homebrew x86_64 build running under
+  Rosetta. It takes 110 to 160 ms per process, where the arm64 `/usr/bin/git`
+  takes 24 to 31 ms. One traced run of the file started 118 git processes.
+  Running the old file with `/usr/bin` first on `PATH` took a median of 5.2
+  seconds instead of 16.6 (3 interleaved pairs, load 18 to 32), so the git
+  binary is the limiter, not Vitest. Each `git commit` also started a second
+  process, `git maintenance run --auto`, which was 109 of one commit's 176 ms in
+  a trace. The change has two parts. `withSelectorRepository` moved to
+  `tests/helpers/selector-repository.ts`. It builds one starting repository per
+  test file, copies it for each test and turns auto maintenance off, so a test
+  no longer starts 5 setup processes and 2 maintenance processes. The
+  temporary-repository tests also moved to three files,
+  `template-selector-retirement.test.ts`, `template-selector-baseline.test.ts`
+  and `template-selector-baseline-history.test.ts`, so Vitest runs them on
+  separate workers. The four files start 67 git processes between them, down
+  from 118. The ratchet describe stays in `template-selectors.test.ts` under its
+  name, because the retirement test copies that file by path and filters on that
+  name. No test body, assertion or title changed.
+- **Follow-up verification:** `vitest list` over all three projects gives the
+  same 4,194 project and title pairs before and after (286 files before, 289
+  after, 3 added, none removed, and the 116 tests are now 108 + 2 + 4 + 2 across
+  four files). `test:unit`, 3 interleaved pairs of the old tip `ff4d9d90` and
+  `336879a3`: median 36.6 s (35.1 to 40.0) before and 20.2 s (19.5 to 20.9)
+  after, at one-minute load 27 to 35. The slowest file went from
+  `template-selectors.test.ts` at 17.4 to 19.4 s of test time to
+  `template-selector-retirement.test.ts` at 5.9 to 6.5 s. All nine runs on the
+  new tip (the three interleaved ones, five more plain runs and one with
+  `TZ=UTC`) passed 2,840 of 2,840 in 230 files, at load 29 to 68. The eight
+  plain runs had a median of 21.5 s (19.5 to 29.3 s), and the slowest file
+  reached 10.3 s once, at load 68. `npx tsc --noEmit` is clean, ESLint with this
+  repo's config alone reports 0 problems on the six changed TypeScript files,
+  and no `onzio-selector-regression-*` directory is left in the temp directory.
+  `npm run lint` was not run, for the worktree reason above. The Linux runs of
+  the earlier heads came from `workflow_dispatch` and are in the PR body.
+- **Merge of `main` and full run (2026-11-11):** `main` was merged into the
+  branch twice (`ec0b9a28`, then `4db5e907`, which is documentation only); the
+  only conflicts were the top entries of this file and `STATUS.md`, and both
+  sides were kept. The two new migrations (`20261110220000`,
+  `20261111080000`) need nothing from the Vitest config: their tests are under
+  `tests/database/`, so the `db` project picks them up. On the first merge head
+  (`364a82e8`), under `scripts/with-local-db-lock.sh` with the installed
+  Supabase CLI 2.109.1: `test:db` passed 1,122 of 1,122 in 55 files (71 s), and
+  the full `npm test` passed 4,289 tests with 1 skipped in 293 files (618 s of
+  Vitest time, 10 min 19 s wall), pilot included, with no flake and no re-run.
+  `test:unit` passed 2,887 of 2,887 in 231 files (12 s) and `npx tsc --noEmit`
+  is clean. The production build was not run.
+- **What other sessions should run once this merges:** `npm run test:unit` for
+  the fast loop, `npm run test:db` (under the lock) for database files and
+  `npm run test:pilot` for the pilot files. Until it merges the old commands
+  work. After it merges, do not use `npx vitest run --exclude 'tests/database/**'`:
+  in Vitest 4.1.10 `--exclude` does not apply to projects, so that command
+  would run the database files too. Use `--project unit`, or name the files.
+- **Exact next step:** Christian decides when to mark the PR ready and whether
+  to keep the `Unit tests` workflow commit and make the check required (branch
+  protection is not touched here). `test:unit` no longer waits on one file, which
+  I infer from the Vitest summaries. A run on the new tip shows 117 s of
+  cumulative worker time in an 18 s run (6.3 times), where a run on the old tip
+  showed 124 s in 38 s (3.3 times). The cumulative import time (58 s) is larger
+  than the cumulative test time (43 s). Further speedups there were not
+  investigated.
+
 ## 2026-11-12 - Classic admin design phase: picks and build order (design only)
 
 - **Status:** `design picked, not built`. No code, no PR, nothing pushed, production not touched.

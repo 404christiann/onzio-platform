@@ -1,5 +1,155 @@
 # Diverse City FC Status
 
+## 2026-11-10 - Test infrastructure: template-selectors split (no work package)
+
+**Agent/package:** Claude Code, test infrastructure, no work package, follow-up
+to the parallel unit tests entry below on the same branch
+`claude/test-speed-projects` (commit `336879a3`). **Status:** `in_progress`,
+draft PR open. No application code, migration, hosted action, Stripe, DNS or
+email change, and no new dependency.
+
+**Completed work:**
+
+- `tests/architecture/template-selectors.test.ts` was the long pole of
+  `test:unit` (17.4 to 19.4 s of test time in the runs below, 35 s in a profile
+  run at load 21). 108 of its 116 tests take under 40 ms. The other eight each
+  build a git repository with `execFileSync`. The `git` on this Mac's PATH is the
+  Homebrew x86_64 build under Rosetta, which takes 110 to 160 ms per process
+  against 24 to 31 ms for the arm64 `/usr/bin/git`. One traced run started 118
+  git processes. Running the old file with `/usr/bin` first on `PATH` took a
+  median of 5.2 s instead of 16.6 s (3 interleaved pairs, load 18 to 32).
+- `withSelectorRepository` moved to the new `tests/helpers/selector-repository.ts`.
+  It builds one starting repository per test file (`git init --template=`, one
+  empty commit, `refs/remotes/origin/main`), copies it for each test, passes the
+  commit identity with `-c` and sets `maintenance.auto=false`. A test no longer
+  starts 5 setup processes, and `git commit` no longer starts a second
+  `git maintenance run --auto` process (109 of one commit's 176 ms in a trace).
+  An `afterAll` that the helper registers when a test file imports it removes the
+  starting repository.
+- The tests that build a temporary repository moved to
+  `template-selector-retirement.test.ts` (2 tests),
+  `template-selector-baseline.test.ts` (4) and
+  `template-selector-baseline-history.test.ts` (2), so Vitest runs them on
+  separate workers. The four files start 67 git processes, down from 118.
+  `ALLOWLIST_PATH` is now exported from `tests/helpers/template-selectors.ts`.
+  The ratchet describe stays in `template-selectors.test.ts` under its name,
+  because the retirement test copies that file by path and filters on
+  `^template selector ratchet`. That file imports only
+  `../helpers/template-selectors` so the copy keeps working.
+- `tests/README.md` names the new files and says that a file of slow
+  synchronous tests sets the floor for `test:unit`.
+
+**Files changed:** `tests/helpers/selector-repository.ts` (new),
+`tests/helpers/template-selectors.ts`, `tests/architecture/template-selectors.test.ts`,
+the three new `tests/architecture/template-selector-*.test.ts` files,
+`tests/README.md`, this file, `HANDOFF.md`. No test body, assertion or title
+changed, and nothing is skipped, deleted or mocked.
+
+**Verification:** `vitest list` over all three projects gives the same 4,194
+project and title pairs before and after (286 files before, 289 after, 3 added,
+none removed, 108 + 2 + 4 + 2 for the former 116). `test:unit`, 3 interleaved
+pairs of the old tip `ff4d9d90` and `336879a3`, at one-minute load 27 to 35:
+median 36.6 s (35.1 to 40.0) before, 20.2 s (19.5 to 20.9) after. The slowest
+file went from `template-selectors.test.ts` at 17.4 to 19.4 s to
+`template-selector-retirement.test.ts` at 5.9 to 6.5 s. All nine runs on the new
+tip (three interleaved, five more plain, one with `TZ=UTC`) passed 2,840 of
+2,840 in 230 files, at load 29 to 68 (the eight plain runs: median 21.5 s, range
+19.5 to 29.3 s, slowest file 10.3 s once at load 68). `npx tsc --noEmit` clean.
+ESLint with this repo's config alone: 0 problems on the six changed TypeScript
+files. `npm run lint` not run, because the worktree sits inside another checkout
+whose `.eslintrc.json` conflicts. No `onzio-selector-regression-*` directory is
+left in the temp directory. Raw JSON and logs are outside the repository.
+
+**Merge and full run (2026-11-11):** `main` was merged into the branch twice
+(`ec0b9a28`, then `4db5e907`, documentation only). The only conflicts were the
+top entries of `HANDOFF.md` and this file; both sides were kept. The new
+migrations `20261110220000` and `20261111080000` need nothing from the Vitest
+config (their tests are in `tests/database/`, so the `db` project runs them).
+On the first merge head (`364a82e8`), under `scripts/with-local-db-lock.sh` with
+the installed Supabase CLI 2.109.1: `npm run test:db` passed 1,122 of 1,122 in
+55 files (71 s); the full `npm test` passed 4,289 with 1 skipped in 293 files
+(618 s of Vitest time, 10 min 19 s wall), pilot included, no flake, no re-run;
+`npm run test:unit` passed 2,887 of 2,887 in 231 files (12 s); `npx tsc
+--noEmit` is clean. Not run: the production build and `npm run lint` (worktree
+reason above). Other sessions: use `npm run test:unit`, `test:db` (under the
+lock) and `test:pilot`; after this merges `--exclude` no longer excludes files
+from the projects, so `npx vitest run --exclude 'tests/database/**'` would run
+the database files.
+
+**Blockers / decisions:** whether the `Unit tests` workflow is a required check
+is Christian's decision, and when the PR leaves draft.
+
+**Exact next step:** Christian decides when to mark the PR ready and whether to
+keep the `Unit tests` workflow commit.
+
+## 2026-11-10 - Test infrastructure: parallel unit tests (no work package)
+
+**Agent/package:** Claude Code, test infrastructure, no work package. Branch
+`claude/test-speed-projects`, rebased onto `main` `8fa59263` (measured at
+`706620ef`). **Status:** `in_progress`, draft PR open. No application code, migration, hosted action, Stripe, DNS or
+email change. One dev dependency removed.
+
+**Completed work:**
+
+- `vitest.config.ts` has three projects. `unit` is the catch-all and runs files
+  in parallel threads. `db` (`tests/database/**`) and `pilot`
+  (`tests/architecture/pilot-*.test.ts`) run one file at a time in forked
+  processes, as before. `tests/global-setup/serial-project-guard.ts` makes
+  `--fileParallelism` or `--isolate=false` fail those two projects before any
+  test runs (both flags checked: exit 1 with the guard message, no tests run).
+- `package.json` adds `test:unit` and `test:pilot`, and `test:db` runs
+  `--project db`. The local test data cleanup now runs only with the `db`
+  project, so it no longer starts for `test:unit`, `test:legacy` or
+  `test:contracts` (it did nothing there without `SUPABASE_LOCAL=1`).
+- `resolve.tsconfigPaths` replaces `vite-tsconfig-paths`. The package is out of
+  `package.json`, and it, `globrex` and `tsconfck` are out of `package-lock.json`.
+  The lockfile edit is 45 deleted lines, made by script because npm 10.9.9 also drops the
+  `libc` fields from other entries.
+- `tests/README.md` documents the projects, the guard, the per-script
+  parallelism and two Vitest 4.1.10 command-line limits (`--exclude` has no
+  effect on the projects, and `--project '!db' --project '!pilot'` selects all
+  three).
+- A `Unit tests` workflow (`.github/workflows/unit-tests.yml`, the last commit)
+  runs `npm run test:unit` on pull requests and pushes to `main`. Its first run on
+  the PR (ubuntu-latest, Node 22, commit `7cc58c74`) passed 227 files and 2,840
+  of 2,840 tests, with 22.5 s of Vitest time.
+
+**Files changed:** `vitest.config.ts`, `package.json`, `package-lock.json`,
+new `tests/global-setup/serial-project-guard.ts`, new
+`.github/workflows/unit-tests.yml`, `tests/README.md`, this file, `HANDOFF.md`.
+No test file was edited.
+
+**Verification (measured at `706620ef`, then `test:unit` and `tsc` re-run on the
+rebased branch at `8fa59263`: 227 files, 2,840 of 2,840 passed, same 286-file
+list):** the file list is identical before and after
+(286 files: 227 `unit`, 52 `db`, 7 `pilot`, no overlap) and the test ID list for
+the 279 non-pilot files is identical (3,907 tests). Medians of three, old and
+new config interleaved on a loaded Mac: `test:contracts` 56.4s to 10.7s,
+`test:legacy` 26.6s to 5.1s, `test:unit` 128.4s to 51.6s. Seven consecutive
+`test:unit` runs passed 2,833/2,833 (five plain, one with `.env.test` exported,
+one with `TZ=UTC`). A run with no env files and a bare environment also passed,
+and so did one after the plugin was removed. Pilot, old config then new config
+(after the plugin removal): 281 tests each, 275 then 279 passed, 5 then 1
+failed (test timeouts in `pilot-accepted-build-identity`, the one after is
+among the five before), 1 skipped in both. Database: 52 files, 1,074 of 1,074
+passed before (old config) and after, each under the lock. After the change the
+local test data cleanup ran from the `db` project and removed 991 audit rows, 23
+Stripe events, 1 email delivery event, 103 auth log entries, 1 presentation
+publication and 5 presentation documents. `npx tsc --noEmit` clean. ESLint with
+this repo's config: 0 errors. `npm run lint` itself fails in this worktree
+because the worktree sits inside another checkout whose `.eslintrc.json`
+conflicts. Raw logs and JSON are outside the repository.
+
+**Blockers / decisions:** whether the `Unit tests` workflow is a required check
+is Christian's decision. `npm test` end to end and the production build were
+not run, and pilot and database were not re-run after the rebase onto `8fa59263`. The unmerged
+`agent/verify-faster` branch skips pilot files with `--exclude=...`, which the
+projects ignore, so whichever lands second must switch it to `--project`
+(not checked by running that script).
+
+**Exact next step:** Christian reviews the draft PR and decides whether to keep
+the workflow commit and whether the check is required.
+
 ## 2026-11-12 - Classic admin design phase: Christian's picks and the build order (no code changed)
 
 **Agent/package:** Claude Code design session for the classic admin Diverse City uses today,
@@ -416,6 +566,7 @@ goalkeeper match-stat rows. Diverse City having 0 games is expected
 
 **Exact next step:** none for the purge. A real purge needs an archived
 club, a verified export and Christian's go.
+
 
 ## 2026-11-10 - Operator hard purge made safe (one transaction, Storage after commit)
 
