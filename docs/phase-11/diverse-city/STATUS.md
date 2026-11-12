@@ -1,5 +1,101 @@
 # Diverse City FC Status
 
+## 2026-11-12 - Classic admin design phase: Christian's picks and the build order (no code changed)
+
+**Agent/package:** Claude Code design session for the classic admin Diverse City uses today,
+asked by the admin-redesign orchestrator. No work-package ID was assigned. This is a design
+phase: nothing was built in the app, merged, pushed or deployed, and production was not
+touched or read. The reimagined admin (ADMIN-RE-*) stays paused as a parts bin.
+**Status:** `design picked, not built`. Christian picked a direction for five screens and
+the order below is a recommendation, not a go for any build.
+
+**Christian's direction (his words, 2026-11-11):** he likes the existing sidebar, found the
+reimagined admin "disorganized", and wants "a better iteration of the existing one". First
+pain point: text editing is cramped (About story box about 125px wide). Also: "polish the
+other pages", make pages "less cramped and organized and easy to look at and intuitive".
+
+**Picks:**
+
+- **Text editors:** a centered dialog (a bottom sheet on a phone). Big editors (Programs,
+  Tryouts, Shop, Contact) use a two-pane dialog: section list left, fields right.
+- **Save button:** grey with nothing to save, blue when there is, then green with a drawn
+  check mark and a small pop. Never the text "All changes saved".
+- **Registrations:** form cards (four pinned, an "All forms" dialog with search and status
+  filters, archived behind a filter) with Registrants and Form tabs.
+- **Standings:** Read, then edit: a ranked table, Edit opens a small dialog. Number boxes
+  drop the leading zero as you type, select on focus, and restore an emptied box on blur.
+- **Dashboard:** "Focus": a Needs your attention list, then Next game, Registrations and
+  Season cards, then Coming up. Warnings are a bright yellow tile with a dark icon.
+- **Programs:** "Preview": the public Programs page is the screen; click the header, a
+  program card or the closing band to edit. Order and visibility in a toolbar dialog.
+- **Not decided:** the four motion changes (replace the bouncing loading dots with
+  skeletons; button press feedback; Analytics bars via transform; reduced motion handled
+  per part instead of `!important`).
+
+**Audit findings (local practice club Alpha, build of `main` d42ee852, 19 pages, 390 and 1440
+wide, light and dark, normal and worst-case data):**
+
+- Side panels are narrow: About 290-350px, Contact three columns (155px + page + 285-330px),
+  Programs three lists plus a form on one screen. About, Programs, Tryouts and Shop share
+  `components/admin/PageEditorInspector.tsx`, which already becomes a native dialog on phones.
+- Two Save buttons plus a Done on About; Save looks switched off even when it works.
+- Registrations opens on the form builder (about 3,700px tall on a phone), registrants after.
+- Skeletons exist on most pages but are static and some do not match: Standings (4 short rows
+  vs 8 rows about 120px tall, no season row) shifts 0.028 on a laptop and 0.077 on a throttled
+  phone; Schedule shifts 0.017 on a phone. The main area is blank for about 300ms first.
+- `AdminLoading` bouncing dots (40 uses), no press feedback on any button, Analytics bars
+  animate `width`, four editor previews turn all animation off with `!important`.
+- No page scrolls sideways at 390px. Schedule and Roster handle worst-case names well.
+- Not yet reviewed by eye: Tryouts, Shop, Sponsors, Contact, Seasons, Stats, Analytics,
+  Branding, Members, Payments, and the Homepage editor's own panel (screenshots captured).
+- Every page logs one failed request (404) and four loads logged a 403; not traced.
+
+**Recommended build order (not started):**
+
+1. Shared foundations: Save button, one editor dialog (small and two-pane, built on the
+   existing native-dialog inspector), skeleton primitives with a 150ms delay and 350ms
+   minimum, warning-yellow token, button press feedback, reduced-motion fix.
+2. About and Contact. 3. Programs (Preview), Tryouts, Shop. 4. Registrations.
+5. Standings and Dashboard, including row-matched skeletons. 6. Homepage editor and the
+unreviewed pages. 7. Replace the loading dots with skeletons.
+
+**Worth keeping from the reimagined admin:** club time zone helper (`lib/club-time.ts`),
+season hub and per-season league table (RE-11a/11b), programs and tryouts sign-up state
+(RE-12b/12c), the Zod and database text limits and break-ui fixes, plain wording where the
+classic admin is vague, and the hold-aware "your website is paused" idea (`lib/save-status.ts`)
+as a quiet line under Saved. Not worth keeping: the five-tab frame, the More list, the new home.
+
+**Completed work:**
+
+- The audit page, a private Artifact: https://claude.ai/artifact/7bhdGrXZBRnCZsTuFqXt9C
+  (152 full-page screenshots, 80 loading frames and timing numbers on the branch below, not
+  committed).
+- Seven throwaway prototypes behind the prototype-skill picker, in
+  `design-previews/classic-admin/` on branch `claude/classic-admin-design-0caa5d`
+  (local commits only, nothing pushed): `about-editor`, `dialog-everywhere`, `registrations`,
+  `registrations-cards`, `standings`, `dashboard`, `programs`.
+- Outside the repo: `emil-design-eng` updated for motion and loading states (diff at
+  `design-previews/classic-admin/skill-changes/` on that branch; backup in the session
+  scratchpad) and `mobile-native` copied into `~/.claude/skills/` for web use.
+
+**Files changed (this notes-only change):** this file and `HANDOFF.md`.
+
+**Verification:** no app code changed, so no suites apply. Prototypes were checked in the
+in-app browser pane at 1280 and 390 wide, with normal, worst-case and empty data, including
+real typing in the Standings number boxes. Not verified: a real phone (touch, keyboard),
+Safari and Firefox, a screen reader, and reduced motion beyond the CSS. Production not touched.
+
+**Blockers or unresolved decisions:** the four motion changes; whether the prototypes folder
+should ever be merged (it is not part of this change); whether Rose City-style held clubs
+need "your website is paused" under the green Saved state.
+
+**Local environment note:** the shared local Supabase had no Postgres container for most of
+this session. `supabase start` (CLI 2.109.1) fails on the `vector` container under Colima;
+`supabase start -x vector` works. My audit fixtures were removed afterwards.
+
+**Exact next step:** Christian reacts to the picks, decides the motion changes, and says go
+for step 1 (shared foundations) as its own work package. Nothing builds before that.
+
 ## 2026-11-11 - ADMIN-RE-10b: website numbers only with Sponsor Insights
 
 **Agent/package:** Claude Code, `ADMIN-RE-10b`, a fix from Christian's Diverse City

@@ -1,3 +1,18 @@
+## 2026-11-12 - Classic admin design phase: picks and build order (design only)
+
+- **Status:** `design picked, not built`. No code, no PR, nothing pushed, production not touched.
+  The reimagined admin stays paused as a parts bin.
+- **Christian's direction:** keep the classic sidebar, make it "a better iteration of the
+  existing one", start with cramped text editing. Picks: dialog editors (two-pane for the
+  big ones), a green-check Save with no "All changes saved" text, Registrations as form cards
+  with an "All forms" dialog, Standings as read-then-edit, Dashboard "Focus", Programs "Preview".
+- **Where it lives:** audit (private Artifact) and seven prototypes on branch
+  `claude/classic-admin-design-0caa5d`, `design-previews/classic-admin/`. Details, the
+  recommended build order and what to keep from the reimagined admin are in `STATUS.md`.
+- **Undecided:** the four motion changes.
+- **Exact next step:** Christian decides the motion changes and says go for step 1, the shared
+  foundations (Save button, editor dialog, skeletons), as its own package.
+
 ## 2026-11-11 - ADMIN-RE-10b Website numbers only with Sponsor Insights
 
 - **Status:** `in_progress`, PR open. No migration.
