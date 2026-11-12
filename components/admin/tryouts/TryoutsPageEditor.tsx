@@ -21,6 +21,7 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 import { createClient } from "@/lib/admin-client";
 import type { DBContactProfile, DBProgram, DBRegistrationForm, DBTryout, DBTryoutsPageContent } from "@/lib/db-types";
 import { mapTryout } from "@/lib/queries";
+import { compareTryoutsByDate } from "@/lib/sign-up-state";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { clubToday } from "@/lib/club-time";
 import {
@@ -34,7 +35,11 @@ import { resolveTryoutsPageContent, TRYOUTS_PAGE_LIMITS } from "@/lib/tryouts-pa
 import type { TryoutsPageSaveRequest } from "@/lib/tryouts-page-editor/contract";
 import type { PublicRegistrationForm } from "@/lib/registration-public";
 
-type EventDraft = TryoutDraft & { clientKey: string };
+// ADMIN-RE-12b/12c: hidden, reopened and "They contact you" are set on the new
+// admin's Programs and tryouts page. This editor never changes them (its save
+// doesn't send them); it only carries them so the preview matches the website.
+type SignUpFields = Pick<DBTryout, "hidden" | "stays_open_after_date" | "sign_up_by_contact">;
+type EventDraft = TryoutDraft & { clientKey: string; signUp?: SignUpFields };
 type DeletedEvent = { event: EventDraft; index: number };
 type Snapshot = { revision: string; page: Partial<DBTryoutsPageContent>; events: DBTryout[];
   registrationForms?: Record<string, PublicRegistrationForm>;
@@ -55,7 +60,15 @@ async function getSnapshot(operationId?: string): Promise<Snapshot> {
 }
 
 function fromSnapshot(row: DBTryout): EventDraft {
-  return { ...tryoutToDraft(row), clientKey: row.id };
+  return {
+    ...tryoutToDraft(row),
+    clientKey: row.id,
+    signUp: {
+      hidden: row.hidden === true,
+      stays_open_after_date: row.stays_open_after_date === true,
+      sign_up_by_contact: row.sign_up_by_contact === true,
+    },
+  };
 }
 
 function ordered(events: EventDraft[]): EventDraft[] {
@@ -365,9 +378,14 @@ function TryoutsPageEditorContent() {
     setError("Your draft is ready to save over the reviewed page. Events added elsewhere are preserved. Select Save page to continue.");
   }
 
-  const previewTryouts = events.map((event) => mapTryout(tryoutDraftToRow({
-    ...event, id: event.id ?? event.clientKey,
-  }), contactEmail, event.registrationFormId ? nativeForms[event.registrationFormId] : undefined, today));
+  // As the public page: hidden tryouts left out, the rest by date, soonest first.
+  const previewTryouts = events
+    .filter((event) => !event.signUp?.hidden)
+    .map((event) => mapTryout({
+      ...tryoutDraftToRow({ ...event, id: event.id ?? event.clientKey }),
+      ...(event.signUp ?? {}),
+    }, contactEmail, event.registrationFormId ? nativeForms[event.registrationFormId] : undefined, today))
+    .sort(compareTryoutsByDate);
   const previewPageContent = resolveTryoutsPageContent(
     buildTryoutsPageMutationPayload(pageCopy) as Partial<DBTryoutsPageContent>);
   const canEdit = !saving && !uploading && !unconfirmed;

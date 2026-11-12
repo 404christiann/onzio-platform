@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignUps } from "@/components/admin/reimagined/SignUps";
 import { readAdminPortal } from "@/lib/admin-portal";
-import { loadSignUps, parseSignUpPersonId, parseSignUpTab } from "@/lib/admin-sign-ups-data";
+import { loadSignUps, parseSignUpFormId, parseSignUpPersonId, parseSignUpTab } from "@/lib/admin-sign-ups-data";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
 import { createClient } from "@/lib/supabase-server";
@@ -30,7 +30,9 @@ export default async function SignUpsPage({
   const params = await searchParams;
   const tab = parseSignUpTab(params.tab);
   const personId = parseSignUpPersonId(params.person);
-  const data = await loadSignUps(supabase, club.id, portal.timeZone, { tab, personId });
+  // ADMIN-RE-12c: "N signed up" on Programs and tryouts opens the list for that one form.
+  const formId = parseSignUpFormId(params.form);
+  const data = await loadSignUps(supabase, club.id, portal.timeZone, { tab, personId, formId });
 
   return <SignUps data={data} personId={personId} />;
 }

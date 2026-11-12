@@ -59,6 +59,30 @@ Only `onzio.clubs.admin_portal` for Rose City and one audit row changed. No migr
 
 **Switching back:** `npx tsx scripts/set-club-admin-portal.ts rose-city --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`. It takes effect on the next request, with no deploy, and loses no data.
 
+## `GATE-FLIP-DC` — 2026-11-11
+
+Christian's go was given in the flip session ("Dry run, then flip"); the owner had been told or didn't need to be. The run was set up the same way as Rose City: a clean worktree on `main` `a2575ef4`, and only the production URL and key in a mode-700 temporary folder, deleted right after.
+
+Dry run, `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=reimagined`:
+
+```json
+{
+  "event": "club.admin_portal_dry_run",
+  "club": { "id": "d7a41762-5158-496e-b415-c83c01ab5c70", "slug": "diverse-city", "name": "Diverse City FC", "kind": "customer", "lifecycle": "active" },
+  "current": { "adminPortal": "classic", "adminFlags": {}, "timeZone": "America/Chicago", "timeZoneSetAt": "2026-11-08T15:19:31.133905+00:00" },
+  "target": { "adminPortal": "reimagined", "adminFlags": {}, "timeZone": "America/Chicago" },
+  "needsUpdate": true
+}
+```
+
+At 2026-11-11T20:37:29Z, the same command with `--execute --confirm-project=ioalthwsdrlzrubomrow` wrote the switch and reconciled: `admin_portal` `reimagined`, `admin_flags` `{}`, `time_zone` `America/Chicago`, `time_zone_set_at` unchanged. The readback dry run gave `needsUpdate: false`. No flags were turned on; `sponsor_insights` stays off.
+
+Smoke checks on `diversecityfc.com`, `www.diversecityfc.com` and `diverse-city-fc-private.vercel.app`: `/`, `/programs`, `/roster`, `/shop` and `/schedule` return 200. `/admin/login` returns 200, and `/admin`, `/admin/games`, `/admin/score` and `/admin/add-game` send you to login. No `UNKNOWN_TENANT` (30/30). The signed-in admin wasn't checked on production. That needs the owner or Christian, and 0 games is expected because the owner deleted their only game.
+
+**Switching back:** `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`.
+
+**Switched back, 2026-11-11T20:51:29Z.** It was Christian's decision ("Lets undo the new admin for diverse city actually"), and he gave the go in the flip session. The dry run (same setup, `main` `e37b0048`) showed `reimagined`, `{}`, `America/Chicago` to `classic`. The command above then reconciled `admin_portal` `classic`, `admin_flags` `{}`, `time_zone` `America/Chicago`, with `time_zone_set_at` unchanged. The readback gave `needsUpdate: false`. On all three Diverse City domains, `/`, `/programs`, `/roster`, `/shop`, `/schedule` and `/admin/login` return 200, with no `UNKNOWN_TENANT`. Diverse City is on the classic admin again. It can be switched on again with the `--portal=reimagined` command above, only on Christian's go.
+
 ## Notes for the walk-through
 
 - "Saved · on your website" labels are hold-aware (decision 2): while Rose City's public site is held, the new admin says the change is saved but not yet on the website.

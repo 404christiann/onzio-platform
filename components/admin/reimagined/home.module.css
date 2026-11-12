@@ -543,7 +543,7 @@
   }
 }
 
-/* ---------- The Games tab's season card and Website numbers ---------- */
+/* ---------- The Games tab's season card ---------- */
 
 .wide {
   min-width: 0;
@@ -623,11 +623,6 @@
   margin-left: auto;
   font-weight: 600;
   color: hsl(var(--primary));
-}
-
-.note {
-  font-size: 13px;
-  color: hsl(var(--muted-foreground));
 }
 
 @media (min-width: 760px) {

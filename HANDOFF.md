@@ -119,6 +119,102 @@
   than the cumulative test time (43 s). Further speedups there were not
   investigated.
 
+## 2026-11-12 - Classic admin design phase: picks and build order (design only)
+
+- **Status:** `design picked, not built`. No code, no PR, nothing pushed, production not touched.
+  The reimagined admin stays paused as a parts bin.
+- **Christian's direction:** keep the classic sidebar, make it "a better iteration of the
+  existing one", start with cramped text editing. Picks: dialog editors (two-pane for the
+  big ones), a green-check Save with no "All changes saved" text, Registrations as form cards
+  with an "All forms" dialog, Standings as read-then-edit, Dashboard "Focus", Programs "Preview".
+- **Where it lives:** audit (private Artifact) and seven prototypes on branch
+  `claude/classic-admin-design-0caa5d`, `design-previews/classic-admin/`. Details, the
+  recommended build order and what to keep from the reimagined admin are in `STATUS.md`.
+- **Undecided:** the four motion changes.
+- **Exact next step:** Christian decides the motion changes and says go for step 1, the shared
+  foundations (Save button, editor dialog, skeletons), as its own package.
+
+## 2026-11-11 - ADMIN-RE-10b Website numbers only with Sponsor Insights
+
+- **Status:** `in_progress`, PR open. No migration.
+- **Why:** Christian, on Diverse City's walk-through: website numbers aren't included
+  in their plan.
+- **What changes:** the Website tab's "Website numbers · Included" card is removed. The
+  home's website card shows only for a club with Sponsor Insights. A club without the
+  add-on sees no visit numbers and no add-on line.
+- **Exact next step:** the bot reviews and merges. Details in `STATUS.md`.
+
+## 2026-11-11 - GATE-FLIP-DC undone: Diverse City back on the classic admin
+
+- **Status:** `released`. By Christian's decision, Diverse City was switched on at
+  20:37:29Z and switched back to `classic` at 20:51:29Z. He gave the go in the flip
+  session. The time zone (`America/Chicago`) and flags (`{}`) are unchanged. Read back
+  with `needsUpdate: false`.
+- **Smoke checks:** every Diverse City domain's `/`, `/programs`, `/roster`, `/shop`,
+  `/schedule` and `/admin/login` return 200, with no `UNKNOWN_TENANT`.
+- **Switch on again** (only on Christian's go): `npx tsx scripts/set-club-admin-portal.ts
+  diverse-city --portal=reimagined --execute --confirm-project=ioalthwsdrlzrubomrow`.
+- **Staging:** the staging Supabase project `fxefqnoqxbezeccjvrsw` is deleted, so there
+  is no staging Lions club to remove.
+- **Details:** `STATUS.md`, `docs/admin-portal-production-release.md`.
+
+## 2026-11-11 - GATE-FLIP-DC Diverse City switched to the new admin (switched back at 20:51:29Z, see above)
+
+- **Status:** `released` 2026-11-11T20:37:29Z, on Christian's go in the flip
+  session ("Dry run, then flip"). Diverse City's `admin_portal` is
+  `reimagined`. Flags are still `{}` (no `sponsor_insights`), and the time
+  zone is still `America/Chicago`. Read back with `needsUpdate: false`.
+- **Changed:** only that club column and one audit row. No migration, deploy
+  or env change.
+- **Smoke checks:** every Diverse City domain's `/`, `/programs`, `/roster`,
+  `/shop` and `/schedule` return 200. Admin pages send you to login (200).
+  No `UNKNOWN_TENANT`.
+- **Rollback:** `npx tsx scripts/set-club-admin-portal.ts diverse-city
+  --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`, with no
+  deploy.
+- **Not verified:** the signed-in admin on production, including the 0-games
+  empty states. Details in `STATUS.md` and
+  `docs/admin-portal-production-release.md`.
+- **Exact next step:** Christian or the owner walks
+  `https://diversecityfc.com/admin`. Findings become `ADMIN-RE-10x` PRs.
+
+## 2026-11-11 - ADMIN-RE-11c-2 Who played and scored?, games that need player numbers, Season totals
+
+- **Status:** `in_progress`, PR open. Part 2 of 2 of RE-11c; **no migration** (it uses
+  11c-1's tables and views). No change to `lib/club-context.ts`.
+- **What it adds:** after a score saves, "Who played and scored?" leads to the game's
+  Player numbers (`/admin/score/<game>`): Played switches, Goals/Assists up front,
+  cards and "More numbers" once a player has played, "2 of 3 goals added" with "Own
+  goal or not sure". This season's Games card says "N games need player numbers". The
+  new Season totals page (`/admin/seasons/totals`) shows each total with "5 from games ·
+  2 added by hand" and an Adjust panel for games not in Onzio.
+- **Deliberate gap:** "Played" can't be adjusted by hand (Christian: leave it out; it
+  needs a migration).
+- **Verification:** contract and browser tests (390 and 1440, light and dark, worst-case
+  names); full suites on the PR head in the PR body. Details in `STATUS.md`.
+- **Exact next step:** the bot reviews and merges.
+
+## 2026-11-11 - ADMIN-RE-12c The "Programs and tryouts" page
+
+- **Status:** `in_progress`, PR open. **No migration** (it uses RE-12b's
+  functions, already on production); no hosted action.
+- **What it adds:** on the new admin, one "Programs and tryouts" page (More
+  row and Programs tab). It lists tryouts by date and programs in website
+  order. Each row shows whether families can sign up, the form's price and "N
+  signed up" (that opens See registrations for that form). One tap changes
+  how families sign up, closes or reopens, hides or shows, makes a copy,
+  moves a program, or deletes a tryout, each saved at once with Undo. A tryout
+  is added or changed with plain questions and a preview. The page-wide words
+  and a program's page stay on the classic pages, linked from the list.
+- **Visitors see:** nothing until an owner changes something there. The
+  classic Tryouts editor's preview now matches the website (hidden tryouts
+  left out, date order).
+- **Not done:** "Make a new form" doesn't come back with the new form chosen.
+- **Verification:** unit, contract and browser tests (390 and 1440, worst-case
+  names); full suites and the tested commit are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** bot review and merge.
+
 ## 2026-11-11 - Operator hard purge made safe (released)
 
 - **Status:** `released` 2026-11-11. Migration

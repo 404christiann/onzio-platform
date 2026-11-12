@@ -150,6 +150,375 @@ projects ignore, so whichever lands second must switch it to `--project`
 **Exact next step:** Christian reviews the draft PR and decides whether to keep
 the workflow commit and whether the check is required.
 
+## 2026-11-12 - Classic admin design phase: Christian's picks and the build order (no code changed)
+
+**Agent/package:** Claude Code design session for the classic admin Diverse City uses today,
+asked by the admin-redesign orchestrator. No work-package ID was assigned. This is a design
+phase: nothing was built in the app, merged, pushed or deployed, and production was not
+touched or read. The reimagined admin (ADMIN-RE-*) stays paused as a parts bin.
+**Status:** `design picked, not built`. Christian picked a direction for five screens and
+the order below is a recommendation, not a go for any build.
+
+**Christian's direction (his words, 2026-11-11):** he likes the existing sidebar, found the
+reimagined admin "disorganized", and wants "a better iteration of the existing one". First
+pain point: text editing is cramped (About story box about 125px wide). Also: "polish the
+other pages", make pages "less cramped and organized and easy to look at and intuitive".
+
+**Picks:**
+
+- **Text editors:** a centered dialog (a bottom sheet on a phone). Big editors (Programs,
+  Tryouts, Shop, Contact) use a two-pane dialog: section list left, fields right.
+- **Save button:** grey with nothing to save, blue when there is, then green with a drawn
+  check mark and a small pop. Never the text "All changes saved".
+- **Registrations:** form cards (four pinned, an "All forms" dialog with search and status
+  filters, archived behind a filter) with Registrants and Form tabs.
+- **Standings:** Read, then edit: a ranked table, Edit opens a small dialog. Number boxes
+  drop the leading zero as you type, select on focus, and restore an emptied box on blur.
+- **Dashboard:** "Focus": a Needs your attention list, then Next game, Registrations and
+  Season cards, then Coming up. Warnings are a bright yellow tile with a dark icon.
+- **Programs:** "Preview": the public Programs page is the screen; click the header, a
+  program card or the closing band to edit. Order and visibility in a toolbar dialog.
+- **Not decided:** the four motion changes (replace the bouncing loading dots with
+  skeletons; button press feedback; Analytics bars via transform; reduced motion handled
+  per part instead of `!important`).
+
+**Audit findings (local practice club Alpha, build of `main` d42ee852, 19 pages, 390 and 1440
+wide, light and dark, normal and worst-case data):**
+
+- Side panels are narrow: About 290-350px, Contact three columns (155px + page + 285-330px),
+  Programs three lists plus a form on one screen. About, Programs, Tryouts and Shop share
+  `components/admin/PageEditorInspector.tsx`, which already becomes a native dialog on phones.
+- Two Save buttons plus a Done on About; Save looks switched off even when it works.
+- Registrations opens on the form builder (about 3,700px tall on a phone), registrants after.
+- Skeletons exist on most pages but are static and some do not match: Standings (4 short rows
+  vs 8 rows about 120px tall, no season row) shifts 0.028 on a laptop and 0.077 on a throttled
+  phone; Schedule shifts 0.017 on a phone. The main area is blank for about 300ms first.
+- `AdminLoading` bouncing dots (40 uses), no press feedback on any button, Analytics bars
+  animate `width`, four editor previews turn all animation off with `!important`.
+- No page scrolls sideways at 390px. Schedule and Roster handle worst-case names well.
+- Not yet reviewed by eye: Tryouts, Shop, Sponsors, Contact, Seasons, Stats, Analytics,
+  Branding, Members, Payments, and the Homepage editor's own panel (screenshots captured).
+- Every page logs one failed request (404) and four loads logged a 403; not traced.
+
+**Recommended build order (not started):**
+
+1. Shared foundations: Save button, one editor dialog (small and two-pane, built on the
+   existing native-dialog inspector), skeleton primitives with a 150ms delay and 350ms
+   minimum, warning-yellow token, button press feedback, reduced-motion fix.
+2. About and Contact. 3. Programs (Preview), Tryouts, Shop. 4. Registrations.
+5. Standings and Dashboard, including row-matched skeletons. 6. Homepage editor and the
+unreviewed pages. 7. Replace the loading dots with skeletons.
+
+**Worth keeping from the reimagined admin:** club time zone helper (`lib/club-time.ts`),
+season hub and per-season league table (RE-11a/11b), programs and tryouts sign-up state
+(RE-12b/12c), the Zod and database text limits and break-ui fixes, plain wording where the
+classic admin is vague, and the hold-aware "your website is paused" idea (`lib/save-status.ts`)
+as a quiet line under Saved. Not worth keeping: the five-tab frame, the More list, the new home.
+
+**Completed work:**
+
+- The audit page, a private Artifact: https://claude.ai/artifact/7bhdGrXZBRnCZsTuFqXt9C
+  (152 full-page screenshots, 80 loading frames and timing numbers on the branch below, not
+  committed).
+- Seven throwaway prototypes behind the prototype-skill picker, in
+  `design-previews/classic-admin/` on branch `claude/classic-admin-design-0caa5d`
+  (local commits only, nothing pushed): `about-editor`, `dialog-everywhere`, `registrations`,
+  `registrations-cards`, `standings`, `dashboard`, `programs`.
+- Outside the repo: `emil-design-eng` updated for motion and loading states (diff at
+  `design-previews/classic-admin/skill-changes/` on that branch; backup in the session
+  scratchpad) and `mobile-native` copied into `~/.claude/skills/` for web use.
+
+**Files changed (this notes-only change):** this file and `HANDOFF.md`.
+
+**Verification:** no app code changed, so no suites apply. Prototypes were checked in the
+in-app browser pane at 1280 and 390 wide, with normal, worst-case and empty data, including
+real typing in the Standings number boxes. Not verified: a real phone (touch, keyboard),
+Safari and Firefox, a screen reader, and reduced motion beyond the CSS. Production not touched.
+
+**Blockers or unresolved decisions:** the four motion changes; whether the prototypes folder
+should ever be merged (it is not part of this change); whether Rose City-style held clubs
+need "your website is paused" under the green Saved state.
+
+**Local environment note:** the shared local Supabase had no Postgres container for most of
+this session. `supabase start` (CLI 2.109.1) fails on the `vector` container under Colima;
+`supabase start -x vector` works. My audit fixtures were removed afterwards.
+
+**Exact next step:** Christian reacts to the picks, decides the motion changes, and says go
+for step 1 (shared foundations) as its own work package. Nothing builds before that.
+
+## 2026-11-11 - ADMIN-RE-10b: website numbers only with Sponsor Insights
+
+**Agent/package:** Claude Code, `ADMIN-RE-10b`, a fix from Christian's Diverse City
+walk-through on the new admin. Branch `claude/admin-re-10b-website-numbers` from `main`
+`d42ee852`. **Status:** `in_progress`, PR open for the review bot. No migration, no
+hosted action.
+
+**Finding (Christian):** "for diverse city they dont have Website numbers included". The
+Website tab showed a "Website numbers · Included" card (monthly summary plus a Sponsor
+Insights line), and the home's At a glance showed a Website card ("Not counted yet").
+
+**Completed work:**
+
+- `app/admin/(protected)/website/page.tsx`: the Website numbers card is gone for every
+  club. Clubs with the add-on already see their numbers on the Insights tab.
+- `components/admin/reimagined/Glance.tsx`: `WebsiteNumbers` removed (and its `.note` style
+  in `home.module.css`).
+- Home: `visitsHref` is the Insights tab for a club with `admin_flags.sponsor_insights`,
+  otherwise `null`, and `ReimaginedHome` draws the website card only when it is set. So
+  Diverse City sees only the season card under At a glance; a club with the add-on
+  (Rose City once its flag is on) keeps the card.
+- `docs/admin-portal-redesign-plan.md` RE-24b records the change.
+
+**Files changed:** `app/admin/(protected)/page.tsx`, `app/admin/(protected)/website/page.tsx`,
+`components/admin/reimagined/{Glance,ReimaginedHome}.tsx`, `home.module.css`,
+`tests/contracts/admin-reimagined-home.test.ts`, `tests/browser/admin-reimagined-home.spec.ts`,
+`tests/browser/admin-reimagined-tabs.spec.ts`, the plan, this file, `HANDOFF.md`.
+
+**Verification** (clean worktree, `npm ci`, every database and browser run inside
+`scripts/with-local-db-lock.sh`):
+
+- **Red first:** the new contract test failed on `main`'s code.
+- **Green:**
+  - types and lint pass
+  - vitest 237 files, 3,197 passed
+  - architecture 426 passed
+  - build passes
+  - `test:db` 1,122/1,122 before the browser run
+- **The changed browser tests:** 11/11 pass on their own (home At a glance, the programs
+  club's tabs at 390 and 1440 in light and dark, the Sponsor Insights club's tabs).
+- **The whole `admin-reimagined` suite:** 154 passed, 6 failed. The failures came from the
+  shared local database's state, not this change. It had just been restarted with a
+  fresh seed, so the test club showed "12 new this week" sign-ups and extra unscored
+  games. The failures were in home jobs, league, score, seasons and sign-ups, plus the
+  tabs red dot. Their serial specs skipped the rest of each file.
+- **After the browser run:** 15 `league-table-per-season` database tests failed on games
+  left on the test club.
+- **My mistake during this run:** a ledger check came back empty because `psql` isn't
+  installed. That triggered `supabase db reset`, which stopped the shared local database
+  and couldn't pull its image. It stayed down from about 20:59Z until another session
+  ran `supabase start` (about 23:40Z). Local only; no hosted system was touched.
+
+**Exact next step:** the bot reviews and merges; then Diverse City's Website tab and home
+show no website numbers.
+
+## 2026-11-11 - GATE-FLIP-DC undone: Diverse City back on the classic admin
+
+**Agent/package:** Claude Code, `GATE-FLIP-DC` rollback, asked by the admin-redesign
+orchestrator. It was Christian's decision ("Lets undo the new admin for diverse city
+actually"), and he gave the go in this session ("Yes, switch back").
+**Status:** `released`. Diverse City ran the new admin from 20:37:29Z to 20:51:29Z on
+2026-11-11, and is now `classic`. The switch can be turned on again whenever Christian
+says go (the same `GATE-FLIP-DC` command). Only `onzio.clubs.admin_portal` and one audit
+row changed. No migration, deploy or env change.
+
+**Completed work:**
+
+- **Dry run (read-only),** from a clean worktree on `main` `e37b0048`, with only the
+  production URL and key in a mode-700 temporary folder, deleted right after:
+  `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=classic`.
+  - Current: `reimagined`, flags `{}`, `America/Chicago`, set at
+    `2026-11-08T15:19:31.133905+00:00`.
+  - Target: `classic`, `{}`, `America/Chicago`. `needsUpdate: true`.
+- **The switch back,** at 2026-11-11T20:51:29Z:
+  `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`.
+  It reconciled `admin_portal = classic`, `admin_flags = {}`, `time_zone = America/Chicago`,
+  with `time_zone_set_at` unchanged.
+- **Readback:** `needsUpdate: false`.
+- **Smoke checks** on `diversecityfc.com`, `www.diversecityfc.com` and
+  `diverse-city-fc-private.vercel.app`: `/`, `/programs`, `/roster`, `/shop`, `/schedule`
+  and `/admin/login` all 200, with no `UNKNOWN_TENANT` (18/18).
+
+**Files changed:** this file, `HANDOFF.md`, `docs/admin-portal-production-release.md`.
+
+**Not verified:** the signed-in classic admin on production (no owner session for an agent).
+
+**Exact next step:** none for Diverse City until Christian says go again. To switch it on
+again: `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=reimagined --execute --confirm-project=ioalthwsdrlzrubomrow`.
+
+## 2026-11-11 - GATE-FLIP-DC: Diverse City switched to the new admin (switched back at 20:51:29Z, see above)
+
+**Agent/package:** Claude Code, `GATE-FLIP-DC` (`ADMIN-RE-10` in
+`docs/admin-portal-redesign-plan.md`), asked by the admin-redesign orchestrator.
+Christian's go was given in this session: "Dry run, then flip". Picking that option
+also confirmed that the Diverse City owner has been told or doesn't need to be.
+**Status:** `released`. Only `onzio.clubs.admin_portal` for Diverse City and one audit
+row changed. No migration, deploy, seed, Stripe, DNS, email or environment change.
+
+**Completed work:**
+
+- **What the command does:** it sets only `--portal=reimagined`. The only flag the code
+  reads is `sponsor_insights` (the Insights tab), and it stays off. Chicago was already
+  set and confirmed by RE-01, so no `--time-zone` was passed.
+- **Dry run (read-only),** from a clean worktree on `main` `a2575ef4`, with only the
+  production URL and service-role key in a mode-700 temporary folder, deleted right
+  after:
+  `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=reimagined`.
+  - Club `d7a41762-5158-496e-b415-c83c01ab5c70`, `kind = customer`, `lifecycle = active`.
+  - Current: `adminPortal: classic`, `adminFlags: {}`, `timeZone: America/Chicago`,
+    `timeZoneSetAt: 2026-11-08T15:19:31.133905+00:00`.
+  - Target: `reimagined`, `{}`, `America/Chicago`. `needsUpdate: true`.
+  - Nothing surprising.
+- **The switch,** at 2026-11-11T20:37:29Z:
+  `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=reimagined --execute --confirm-project=ioalthwsdrlzrubomrow`.
+  It reconciled `admin_portal = reimagined`, `admin_flags = {}`,
+  `time_zone = America/Chicago`, with `time_zone_set_at` unchanged.
+- **Readback:** the dry run again gave `current.adminPortal: reimagined` and
+  `needsUpdate: false`.
+- **Smoke checks** on `diversecityfc.com`, `www.diversecityfc.com` and
+  `diverse-city-fc-private.vercel.app`:
+  - `/`, `/programs`, `/roster`, `/shop` and `/schedule` all 200.
+  - `/admin/login` 200. `/admin`, `/admin/games`, `/admin/score` and `/admin/add-game`
+    send you to login (200).
+  - No `UNKNOWN_TENANT` anywhere (30/30).
+
+**Rollback:** `npx tsx scripts/set-club-admin-portal.ts diverse-city --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`.
+It works on the next request, needs no deploy and loses no data.
+
+**Files changed:** this file, `HANDOFF.md`, `docs/admin-portal-production-release.md`.
+
+**Not verified:** the signed-in new admin on production. No owner session is
+available to an agent, and signing in is the owner's or Christian's job. That includes
+how the empty states read with 0 games: the owner deleted their only game, so 0 games is
+expected.
+
+**Exact next step:** Christian, or the Diverse City owner, signs in at
+`https://diversecityfc.com/admin` and checks the home, Games, Programs and Website tabs
+on a phone and a laptop. The empty game states should read as empty, not as broken. Any
+finding becomes an `ADMIN-RE-10x` fix PR. Switch back with the rollback line if needed.
+
+## 2026-11-11 - ADMIN-RE-11c-2: Who played and scored?, games that need player numbers, Season totals
+
+**Agent/package:** Claude Code, `ADMIN-RE-11c` part 2 of 2 (screens; 11c-1, #137, is
+released). Branch `claude/admin-re-11c-2` from `main` `ec0b9a28`. Started on Christian's
+"run 12c, 11c-2 and #133 in parallel" (via the orchestrator).
+**Status:** `in_progress`, PR open for the review bot. **No migration**: it uses 11c-1's
+tables, views and `played`. Nothing added to the tenant select in `lib/club-context.ts`.
+No new dependency; icons are the admin's icons.download set; no BoardUI (decision 6).
+
+**Completed work (designs `cd-after-game`, `cd-season-totals`, the hub in
+`cd-season-final`; group 1 decisions 2, 3, 6, 7, 11):**
+
+- **Enter a score:** once a score saves, its card asks "Who played and scored?" with
+  "Add player numbers" (to the game's list) and "Later" ("You'll find it in This season").
+- **Player numbers, `/admin/score/<game>`:** the game's season players by position, each
+  with a Played switch. Goals and Assists up front (keepers: Saves, Goals let in); Yellow,
+  Red and "More numbers" (started, clean sheet, minutes up to 300, tackles, offsides,
+  fouls, fouled) once the player has played. Any number marks a player as played; Played
+  can be set on its own; switching it off clears the row. The summary says "2 of 3 goals
+  added" (segments up to 12 goals, a bar above), warns "That's more than the 3-goal
+  score", and "Own goal or not sure" fills the gap; Save always works. One "Save player
+  numbers" writes every row with an explicit `played` through `POST /api/admin/data`
+  (upsert on `player_id,match_id`); "Saved · on each player's page", or the paused words
+  while the site is held. Phone: the summary sticks under the page bar and Save is a bar
+  above the tab bar; laptop: game, summary and Save on the left, the list on the right.
+  Leaving with unsaved changes asks first. A classic club goes to the old Match stats.
+- **This season hub:** the Games card says "N games need player numbers" (a scored game
+  where nobody is marked as played) with the newest one's line and "Add player numbers";
+  the Player totals card says "Added up from N games' player numbers" and "See totals"
+  opens the new page.
+- **Season totals, `/admin/seasons/totals`:** one table per position on a laptop, one card
+  per player on a phone; every number is the totals view's, so no cell is a field. A
+  number with a hand-entered part is highlighted, with "Goals: 5 from games · 2 added by
+  hand" (or "taken off by hand"). "Adjust" opens a centered panel (laptop) or bottom sheet
+  (phone): "Add numbers for games that aren't in Onzio", "These add on top of the N games
+  you entered", a stepper per number with "Total 7 · 5 from games", "More numbers".
+  Taking off stops at what the games give, so a total never goes below 0; the limit is
+  ±9,999. Saves upsert the adjustment through `POST /api/admin/data`. A classic club goes
+  to the old Season stats.
+
+**Deliberate gap (Christian, 2026-11-11, "Yes, leave it out"):** the design's Adjust
+panel has a "Played" stepper, but adjustments have no games-played column. Played is not
+adjustable; adding it later needs a migration (a `games_played` column on
+`*_season_adjustments` and the views).
+
+**Files changed:** `lib/player-numbers.ts` (new), `lib/admin-player-numbers-data.ts` (new),
+`lib/admin-season-totals-data.ts` (new), `lib/admin-seasons-data.ts`,
+`app/admin/(protected)/score/[matchId]/page.tsx` (new),
+`app/admin/(protected)/seasons/totals/page.tsx` (new), `app/admin/(protected)/seasons/page.tsx`,
+`components/admin/reimagined/{PlayerNumbers,SeasonTotals}.tsx` (new) and their CSS modules,
+`components/admin/reimagined/{ScoreEntry,SeasonsHub}.tsx`, `score.module.css`,
+`tests/contracts/admin-reimagined-player-numbers.test.ts` (new),
+`tests/contracts/admin-reimagined-seasons.test.ts`,
+`tests/browser/admin-reimagined-player-numbers.spec.ts` (new), this file, `HANDOFF.md`,
+`docs/admin-portal-redesign-plan.md`.
+
+**Verification:** see the PR body (results table with the tested commit).
+
+**Blockers/decisions:** none open. Not done here: the old Match stats page still never
+sends `played`.
+
+**Next step:** clear the review bot; the bot merges (no migration, no gate).
+
+## 2026-11-11 - ADMIN-RE-12c: the "Programs and tryouts" page
+
+**Agent/package:** Claude Code, `ADMIN-RE-12c`, the last of three RE-12 PRs
+(12a #131 and 12b #139 are released). Branch
+`claude/admin-re-12c-programs-tryouts` from `main` `ec0b9a28`. **Status:**
+`in_progress`, PR open for the review bot. **No migration**: it uses the RPCs
+RE-12b put on production. No change to `lib/club-context.ts`, no hosted
+action. Started on the orchestrator's go, relaying Christian's "run 12c, 11c-2
+and #133 in parallel" (2026-11-11).
+
+**Completed work:**
+
+- **Page** `/admin/programs-and-tryouts` (`app/admin/(protected)/programs-and-tryouts/page.tsx`,
+  `components/admin/reimagined/ProgramsTryouts.tsx`, `TryoutForm.tsx`,
+  `programs-tryouts.module.css`). Designs `cd-programs-final` and
+  `cd-tryout-final`. It follows group 2 decisions 1-8 and 10-13 as built, and
+  14 with the same exception as the HANDOFF entry.
+  - **List:** tryouts by date, then programs in website order. Each row has
+    the state pill, the form price and "N signed up", which links to See
+    registrations for that form.
+  - **Sign-up way menu:** form (with "Used by", "Connect payments first · Set
+    up", "Not open yet" and "Make a new form"), link, or they contact you.
+  - **⋯ menu:** change the details; close or reopen; hide or show; make a
+    copy; move up or down; delete with a confirm.
+  - **Saving:** each change saves at once with "Saved · Undo", using the
+    hold-aware saved words.
+  - **Add or change a tryout:** plain questions with a preview. The tab's
+    "Add a tryout" opens it (`?add=tryout`).
+  - **Classic pages:** the page-wide words link to them.
+  - A classic club is sent to the old pages.
+- **Data:** `lib/admin-programs-tryouts-data.ts`, reading through the user's
+  own client, scoped to the club. It reads no names or contact details;
+  states come from `lib/sign-up-state.ts`. `tallySignUps` in
+  `lib/admin-sign-ups-data.ts` now also counts paid and refunded per form.
+- **Writes:** `POST /api/admin/programs-and-tryouts`
+  (`lib/programs-tryouts-contract.ts`). The club and session are resolved on
+  the server, and it checks that the club's site has the section and allows
+  new programs for Make a copy. It calls `save_tryout`,
+  `save_program_sign_up`, `copy_program`, `copy_tryout`, `delete_tryout` and
+  `save_program_directory`, and a deleted tryout's photo is retired.
+- **Manifest:**
+  - route `programs-and-tryouts`, new admin only, visible when the site has
+    programs or tryouts;
+  - one More row in place of the Programs and Tryouts rows (named for the one
+    section a club has);
+  - Programs tab placement and search keywords.
+- **See registrations:** `?form=` narrows the list, the tab counts and "new
+  this week" to one of the club's own forms. A foreign or malformed id is
+  ignored. It shows "From <form> · All forms".
+- **Classic Tryouts editor preview:** leaves hidden tryouts out, keeps a
+  reopened one open, and sorts by date, like the website. Its save is
+  unchanged (the review bot's Low on #139).
+- **Icons:** eye-slash and link from icons.download (medium/outline/round),
+  with `approved-selection.json` and the icon contract test.
+
+**Not done:** "Make a new form" opens Sign-up forms but doesn't come back with
+the new form chosen (decision 7's return trip). The top bar always reads
+"Programs and tryouts"; the page heading and More row follow the club's
+sections.
+
+**Verification:** `tests/contracts/admin-reimagined-programs-tryouts.test.ts`,
+the updated manifest and icon contracts, and
+`tests/browser/admin-reimagined-programs-tryouts.spec.ts` at 390 and 1440 on
+local Alpha with the worst-case 80-character name and 160-character place.
+The full suites, with the commit they ran on, are in the PR body.
+
+**Blockers:** none.
+
+**Exact next step:** bot review, then merge (no gate).
+
 ## 2026-11-11 - Operator hard purge released
 
 **Agent/package:** Claude Code, operator purge fix (PR #138), `GATE-MIGRATE`

@@ -161,28 +161,3 @@ export function SeasonCard({ season }: { season: HomeBoard["season"] }) {
     </section>
   );
 }
-
-/**
- * Website numbers for a club without Sponsor Insights: the included monthly
- * summary, and one quiet line about the add-on. No numbers until visits are
- * counted.
- */
-export function WebsiteNumbers({ held }: { held: boolean }) {
-  return (
-    <section aria-labelledby="website-numbers" className={styles.vars}>
-      <h2 id="website-numbers" className={styles.label}>
-        Website numbers
-        <span className={styles.count}>Included</span>
-      </h2>
-      <div className={`${styles.card} ${styles.pad}`} data-testid="website-numbers">
-        <b>{held ? "Not live yet" : "No visit numbers yet"}</b>
-        <p className={styles.note}>
-          {held
-            ? "Your monthly summary starts the month your site relaunches."
-            : "A short summary every month shows here once visits are counted."}{" "}
-          Numbers for each page, sponsor logo clicks and a monthly sponsor report come with Sponsor Insights.
-        </p>
-      </div>
-    </section>
-  );
-}
