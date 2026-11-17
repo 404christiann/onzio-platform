@@ -30,7 +30,13 @@ async function uploadArtwork(page: Page, buffer: Buffer, mimeType: string, fileN
 }
 async function openPiece(page: Page, piece: string) {
   const target = page.frameLocator('iframe[title="Homepage preview"]').locator(`[data-homepage-piece="${piece}"]`).first();
-  await target.evaluate(element => element.scrollIntoView({ block: "start" }));
+  // The Rose City header is sticky (top:0, z-index:10) since 2f70087, which landed after this spec was written. Scroll
+  // each piece to just below it so the (12, 12) click lands on the piece, not on the header covering its top edge.
+  await target.evaluate(element => {
+    element.scrollIntoView({ block: "start" });
+    const header = element.ownerDocument.querySelector(".club-header");
+    if (header && header !== element) element.ownerDocument.defaultView?.scrollBy(0, -header.getBoundingClientRect().bottom);
+  });
   await target.click({ position: { x: 12, y: 12 } });
   await target.click({ position: { x: 12, y: 12 } });
   await expect(page.locator(".hp-panel")).toBeVisible();
