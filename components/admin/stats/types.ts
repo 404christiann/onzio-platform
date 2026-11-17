@@ -1,5 +1,6 @@
 import type { Ref } from "react";
 import type { useSeasons } from "@/lib/use-seasons";
+import type { SaveState } from "@/components/admin/ui/useSaveState";
 
 export type StatsPosition = "Goalkeeper" | "Defender" | "Midfielder" | "Forward";
 export const STATS_POSITIONS: StatsPosition[] = ["Goalkeeper", "Defender", "Midfielder", "Forward"];
@@ -19,7 +20,7 @@ export type StatsField = {
 export type StatsFieldGroup = { id: string; label: string; fields: StatsField[] };
 
 export type StatsView = "match" | "season";
-export type StatsEditorControls = { changeSeason: (id: string) => void; changeView: () => void };
+export type StatsEditorControls = { changeSeason: (id: string) => void; changeView: () => void; save: () => void };
 export type StatsEditorProps = {
   seasonState: ReturnType<typeof useSeasons>;
   selectedPlayerId: string | null;
@@ -31,4 +32,5 @@ export type StatsEditorProps = {
   onViewChange: (view: StatsView) => void;
   controlsRef: Ref<StatsEditorControls>;
   onSavingChange: (saving: boolean) => void;
+  onSaveStateChange: (state: SaveState) => void;
 };

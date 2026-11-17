@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import styles from "./stats-workspace.module.css";
 
-export function StatsScopeSwitchDialog({ open, currentLabel, busy, error, onCancel, onDiscard, onSaveAndSwitch }: { open: boolean; currentLabel: string; busy: boolean; error?: string | null; onCancel: () => void; onDiscard: () => void; onSaveAndSwitch: () => void }) {
+export function LegacyStatsScopeSwitchDialog({ open, currentLabel, busy, error, onCancel, onDiscard, onSaveAndSwitch }: { open: boolean; currentLabel: string; busy: boolean; error?: string | null; onCancel: () => void; onDiscard: () => void; onSaveAndSwitch: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null), title = useId();
   useEffect(() => {
     const element = dialog.current; if (!element || !open) return;

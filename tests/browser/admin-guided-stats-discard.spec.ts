@@ -62,7 +62,7 @@ for (const width of [390, 1440]) for (const initialView of ["match", "season"] a
       const baseline = initialView === "match" ? "3" : "17";
       await expect(goals).toHaveValue(baseline);
       await goals.fill("8");
-      await expect(page.getByText("1 player with unsaved changes", { exact: true })).toBeVisible();
+      await expect(page.locator("[data-admin-save-button]")).toHaveAttribute("data-state", "dirty");
       await expect.poll(() => unloadWarns(page)).toBe(true);
       await page.route(url => url.pathname === "/admin/stats" && url.searchParams.get("view") === nextView && url.searchParams.has("_rsc"), async route => {
         held = true; await navigation; await route.continue();
@@ -74,7 +74,7 @@ for (const width of [390, 1440]) for (const initialView of ["match", "season"] a
       // Scope to the visible tab panel: while the initial server stream is
       // still finishing, React can briefly keep a hidden copy of the page in
       // <div id="S:..." hidden>, which an unscoped text match also counts.
-      await expect(page.getByRole("tabpanel").getByText("All changes saved", { exact: true })).toBeVisible();
+      await expect(page.locator("[data-admin-save-button]")).toHaveAttribute("aria-disabled", "true");
       await expect.poll(() => unloadWarns(page)).toBe(false);
       await expect(page.getByRole("tab", { name: initialView === "match" ? "Match stats" : "Season stats", exact: true })).toHaveAttribute("aria-selected", "true");
       release();

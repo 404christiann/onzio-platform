@@ -23,6 +23,7 @@ export type AdminImageFieldProps = AdminImageRules & {
   onUpload: (files: FileList) => Promise<boolean>;
   onRemove?: () => void;
   onDirty?: () => void;
+  onPendingChange?: (pending: boolean) => void;
 };
 
 export function AdminImageField({
@@ -38,15 +39,24 @@ export function AdminImageField({
   onUpload,
   onRemove,
   onDirty,
+  onPendingChange,
 }: AdminImageFieldProps) {
   const input = useRef<HTMLInputElement>(null);
   const uploadButton = useRef<HTMLButtonElement>(null);
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
+  const attemptRef = useRef<{ notify?: (pending: boolean) => void } | null>(null);
   const mounted = useRef(false);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
+    setPending(false);
+    return () => {
+      mounted.current = false;
+      const attempt = attemptRef.current;
+      attemptRef.current = null;
+      inFlight.current = false;
+      attempt?.notify?.(false);
+    };
   }, []);
   const [dragging, setDragging] = useState(false);
   const [message, setMessage] = useState("");
@@ -62,11 +72,14 @@ export function AdminImageField({
       return;
     }
     inFlight.current = true;
+    const attempt = { notify: onPendingChange };
+    attemptRef.current = attempt;
     setPending(true);
     const file = files[0];
     try {
+      attempt.notify?.(true);
       const issue = await imageFileIssue(file, rules);
-      if (!mounted.current) return;
+      if (!mounted.current || attemptRef.current !== attempt) return;
       if (issue) {
         setMessage(issue);
         return;
@@ -75,14 +88,18 @@ export function AdminImageField({
       const transfer = new DataTransfer();
       transfer.items.add(file);
       const saved = await onUpload(transfer.files);
-      if (!mounted.current) return;
+      if (!mounted.current || attemptRef.current !== attempt) return;
       if (saved) onDirty?.();
       else setMessage("The image could not be uploaded. Try again.");
     } catch {
-      if (mounted.current) setMessage("The image could not be uploaded. Try again.");
+      if (mounted.current && attemptRef.current === attempt) setMessage("The image could not be uploaded. Try again.");
     } finally {
-      inFlight.current = false;
-      if (mounted.current) setPending(false);
+      if (attemptRef.current === attempt) {
+        attemptRef.current = null;
+        inFlight.current = false;
+        if (mounted.current) setPending(false);
+        attempt.notify?.(false);
+      }
     }
   }
 

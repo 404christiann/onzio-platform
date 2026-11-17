@@ -86,7 +86,7 @@ describe("3. Logo and sponsor uploads match what the server accepts", () => {
     expect(adminClient).toContain("kind: configuration.kind");
     const authorize = source("app/api/admin/media/authorize/route.ts");
     expect(authorize).toMatch(/kind === "graphic" &&\s*parsed\.data\.mimeType === "image\/jpeg"/);
-    for (const page of ["app/admin/(protected)/branding/page.tsx", "app/admin/(protected)/sponsors/page.tsx"]) {
+    for (const page of ["components/admin/club-settings/LegacyBranding.tsx", "components/admin/sponsors/ClassicSponsorsPage.tsx"]) {
       const text = source(page);
       expect(text).toContain('import { createClient } from "@/lib/admin-client";');
       expect(text).not.toMatch(/from "@\/lib\/supabase(-server)?"/);
@@ -94,9 +94,9 @@ describe("3. Logo and sponsor uploads match what the server accepts", () => {
   });
 
   it("stops promising JPG on Branding and Sponsors", () => {
-    const branding = source("app/admin/(protected)/branding/page.tsx");
+    const branding = source("components/admin/club-settings/LegacyBranding.tsx");
     expect(branding).not.toMatch(/JPG|image\/jpeg/);
-    const sponsors = source("app/admin/(protected)/sponsors/page.tsx");
+    const sponsors = source("components/admin/sponsors/ClassicSponsorsPage.tsx");
     expect(sponsors).not.toContain('accept="image/*"');
     expect(sponsors).toContain("GRAPHIC_UPLOAD_ACCEPT");
   });
@@ -114,7 +114,7 @@ describe("4. Contact admin only where a Contact page exists", () => {
 describe("5. Branding footer line only where the footer shows it", () => {
   it("gates the tagline field and its save on the design", () => {
     expect(diverseCitySite.admin.branding.showFooterTagline).toBe(true);
-    const branding = source("app/admin/(protected)/branding/page.tsx");
+    const branding = source("components/admin/club-settings/LegacyBranding.tsx");
     expect(branding).toContain("showFooterTagline");
     expect(branding).toMatch(/showFooterTagline\s*\?/);
   });
@@ -210,7 +210,7 @@ describe("10. Program and Tryout default wording", () => {
 describe("11. New sign-up form participant default", () => {
   it("defaults to minor or adult so neither a child nor an adult is turned away", () => {
     expect(NEW_REGISTRATION_FORM_PARTICIPANT_MODE).toBe("both");
-    const page = source("app/admin/(protected)/registrations/page.tsx");
+    const page = source("components/admin/registrations/registration-editor-model.ts");
     expect(page).toContain("participantMode: NEW_REGISTRATION_FORM_PARTICIPANT_MODE");
   });
 });
@@ -237,9 +237,11 @@ describe("13. Who can sign in lists every owner (decision 0013)", () => {
     const route = source("app/api/admin/members/route.ts");
     expect(route).toContain("listClubOwners(");
     const page = source("app/admin/(protected)/members/page.tsx");
-    expect(page).toContain("otherOwners.map(");
-    expect(page).toMatch(/totalAdminCount = admins\.length \+ otherOwners\.length/);
-    const ownerBlock = page.slice(page.indexOf("otherOwners.map("), page.indexOf("admins.map("));
+    expect(page).toContain("owners.map(");
+    expect(page).toContain("const [owners, setOwners] = useState<OwnerMember[]>([])");
+    expect(page).toContain("setOwners(Array.isArray(body.owners) ? body.owners : [])");
+    expect(page).toMatch(/owners\.length \+ admins\.length/);
+    const ownerBlock = page.slice(page.indexOf("owners.map("), page.indexOf("admins.map("));
     expect(ownerBlock).not.toContain("Remove");
     expect(ownerBlock).toContain("Owner");
   });
@@ -262,6 +264,6 @@ describe("14. Shop switch gaps", () => {
 
 describe("15. Sponsors help", () => {
   it("does not mention a slideshow", () => {
-    expect(source("app/admin/(protected)/sponsors/page.tsx")).not.toMatch(/slideshow/i);
+    expect(source("components/admin/sponsors/ClassicSponsorsPage.tsx")).not.toMatch(/slideshow/i);
   });
 });

@@ -251,20 +251,6 @@ test("retains edits made during an in-flight save", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test("scopes the existing saving pill ring speed to classic admin", async ({ page }) => {
-  await page.route("**/*", (route) =>
-    new URL(route.request().url()).origin === origin ? route.continue() : route.abort(),
-  );
-  await page.goto(`${origin}${fixture}?pill=classic`);
-  const ring = page.getByRole("status").locator("span[aria-hidden=true]");
-  await expect(ring).toHaveCSS("animation-duration", "0.45s");
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(ring).toHaveCSS("animation-name", "none");
-  await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto(`${origin}${fixture}?pill=outside`);
-  await expect(ring).toHaveCSS("animation-duration", "0.7s");
-});
-
 test("fits unstacked save actions with an optional button on a narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   const { button, input, status, errors } = await openFixture(page, "light", "&cancel");

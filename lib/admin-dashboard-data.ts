@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { clubToday, DEFAULT_CLUB_TIME_ZONE } from "@/lib/club-time";
 import {
   buildRegistrationMix,
+  paidRowsOnCurrentForms,
   type RegistrationMixItem,
 } from "@/lib/admin-dashboard-mix";
 
@@ -172,7 +173,9 @@ export async function loadAdminDashboardData(
     if (result.status === "rejected" || result.value.error) {
       return failed(`Could not load ${label}.`);
     }
-    return ready(result.value.count ?? 0);
+    // A null count with no error is an unknown, never a zero.
+    if (result.value.count === null) return failed(`Could not load ${label}.`);
+    return ready(result.value.count);
   };
 
   const players = countSection(playersResult, "active players");
@@ -277,9 +280,11 @@ export async function loadAdminDashboardData(
       : failed("Could not load registration mix.");
   }
 
-  const paidRegistrations = paidRows
-    ? ready(paidRows.length)
-    : failed<number>("Could not load paid registrations.");
+  // Same current-form set as the mix, so the KPI and the mix total cannot drift.
+  const paidRegistrations =
+    paidRows && formRows
+      ? ready(paidRowsOnCurrentForms(formRows, paidRows).length)
+      : failed<number>("Could not load paid registrations.");
 
   return {
     activeSeasonLabel: activeSeason?.label ?? null,

@@ -10,6 +10,8 @@ export const HOMEPAGE_PIECE_LABELS: Record<PieceId, string> = {
 };
 export type HomepagePreviewValue = {
   playback?: boolean;
+  /** Classic preview follows the resolved owner-page shortcut. */
+  navigateShared?: boolean;
   draft: HomepageDraft;
   videoSource: string;
   selection: PieceId | null;
@@ -27,7 +29,7 @@ export function useHomepagePiece(piece: PieceId): HTMLAttributes<HTMLElement> & 
   // editing canvas omits it rather than dressing it up as editable. The editor
   // offers it as an explicit shortcut instead. Playback and the public site are
   // untouched: neither receives this attribute.
-  if (piece.startsWith("shared.")) return { "data-homepage-shared": "true" };
+  if (piece.startsWith("shared.") && !preview.navigateShared) return { "data-homepage-shared": "true" };
   return {
     "data-homepage-piece": piece, tabIndex: 0, role: "button",
     "aria-label": HOMEPAGE_PIECE_LABELS[piece], "aria-pressed": preview.selection === piece,

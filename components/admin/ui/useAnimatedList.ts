@@ -120,11 +120,19 @@ export function useAnimatedList({ axis = "vertical" }: { axis?: "vertical" | "bo
       list.style.position = "relative";
     }
 
+    if (focusedInRemoved) {
+      // Keep modal recovery from observing body when the active row is removed.
+      if (!list.hasAttribute("tabindex")) list.tabIndex = -1;
+      list.focus({ preventScroll: true });
+    }
+
     flushSync(mutate);
 
     if (focusedInRemoved) {
       queueMicrotask(() => {
         if (!list.isConnected) return;
+        const active = list.ownerDocument.activeElement;
+        if (active !== list && active !== list.ownerDocument.body) return;
         const remaining = activeRows(list);
         const neighbor = remaining[Math.min(removedIndex, remaining.length - 1)];
         const target = neighbor?.querySelector<HTMLElement>(focusableSelector);

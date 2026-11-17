@@ -6,6 +6,8 @@ export type UnsavedGuardRegistration = {
   dirty: boolean;
   edited: string;
   onSave: () => Promise<boolean>;
+  /** Read current retained work when an open guard rerenders after an attempt. */
+  retentionNotice?: () => string | null;
   onDiscard?: () => void | Promise<void>;
 };
 

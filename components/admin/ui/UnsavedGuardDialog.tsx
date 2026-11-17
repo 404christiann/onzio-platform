@@ -134,6 +134,9 @@ export function UnsavedGuardProvider({
     attempt.target.continue();
   }
 
+  const retentionNotice = attempt?.source.retentionNotice?.() ?? null;
+  const retentionId = `${descriptionId}-retention`;
+
   return (
     <UnsavedGuardContext.Provider value={context}>
       {children}
@@ -145,14 +148,16 @@ export function UnsavedGuardProvider({
         busy={busy}
         initialFocus={saveRef}
         finalFocus={openerRef}
-        descriptionId={descriptionId}
+        descriptionId={retentionNotice ? `${descriptionId} ${retentionId}` : descriptionId}
         footer={(
           <AdminDialogFooter
+            actionsClassName="flex-1 min-w-0"
             primary={(
               <AdminPendingButton
                 ref={saveRef}
                 variant="default"
                 size="lg"
+                className="min-h-11"
                 label={attempt?.target.kind === "switch" ? "Save and switch" : "Save and leave"}
                 pendingLabel="Saving…"
                 pending={busy}
@@ -183,6 +188,7 @@ export function UnsavedGuardProvider({
           <strong className="font-semibold text-foreground">{attempt?.target.label}</strong>{" "}
           will lose those changes unless you save them.
         </p>
+        {retentionNotice && <p id={retentionId} className="text-sm leading-6 text-muted-foreground">{retentionNotice}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </AdminDialog>
     </UnsavedGuardContext.Provider>

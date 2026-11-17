@@ -167,9 +167,10 @@ type AdminDialogFooterProps = {
   children?: ReactNode;
   status?: ReactNode;
   destructive?: ReactNode;
+  actionsClassName?: string;
 };
 
-export function AdminDialogFooter({ primary, children, status, destructive }: AdminDialogFooterProps) {
+export function AdminDialogFooter({ primary, children, status, destructive, actionsClassName }: AdminDialogFooterProps) {
   const phone = useSyncExternalStore(subscribePhoneViewport, isPhoneViewport, serverPhoneViewport);
   const primaryAction = <Fragment key="primary">{primary}</Fragment>;
   const secondaryActions = <Fragment key="secondary">{children}</Fragment>;
@@ -177,7 +178,7 @@ export function AdminDialogFooter({ primary, children, status, destructive }: Ad
     <div key="destructive" className={styles.destructive}>{destructive}</div>
   );
   const actions = (
-    <div key="actions" className={styles.actions}>
+    <div key="actions" className={actionsClassName ? styles.actions + " " + actionsClassName : styles.actions}>
       {phone ? [primaryAction, secondaryActions] : [secondaryActions, primaryAction]}
     </div>
   );

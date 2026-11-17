@@ -1,10 +1,11 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { programPageSaveRequestSchema } from "@/lib/program-page-editor/contract";
 
 const root = process.cwd();
-const source = (path: string) => readFileSync(resolve(root, path), "utf8");
+const source = (path: string) => path === "app/admin/(protected)/programs/page.tsx" ? readProgramsEditorSource() : readFileSync(resolve(root, path), "utf8");
 const id = "44444444-4444-4444-8444-444444444401";
 const asset = "55555555-5555-4555-8555-555555555501";
 const updatedAt = "2026-10-02T18:00:00+00:00";

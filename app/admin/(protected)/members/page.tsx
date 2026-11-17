@@ -1,15 +1,18 @@
 "use client";
 
-import { Check } from "@/components/admin/icons";
-
-import { FormEvent, useEffect, useState } from "react";
-import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
+import { TeamSkeleton } from "@/components/admin/club-settings/ClubSettingsSkeleton";
+import { ClubSettingsFrame } from "@/components/admin/club-settings/ClubSettingsFrame";
+import styles from "@/components/admin/club-settings/ClubSettings.module.css";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { AdminPendingButton } from "@/components/admin/ui/AdminPendingButton";
+import { useAnimatedList } from "@/components/admin/ui/useAnimatedList";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { SignInPeople } from "@/components/admin/reimagined/SignInPeople";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { memberLabel } from "@/lib/admin-greeting";
-import { createClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
 
 type AdminMember = { userId: string; email: string; displayName: string | null };
@@ -184,7 +187,7 @@ function membershipErrorTone(code: unknown): MessageTone {
 
 // ADMIN-RE-18: a club on the reimagined admin gets "Who can sign in" (design:
 // cd-signin-final), which talks to the same members route. A club still on the
-// classic admin keeps the Team access page below, unchanged.
+// classic admin uses the shared Club settings frame below.
 export default function MembersPage() {
   const reimagined = useAdminPortal().portal === "reimagined";
   return reimagined ? <SignInPeople /> : <ClassicMembersPage />;
@@ -192,221 +195,213 @@ export default function MembersPage() {
 
 function ClassicMembersPage() {
   const club = useClubContext();
-  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
+  const isOwner = club.role === "owner";
   const [admins, setAdmins] = useState<AdminMember[]>([]);
   const [owners, setOwners] = useState<OwnerMember[]>([]);
   const [email, setEmail] = useState("");
+  const currentEmail = useRef("");
   const [message, setMessage] = useState<MembershipMessage | null>(null);
+  const [loading, setLoading] = useState(isOwner);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [emailInvalid, setEmailInvalid] = useState(false);
+  const [pending, setPending] = useState<"add" | "remove" | null>(null);
+  const [uncertain, setUncertain] = useState(false);
+  const [removing, setRemoving] = useState<AdminMember | null>(null);
+  const busy = useRef(false);
+  const mounted = useRef(false);
+  const newest = useRef<string | null>(null);
+  const [reads] = useState(() => ({ version: 0 }));
+  const opener = useRef<HTMLButtonElement | null>(null);
+  const addInput = useRef<HTMLInputElement>(null);
+  const list = useAnimatedList();
 
-  // This route is owner-only in the manifest (`ownerOnly: true`, which hides
-  // it from nav/search) and every read/mutation goes through the API route's
-  // server-side `assertClubOwnerSession`/OWNER_REQUIRED checks. The page
-  // itself, though, is a client component with no role-based redirect: a
-  // non-owner admin who types the URL directly still renders it — they just
-  // get empty/error chrome because the API rejects them. So nothing here may
-  // assume the viewer is the owner; showOwnerRow below checks club.role. The
-  // owner row is derived entirely from client-side identity —
-  // `club.role` from useClubContext() and the signed-in email from
-  // supabase.auth.getUser() — the same pattern AdminShell.tsx already uses.
-  // Other active owners come from the owner-only GET (`owners`), so a second
-  // owner is never hidden from this one.
-  useEffect(() => {
-    const supabase = createClient();
-    void supabase.auth.getUser().then(({ data }) => {
-      setOwnerEmail(data.user?.email ?? null);
-    });
-  }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
+    if (!isOwner) return;
+    const version = ++reads.version;
     const response = await fetch("/api/admin/members", { cache: "no-store" });
     const body = await response.json();
-    if (!response.ok) {
-      throw new Error(
-        membershipErrorMessage(body.error, "Unable to load administrators"),
-      );
-    }
-    setAdmins(body.admins);
+    if (!response.ok) throw new Error(membershipErrorMessage(body.error, "Unable to load administrators."));
+    if (!mounted.current || version !== reads.version) return;
+    const members = body.admins as AdminMember[];
+    setAdmins([...members].sort((a, b) => Number(b.userId === newest.current) - Number(a.userId === newest.current)));
     setOwners(Array.isArray(body.owners) ? body.owners : []);
-  }
+    setLoadFailed(false);
+  }, [isOwner, reads]);
 
   useEffect(() => {
-    void load().catch((error) =>
-      setMessage({ text: error.message, tone: "destructive" }),
-    );
-  }, []);
+    mounted.current = true;
+    if (isOwner) {
+      setLoading(true);
+      void load().catch((error: unknown) => {
+        if (!mounted.current) return;
+        setLoadFailed(true);
+        setMessage({ text: error instanceof Error ? error.message : "Unable to load administrators.", tone: "destructive" });
+      }).finally(() => { if (mounted.current) setLoading(false); });
+    }
+    return () => { mounted.current = false; reads.version++; };
+  }, [isOwner, load, reads]);
+
+  async function refresh() {
+    if (busy.current || loading) return;
+    setLoading(true);
+    try { await load(); setMessage(null); }
+    catch (error) {
+      setLoadFailed(true);
+      setMessage({ text: error instanceof Error ? error.message : "Unable to refresh administrators.", tone: "warning" });
+    } finally { if (mounted.current) setLoading(false); }
+  }
 
   async function add(event: FormEvent) {
     event.preventDefault();
+    if (!isOwner || busy.current || loading || loadFailed || uncertain) return;
+    const submitted = currentEmail.current.trim().toLowerCase();
+    busy.current = true;
+    reads.version++;
+    setPending("add");
+    setEmailInvalid(false);
     setMessage(null);
-    const response = await fetch("/api/admin/members", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "add", email }),
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      return setMessage({
-        text: membershipErrorMessage(body.error, "Unable to add administrator"),
-        tone: membershipErrorTone(body.error),
+    let acknowledged = false;
+    try {
+      const response = await fetch("/api/admin/members", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "add", email: submitted }),
       });
+      const body = await response.json();
+      if (!response.ok) {
+        setEmailInvalid(body.error === "INVALID_MEMBERSHIP_INPUT");
+        setMessage({ text: membershipErrorMessage(body.error, "Unable to add administrator."), tone: membershipErrorTone(body.error) });
+        return;
+      }
+      if (typeof body.userId !== "string" || body.codeSent !== true) throw new Error("The server response could not be confirmed.");
+      acknowledged = true;
+      newest.current = body.userId;
+      if (currentEmail.current.trim().toLowerCase() === submitted) {
+        currentEmail.current = "";
+        setEmail("");
+      }
+      list.change({ type: "add", key: body.userId }, () => {
+        setAdmins((current) => [{ userId: body.userId, email: body.email ?? submitted, displayName: null }, ...current.filter((member) => member.userId !== body.userId)]);
+      });
+      setMessage({ text: "Administrator added. A sign-in code was sent to their email.", tone: "success" });
+      try { await load(); }
+      catch {
+        setLoadFailed(true);
+        setMessage({ text: "Administrator added and a sign-in code was sent. The list could not be refreshed. Refresh the list before making another change.", tone: "warning" });
+      }
+    } catch {
+      if (!acknowledged) {
+        setUncertain(true);
+        setMessage({ text: "We could not confirm whether the administrator was added or a code was sent. Reload to review access before trying again.", tone: "warning" });
+      }
+    } finally {
+      busy.current = false;
+      if (mounted.current) setPending(null);
     }
-    setEmail("");
-    setMessage({
-      text: "Administrator added. A sign-in code was sent to their email.",
-      tone: "success",
-    });
-    await load();
   }
 
-  async function remove(userId: string) {
+  async function remove() {
+    const member = removing;
+    if (!isOwner || !member || busy.current || uncertain || loading || loadFailed) return;
+    busy.current = true;
+    reads.version++;
+    setPending("remove");
     setMessage(null);
-    const response = await fetch("/api/admin/members", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "remove", userId }),
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      return setMessage({
-        text: membershipErrorMessage(body.error, "Unable to remove administrator"),
-        tone: membershipErrorTone(body.error),
+    try {
+      const response = await fetch("/api/admin/members", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "remove", userId: member.userId }),
       });
+      const body = await response.json();
+      if (!response.ok) {
+        setMessage({ text: membershipErrorMessage(body.error, "Unable to remove administrator."), tone: membershipErrorTone(body.error) });
+        return;
+      }
+      if (body.userId !== member.userId || body.status !== "removed") throw new Error("The server response could not be confirmed.");
+      const mutate = () => setAdmins((current) => current.filter((item) => item.userId !== member.userId));
+      if (!list.change({ type: "remove", key: member.userId }, mutate)) mutate();
+      setRemoving(null);
+      setMessage({ text: "Administrator access removed.", tone: "success" });
+      try { await load(); }
+      catch {
+        setLoadFailed(true);
+        setMessage({ text: "Administrator access removed. The list could not be refreshed. Refresh the list before making another change.", tone: "warning" });
+      }
+    } catch {
+      setUncertain(true);
+      setMessage({ text: "We could not confirm whether access was removed. Reload to review access before trying again.", tone: "warning" });
+      setRemoving(null);
+    } finally {
+      busy.current = false;
+      if (mounted.current) setPending(null);
     }
-    setMessage({ text: "Administrator access removed.", tone: "success" });
-    await load();
   }
 
-  const showOwnerRow = club.role === "owner";
-  // Every other active owner (decision 0013). Only Onzio adds or removes an
-  // owner, so these rows never offer Remove.
-  const otherOwners = owners.filter((owner) => !owner.isYou);
-  // A saved name shows instead of the email, with the email underneath; no
-  // name shows the email alone (memberLabel, ADMIN-RE-01).
-  const yourName = owners.find((owner) => owner.isYou)?.displayName ?? null;
-  const totalAdminCount = admins.length + otherOwners.length + (showOwnerRow ? 1 : 0);
-
+  const disabled = loading || loadFailed || pending !== null || uncertain;
   return (
-    <AdminPage className="max-w-4xl">
-      <AdminPageHeader
-        title="Team access"
-        description="Owners can add or remove administrators. Ownership changes still require Onzio."
-      />
-
-      <AdminPanel as="div">
-      <form onSubmit={add}>
-        <h2 className="text-base font-semibold text-card-foreground">Add administrator</h2>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="min-w-0 flex-1">
-            <label htmlFor="new-admin-email" className={ADMIN_LABEL_CLASS}>
-              Email
-            </label>
-            <input
-              id="new-admin-email"
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="administrator@example.com"
-              className={ADMIN_INPUT_CLASS}
-            />
-          </div>
-          <button className="min-h-11 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            Send access code
-          </button>
-        </div>
-      </form>
-      <p className="mt-4 rounded-xl border border-border bg-background/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-        Adding an administrator emails them a sign-in code. They get full
-        content access to this club — everything except billing and
-        ownership.
-      </p>
-      </AdminPanel>
-
-      <section className="space-y-3" aria-labelledby="current-administrators-heading">
-        <h2 id="current-administrators-heading" className="text-base font-semibold text-foreground">
-          People who can sign in · {totalAdminCount}
-        </h2>
-        {showOwnerRow && (
-          <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
-            <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
-              <AvatarChip email={ownerEmail} displayName={yourName} variant="owner" />
-              <div className="min-w-0">
-                <span className="block min-w-0 truncate text-sm">
-                  {ownerEmail ? memberLabel(yourName, ownerEmail) : yourName ?? "Loading…"}
-                </span>
-                {yourName && ownerEmail && (
-                  <span className="block min-w-0 truncate text-xs text-muted-foreground">{ownerEmail}</span>
-                )}
-                <span className="mt-1 inline-block text-xs font-semibold text-primary">
-                  You · owner
-                </span>
-              </div>
+    <ClubSettingsFrame active="team">
+      {!isOwner ? (
+        <section className={styles.card} aria-labelledby="team-access-heading">
+          <h2 id="team-access-heading">Team access</h2>
+          <p className={styles.notice}>Only owners can view and manage this club’s administrators. Contact your club owner for access changes.</p>
+        </section>
+      ) : (
+        <section className={styles.card} aria-labelledby="team-access-heading" aria-busy={loading || undefined}>
+          <h2 id="team-access-heading">Team access</h2>
+          <p className={styles.description}>Owners can add or remove administrators. Ownership changes still require Onzio.</p>
+          <ShimmerRegion loading={loading} quietRefresh={owners.length + admins.length > 0} skeleton={<TeamSkeleton />} minHeight={240} loadingLabel="Loading team access">
+          <form className={styles.addRow} onSubmit={add}>
+            <div className={styles.field}>
+              <label htmlFor="new-admin-email" className={ADMIN_LABEL_CLASS}>Administrator email</label>
+              <input ref={addInput} id="new-admin-email" type="email" required autoComplete="off" value={email}
+                onChange={(event) => { currentEmail.current = event.target.value; setEmail(event.target.value); setEmailInvalid(false); }}
+                placeholder="administrator@example.com" className={ADMIN_INPUT_CLASS} aria-describedby={emailInvalid ? "administrator-hint team-message" : "administrator-hint"} aria-invalid={emailInvalid || undefined} />
             </div>
-            <span className="max-w-full flex-none break-words whitespace-normal rounded-full border border-border px-3 py-1.5 text-right text-xs text-muted-foreground">
-              Contact Onzio to transfer
-            </span>
-          </div>
-        )}
-        {otherOwners.map((owner) => (
-          <div key={owner.userId} className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
-            <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
-              <AvatarChip email={owner.email} displayName={owner.displayName} variant="owner" />
-              <div className="min-w-0">
-                <span className="block min-w-0 truncate text-sm">{memberLabel(owner.displayName, owner.email)}</span>
-                {owner.displayName && (
-                  <span className="block min-w-0 truncate text-xs text-muted-foreground">{owner.email}</span>
-                )}
-                <span className="mt-1 inline-block text-xs font-semibold text-primary">
-                  Owner
-                </span>
+            <AdminPendingButton type="submit" label="Add administrator" pendingLabel="Sending code…" pending={pending === "add"}
+              disabled={disabled && pending !== "add"} className={styles.addButton} />
+          </form>
+          <p id="administrator-hint" className={styles.hint}>They get a sign-in code by email. Administrators can edit the website, not billing or ownership.</p>
+          {!loading && <h3 className={styles.count}>People who can sign in · {owners.length + admins.length}</h3>}
+          <div ref={list.listRef} tabIndex={-1} aria-label="People who can sign in">
+            {owners.map((owner) => (
+              <div key={owner.userId} className={styles.row} {...list.rowProps(owner.userId)}>
+                <AvatarChip email={owner.email} displayName={owner.displayName} variant="owner" />
+                <div className={styles.identity}>
+                  <b>{memberLabel(owner.displayName, owner.email)}</b>
+                  {owner.displayName && <span>{owner.email}</span>}
+                  {owner.isYou ? <span>You · owner</span> : <span className={styles.mobileRole}>Owner</span>}
+                </div>
+                <span className={`${styles.role} ${styles.owner}`}>Owner</span><span />
               </div>
-            </div>
-            <span className="max-w-full flex-none break-words whitespace-normal rounded-full border border-border px-3 py-1.5 text-right text-xs text-muted-foreground">
-              Only Onzio can change owners
-            </span>
-          </div>
-        ))}
-        {admins.map((admin) => (
-          <div key={admin.userId} className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
-            <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
-              <AvatarChip email={admin.email} displayName={admin.displayName} variant="admin" />
-              <div className="min-w-0">
-                <span className="block min-w-0 truncate text-sm">{memberLabel(admin.displayName, admin.email)}</span>
-                {admin.displayName && (
-                  <span className="block min-w-0 truncate text-xs text-muted-foreground">{admin.email}</span>
-                )}
-                <span className="mt-1 inline-block text-xs text-muted-foreground">
-                  Administrator
-                </span>
+            ))}
+            {admins.map((member) => (
+              <div key={member.userId} className={styles.row} {...list.rowProps(member.userId)}>
+                <AvatarChip email={member.email} displayName={member.displayName} variant="admin" />
+                <div className={styles.identity}>
+                  <b>{memberLabel(member.displayName, member.email)}</b>
+                  {member.displayName && <span>{member.email}</span>}
+                  <span className={styles.mobileRole}>Administrator</span>
+                </div>
+                <span className={styles.role}>Administrator</span>
+                <button type="button" className={`${styles.action} ${styles.remove}`} disabled={disabled}
+                  onClick={(event) => { opener.current = event.currentTarget; setMessage(null); setRemoving(member); }}>Remove</button>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => void remove(admin.userId)}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-11 flex-none rounded-xl border border-destructive/30 px-4 py-2 text-sm font-semibold text-destructive"
-            >
-              Remove
-            </button>
+            ))}
           </div>
-        ))}
-      </section>
-
-      {message && (
-        <p
-          role="status"
-          className={cn(
-            "mt-5 border text-sm",
-            message.tone === "success" &&
-              "inline-flex items-center gap-1.5 rounded-full border-success/30 bg-success/10 px-4 py-2 font-medium text-success",
-            message.tone === "destructive" &&
-              "rounded-xl border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive",
-            message.tone === "warning" &&
-              "rounded-xl border-warning/30 bg-warning/10 px-4 py-3 text-warning",
-          )}
-        >
-          {message.tone === "success" ? <><Check width="14" height="14" className="mr-1 inline-block align-middle" />{message.text}</> : message.text}
-        </p>
+          {!loading && !loadFailed && !admins.length && <p className={styles.hint}>No administrators yet. Add someone above to give them access.</p>}
+          {message && <p id="team-message" className={cn(styles.notice, message.tone === "destructive" && styles.error)} role="status">{message.text}</p>}
+          {loadFailed && !uncertain && <button type="button" className={styles.action} disabled={pending !== null || loading} onClick={() => void refresh()}>Refresh list</button>}
+          {uncertain && <button type="button" className={styles.action} onClick={() => window.location.reload()}>Reload to review access</button>}
+          </ShimmerRegion>
+          <p className={styles.notice}>Ownership can’t be changed here — contact Onzio to transfer ownership.</p>
+        </section>
       )}
-    </AdminPage>
+      <AdminConfirmDialog open={removing !== null} title={`Remove ${removing ? memberLabel(removing.displayName, removing.email) : "administrator"}’s access?`}
+        confirmLabel={pending === "remove" ? "Removing…" : "Remove access"} destructive busy={pending === "remove"}
+        onCancel={() => { if (!busy.current) setRemoving(null); }} onConfirm={() => { void remove(); }}
+        finalFocus={() => opener.current?.isConnected ? opener.current : addInput.current}>
+        <p>{removing?.email} will be signed out and can’t sign in until you add them again.</p>
+        {message && pending !== "remove" && <p role="alert" className={styles.error}>{message.text}</p>}
+      </AdminConfirmDialog>
+    </ClubSettingsFrame>
   );
 }

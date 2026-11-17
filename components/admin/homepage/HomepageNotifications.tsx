@@ -93,6 +93,7 @@ export function useHomepageNotification({
 export default function HomepageNotifications({
   notification,
   onRetry,
+  retryDisabled,
   onDismiss,
   onHold,
   onRelease,
@@ -100,6 +101,7 @@ export default function HomepageNotifications({
 }: {
   notification: HomepageNotification | null;
   onRetry?: () => void;
+  retryDisabled?: boolean;
   onDismiss?: () => void;
   onHold?: () => void;
   onRelease?: () => void;
@@ -121,7 +123,7 @@ export default function HomepageNotifications({
       <span className="hp-notification-icon" aria-hidden="true">{kind === "saving" ? icon : kind === "success" ? <Check size={14} /> : kind === "warning" ? <AlertTriangle size={14} /> : <X size={14} />}</span>
       <p>{text}</p>
       <div className="hp-notification-actions">
-        {actionable && kind === "error" && onRetry ? <button type="button" className="hp-notification-action" onClick={onRetry}>Try saving again</button> : null}
+        {actionable && kind === "error" && onRetry ? <button type="button" className="hp-notification-action" disabled={retryDisabled} onClick={onRetry}>Try saving again</button> : null}
         {onDismiss && kind !== "saving" ? <button type="button" className="hp-notification-dismiss" aria-label="Dismiss notification" onClick={onDismiss}>Dismiss</button> : null}
       </div>
     </div>

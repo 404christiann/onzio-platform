@@ -1,5 +1,8 @@
 import ResilientImage from "@/components/ResilientImage";
+import type { ReactNode } from "react";
 import type { ContactContent } from "@/lib/queries";
+
+export type ContactPageRegion = "hero" | "details" | "social";
 
 function telephoneHref(phone: string): string {
   const normalized = phone.replace(/[^0-9+]/g, "");
@@ -13,9 +16,11 @@ function telephoneHref(phone: string): string {
 export default function AcademyContactPage({
   content,
   clubName = "the club",
+  renderEditorRegion = (_section, children) => children,
 }: {
   content: ContactContent;
   clubName?: string;
+  renderEditorRegion?: (section: ContactPageRegion, children: ReactNode) => ReactNode;
 }) {
   const email = content.profile?.publicEmail?.trim() ?? "";
   const emailHref = email ? `mailto:${email}` : "";
@@ -38,7 +43,7 @@ export default function AcademyContactPage({
 
   return (
     <div className="bg-[#F9FAFD]">
-      <section data-contact-editor-section="hero" className="relative isolate overflow-hidden bg-[#1E3653] px-6 pb-20 pt-40 text-white lg:px-10 lg:pb-28">
+      {renderEditorRegion("hero", <section data-contact-editor-section="hero" className="relative isolate overflow-hidden bg-[#1E3653] px-6 pb-20 pt-40 text-white lg:px-10 lg:pb-28">
         {page?.heroMediaUrl ? (
           <>
             <ResilientImage
@@ -73,10 +78,10 @@ export default function AcademyContactPage({
             </a>
           ) : null}
         </div>
-      </section>
+      </section>)}
 
       <section data-contact-editor-section="details" className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-        {details.length > 0 ? (
+        {renderEditorRegion("details", details.length > 0 ? (
           <div className="grid gap-px overflow-hidden bg-[#1E3653]/15 md:grid-cols-3">
             {details.map((detail) => (
               <div key={detail.label} className="bg-[#F9FAFD] p-6 sm:p-8">
@@ -98,9 +103,9 @@ export default function AcademyContactPage({
               </div>
             ))}
           </div>
-        ) : null}
+        ) : null)}
 
-        {content.socialLinks.length > 0 ? (
+        {renderEditorRegion("social", content.socialLinks.length > 0 ? (
           <div data-contact-editor-section="social" className="mt-14">
             <p className="font-display text-xs font-bold uppercase text-[#1E3653]/45">
               Follow Along
@@ -126,7 +131,7 @@ export default function AcademyContactPage({
               ))}
             </div>
           </div>
-        ) : null}
+        ) : null)}
 
         {!content.profile && !content.page ? (
           <div className="bg-[#EDF2F7] p-8 sm:p-12">

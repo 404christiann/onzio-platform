@@ -1,243 +1,35 @@
 "use client";
-
-import guided from "@/components/admin/AdminGuided.module.css";
-import { formatClubDate } from "@/lib/club-time";
-import {
-  IconCaretDown as AdminSelectChevron,
-  ChevronDownIcon,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Search
-} from "@/components/admin/icons";
-
-import Image from "@/components/ResilientImage";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import { AdminPage, AdminPageHeader, AdminPageToolbar, AdminPanel } from "@/components/admin/AdminPage";
-import { AdminSidePanel } from "@/components/admin/AdminSidePanel";
-import { AdminModal } from "@/components/admin/AdminModal";
+import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
+import { Plus, Search } from "@/components/admin/icons";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import OpponentCrest from "@/components/OpponentCrest";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import { clubToday } from "@/lib/club-time";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
-import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
-import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
 import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
-import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { cn } from "@/lib/utils";
-
 import { Button } from "@/components/ui/button";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverPositioner,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import type { SlidingPanelDirection } from "@/components/ui/sliding-panel";
-import { Skeleton } from "@/components/ui/skeleton";
-
-// ── Types ─────────────────────────────────────
-
-type Match = {
-  id: string;
-  date: string;
-  time: string;
-  opponent: string;
-  opponent_short_name: string | null;
-  opponent_logo_url: string | null;
-  competition: string | null;
-  sponsor_name: string | null;
-  sponsor_logo_url: string | null;
-  sponsor_link: string | null;
-  home: boolean;
-  venue: string;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  rose_city_score: number | null;
-  opponent_score: number | null;
-  season_id: string;
-};
-
-type FormState = Omit<Match, "id">;
-
-type ResultFilter = "all" | "home" | "away" | "missing";
-
-/** Month cards reserve the responsive match-row layout throughout loading. */
-function ScheduleListSkeleton() {
-  return (
-    <AdminSkeletonRegion className="flex flex-col gap-4" label="Loading schedule">
-      {Array.from({ length: 2 }, (_, groupIndex) => (
-        <div key={groupIndex} className={cn("overflow-hidden rounded-xl border border-border bg-card", guided.listGroup)}>
-          <div className="border-b border-border bg-muted/40 px-4 py-2.5">
-            <Skeleton className="h-3.5 w-24" />
-          </div>
-          <div className="divide-y divide-border">
-            {Array.from({ length: 3 }, (_, rowIndex) => (
-              <div key={rowIndex} className="flex items-center gap-3 px-4 py-3 sm:grid sm:grid-cols-[5.5rem_2.5rem_minmax(0,1.9fr)_7rem_minmax(0,1fr)_6rem] sm:gap-4">
-                <div className="hidden space-y-2 sm:block"><Skeleton className="h-4 w-16" /><Skeleton className="h-3 w-12" /></div>
-                <Skeleton className="size-9 flex-none rounded-full" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-4 w-40 max-w-full" />
-                  <Skeleton className="h-3 w-32 max-w-full" />
-                  <Skeleton className="h-3 w-24 sm:hidden" />
-                  <Skeleton className="h-3 w-16 sm:hidden" />
-                </div>
-                <Skeleton className="hidden h-4 w-20 sm:block" />
-                <Skeleton className="hidden h-3 w-full sm:block" />
-                <Skeleton className="h-7 w-12 flex-shrink-0 rounded-lg sm:justify-self-end" />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </AdminSkeletonRegion>
-  );
-}
-
-function emptyForm(seasonId = ""): FormState {
-  return {
-    date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "",
-    sponsor_name: null, sponsor_logo_url: null, sponsor_link: null,
-    home: true, venue: "", address: "", city: "", state: "",
-    rose_city_score: null, opponent_score: null, season_id: seasonId,
-  };
-}
-
-// ADMIN-RE-07c: /api/admin/data and the database hold every saved game to
-// these text limits (lib/match-text-limits.ts) and cap a score at 99.
-const MAX_MATCH_SCORE = 99;
-const MATCH_FIELD_LABELS: Record<keyof typeof MATCH_TEXT_LIMITS, string> = {
-  opponent: "Opponent name",
-  opponent_short_name: "Short name",
-  venue: "Venue name",
-  competition: "Competition",
-  address: "Street address",
-  city: "City",
-  state: "State",
-};
-
-function matchTooLong(form: FormState): string | null {
-  for (const field of Object.keys(MATCH_TEXT_LIMITS) as Array<keyof typeof MATCH_TEXT_LIMITS>) {
-    const value = form[field];
-    if (typeof value === "string" && value.length > MATCH_TEXT_LIMITS[field]) {
-      return `${MATCH_FIELD_LABELS[field]} can be at most ${MATCH_TEXT_LIMITS[field]} characters.`;
-    }
-  }
-  return null;
-}
-
-function normalizeScore(value: number | null): number | null {
-  return value === null || Number.isNaN(value) ? null : value;
-}
-
-function parseDateInput(value: string): Date | undefined {
-  if (!value) return undefined;
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return undefined;
-  return new Date(year, month - 1, day);
-}
-
-function formatDateInput(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-/** "2026-03-15" -> "March 2026". Never shifts a day relative to the plain date
- * stored on the match (lib/club-time.ts). Falls back to a literal "Undated"
- * bucket for a match saved without a date. */
-function monthGroupKey(dateValue: string): string {
-  return formatClubDate(dateValue, "month-year") ?? "Undated";
-}
-
-function hasResult(match: Pick<Match, "rose_city_score" | "opponent_score">): boolean {
-  return match.rose_city_score !== null && match.opponent_score !== null;
-}
-
-/** "2026-03-14" -> "Sat 14". Used in the row list, where the month is
- * already established by the group header above it. */
-function formatRowDate(dateValue: string): string {
-  return formatClubDate(dateValue, "weekday-day") ?? "No date";
-}
-
-/** "2026-03-14" -> "Sat 14 Mar". Used in the edit panel, which has no
- * surrounding month context of its own. */
-function formatShortDate(dateValue: string): string {
-  return formatClubDate(dateValue, "weekday-day-month") ?? "No date";
-}
-
-/** "18:00" -> "6:00 PM" */
-function formatTime12h(timeValue: string): string {
-  if (!timeValue) return "";
-  const [hourStr, minStr] = timeValue.split(":");
-  const minutes = parseInt(minStr ?? "0", 10);
-  let hours = parseInt(hourStr ?? "", 10);
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return timeValue;
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12;
-  if (hours === 0) hours = 12;
-  return `${hours}:${String(minutes).padStart(2, "0")} ${ampm}`;
-}
-
-const LOGO_FILE_GUIDANCE = "Choose a PNG or WebP logo.";
-
-function logoUploadErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.includes("UNSUPPORTED_MEDIA_TYPE")) return LOGO_FILE_GUIDANCE;
-  return error instanceof Error ? error.message : "Upload failed";
-}
-
-async function uploadPhoto(file: File, bucket: string, folder: string): Promise<string> {
-  const supabase = createClient();
-  const extension = file.name.split(".").pop() ?? "jpg";
-  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(path, file);
-  if (error) throw new Error(error.message);
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
-}
-
-async function deleteUnusedMatchImageUrls({
-  bucket,
-  urls,
-  column,
-  allowedPrefixes,
-}: {
-  bucket: string;
-  urls: Array<string | null | undefined>;
-  column: "opponent_logo_url" | "sponsor_logo_url";
-  allowedPrefixes: string[];
-}) {
-  const supabase = createClient();
-  const unusedUrls: string[] = [];
-
-  for (const url of urls) {
-    if (!url) continue;
-    const { count, error } = await supabase
-      .from("matches")
-      .select("id", { count: "exact", head: true })
-      .eq(column, url);
-    if (error) throw new Error(error.message);
-    if ((count ?? 0) === 0) unusedUrls.push(url);
-  }
-
-  await deleteStorageUrls(bucket, unusedUrls, allowedPrefixes);
-}
-
-// ── Main component ────────────────────────────
+import { AdminDialog, AdminDialogFooter } from "@/components/admin/ui/AdminDialog";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { AdminSaveButton } from "@/components/admin/ui/AdminSaveButton";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
+import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
+import LegacySchedulePage from "@/components/admin/schedule/LegacySchedulePage";
+import { MatchForm } from "@/components/admin/schedule/ScheduleMatchForm";
+import { ScheduleMatchList, ScheduleListSkeleton } from "@/components/admin/schedule/ScheduleMatchList";
+import { emptyForm, matchTooLong, normalizeScore, deleteUnusedMatchImageUrls, monthGroupKey, hasResult, formatShortDate, MAX_MATCH_SCORE, type Match, type FormState, type ResultFilter } from "@/components/admin/schedule/schedule-model";
 
 export default function SchedulePage() {
+  const portal = useAdminPortal();
+  return portal.portal === "reimagined" ? <LegacySchedulePage /> : <ClassicSchedulePage />;
+}
+
+function ClassicSchedulePage() {
   const club = useClubContext();
   // See MatchForm: academy@1 never renders match sponsors, so the fields are
   // hidden and nothing is copied forward into a new match for that template.
@@ -259,20 +51,33 @@ export default function SchedulePage() {
   const [matchesReady, setMatchesReady] = useState(false);
   const [editingId, setEditingId]   = useState<string | null>(null);
   const [editForm, setEditForm]     = useState<FormState>(emptyForm());
+  const [createdMatchId, setCreatedMatchId] = useState<string | null>(null);
+  const editorOpener = useRef<HTMLElement | null>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const editorActivity = useRef(0);
   const [addOpen, setAddOpen]       = useState(false);
   const [addForm, setAddForm]       = useState<FormState>(emptyForm());
   const [saving, setSaving]         = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const deleteCancelRef = useRef<HTMLButtonElement>(null);
+
   const [error, setError]           = useState<string | null>(null);
   const [saved, setSaved]           = useState(false);
 
-  // Panel state: the side panel is open whenever `addOpen` or `editingId` is
-  // set. `panelDirection` drives the SlidingPanel content-swap animation —
-  // 1 opens/advances, -1 retargets backward — same convention as Roster's
-  // AdminSidePanel pilot.
-  const [panelDirection, setPanelDirection] = useState<SlidingPanelDirection>(1);
+  const [editorSession, setEditorSession] = useState(0);
+  const [savedSession, setSavedSession] = useState<number | null>(null);
+  const [initialForm, setInitialForm] = useState<FormState>(emptyForm());
+  const initialFormRef = useRef(initialForm);
+  initialFormRef.current = initialForm;
+  const panelDraft = useRef<FormState>(emptyForm());
+  const uploadCountRef = useRef(0);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [flashedId, setFlashedId] = useState<string | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { timeZone } = useAdminPortal();
+  const today = clubToday(timeZone);
+  const missingResult = useCallback((match: Match) => match.date < today && !hasResult(match), [today]);
+  useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
 
   // Search + result filter: pure client-side derived state, same pattern as
   // Roster's search/status filters — the season's matches are already loaded
@@ -305,16 +110,18 @@ export default function SchedulePage() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    setEditingId(null);
+    if (addOpen || editingId) return;
     setAddForm({
       ...emptyForm(selectedSeasonId),
       ...carrySponsor(matches, selectedSeasonId),
     });
-  }, [carrySponsor, matches, selectedSeasonId]);
+  }, [carrySponsor, matches, selectedSeasonId, addOpen, editingId]);
 
-  function flash() {
+  function flash(id?: string) {
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if (id) setFlashedId(id);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => { setSaved(false); setFlashedId(null); }, 1400);
   }
 
   // ── Add ─────────────────────────────────────
@@ -359,11 +166,11 @@ export default function SchedulePage() {
 
   async function handleAdd() {
     const validationError = validate(addForm);
-    if (validationError) { setError(validationError); return; }
+    if (validationError) { setError(validationError); return false; }
     setSaving(true);
     setError(null);
     const supabase = createClient();
-    const { error: e } = await supabase.from("matches").insert([{
+    const { data: inserted, error: e } = await supabase.from("matches").insert([{
       ...addForm,
       address: addForm.address?.trim() || null,
       city: addForm.city?.trim() || null,
@@ -376,15 +183,15 @@ export default function SchedulePage() {
       sponsor_logo_url: addForm.sponsor_logo_url?.trim() || null,
       sponsor_link: addForm.sponsor_link?.trim() || null,
     }]);
-    if (e) { setError(e.message); setSaving(false); return; }
-    setAddForm({
-      ...emptyForm(selectedSeasonId),
-      ...carrySponsor(matches, selectedSeasonId),
-    });
-    setAddOpen(false);
+    if (e) { setError(e.message); setSaving(false); return false; }
+    const createdId = Array.isArray(inserted) ? inserted[0]?.id : undefined;
+    setCreatedMatchId(createdId ?? null);
+    initialFormRef.current = addForm;
+    setInitialForm(addForm);
     await load();
-    flash();
+    flash(createdId);
     setSaving(false);
+    return true;
   }
 
   // ── Edit ────────────────────────────────────
@@ -404,33 +211,33 @@ export default function SchedulePage() {
     });
   }
 
-  // Panel key for the currently-open row/form, in the same chronological
-  // order the rows render in (independent of the month grouping). Used only
-  // to pick a slide direction when the panel retargets from one match
-  // straight to another without closing.
-  function panelIndex(key: string | null): number {
-    if (key === null) return -1;
-    return sorted.findIndex((m) => m.id === key);
-  }
-
   function openAddPanel() {
-    setPanelDirection(1);
+    editorOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setCreatedMatchId(null);
+    setEditorSession((current) => current + 1);
+    const next = { ...emptyForm(selectedSeasonId), ...carrySponsor(matches, selectedSeasonId) };
+    setInitialForm(next);
     setEditingId(null);
-    setAddForm({
-      ...emptyForm(selectedSeasonId),
-      ...carrySponsor(matches, selectedSeasonId),
-    });
+    setAddForm(next);
     setError(null);
     setAddOpen(true);
   }
 
   function openEditPanel(m: Match) {
-    const fromIndex = addOpen ? -1 : panelIndex(editingId);
-    const toIndex = panelIndex(m.id);
-    setPanelDirection(fromIndex === -1 ? 1 : toIndex >= fromIndex ? 1 : -1);
+    editorOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setCreatedMatchId(null);
+    setEditorSession((current) => current + 1);
     setAddOpen(false);
     setError(null);
     startEdit(m);
+    setInitialForm({
+      date: m.date, time: m.time, opponent: m.opponent,
+      opponent_short_name: m.opponent_short_name,
+      opponent_logo_url: m.opponent_logo_url, competition: m.competition ?? "",
+      sponsor_name: m.sponsor_name, sponsor_logo_url: m.sponsor_logo_url, sponsor_link: m.sponsor_link,
+      home: m.home, venue: m.venue, address: m.address ?? "", city: m.city ?? "", state: m.state ?? "",
+      rose_city_score: m.rose_city_score, opponent_score: m.opponent_score, season_id: m.season_id,
+    });
   }
 
   function closePanel() {
@@ -439,10 +246,10 @@ export default function SchedulePage() {
     setError(null);
   }
 
-  async function handleSaveEdit() {
-    if (!editingId) return;
+  async function handleSaveEdit(editingId: string | null, editForm: FormState) {
+    if (!editingId) return false;
     const validationError = validate(editForm);
-    if (validationError) { setError(validationError); return; }
+    if (validationError) { setError(validationError); return false; }
     setSaving(true);
     setError(null);
     const supabase = createClient();
@@ -460,7 +267,7 @@ export default function SchedulePage() {
       sponsor_logo_url: editForm.sponsor_logo_url?.trim() || null,
       sponsor_link: editForm.sponsor_link?.trim() || null,
     }).eq("id", editingId);
-    if (e) { setError(e.message); setSaving(false); return; }
+    if (e) { setError(e.message); setSaving(false); return false; }
     await deleteUnusedMatchImageUrls({
       bucket: "opponent-logos",
       urls: [
@@ -481,10 +288,13 @@ export default function SchedulePage() {
       column: "sponsor_logo_url",
       allowedPrefixes: ["match-sponsors/"],
     });
-    setEditingId(null);
+    const savedId = editingId;
+    initialFormRef.current = editForm;
+    setInitialForm(editForm);
     await load();
-    flash();
+    flash(savedId);
     setSaving(false);
+    return true;
   }
 
   // ── Delete ──────────────────────────────────
@@ -509,11 +319,11 @@ export default function SchedulePage() {
   // ── Render ───────────────────────────────────
 
   const selectedSeason = seasons.find((season) => season.id === selectedSeasonId);
-  const sorted = matches.filter((match) => match.season_id === selectedSeasonId).sort((a, b) => {
+  const sorted = useMemo(() => matches.filter((match) => match.season_id === selectedSeasonId).sort((a, b) => {
     const keyA = `${a.date}T${a.time ?? "00:00"}`;
     const keyB = `${b.date}T${b.time ?? "00:00"}`;
     return keyA < keyB ? -1 : keyA > keyB ? 1 : 0;
-  });
+  }), [matches, selectedSeasonId]);
 
   // Counts for the filter chips reflect the whole season, independent of
   // the search box — same convention as the mockup's "All 18 / Home 9 /
@@ -523,17 +333,17 @@ export default function SchedulePage() {
       all: sorted.length,
       home: sorted.filter((m) => m.home).length,
       away: sorted.filter((m) => !m.home).length,
-      missing: sorted.filter((m) => !hasResult(m)).length,
+      missing: sorted.filter(missingResult).length,
     }),
-    [sorted],
+    [sorted, missingResult],
   );
 
   const resultFiltered = useMemo(() => {
     if (resultFilter === "home") return sorted.filter((m) => m.home);
     if (resultFilter === "away") return sorted.filter((m) => !m.home);
-    if (resultFilter === "missing") return sorted.filter((m) => !hasResult(m));
+    if (resultFilter === "missing") return sorted.filter(missingResult);
     return sorted;
-  }, [sorted, resultFilter]);
+  }, [sorted, resultFilter, missingResult]);
 
   // Search is pure client-side derived state — the season's matches are
   // already loaded in full, so no new query is needed.
@@ -561,13 +371,75 @@ export default function SchedulePage() {
   }, [filtered]);
 
   const panelOpen = addOpen || editingId !== null;
-  const panelKey = addOpen ? "add" : (editingId ?? "closed");
   const panelForm = editingId ? editForm : addForm;
-  const panelOnChange = editingId ? setEditForm : setAddForm;
+  panelDraft.current = panelForm;
+  function panelOnChange(update: SetStateAction<FormState>) {
+    const next = typeof update === "function" ? update(panelDraft.current) : update;
+    panelDraft.current = next;
+    editorActivity.current += 1;
+    (editingId ? setEditForm : setAddForm)(next);
+  }
+  const dirty = panelOpen && JSON.stringify(panelForm) !== JSON.stringify(initialForm);
+  const saveAction = useSaveState({
+    isDirty: dirty,
+    onSave: async () => {
+      const activityAtSave = editorActivity.current;
+      const persistedId = editingId ?? createdMatchId;
+      const success = await (persistedId ? handleSaveEdit(persistedId, panelForm) : handleAdd()).catch((saveError) => {
+        setError(saveError instanceof Error ? saveError.message : "The match could not be saved. Try again.");
+        return false;
+      });
+      setSaving(false);
+      if (!success) throw new Error("Match could not be saved");
+      setSavedSession(editorActivity.current === activityAtSave ? editorSession : null);
+    },
+  });
+  const visibleSaveState = saveAction.state === "saved" && savedSession !== editorSession ? "clean" : saveAction.state;
+  useEffect(() => {
+    if (!panelOpen || dirty || uploadCount > 0 || visibleSaveState !== "saved" || savedSession !== editorSession) return;
+    const timer = setTimeout(() => {
+      setAddOpen(false);
+      setEditingId(null);
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [panelOpen, dirty, uploadCount, visibleSaveState, savedSession, editorSession]);
+
+  const guardSaveAttempt = useRef<() => Promise<boolean>>(async () => false);
+  guardSaveAttempt.current = async () => {
+    if (uploadCountRef.current > 0 || saving) return false;
+    const activityAtSave = editorActivity.current;
+    try {
+      await saveAction.save();
+      return editorActivity.current === activityAtSave && uploadCountRef.current === 0
+        && JSON.stringify(panelDraft.current) === JSON.stringify(initialFormRef.current);
+    } catch { return false; }
+  };
+
+  const requestNavigation = useUnsavedGuard({
+    dirty: dirty || uploadCount > 0,
+    edited: editingId ? "this match" : "a new match",
+    onSave: () => guardSaveAttempt.current(),
+    onDiscard: closePanel,
+  });
+  function uploadBusyChange(delta: number) {
+    uploadCountRef.current = Math.max(0, uploadCountRef.current + delta);
+    setUploadCount(uploadCountRef.current);
+  }
+
+  function mediaActivity() {
+    editorActivity.current += 1;
+    setSavedSession(null);
+  }
+
+  function requestClose() {
+    if (visibleSaveState === "saving" || uploadCount > 0) return;
+    requestNavigation({ kind: "switch", label: "the schedule", continue: closePanel });
+  }
+
 
   return (
     <AdminPage className="max-w-4xl">
-      <AdminSaveFeedback saving={saving} saved={saved} />
+      <span className="sr-only" role="status">{saved ? "Match saved" : ""}</span>
 
       <AdminPageHeader
         title="Schedule"
@@ -577,17 +449,18 @@ export default function SchedulePage() {
             seasons={seasons}
             loading={seasonsLoading}
             value={selectedSeasonId}
-            onChange={setSelectedSeasonId}
+            onChange={(value) => requestNavigation({ kind: "switch", label: "another season", continue: () => setSelectedSeasonId(value) })}
             label="View season"
+            className="h-11"
             disabled={seasonsLoading || saving}
           />
-          <button
-            onClick={openAddPanel}
+          <Button
+            onClick={() => requestNavigation({ kind: "switch", label: "a new match", continue: openAddPanel })}
             disabled={!matchesReady || seasonsLoading || saving || !selectedSeasonId}
             className="min-h-11 flex-shrink-0 rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           >
             <Plus width={14} height={14} className="mr-1 inline-block align-middle" /> Add match
-          </button>
+          </Button>
         </div>}
       />
 
@@ -599,886 +472,100 @@ export default function SchedulePage() {
       )}
 
       {/* Search + result filter */}
-      <AdminPageToolbar className="flex-col items-stretch gap-3">
-        <div className="relative w-full sm:max-w-xs">
+      <div data-schedule-toolbar="" className="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative min-w-0 w-full sm:max-w-xs">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
           />
           <input
+            ref={searchInput}
             type="search"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { const value = e.target.value; requestNavigation({ kind: "switch", label: "another match search", continue: () => setSearchQuery(value) }); }}
             disabled={loading || seasonsLoading}
             placeholder="Search opponent or venue…"
             aria-label="Search matches by opponent or venue"
             className={cn(ADMIN_INPUT_CLASS, "pl-9")}
           />
         </div>
-        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start sm:shrink-0">
           <div
             role="group"
             aria-label="Filter matches by result"
-            className="flex max-w-full flex-wrap gap-1 rounded-lg border border-border bg-muted/60 p-1"
+            className="flex max-w-full flex-wrap gap-1 rounded-lg bg-muted/60 p-1"
           >
             {([
-              ["all", `All ${resultFilterCounts.all}`],
-              ["home", `Home ${resultFilterCounts.home}`],
-              ["away", `Away ${resultFilterCounts.away}`],
-              ["missing", `Result missing ${resultFilterCounts.missing}`],
+              ["all", "All"],
+              ["home", "Home"],
+              ["away", "Away"],
+              ["missing", "Result missing"],
             ] as [ResultFilter, string][]).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
-                onClick={() => setResultFilter(value)}
+                onClick={() => requestNavigation({ kind: "switch", label: "another match filter", continue: () => setResultFilter(value) })}
                 aria-pressed={resultFilter === value}
+                data-schedule-filter={value}
                 disabled={loading || seasonsLoading}
                 className={cn(
-                  "min-h-11 flex-none rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "admin-press inline-flex min-h-11 flex-none items-center gap-1 rounded-lg px-2 py-2 text-xs font-medium sm:text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   resultFilter === value
                     ? "bg-card text-primary shadow-sm"
                     : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
                 )}
               >
-                {loading || seasonsLoading ? label.replace(/\s\d+$/, "") : label}
+                {label} <span className="inline-block w-[3ch] flex-none text-right tabular-nums">{loading || seasonsLoading ? "–" : resultFilterCounts[value]}</span>
               </button>
             ))}
           </div>
-          <p className="whitespace-nowrap font-body text-sm text-muted-foreground">
-            Sorted by date
-          </p>
         </div>
-      </AdminPageToolbar>
+      </div>
 
-      {/* Match list, grouped by month */}
-      {loading || seasonsLoading ? (
-        <ScheduleListSkeleton />
-      ) : !matchesReady ? null : filtered.length === 0 ? (
-        <AdminPanel className="flex flex-col items-center gap-1 py-10 text-center">
-          <p className="font-body text-sm font-semibold text-foreground">
-            {sorted.length === 0
-              ? "No matches yet"
-              : resultFilter === "missing"
-                ? "No matches are missing a result"
-                : "No matches match your search and filters"}
-          </p>
-          <p className="font-body text-sm text-muted-foreground">
-            {sorted.length === 0
-              ? `Add a match for ${selectedSeason?.label ?? "the selected season"} to get started.`
-              : resultFilter === "missing"
-                ? "Every match this season already has a result."
-                : "Try a different search term or filter."}
-          </p>
-        </AdminPanel>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {monthGroups.map(([month, monthMatches]) => (
-            <div key={month} className={cn("overflow-hidden rounded-xl border border-border bg-card", guided.listGroup)}>
-              <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
-                <span className="font-body text-sm font-semibold text-foreground">
-                  {month}
-                </span>
-                <span className="font-body text-xs text-muted-foreground">
-                  {monthMatches.length} {monthMatches.length === 1 ? "match" : "matches"}
-                </span>
-              </div>
-              <div className="divide-y divide-border">
-                {monthMatches.map((m) => {
-                  const isEditing = editingId === m.id;
-                  const venueLine = [m.venue, m.city, m.state].filter(Boolean).join(", ") +
-                    (m.address ? ` · ${m.address}` : "");
-                  const subtitle = (
-                    <>
-                      {/* Competition */}
-                      {m.competition && (
-                        <p className="truncate font-body text-xs text-muted-foreground">{m.competition}</p>
-                      )}
+      <ShimmerRegion loading={loading || seasonsLoading} minHeight={360}
+        loadingLabel="Loading schedule" skeleton={<ScheduleListSkeleton groups={matchesReady && !seasonsLoading ? monthGroups : undefined} showSponsors={!hidesMatchSponsorFields} />}>
+        {!matchesReady ? null : filtered.length === 0 ? (
+          <AdminPanel className="flex min-h-[180px] flex-col items-center justify-center gap-2 py-10 text-center">
+            <p className="text-sm font-semibold">{sorted.length === 0 ? "No matches yet" : resultFilter === "missing" && !searchQuery.trim() ? "No matches are missing a result" : "No matches match your search and filters"}</p>
+            <p className="text-sm text-muted-foreground">{sorted.length === 0 ? `Add a match for ${selectedSeason?.label ?? "the selected season"} to get started.` : resultFilter === "missing" && !searchQuery.trim() ? "Every played match already has a result." : "Try a different search term or filter."}</p>
+            {sorted.length === 0 && <Button onClick={() => requestNavigation({ kind: "switch", label: "a new match", continue: openAddPanel })} disabled={!selectedSeasonId}>Add match</Button>}
+          </AdminPanel>
+        ) : <ScheduleMatchList groups={monthGroups} clubName={club.name} today={today} flashedId={flashedId}
+          showSponsors={!hidesMatchSponsorFields} onEdit={openEditPanel}
+          onResultFocusFallback={() => document.querySelector<HTMLButtonElement>('[data-schedule-filter="missing"]')?.focus()}
+          onSaveResult={async (match, homeScore, awayScore) => {
+            const supabase = createClient();
+            const { error: resultError } = await supabase.from("matches").update({ rose_city_score: homeScore, opponent_score: awayScore }).eq("id", match.id);
+            if (resultError) throw new Error(resultError.message);
+            setMatches((current) => current.map((row) => row.id === match.id ? { ...row, rose_city_score: homeScore, opponent_score: awayScore } : row));
+            flash(match.id);
+          }} />}
+      </ShimmerRegion>
 
-                      {!hidesMatchSponsorFields && m.sponsor_logo_url && (
-                        <p className="truncate font-body text-xs text-muted-foreground">
-                          Presented by {m.sponsor_name || "match sponsor"}
-                        </p>
-                      )}
-                    </>
-                  );
-
-                  const editButton = (
-                    <button
-                      onClick={() => openEditPanel(m)}
-                      className={cn(
-                        "min-h-11 flex-none rounded-xl px-3 py-2.5 font-body text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        isEditing
-                          ? "bg-primary text-primary-foreground"
-                          : "border border-border bg-card text-foreground hover:bg-accent",
-                      )}
-                    >
-                      {isEditing ? "Editing" : "Edit"}
-                    </button>
-                  );
-                  const resultLabel = hasResult(m) ? (
-                    <span className="font-display text-sm font-semibold tabular-nums text-foreground">
-                      <span aria-hidden="true">{m.rose_city_score} – {m.opponent_score}</span>
-                      <span className="sr-only">
-                        Result: {club.name} {m.rose_city_score} - {m.opponent_score} {m.opponent}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="font-body text-xs text-warning">No result yet</span>
-                  );
-
-                  return (
-                    <div
-                      key={m.id}
-                      className={cn(
-                        "transition-colors",
-                        isEditing ? "border-l-4 border-l-primary bg-primary/5" : "hover:bg-accent/40",
-                      )}
-                    >
-                      {/* Mobile: stacked card */}
-                      <div className="flex items-center gap-3 px-4 py-4 sm:hidden">
-                        <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={36} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="break-words font-body text-[15px] font-semibold leading-5 text-foreground">
-                              {m.home ? "vs" : "@"} {m.opponent}
-                            </span>
-                            <span
-                              className={cn(
-                                "flex-none rounded-full px-2 py-0.5 font-body text-xs font-medium",
-                                m.home ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
-                              )}
-                            >
-                              {m.home ? "Home" : "Away"}
-                            </span>
-                          </div>
-                          <p className="font-body text-xs text-muted-foreground">
-                            {formatRowDate(m.date)} · {formatTime12h(m.time)}
-                          </p>
-                          {subtitle}
-                          <p className="truncate font-body text-xs text-muted-foreground">{venueLine}</p>
-                          <div className="mt-1">{resultLabel}</div>
-                        </div>
-                        {editButton}
-                      </div>
-
-                      {/* Desktop: table row — date/time, crest, opponent, result, venue, actions */}
-                      <div className="hidden grid-cols-[5.5rem_2.5rem_minmax(0,1.9fr)_7rem_minmax(0,1fr)_6rem] items-center gap-4 px-4 py-4 sm:grid">
-                        <div className="flex flex-col gap-0.5">
-                          <span className={cn("font-display text-sm font-semibold", isEditing ? "text-primary" : "text-foreground")}>
-                            {formatRowDate(m.date)}
-                          </span>
-                          <span className="font-body text-xs text-muted-foreground">{formatTime12h(m.time)}</span>
-                        </div>
-                        <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={34} />
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="break-words font-body text-[15px] font-semibold leading-5 text-foreground">
-                              {m.home ? "vs" : "@"} {m.opponent}
-                            </span>
-                            <span
-                              className={cn(
-                                "flex-none rounded-full px-2 py-0.5 font-body text-xs font-medium",
-                                m.home ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
-                              )}
-                            >
-                              {m.home ? "Home" : "Away"}
-                            </span>
-                          </div>
-                          {subtitle}
-                        </div>
-                        <div>{resultLabel}</div>
-                        <div className="min-w-0">
-                          <span className="block truncate font-body text-xs text-muted-foreground">{venueLine}</span>
-                        </div>
-                        <div className="flex justify-end">{editButton}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <AdminSidePanel
-        open={panelOpen}
-        onClose={closePanel}
-        title={editingId ? `${editForm.home ? "vs" : "@"} ${editForm.opponent || "Opponent"}` : "New match"}
-        description={
-          editingId
-            ? [formatShortDate(editForm.date), formatTime12h(editForm.time)].filter(Boolean).join(" · ") || "No date"
-            : "Add a match to the schedule."
-        }
-        activeKey={panelKey}
-        direction={panelDirection}
-        className="max-w-2xl"
-        footer={
-          <div className="space-y-3">
-      <AdminModal
-        open={confirmDeleteOpen && editingId !== null}
-        onClose={() => { if (!deletingId) setConfirmDeleteOpen(false); }}
-        initialFocus={deleteCancelRef}
-        aria-labelledby="delete-match-title"
-        backdropClassName="fixed inset-0 z-[200] bg-background/80 backdrop-blur-sm"
-        className="fixed left-1/2 top-1/2 z-[201] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl"
-      >
-        <h2 id="delete-match-title" className="break-words text-xl font-semibold text-foreground">Delete this match?</h2>
-        <p className="mt-3 break-words text-sm leading-relaxed text-muted-foreground">
-          {editForm.home ? "vs" : "@"} {editForm.opponent || "Opponent"}
-          {editForm.date ? ` · ${formatShortDate(editForm.date)}` : ""}
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">This removes the match from your schedule and deletes the player stats entered for it on the Stats page. Season totals you typed yourself are not changed. This cannot be undone.</p>
-        {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button ref={deleteCancelRef} type="button" disabled={Boolean(deletingId)}
-            onClick={() => setConfirmDeleteOpen(false)}
-            className="min-h-11 flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">Cancel</button>
-          <button type="button" disabled={Boolean(deletingId)}
-            onClick={() => { if (editingId && !deletingId) void handleDelete(editingId); }}
-            className="min-h-11 flex-1 rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{deletingId ? "Deleting…" : "Delete match"}</button>
-        </div>
-      </AdminModal>
-
-            {error && (
-              <p role="alert" className="font-body text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={() => { setError(null); setConfirmDeleteOpen(true); }}
-                  disabled={deletingId === editingId}
-                  className="min-h-11 w-full rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                >
-                  {deletingId === editingId ? "Deleting…" : "Delete match"}
-                </button>
-              )}
-              <div className="grid w-full grid-cols-2 gap-3 sm:ml-auto sm:flex sm:w-auto">
-                <button
-                  type="button"
-                  onClick={closePanel}
-                  className="min-h-11 rounded-lg border border-border bg-card px-5 py-2.5 font-body text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={editingId ? handleSaveEdit : handleAdd}
-                  disabled={saving}
-                  className="min-h-11 rounded-lg bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving && <AdminLoadingDots className="mr-2" />}
-                  {saving ? "Saving…" : editingId ? "Save changes" : "Save match"}
-                </button>
-              </div>
-            </div>
-          </div>
-        }
-      >
-        <MatchForm
-          form={panelForm}
-          onChange={panelOnChange}
-          seasons={seasons}
-          cleanupDraftUploads={!editingId}
-        />
-      </AdminSidePanel>
+      <AdminDialog open={panelOpen} onClose={requestClose}
+        finalFocus={() => editorOpener.current?.isConnected ? editorOpener.current : searchInput.current} size="md" busy={visibleSaveState === "saving" || uploadCount > 0}
+        title={editingId ? "Edit match" : "Add match"}
+        eyebrow={editingId ? `${editForm.home ? "vs" : "@"} ${editForm.opponent || "Opponent"}` : "Schedule"}
+        footer={<AdminDialogFooter
+          status={error ? <p role="alert" className="text-sm text-destructive">{error}</p> : dirty ? "Unsaved changes" : null}
+          destructive={editingId ? <Button variant="outline" className="min-h-11 text-destructive" disabled={saving || uploadCount > 0} onClick={() => { setError(null); setConfirmDeleteOpen(true); }}>Delete match</Button> : null}
+          primary={<AdminSaveButton className="!min-h-11" state={uploadCount > 0 ? "clean" : visibleSaveState} onSave={() => { void saveAction.save().catch(() => {}); }} />}
+        ><Button variant="outline" className="min-h-11" onClick={requestClose} disabled={saving || uploadCount > 0}>Cancel</Button></AdminDialogFooter>}>
+        <fieldset disabled={visibleSaveState === "saving"}>
+        <MatchForm form={panelForm} onChange={panelOnChange} seasons={seasons} cleanupDraftUploads={!editingId && !createdMatchId}
+          onMediaActivity={mediaActivity}
+          onUploadBusyChange={uploadBusyChange} />
+        </fieldset>
+      </AdminDialog>
+      <AdminConfirmDialog open={confirmDeleteOpen && editingId !== null}
+        finalFocus={() => panelOpen ? true : searchInput.current} title="Delete this match?" destructive
+        confirmLabel={deletingId ? "Deleting…" : "Delete match"} busy={Boolean(deletingId)}
+        onCancel={() => { if (!deletingId) setConfirmDeleteOpen(false); }}
+        onConfirm={() => { if (editingId && !deletingId) void handleDelete(editingId); }}>
+        <p>{editForm.home ? "vs" : "@"} {editForm.opponent || "Opponent"}{editForm.date ? ` · ${formatShortDate(editForm.date)}` : ""}</p>
+        <p className="mt-3">This removes the match from your schedule and deletes the player stats entered for it on the Stats page. Season totals you typed yourself are not changed. This cannot be undone.</p>
+        {error && <p role="alert" className="mt-3 text-destructive">{error}</p>}
+      </AdminConfirmDialog>
     </AdminPage>
-  );
-}
-
-// ── Reusable form ─────────────────────────────
-
-function MatchForm({
-  form,
-  onChange,
-  seasons,
-  cleanupDraftUploads = false,
-}: {
-  form: Omit<Match, "id">;
-  onChange: (f: Omit<Match, "id">) => void;
-  seasons: DBSeason[];
-  cleanupDraftUploads?: boolean;
-}) {
-  const club = useClubContext();
-  // academy@1 renders fixtures through AcademyNextMatch and AcademyFixtureRow,
-  // neither of which reads sponsor_name, sponsor_logo_url, or sponsor_link, so
-  // anything entered here could never appear on this club's site. Same
-  // dead-admin-surface removal as DCFC-D130. The columns, the upload/cleanup
-  // logic, and every other template's editor are untouched — clubhouse@1 still
-  // renders these through NextMatchCard.
-  const schedulePolicy = codeSiteAdminFor(club)?.schedule;
-  const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false;
-  // ADMIN-RE-22: academy@1's Next Match card shows the game's own competition.
-  const competitionOnNextMatch = schedulePolicy?.competitionShowsOnNextMatch === true;
-
-  function set(field: string, value: string | boolean | number | null) {
-    onChange({ ...form, [field]: value });
-  }
-
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-
-  function setScore(field: "rose_city_score" | "opponent_score", value: string) {
-    set(field, value === "" ? null : Number(value));
-  }
-
-  return (
-    <div className="space-y-8">
-      <MatchFormSection
-        id="match-details-heading"
-        title="Match details"
-        description="Required fields are marked with *."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field id="match-season" label="Season" required>
-            <NativeSelect chevronIcon={AdminSelectChevron}
-              id="match-season"
-              value={form.season_id}
-              onChange={(e) => set("season_id", e.target.value)}
-              className="min-h-11"
-              required
-            >
-              <NativeSelectOption value="">Select a season</NativeSelectOption>
-              {seasons.map((season) => (
-                <NativeSelectOption key={season.id} value={season.id}>
-                  {season.label}{season.active ? " (Active)" : ""}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </Field>
-
-          <Field id="match-home-away" label="Home or away" required>
-            <NativeSelect chevronIcon={AdminSelectChevron}
-              id="match-home-away"
-              value={form.home ? "home" : "away"}
-              onChange={(e) => set("home", e.target.value === "home")}
-              className="min-h-11"
-              required
-            >
-              <NativeSelectOption value="home">Home</NativeSelectOption>
-              <NativeSelectOption value="away">Away</NativeSelectOption>
-            </NativeSelect>
-          </Field>
-
-          <Field id="match-date" label="Date" required>
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-              <PopoverTrigger
-                id="match-date"
-                aria-required="true"
-                render={<Button variant="outline" />}
-                className="min-h-11 w-full justify-between font-normal"
-              >
-                {parseDateInput(form.date)?.toLocaleDateString() ?? "Select date"}
-                <ChevronDownIcon className="size-4 opacity-50" />
-              </PopoverTrigger>
-              <PopoverPositioner align="start">
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    components={{
-                      Chevron: ({ className, orientation, ...props }) => {
-                        const Icon = orientation === "left" ? ChevronLeft : orientation === "right" ? ChevronRight : ChevronDownIcon;
-                        return <Icon className={cn("size-4", className)} {...props} />;
-                      },
-                    }}
-                    mode="single"
-                    selected={parseDateInput(form.date)}
-                    captionLayout="dropdown"
-                    onSelect={(date) => {
-                      if (date) set("date", formatDateInput(date));
-                      setDatePickerOpen(false);
-                    }}
-                  />
-                </PopoverContent>
-              </PopoverPositioner>
-            </Popover>
-          </Field>
-
-          <Field id="match-time" label="Time" required>
-            <input
-              id="match-time"
-              type="time"
-              value={form.time}
-              onChange={(e) => set("time", e.target.value)}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11 min-w-0 max-w-full box-border appearance-none")}
-              required
-            />
-          </Field>
-
-          <Field
-            id="match-competition"
-            label="Competition"
-            optional
-            help={competitionOnNextMatch ? "Shows under VS on your homepage Next Match card. Leave it blank to show no competition." : undefined}
-            className="sm:col-span-2"
-          >
-            <input
-              id="match-competition"
-              type="text"
-              placeholder="e.g. UPSL Premier Division"
-              value={form.competition ?? ""}
-              onChange={(e) => set("competition", e.target.value)}
-              maxLength={MATCH_TEXT_LIMITS.competition}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-            />
-          </Field>
-        </div>
-      </MatchFormSection>
-
-      <MatchFormSection id="opponent-heading" title="Opponent">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field id="match-opponent" label="Opponent name" required>
-            <input
-              id="match-opponent"
-              type="text"
-              placeholder="e.g. Portland FC"
-              value={form.opponent}
-              onChange={(e) => set("opponent", e.target.value)}
-              maxLength={MATCH_TEXT_LIMITS.opponent}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-              required
-            />
-          </Field>
-
-          <Field
-            id="match-opponent-short-name"
-            label="Short name"
-            optional
-            help="Use only when the full name is too long for the homepage card."
-          >
-            <input
-              id="match-opponent-short-name"
-              type="text"
-              placeholder="e.g. Portland"
-              value={form.opponent_short_name ?? ""}
-              onChange={(e) => set("opponent_short_name", e.target.value)}
-              maxLength={MATCH_TEXT_LIMITS.opponent_short_name}
-              aria-describedby="match-opponent-short-name-help"
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-            />
-          </Field>
-
-          <Field id="match-opponent-logo" label="Opponent logo" optional className="sm:col-span-2">
-            <OpponentLogoUpload
-              inputId="match-opponent-logo"
-              logoUrl={form.opponent_logo_url}
-              opponentName={form.opponent}
-              onUploaded={async (url) => {
-                if (cleanupDraftUploads) {
-                  await deleteUnusedMatchImageUrls({
-                    bucket: "opponent-logos",
-                    urls: [form.opponent_logo_url],
-                    column: "opponent_logo_url",
-                    allowedPrefixes: ["match-opponents/"],
-                  });
-                }
-                onChange({ ...form, opponent_logo_url: url });
-              }}
-              onRemove={async () => {
-                if (cleanupDraftUploads) {
-                  await deleteUnusedMatchImageUrls({
-                    bucket: "opponent-logos",
-                    urls: [form.opponent_logo_url],
-                    column: "opponent_logo_url",
-                    allowedPrefixes: ["match-opponents/"],
-                  });
-                }
-                onChange({ ...form, opponent_logo_url: null });
-              }}
-            />
-          </Field>
-        </div>
-      </MatchFormSection>
-
-      <MatchFormSection id="venue-heading" title="Venue">
-        <div className="space-y-4">
-          <Field id="match-venue" label="Venue name" required>
-            <input
-              id="match-venue"
-              type="text"
-              placeholder="e.g. Delta Park"
-              value={form.venue}
-              onChange={(e) => set("venue", e.target.value)}
-              maxLength={MATCH_TEXT_LIMITS.venue}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-              required
-            />
-          </Field>
-
-          <Field id="match-address" label="Street address" optional>
-            <input
-              id="match-address"
-              type="text"
-              placeholder="e.g. 1234 N Broadacre St"
-              value={form.address ?? ""}
-              onChange={(e) => set("address", e.target.value)}
-              maxLength={MATCH_TEXT_LIMITS.address}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-            />
-          </Field>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
-            <Field id="match-city" label="City" optional>
-              <input
-                id="match-city"
-                type="text"
-                placeholder="e.g. Irvine"
-                value={form.city ?? ""}
-                onChange={(e) => set("city", e.target.value)}
-              maxLength={MATCH_TEXT_LIMITS.city}
-                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-              />
-            </Field>
-
-            <Field id="match-state" label="State" optional>
-              <input
-                id="match-state"
-                type="text"
-                placeholder="e.g. CA"
-                value={form.state ?? ""}
-                onChange={(e) => set("state", e.target.value)}
-              maxLength={MATCH_TEXT_LIMITS.state}
-                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-              />
-            </Field>
-          </div>
-        </div>
-      </MatchFormSection>
-
-      <MatchFormSection
-        id="result-heading"
-        title="Result"
-        description="Leave both scores blank until the match is played."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field id="match-club-score" label={`${club.name} score`} optional>
-            <input
-              id="match-club-score"
-              type="number"
-              min="0"
-              step="1"
-              inputMode="numeric"
-              placeholder="e.g. 2"
-              value={String(form.rose_city_score ?? "")}
-              onChange={(e) => setScore("rose_city_score", e.target.value)}
-              max={MAX_MATCH_SCORE}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-            />
-          </Field>
-
-          <Field id="match-opponent-score" label="Opponent score" optional>
-            <input
-              id="match-opponent-score"
-              type="number"
-              min="0"
-              step="1"
-              inputMode="numeric"
-              placeholder="e.g. 1"
-              value={String(form.opponent_score ?? "")}
-              onChange={(e) => setScore("opponent_score", e.target.value)}
-              max={MAX_MATCH_SCORE}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-            />
-          </Field>
-        </div>
-      </MatchFormSection>
-
-      {/* Academy fixture cards do not show sponsor columns. */}
-      {!hidesMatchSponsorFields && (
-        <MatchFormSection
-          id="sponsor-heading"
-          title="Presented by"
-          description="New matches reuse the latest sponsor details. Clear the logo to hide the sponsor on the homepage."
-        >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field id="match-sponsor-name" label="Sponsor name" optional>
-              <input
-                id="match-sponsor-name"
-                type="text"
-                placeholder="e.g. Tepito Coffee"
-                value={form.sponsor_name ?? ""}
-                onChange={(e) => set("sponsor_name", e.target.value)}
-                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-              />
-            </Field>
-
-            <Field id="match-sponsor-link" label="Sponsor website" optional>
-              <input
-                id="match-sponsor-link"
-                type="url"
-                placeholder="https://..."
-                value={form.sponsor_link ?? ""}
-                onChange={(e) => set("sponsor_link", e.target.value)}
-                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-              />
-            </Field>
-
-            <Field id="match-sponsor-logo" label="Sponsor logo" optional className="sm:col-span-2">
-              <SponsorLogoUpload
-                inputId="match-sponsor-logo"
-                logoUrl={form.sponsor_logo_url}
-                sponsorName={form.sponsor_name ?? ""}
-                onUploaded={async (url) => {
-                  if (cleanupDraftUploads) {
-                    await deleteUnusedMatchImageUrls({
-                      bucket: "sponsors",
-                      urls: [form.sponsor_logo_url],
-                      column: "sponsor_logo_url",
-                      allowedPrefixes: ["match-sponsors/"],
-                    });
-                  }
-                  onChange({ ...form, sponsor_logo_url: url });
-                }}
-                onRemove={async () => {
-                  if (cleanupDraftUploads) {
-                    await deleteUnusedMatchImageUrls({
-                      bucket: "sponsors",
-                      urls: [form.sponsor_logo_url],
-                      column: "sponsor_logo_url",
-                      allowedPrefixes: ["match-sponsors/"],
-                    });
-                  }
-                  onChange({ ...form, sponsor_logo_url: null });
-                }}
-              />
-            </Field>
-          </div>
-        </MatchFormSection>
-      )}
-    </div>
-  );
-}
-
-function OpponentLogoUpload({
-  inputId,
-  logoUrl,
-  opponentName,
-  onUploaded,
-  onRemove,
-}: {
-  inputId: string;
-  logoUrl: string | null;
-  opponentName: string;
-  onUploaded: (url: string) => void | Promise<void>;
-  onRemove: () => void | Promise<void>;
-}) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  async function handleFile(file: File | null) {
-    if (!file) return;
-    if (file.type !== "image/png" && file.type !== "image/webp") {
-      setError(LOGO_FILE_GUIDANCE);
-      if (fileRef.current) fileRef.current.value = "";
-      return;
-    }
-    setUploading(true);
-    setError(null);
-    try {
-      await onUploaded(await uploadPhoto(file, "opponent-logos", "match-opponents"));
-    } catch (uploadError: unknown) {
-      setError(logoUploadErrorMessage(uploadError));
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <OpponentCrest name={opponentName || "?"} logoUrl={logoUrl} size={40} />
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        disabled={uploading}
-        aria-label={uploading ? "Uploading opponent logo" : logoUrl ? "Replace opponent logo" : "Upload opponent logo"}
-        className="min-h-11 rounded-lg border border-border bg-card px-4 py-2.5 font-body text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload"}
-      </button>
-      {logoUrl && !uploading && (
-        <button
-          type="button"
-          onClick={() => void onRemove()}
-          aria-label="Remove opponent logo"
-          className="min-h-11 rounded-lg px-3 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Remove
-        </button>
-      )}
-      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP</p>
-      <input
-        id={inputId}
-        ref={fileRef}
-        type="file"
-        accept="image/png,image/webp"
-        aria-describedby={`${inputId}-format-hint`}
-        className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-      />
-      {error && (
-        <p className="w-full font-body text-xs text-destructive">{error}</p>
-      )}
-    </div>
-  );
-}
-
-function SponsorLogoUpload({
-  inputId,
-  logoUrl,
-  sponsorName,
-  onUploaded,
-  onRemove,
-}: {
-  inputId: string;
-  logoUrl: string | null;
-  sponsorName: string;
-  onUploaded: (url: string) => void | Promise<void>;
-  onRemove: () => void | Promise<void>;
-}) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  async function handleFile(file: File | null) {
-    if (!file) return;
-    if (file.type !== "image/png" && file.type !== "image/webp") {
-      setError(LOGO_FILE_GUIDANCE);
-      if (fileRef.current) fileRef.current.value = "";
-      return;
-    }
-    setUploading(true);
-    setError(null);
-    try {
-      await onUploaded(await uploadPhoto(file, "sponsors", "match-sponsors"));
-    } catch (uploadError: unknown) {
-      setError(logoUploadErrorMessage(uploadError));
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div
-        className="relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-lg border border-border bg-white"
-      >
-        {logoUrl ? (
-          <Image
-            src={logoUrl}
-            alt={sponsorName ? `${sponsorName} logo` : "Sponsor logo"}
-            fill
-            sizes="112px"
-            className="object-contain p-2"
-          />
-        ) : (
-          <span className="font-display text-[0.55rem] font-bold uppercase tracking-widest text-black/35">
-            No Logo
-          </span>
-        )}
-      </div>
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        disabled={uploading}
-        aria-label={uploading ? "Uploading sponsor logo" : logoUrl ? "Replace sponsor logo" : "Upload sponsor logo"}
-        className="min-h-11 rounded-lg border border-border bg-card px-4 py-2.5 font-body text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload"}
-      </button>
-      {logoUrl && !uploading && (
-        <button
-          type="button"
-          onClick={() => void onRemove()}
-          aria-label="Remove sponsor logo"
-          className="min-h-11 rounded-lg px-3 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Remove
-        </button>
-      )}
-      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP</p>
-      <input
-        id={inputId}
-        ref={fileRef}
-        type="file"
-        accept="image/png,image/webp"
-        aria-describedby={`${inputId}-format-hint`}
-        className="hidden"
-        onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
-      />
-      {error && (
-        <p className="font-body w-full text-xs text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function Field({
-  id,
-  label,
-  required,
-  optional,
-  help,
-  className,
-  children,
-}: {
-  id: string;
-  label: string;
-  required?: boolean;
-  optional?: boolean;
-  help?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={className}>
-      <label htmlFor={id} className="mb-2 block font-body text-sm font-semibold text-foreground">
-        {label}
-        {required && <span className="ml-1 text-destructive">*</span>}
-        {optional && <span className="ml-1.5 font-normal text-muted-foreground">Optional</span>}
-      </label>
-      {children}
-      {help && (
-        <p id={`${id}-help`} className="mt-1.5 font-body text-sm leading-relaxed text-muted-foreground">
-          {help}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function MatchFormSection({
-  id,
-  title,
-  description,
-  children,
-}: {
-  id: string;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={cn("space-y-4", guided.formSection)} aria-labelledby={id}>
-      <div>
-        <div className="flex items-center gap-3">
-          <h3 id={id} className="font-body text-base font-semibold normal-case text-foreground">
-            {title}
-          </h3>
-          <span className="h-px flex-1 bg-border" aria-hidden="true" />
-        </div>
-        {description && (
-          <p className="mt-1.5 font-body text-sm leading-relaxed text-muted-foreground">
-            {description}
-          </p>
-        )}
-      </div>
-      {children}
-    </section>
   );
 }

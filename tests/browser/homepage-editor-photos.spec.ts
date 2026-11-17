@@ -1,3 +1,4 @@
+import { saveHomepage, expectHomepageSaved, navigateHomepageOwner, openHomepagePlayback, closeHomepagePlayback } from "./helpers/homepage-editor-controls";
 import { createHash, randomUUID } from "node:crypto";
 import { copyFileSync } from "node:fs";
 import path from "node:path";
@@ -137,19 +138,18 @@ test.describe("homepage editor photo queue", () => {
       await page.goto("/admin/homepage");
       expect((await (await page.request.get("/api/admin/homepage")).json()).design.templateKey).toBe("clubhouse@1");
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
-      const toolbar = page.locator(".hp-toolbar");
-      const panel = page.locator(".hp-panel");
-      const photoInput = page.getByLabel("Choose homepage photos");
+      const toolbar = page.getByRole("dialog", { name: "Photo slideshow", exact: true });
+      const panel = page.getByRole("dialog", { name: "Photo slideshow", exact: true });
+      const photoInput = page.getByLabel("Choose photos for Slideshow photos");
 
       // Zero-photo area is selectable.
       const emptyPiece = frame.locator('[data-homepage-piece="photos"]');
       await expect(emptyPiece).toHaveText("Photos · Add photo");
       await emptyPiece.click();
-      await emptyPiece.click();
-      await toolbar.getByRole("button", { name: "Add photo" }).click();
+      await toolbar.getByRole("button", { name: "Add photos" }).click();
       await photoInput.setInputFiles([FIXTURE_PHOTOS[0], FIXTURE_PHOTOS[1]]);
 
-      const photos = panel.locator(".hp-photo");
+      const photos = panel.locator("[data-photo-id], .hc-photo-status");
       await expect(photos).toHaveCount(2);
       const failed = photos.filter({ has: page.getByRole("alert") });
       const ready = photos.filter({ hasNot: page.getByRole("alert") });
@@ -160,7 +160,7 @@ test.describe("homepage editor photo queue", () => {
 
       // Retrying only the failed file leaves the successful photo untouched.
       await failed.getByRole("button", { name: "Try this photo again" }).click();
-      await expect(panel.locator(".hp-photo").filter({ has: page.getByRole("alert") })).toHaveCount(0);
+      await expect(panel.locator("[data-photo-id], .hc-photo-status").filter({ has: page.getByRole("alert") })).toHaveCount(0);
       await expect(photos).toHaveCount(2);
       await expect(photos.nth(0).locator("img")).toBeVisible();
       await expect(photos.nth(1).locator("img")).toBeVisible();
@@ -173,14 +173,14 @@ test.describe("homepage editor photo queue", () => {
       for (let i = 0; i < 4; i++) {
         const filler = info.outputPath(`filler-${i}.jpeg`);
         copyFileSync(path.resolve(FIXTURE_PHOTOS[i % FIXTURE_PHOTOS.length]), filler);
-        await toolbar.getByRole("button", { name: "Add photo" }).click();
+        await toolbar.getByRole("button", { name: "Add photos" }).click();
         await photoInput.setInputFiles([filler]);
         await expect(photos).toHaveCount(3 + i);
         await expect(photos.nth(2 + i).getByRole("status")).toHaveCount(0);
         await expect(photos.nth(2 + i).getByRole("alert")).toHaveCount(0);
       }
-      await expect(page.getByText("6 of 6 photos used", { exact: true })).toBeVisible();
-      await expect(toolbar.getByRole("button", { name: "Add photo" })).toBeDisabled();
+      await expect(panel.locator('[aria-label="6 of 6 photos"]')).toBeVisible();
+      await expect(toolbar.getByRole("button", { name: "Add photos" })).toBeDisabled();
       const overflow = info.outputPath("overflow.jpeg");
       copyFileSync(path.resolve(FIXTURE_PHOTOS[0]), overflow);
       await photoInput.setInputFiles([overflow]);
@@ -191,28 +191,27 @@ test.describe("homepage editor photo queue", () => {
       await page.setViewportSize({ width: 390, height: 408 });
       await photos.nth(5).getByLabel("Describe this photo").fill("Last photo on mobile");
       await expect(panel.getByRole("button", { name: "Done", exact: true })).toBeInViewport();
-      await expect(panel.getByRole("button", { name: "Save homepage", exact: true })).toBeInViewport();
+      await expect(panel.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
       await panel.getByRole("button", { name: "Done", exact: true }).click();
       await page.setViewportSize({ width: 1440, height: 900 });
       await expect(frame.locator('[data-homepage-piece="photos"] button').first()).toHaveJSProperty("inert", true);
-      await page.getByRole("button", { name: "Playback preview", exact: true }).click();
-      const secondSlide = frame.locator('.clubhouse-matchday-slide').nth(1);
-      await frame.getByRole("button", { name: "Show matchday photo 1", exact: true }).click();
-      const nextPhoto = frame.getByRole("button", { name: "Next matchday photo", exact: true });
+      const playback = await openHomepagePlayback(page);
+      const secondSlide = playback.locator('.clubhouse-matchday-slide').nth(1);
+      await playback.getByRole("button", { name: "Show matchday photo 1", exact: true }).click();
+      const nextPhoto = playback.getByRole("button", { name: "Next matchday photo", exact: true });
       await nextPhoto.focus(); await nextPhoto.press("Enter");
       await expect(secondSlide).toHaveAttribute("data-active", "true");
-      await page.getByRole("button", { name: "Back to editing", exact: true }).click();
-      await frame.locator('[data-homepage-piece="photos"]').click();
+      await closeHomepagePlayback(page);
       await frame.locator('[data-homepage-piece="photos"]').click();
       await expect(photos.nth(5).getByLabel("Describe this photo")).toHaveValue("Last photo on mobile");
 
       // Reorder: move the second described photo up to the first slot.
       await expect(photos.nth(1).getByLabel("Describe this photo")).toHaveValue("Second photo");
-      await photos.nth(1).getByRole("button", { name: "Move up" }).click();
+      await photos.nth(1).getByRole("button", { name: /^Move photo \d+ up$/ }).click();
       await expect(photos.nth(0).getByLabel("Describe this photo")).toHaveValue("Second photo");
       await expect(photos.nth(1).getByLabel("Describe this photo")).toHaveValue("First photo");
-      await expect(photos.nth(0).getByRole("button", { name: "Move up" })).toBeDisabled();
-      await expect(photos.nth(5).getByRole("button", { name: "Move down" })).toBeDisabled();
+      await expect(photos.nth(0).getByRole("button", { name: /^Move photo \d+ up$/ })).toBeDisabled();
+      await expect(photos.nth(5).getByRole("button", { name: /^Move photo \d+ down$/ })).toBeDisabled();
 
       // Removal frees a slot and keeps the remaining order contiguous.
       const removedSrc = await photos.nth(2).locator("img").getAttribute("src");
@@ -220,13 +219,13 @@ test.describe("homepage editor photo queue", () => {
       const removedPath = decodeURIComponent(new URL(removedSrc!).pathname.split("/storage/v1/object/public/onzio-media/")[1]);
       const removedAsset = await db.query("select id from onzio.media_assets where storage_path=$1", [removedPath]);
       expect(removedAsset.rows).toHaveLength(1);
-      await photos.nth(2).getByRole("button", { name: "Remove photo" }).click();
+      await photos.nth(2).getByRole("button", { name: /^Remove photo(?: \d+)?$/ }).click();
       await expect(photos).toHaveCount(5);
-      await expect(toolbar.getByRole("button", { name: "Add photo" })).toBeEnabled();
+      await expect(toolbar.getByRole("button", { name: "Add photos" })).toBeEnabled({ timeout: 8000 });
+      // Undo holds media ownership until its five-second window ends and Save retires it.
+      await saveHomepage(page);
       await expect.poll(async () => (await db.query("select status from onzio.media_assets where id=$1", [removedAsset.rows[0].id])).rows[0]?.status).toBe("orphaned");
-
-      await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
-      await expect(page.getByText("Saved. Your homepage is updated.", { exact: true })).toBeVisible();
+      await expectHomepageSaved(page);
       const saved = await (await page.request.get("/api/admin/homepage")).json();
       expect(saved.content.photos.items).toHaveLength(5);
       expect(saved.content.photos.items.map((item: { order: number }) => item.order)).toEqual([0, 1, 2, 3, 4]);
@@ -262,14 +261,13 @@ test.describe("homepage editor photo queue", () => {
       await page.goto("/admin/homepage");
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       await frame.locator('[data-homepage-piece="photos"]').click();
-      await frame.locator('[data-homepage-piece="photos"]').click();
-      await page.getByRole("button", { name: "Add photo" }).filter({ visible: true }).first().click();
-      await page.getByLabel("Choose homepage photos").setInputFiles(FIXTURE_PHOTOS[0]);
+      await page.getByRole("button", { name: "Add photos" }).filter({ visible: true }).first().click();
+      await page.getByLabel("Choose photos for Slideshow photos").setInputFiles(FIXTURE_PHOTOS[0]);
       await finalized;
       expect(uploadedAssetId).toBeTruthy();
-      const photo = page.locator(".hp-panel .hp-photo");
+      const photo = page.getByRole("dialog", { name: "Photo slideshow" }).locator("[data-photo-id], .hc-photo-status");
       await expect(photo).toHaveCount(1);
-      await photo.getByRole("button", { name: "Remove photo" }).click();
+      await photo.getByRole("button", { name: /^Remove photo(?: \d+)?$/ }).click();
       await expect(photo).toHaveCount(0);
       releaseFinalize?.();
       await expect.poll(async () => (await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetId])).rows[0]?.status).toBe("orphaned");
@@ -296,17 +294,16 @@ test.describe("homepage editor photo queue", () => {
       await page.goto("/admin/homepage");
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       await frame.locator('[data-homepage-piece="photos"]').click();
-      await frame.locator('[data-homepage-piece="photos"]').click();
-      await page.getByRole("button", { name: "Add photo" }).filter({ visible: true }).first().click();
-      await page.getByLabel("Choose homepage photos").setInputFiles(FIXTURE_PHOTOS[0]);
-      const photo = page.locator(".hp-panel .hp-photo");
+      await page.getByRole("button", { name: "Add photos" }).filter({ visible: true }).first().click();
+      await page.getByLabel("Choose photos for Slideshow photos").setInputFiles(FIXTURE_PHOTOS[0]);
+      const photo = page.getByRole("dialog", { name: "Photo slideshow" }).locator("[data-photo-id], .hc-photo-status");
       await expect(photo.locator("img")).toBeVisible();
       const src = await photo.locator("img").getAttribute("src");
       const storagePath = decodeURIComponent(new URL(src!).pathname.split("/storage/v1/object/public/onzio-media/")[1]);
       uploadedAssetId = (await db.query("select id from onzio.media_assets where storage_path=$1", [storagePath])).rows[0]?.id ?? null;
       expect(uploadedAssetId).toBeTruthy();
-      await page.getByRole("button", { name: "Edit in About" }).filter({ visible: true }).click();
-      await page.getByRole("dialog").filter({ hasText: "Save your homepage changes?" }).getByRole("button", { name: "Leave without saving" }).click();
+      await navigateHomepageOwner(page, "About");
+      await page.getByRole("dialog").filter({ hasText: "Save your changes first?" }).getByRole("button", { name: "Discard changes" }).click();
       await expect(page).toHaveURL(/\/admin\/about$/);
       expect((await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetId])).rows[0]?.status).toBe("orphaned");
     } finally {
@@ -335,10 +332,9 @@ test.describe("homepage editor photo queue", () => {
       await page.goto("/admin/homepage");
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       await frame.locator('[data-homepage-piece="photos"]').click();
-      await frame.locator('[data-homepage-piece="photos"]').click();
-      await page.getByRole("button", { name: "Add photo" }).filter({ visible: true }).first().click();
-      await page.getByLabel("Choose homepage photos").setInputFiles(FIXTURE_PHOTOS.slice(0, 2));
-      const photos = page.locator(".hp-panel .hp-photo img");
+      await page.getByRole("button", { name: "Add photos" }).filter({ visible: true }).first().click();
+      await page.getByLabel("Choose photos for Slideshow photos").setInputFiles(FIXTURE_PHOTOS.slice(0, 2));
+      const photos = page.getByRole("dialog", { name: "Photo slideshow" }).locator("[data-photo-id] img");
       await expect(photos).toHaveCount(2);
       for (let index = 0; index < 2; index += 1) {
         await expect(photos.nth(index)).toBeVisible();
@@ -440,16 +436,14 @@ test.describe("homepage editor photo queue", () => {
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       const heading = frame.locator('[data-homepage-piece="hero.heading"]');
       await heading.click();
-      await page.getByRole("button", { name: "Change the words" }).filter({ visible: true }).click();
       await page.getByLabel("Line one", { exact: true }).fill(dirtyMarker);
       await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
 
-      // Shared content is not drawn on the editing canvas any more; the editor
-      // offers it as an explicit shortcut, which is what raises the leave guard.
-      await expect(frame.locator('[data-homepage-piece="shared.story"]')).toHaveCount(0);
-      await page.getByRole("button", { name: "Edit in About" }).filter({ visible: true }).click();
+      // Both the owner region and its accessible shortcut use the shared leave guard.
+      await expect(frame.locator('[data-homepage-piece="shared.story"]')).toHaveCount(1);
+      await navigateHomepageOwner(page, "About");
 
-      const dialog = page.getByRole("dialog").filter({ hasText: "Save your homepage changes?" });
+      const dialog = page.getByRole("dialog").filter({ hasText: "Save your changes first?" });
       await expect(dialog).toBeVisible();
       await expect(page).toHaveURL(/\/admin\/homepage$/);
 
@@ -458,9 +452,9 @@ test.describe("homepage editor photo queue", () => {
       await expect(page).toHaveURL(/\/admin\/homepage$/);
       await expect(page.getByLabel("Line one", { exact: true })).toHaveCount(0);
 
-      await page.getByRole("button", { name: "Edit in About" }).filter({ visible: true }).click();
+      await navigateHomepageOwner(page, "About");
       await expect(dialog).toBeVisible();
-      await dialog.getByRole("button", { name: "Leave without saving" }).click();
+      await dialog.getByRole("button", { name: "Discard changes" }).click();
       await expect(page).toHaveURL(/\/admin\/about$/);
 
       await page.goto("/admin/homepage");
@@ -468,14 +462,12 @@ test.describe("homepage editor photo queue", () => {
       await expect(reloadedHeading).not.toContainText(dirtyMarker);
 
       await reloadedHeading.click();
-      await page.getByRole("button", { name: "Change the words" }).filter({ visible: true }).click();
       await page.getByLabel("Line one", { exact: true }).fill(savedMarker);
       await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
-      // Shared content left the editing canvas; the editor's explicit shortcut
-      // is now what raises the unsaved-changes guard.
-      await page.getByRole("button", { name: "Edit in About" }).filter({ visible: true }).click();
+      // The owner shortcut uses the same guard after the accepted dialog closes.
+      await navigateHomepageOwner(page, "About");
       await expect(dialog).toBeVisible();
-      await dialog.getByRole("button", { name: "Save and continue" }).click();
+      await dialog.getByRole("button", { name: "Save and leave" }).click();
       await expect(page).toHaveURL(/\/admin\/about$/);
       const afterSave = await (await page.request.get("/api/admin/homepage")).json();
       expect(afterSave.content.hero.headline_line_one).toBe(savedMarker);

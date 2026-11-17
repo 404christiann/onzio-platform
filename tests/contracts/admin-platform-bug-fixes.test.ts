@@ -58,7 +58,7 @@ describe("new clubs never inherit Rose City sample content", () => {
   });
 
   it("does not seed admin editors with Rose City content before loading", () => {
-    expect(source("app/admin/(protected)/sponsors/page.tsx")).not.toMatch(/defaultSponsorLogosForPlacement/);
+    expect(source("components/admin/sponsors/ClassicSponsorsPage.tsx")).not.toMatch(/defaultSponsorLogosForPlacement/);
     expect(source("app/admin/(protected)/about/page.tsx")).not.toMatch(/toAboutDraft\(DEFAULT_ABOUT_PAGE_CONTENT\)|toLogoDraft\(DEFAULT_CLUB_LOGO_PAGE_CONTENT\)/);
     expect(source("app/(public)/club/about/page.tsx")).not.toMatch(/DEFAULT_ABOUT_PAGE_CONTENT/);
   });

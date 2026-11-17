@@ -1,3 +1,4 @@
+import { saveHomepage, expectHomepageSaved, expectHomepageClean } from "./helpers/homepage-editor-controls";
 import { expect, test } from "@playwright/test";
 
 test("individual hero selection edits the real preview, then saves once", async ({ page }, info) => {
@@ -14,25 +15,24 @@ test("individual hero selection edits the real preview, then saves once", async 
   });
   try {
     await page.goto("/admin/homepage");
-    await expect(page.getByText("Preview · Changes appear on your website after you save.")).toBeVisible();
+    await expect(page.getByText("Changes appear on your website after you save.")).toBeVisible();
     const frame = page.frameLocator('iframe[title="Homepage preview"]');
     const heading = frame.locator('[data-homepage-piece="hero.heading"]');
     await expect(heading).toBeVisible();
     await heading.click();
     await expect(heading).toHaveAttribute("aria-pressed", "true");
     await page.screenshot({ path: info.outputPath("desktop-selected.png"), fullPage: true });
-    await expect(page.getByRole("dialog", { name: "Main heading", exact: true })).toHaveCount(0);
-    await heading.click();
+    await expect(page.getByRole("dialog", { name: "Hero", exact: true })).toBeVisible();
     await page.getByLabel("Line one", { exact: true }).fill(marker);
     await expect(heading).toContainText(marker);
     expect(requests).toHaveLength(0);
     const unchanged = await (await page.request.get("/api/admin/homepage")).json();
     expect(unchanged.content.hero).toEqual(baseline.content.hero);
-    await expect(page.getByRole("status").filter({ hasText: "Not saved yet: Top of your homepage" })).toBeVisible();
-    const panel = page.getByRole("dialog", { name: "Main heading", exact: true });
-    await expect(panel.getByRole("button", { name: "Save homepage", exact: true })).toBeVisible();
-    await panel.getByRole("button", { name: "Save homepage", exact: true }).click();
-    await expect(page.getByText("Saved. Your homepage is updated.", { exact: true })).toBeVisible();
+    await expect(page.locator("[data-admin-save-status]")).toContainText("Unsaved changes");
+    const panel = page.getByRole("dialog", { name: "Hero", exact: true });
+    await expect(panel.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
+    await saveHomepage(page, "hero.heading");
+    await expectHomepageSaved(page);
     await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
     await expect(heading).toHaveAttribute("aria-pressed", "false");
     expect(requests).toHaveLength(1);
@@ -40,10 +40,9 @@ test("individual hero selection edits the real preview, then saves once", async 
     expect(saved.content.hero.headline_line_one).toBe(marker);
     await page.screenshot({ path: info.outputPath("desktop-saved.png"), fullPage: true });
     await page.setViewportSize({ width: 390, height: 678 });
-    await expect(page.getByRole("button", { name: "Top", exact: true })).toBeVisible();
+    await expect(heading).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
-    await page.getByRole("button", { name: "Top", exact: true }).click();
-    await page.getByRole("button", { name: "Change the words", exact: true }).filter({ visible: true }).click();
+    await heading.click();
     await expect(page.getByLabel("Line one", { exact: true })).toBeVisible();
     await page.screenshot({ path: info.outputPath("mobile-sheet.png"), fullPage: true });
     await page.setViewportSize({ width: 390, height: 408 });
@@ -87,9 +86,8 @@ test("a failed save preserves the draft and retries the same operation", async (
     await expect(frame.locator('[data-homepage-piece="video"]')).toHaveCount(0);
     const heading = frame.locator('[data-homepage-piece="hero.heading"]');
     await heading.click();
-    await page.getByRole("button", { name: "Change the words" }).filter({ visible: true }).click();
     await page.getByLabel("Line one", { exact: true }).fill(marker);
-    await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+    await saveHomepage(page, "hero.heading");
     await expect(page.getByLabel("Line one", { exact: true })).toBeDisabled();
     await expect(page.locator(".hp-notification-saving")).toContainText("Saving your homepage…");
     release();
@@ -98,7 +96,7 @@ test("a failed save preserves the draft and retries the same operation", async (
     await expect(heading).toContainText(marker);
     expect((await (await page.request.get("/api/admin/homepage")).json()).content.hero).toEqual(baseline.content.hero);
     await page.getByRole("button", { name: "Try saving again" }).click();
-    await expect(page.getByText("Saved. Your homepage is updated.", { exact: true })).toBeVisible();
+    await expectHomepageSaved(page);
     expect(submitted).toHaveLength(2);
     expect(submitted[1]).toEqual(submitted[0]);
   } finally {
@@ -115,11 +113,10 @@ test("story defaults are editable without marking an untouched section dirty", a
   const frame = page.frameLocator('iframe[title="Homepage preview"]');
   const story = frame.locator('[data-homepage-piece="story.text"]');
   await story.click();
-  await page.getByRole("button", { name: "Change the words" }).filter({ visible: true }).click();
   const heading = page.getByLabel("Main heading", { exact: true });
   const renderedHeading = (await story.locator("h2").textContent())!.trim();
   await expect(heading).toHaveValue(renderedHeading);
-  await expect(page.getByText("Nothing to save yet.", { exact: true })).toBeVisible();
+  await expectHomepageClean(page);
   await heading.fill("A draft story heading");
   await expect(story.locator("h2")).toHaveText("A draft story heading");
   await heading.fill("");
@@ -131,15 +128,17 @@ test("keyboard selection opens words and restores focus after closing options", 
   await page.goto("/admin/homepage");
   const frame = page.frameLocator('iframe[title="Homepage preview"]');
   const heading = frame.locator('[data-homepage-piece="hero.heading"]');
+  await expect(heading).toBeVisible();
   await heading.focus();
   await heading.press("Enter");
   await expect(heading).toHaveAttribute("aria-pressed", "true");
-  await heading.press("Space");
   const input = page.getByLabel("Line one", { exact: true });
   await expect(input).toBeFocused();
   await input.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Main heading", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Hero", exact: true })).not.toBeVisible();
   await expect(heading).toBeFocused();
+  await heading.press("Space");
+  await expect(input).toBeFocused();
   await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
   await expect(heading).toHaveAttribute("aria-pressed", "false");
   await expect(heading).toBeFocused();

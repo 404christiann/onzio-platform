@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -266,10 +267,7 @@ describe("Programs admin draft preview", () => {
 });
 
 describe("DCFC-301 protected Programs admin surface", () => {
-  const pageSource = readFileSync(
-    resolve(process.cwd(), "app/admin/(protected)/programs/page.tsx"),
-    "utf8",
-  );
+  const pageSource = readProgramsEditorSource();
   const shellSource = readFileSync(
     resolve(process.cwd(), "lib/admin-route-manifest.ts"),
     "utf8",

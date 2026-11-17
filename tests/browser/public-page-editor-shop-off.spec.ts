@@ -14,8 +14,8 @@ test.describe.configure({ mode: "serial" });
 test.use({ viewport: { width: 1440, height: 900 } });
 
 let db: Client;
-let previousStore: boolean;
-let revisionsBefore: Array<{ surface: string; revision: string }>;
+let clubBefore: string;
+let revisionsBefore: string;
 let auditBefore: string;
 const assetId = randomUUID();
 const operationIds: string[] = [];
@@ -23,12 +23,12 @@ const operationIds: string[] = [];
 test.beforeAll(async () => {
   db = new Client(config);
   await db.connect();
-  previousStore = (await db.query("select store_enabled from onzio.clubs where id=$1", [ALPHA])).rows[0].store_enabled;
-  revisionsBefore = (await db.query("select surface, revision::text from onzio_private.shop_page_revisions where club_id=$1", [ALPHA])).rows;
+  clubBefore = (await db.query("select to_jsonb(c)::text as raw from onzio.clubs c where id=$1", [ALPHA])).rows[0].raw;
+  revisionsBefore = (await db.query("select coalesce(jsonb_agg(to_jsonb(r) order by surface),'[]'::jsonb)::text as raw from onzio_private.shop_page_revisions r where club_id=$1", [ALPHA])).rows[0].raw;
   auditBefore = (await db.query("select coalesce(max(id),0)::text as id from onzio.audit_events")).rows[0].id;
   const existing = await db.query("select 1 from onzio.shop_kit_section where club_id=$1 and surface='shop' and kit_variant='home'", [ALPHA]);
   if (existing.rowCount) throw new Error("Alpha already has a Shop-page home kit; this spec only cleans up rows it creates.");
-  await db.query("update onzio.clubs set store_enabled=false where id=$1", [ALPHA]);
+  await db.query("update onzio.clubs set store_enabled=false,admin_portal='reimagined' where id=$1", [ALPHA]);
   await db.query(`insert into onzio.media_assets
     (id,club_id,storage_bucket,storage_path,surface,media_kind,mime_type,byte_size,width,height,checksum_sha256,status,published_at)
     values($1,$2,'onzio-media',$3,'shop','photograph','image/webp',100,100,100,$4,'published',now())`,
@@ -46,12 +46,19 @@ test.afterAll(async () => {
     await db.query("delete from onzio.shop_kit_section where club_id=$1 and surface='shop' and kit_variant='home'", [ALPHA]);
     await db.query("delete from onzio.media_assets where id=$1", [assetId]);
     if (operationIds.length) await db.query("delete from onzio_private.shop_page_receipts where club_id=$1 and operation_id = any($2::uuid[])", [ALPHA, operationIds]);
-    await db.query("delete from onzio_private.shop_page_revisions where club_id=$1", [ALPHA]);
-    for (const row of revisionsBefore) {
-      await db.query("insert into onzio_private.shop_page_revisions(club_id,surface,revision) values($1,$2,$3)", [ALPHA, row.surface, row.revision]);
-    }
+    await db.query("begin");
+    try {
+      await db.query("set local session_replication_role=replica");
+      await db.query("delete from onzio_private.shop_page_revisions where club_id=$1", [ALPHA]);
+      await db.query("insert into onzio_private.shop_page_revisions select * from jsonb_populate_recordset(null::onzio_private.shop_page_revisions,$1::jsonb)", [revisionsBefore]);
+      const columns = Object.keys(JSON.parse(clubBefore)).map((name) => `"${name}"`);
+      const actual = (await db.query("select to_jsonb(c)::text as raw from onzio.clubs c where id=$1", [ALPHA])).rows[0].raw;
+      if (actual !== clubBefore) await db.query(`update onzio.clubs set (${columns.join(",")})=(select ${columns.join(",")} from jsonb_populate_record(null::onzio.clubs,$1::jsonb)) where id=$2`, [clubBefore, ALPHA]);
+      await db.query("commit");
+    } catch (error) { await db.query("rollback"); throw error; }
     await db.query("delete from onzio.audit_events where club_id=$1 and id > $2::bigint", [ALPHA, auditBefore]);
-    await db.query("update onzio.clubs set store_enabled=$2 where id=$1", [ALPHA, previousStore]);
+    expect((await db.query("select to_jsonb(c)::text as raw from onzio.clubs c where id=$1", [ALPHA])).rows[0].raw).toBe(clubBefore);
+    expect((await db.query("select coalesce(jsonb_agg(to_jsonb(r) order by surface),'[]'::jsonb)::text as raw from onzio_private.shop_page_revisions r where club_id=$1", [ALPHA])).rows[0].raw).toBe(revisionsBefore);
   } finally {
     await db.end();
   }
@@ -63,7 +70,8 @@ test("owners can open and save the Shop editor while the Shop is off, and visito
   // The editor used to bounce to the dashboard; it must stay put.
   await page.waitForTimeout(1_000);
   await expect(page).toHaveURL(/\/admin\/shop$/);
-  await expect(page.getByRole("link", { name: "Shop", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Club admin", exact: true }).getByRole("link", { name: "Website", exact: true })).toBeVisible();
+  await expect(page.locator("[data-admin-save-button]")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Edit kit text", exact: true }).click();
   const title = page.getByLabel("Kit title", { exact: true });

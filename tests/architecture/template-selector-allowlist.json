@@ -90,7 +90,7 @@
     "read:data-font-pack": 1
   },
   "components/admin/shop/ShopPageEditor.tsx": {
-    "flag:isClubhouse": 8,
+    "flag:isClubhouse": 4,
     "flag:sharedWithHomepage": 3,
     "flag:template": 2,
     "literal:clubhouse@1": 1,

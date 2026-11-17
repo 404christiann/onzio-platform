@@ -1,4 +1,21 @@
 import { expect, test, type Page } from "@playwright/test";
+import { captureContactRows, localContactDatabase, restoreContactRows, type ContactRows } from "./helpers/contact-editor-fixture";
+
+// This suite preserves the legacy editor used by the reimagined portal.
+// The classic canvas has its own admin-classic-contact acceptance suite.
+const legacyDb = localContactDatabase();
+let originalRows: ContactRows;
+test.beforeAll(async () => {
+  await legacyDb.connect();
+  originalRows = await captureContactRows(legacyDb);
+  if (originalRows.get("onzio.clubs")![0].admin_portal !== "reimagined") {
+    await legacyDb.query("update onzio.clubs set admin_portal='reimagined' where id='11111111-1111-4111-8111-111111111111'");
+  }
+});
+test.afterAll(async () => {
+  try { if (originalRows) await restoreContactRows(legacyDb, originalRows); }
+  finally { await legacyDb.end(); }
+});
 
 async function snapshot(page: Page) {
   const response = await page.request.get("/api/admin/contact-editor");

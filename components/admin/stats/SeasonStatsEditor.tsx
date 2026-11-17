@@ -3,12 +3,11 @@
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import { AdminStatsGroupsSkeleton } from "@/components/admin/AdminCompetitionSkeletons";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminPageToolbar } from "@/components/admin/AdminPage";
 import { StatsWorkspace } from "@/components/admin/stats/StatsWorkspace";
-import { StatsSaveBar } from "@/components/admin/stats/StatsSaveBar";
-import { StatsScopeSwitchDialog } from "@/components/admin/stats/StatsScopeSwitchDialog";
 import type { StatsEditorProps, StatsFieldGroup, StatsPlayer, StatsValue } from "@/components/admin/stats/types";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/admin-client";
 import { saveSeasonTotals } from "@/lib/season-totals-save";
@@ -54,7 +53,7 @@ function isGK(s: FieldStats | GKStats): s is GKStats {
 
 // ── Main component ────────────────────────────
 
-export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPlayerChange, showPlayerDetail, onShowPlayerDetailChange, onViewChange, controlsRef, onSavingChange }: StatsEditorProps) {
+export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPlayerChange, showPlayerDetail, onShowPlayerDetailChange, onViewChange, controlsRef, onSavingChange, onSaveStateChange }: StatsEditorProps) {
   const {
     seasons,
     activeSeasonId,
@@ -65,16 +64,13 @@ export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPla
   const [players, setPlayers] = useState<Player[]>([]);
   const [stats, setStats]         = useState<StatsMap>({});
   const [baselineStats, setBaselineStats] = useState<StatsMap>({});
-  const [pendingScope, setPendingScope] = useState<{ kind: "season"; id: string } | { kind: "view"; view: "match" } | null>(null);
   const saveLock = useRef(false);
-  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirtyPlayerIds = useMemo(() => new Set(players.filter(player => JSON.stringify(stats[player.id]) !== JSON.stringify(baselineStats[player.id])).map(player => player.id)), [players, stats, baselineStats]);
   const hasChanges = dirtyPlayerIds.size > 0;
   const [loading, setLoading] = useState(true);
   const [loadedSeasonId, setLoadedSeasonId] = useState<string | null>(null);
   const statsPending = seasonsLoading || loading || Boolean(selectedSeasonId && loadedSeasonId !== selectedSeasonId);
   const [saving, setSaving]   = useState(false);
-  const [saved, setSaved]     = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const [seasonRowIds, setSeasonRowIds] = useState<Set<string>>(new Set());
 
@@ -89,7 +85,6 @@ export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPla
     async function load() {
       setLoading(true);
       setError(null);
-      setSaved(false);
       const supabase = createClient();
       // ADMIN-RE-11c: what shows is the totals as visitors see them, the season's
       // match stats added up plus what was added by hand.
@@ -172,7 +167,6 @@ export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPla
 
   function updateStat(playerId: string, field: string, value: StatsValue) {
     if (saving || saveLock.current || statsPending || typeof value !== "number") return;
-    setSaved(false);
     setStats((prev) => ({
       ...prev,
       [playerId]: { ...prev[playerId], [field]: Math.max(0, value) },
@@ -185,7 +179,6 @@ export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPla
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasChanges]);
-  useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
 
   async function handleSave(): Promise<boolean> {
     if (statsPending || saving || saveLock.current || !hasChanges || !selectedSeasonId) return false;
@@ -209,9 +202,6 @@ export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPla
       }
       setSeasonRowIds(new Set(players.map((p) => p.id)));
       setBaselineStats(stats);
-      setSaved(true);
-      if (savedTimer.current) clearTimeout(savedTimer.current);
-      savedTimer.current = setTimeout(() => setSaved(false), 3000);
       return true;
     } catch (saveError: unknown) {
       setError(saveError instanceof Error ? saveError.message : "Failed to save season stats. Your changes are still here.");
@@ -219,41 +209,31 @@ export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPla
     } finally { saveLock.current = false; setSaving(false); }
   }
 
-  function applyScope(next: NonNullable<typeof pendingScope>) {
+  type Scope = { kind: "season"; id: string } | { kind: "view"; view: "match" };
+  function applyScope(next: Scope) {
     setError(null);
-    setSaved(false);
-    setPendingScope(null);
     if (next.kind === "season") setSelectedSeasonId(next.id);
     else onViewChange(next.view);
   }
-  function requestScope(next: NonNullable<typeof pendingScope>) {
+  function requestScope(next: Scope) {
     if (saving || saveLock.current || (next.kind === "season" && next.id === selectedSeasonId)) return;
-    if (hasChanges) setPendingScope(next);
-    else applyScope(next);
+    const target = next.kind === "season" ? seasons.find(season => season.id === next.id)?.label ?? "another season" : "Match stats";
+    requestNavigation({ kind: "switch", label: target, continue: () => applyScope(next) });
   }
-  function discardAndSwitch() {
-    if (pendingScope && !saving && !saveLock.current) {
-      setStats(baselineStats);
-      applyScope(pendingScope);
-    }
-  }
-  async function saveAndSwitch() {
-    const next = pendingScope;
-    if (next && await handleSave()) applyScope(next);
-  }
+  const save = useSaveState({ isDirty: !statsPending && hasChanges && Boolean(selectedSeasonId), onSave: async () => { if (!(await handleSave())) throw new Error("Season totals were not saved"); } });
+  const seasonLabel = seasons.find(season => season.id === selectedSeasonId)?.label ?? "this season";
+  const requestNavigation = useUnsavedGuard({ dirty: hasChanges, edited: `season totals for ${seasonLabel}`, onSave: handleSave, onDiscard: () => setStats(baselineStats) });
   useImperativeHandle(controlsRef, () => ({
     changeSeason: (id: string) => requestScope({ kind: "season", id }),
     changeView: () => requestScope({ kind: "view", view: "match" }),
+    save: () => { void save.save().catch(() => undefined); },
   }));
+  useEffect(() => { onSaveStateChange(save.state); }, [save.state, onSaveStateChange]);
   useEffect(() => { onSavingChange(saving); }, [saving, onSavingChange]);
-
-  const seasonLabel = seasons.find(season => season.id === selectedSeasonId)?.label ?? "this season";
-  const saveDisabled = saving || statsPending || !hasChanges || !selectedSeasonId;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <AdminSaveFeedback saving={saving} saved={saved} />
-      {error && pendingScope === null && <p role="alert" className="font-body mb-4 text-sm text-destructive">Error: {error}</p>}
+      {error && <p role="alert" className="font-body mb-4 text-sm text-destructive">Error: {error}</p>}
       <AdminPageToolbar className="items-start sm:items-center"><p className="font-body text-sm text-muted-foreground">These season totals appear on the public roster. They add up from match stats; change a total to add the rest by hand.</p>
         {statsPending ? <AdminSkeletonRegion label="Loading player count"><Skeleton className="h-4 w-16" /></AdminSkeletonRegion> : <span className="font-body text-sm text-muted-foreground">{players.length} player{players.length === 1 ? "" : "s"}</span>}
       </AdminPageToolbar>
@@ -261,8 +241,6 @@ export function SeasonStatsEditor({ seasonState, selectedPlayerId, onSelectedPla
         <StatsWorkspace key={selectedSeasonId} players={players} values={stats} selectedPlayerId={selectedPlayerId} onSelectedPlayerChange={onSelectedPlayerChange}
         showPlayerDetail={showPlayerDetail} onShowPlayerDetailChange={onShowPlayerDetailChange}
         dirtyPlayerIds={dirtyPlayerIds} groupsForPlayer={seasonFieldGroups} onChange={updateStat} disabled={saving} positionGroupIdPrefix="season-stats" contextLabel={`${seasonLabel} season`} description="This player’s season totals: match stats added up, plus anything added by hand." />}
-      <StatsSaveBar label="Save season totals" saving={saving} disabled={saveDisabled} dirtyCount={dirtyPlayerIds.size} onSave={() => void handleSave()} contextLabel={`Season totals for ${seasonLabel}. Save to update the public roster.`} />
-      <StatsScopeSwitchDialog open={pendingScope !== null} currentLabel={`season totals for ${seasonLabel}`} busy={saving} error={error} onCancel={() => setPendingScope(null)} onDiscard={discardAndSwitch} onSaveAndSwitch={() => void saveAndSwitch()} />
     </div>
   );
 }

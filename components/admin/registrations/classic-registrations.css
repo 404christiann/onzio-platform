@@ -1,0 +1,82 @@
+
+.classic-registrations{--registration-ease:cubic-bezier(.23,1,.32,1)}
+.registration-header-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;min-width:0;padding:0 16px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--secondary));font-size:14px;font-weight:500;white-space:nowrap;touch-action:manipulation}
+.registration-header-button:disabled{opacity:.5;cursor:default}
+.registration-primary{border-color:transparent;background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-weight:600}
+.registration-header-button:focus-visible,.registration-form-card:focus-visible,.registration-form-row:focus-visible,.registration-chips button:focus-visible,.registration-builder nav button:focus-visible,.registration-view:focus-visible{outline:2px solid hsl(var(--primary));outline-offset:2px}
+.registration-form-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(130px,.85fr);gap:12px}
+.registration-form-card{display:flex;min-width:0;min-height:128px;flex-direction:column;align-items:flex-start;gap:8px;padding:16px;text-align:left;border:1px solid hsl(var(--border));border-radius:14px;background:hsl(var(--card));transition:border-color 160ms,background-color 160ms}
+.registration-form-card[aria-pressed=true]{border-color:hsl(var(--primary));background:hsl(var(--primary)/.06);box-shadow:inset 0 0 0 1px hsl(var(--primary)/.2)}
+.registration-form-card-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:15px;font-weight:600}
+.registration-form-card-count{font-size:12px;color:hsl(var(--muted-foreground))}
+.registration-all-card{justify-content:center;background:transparent;border-style:dashed}
+.registration-form-status{display:inline-flex;align-items:center;gap:6px;flex:none;width:max-content;max-width:100%;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600;line-height:18px;background:hsl(var(--muted));color:hsl(var(--muted-foreground));white-space:nowrap}
+.registration-form-status i{width:6px;height:6px;flex:none;border-radius:50%;background:currentColor}
+.registration-form-status[data-status=open]{background:hsl(var(--success)/.1);color:hsl(var(--success))}
+.registration-form-status[data-status=draft],.registration-form-status[data-status=closed]{background:hsl(var(--warning)/.1);color:hsl(var(--warning))}
+.registration-workspace-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0;flex-wrap:wrap}
+.registration-workspace-heading>div:first-child{display:flex;align-items:center;gap:10px;min-width:0}
+.registration-workspace-heading h2{font-size:17px;font-weight:600;overflow-wrap:anywhere;min-width:0}
+.registration-lifecycle{display:flex;flex-wrap:wrap;gap:8px}
+.registration-message{padding:12px 14px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--card));font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.registration-recovery{display:flex;flex-direction:column;gap:10px;border:1px solid hsl(var(--warning)/.4);border-radius:12px;background:hsl(var(--warning)/.08);padding:14px;font-size:13px;overflow-wrap:anywhere}
+.registration-recovery button{align-self:flex-start}
+.registration-empty{padding:32px 16px;text-align:center;font-size:14px;color:hsl(var(--muted-foreground));grid-column:1/-1}
+.registration-search{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500}
+.registration-search input{width:100%;min-height:44px;border:1px solid hsl(var(--input));border-radius:10px;padding:10px 12px;background:hsl(var(--background));font-size:16px;outline-offset:2px}
+.registration-chips{display:flex;flex-wrap:wrap;gap:8px}
+.registration-chips button{min-height:36px;padding:6px 12px;border:1px solid hsl(var(--border));border-radius:999px;background:hsl(var(--secondary));font-size:12px;font-weight:500}
+.registration-chips button[aria-pressed=true]{border-color:hsl(var(--primary));background:hsl(var(--primary));color:hsl(var(--primary-foreground))}
+.registration-form-rows{display:flex;flex-direction:column}
+.registration-form-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px;padding:12px 2px;border-bottom:1px solid hsl(var(--border));text-align:left}
+.registration-form-row>span:first-child{display:flex;flex-direction:column;gap:4px;min-width:0}
+.registration-form-row b{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.registration-form-row small{font-size:12px;color:hsl(var(--muted-foreground))}
+.registration-form-row[aria-current=true]{color:hsl(var(--primary))}
+.registration-builder{display:grid;grid-template-columns:160px minmax(0,1fr);gap:24px;min-width:0}
+.registration-builder nav{display:flex;flex-direction:column;align-self:start;gap:4px;position:sticky;top:0}
+.registration-builder nav button{min-height:40px;padding:8px 12px;border-radius:8px;text-align:left;font-size:13px;font-weight:500}
+.registration-builder nav button[aria-current=true]{background:hsl(var(--accent));color:hsl(var(--foreground))}
+.registration-builder>fieldset{border:0;min-width:0;padding:0;margin:0}
+.registration-builder [data-registration-section] section{border:0;box-shadow:none;padding:0;background:transparent}
+.registration-builder [data-registration-section] section>div:first-child{padding-top:0}
+.registration-builder [data-registration-section] section>div{padding-left:0;padding-right:0}
+.registration-form-summary{display:flex;flex-direction:column;gap:20px}
+.registration-summary-heading{display:flex;justify-content:space-between;gap:16px}
+.registration-summary-heading h3{font-size:20px;font-weight:600;overflow-wrap:anywhere}
+.registration-summary-heading p{margin-top:8px;color:hsl(var(--muted-foreground));overflow-wrap:anywhere;white-space:pre-wrap}
+.registration-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.registration-form-summary h3{font-weight:600;margin-bottom:12px}
+.registration-form-summary li{font-size:14px;padding:5px 0;overflow-wrap:anywhere}
+.registration-view{min-height:38px;padding:6px 12px;border:1px solid hsl(var(--border));border-radius:9px;font-size:13px}
+.registration-detail{display:flex;flex-direction:column;gap:18px;min-width:0}
+.registration-detail dt{font-size:12px;font-weight:600;color:hsl(var(--muted-foreground))}
+.registration-detail dd{margin-top:4px;font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap}
+.registration-loading{display:grid;min-width:0}
+.registration-loaded,.registration-skeleton{grid-area:1/1;min-width:0;display:flex;flex-direction:column;gap:24px}
+.registration-loading[data-phase=waiting]>.registration-skeleton{visibility:hidden}
+.registration-loading[data-phase=crossfade]>.registration-skeleton{pointer-events:none;animation:registration-skeleton-out 160ms linear both}
+.registration-loading[data-phase=crossfade]>.registration-loaded{animation:registration-content-in 160ms linear both}
+.registration-skeleton-tabs{display:flex;gap:24px;min-height:44px;align-items:center;border-bottom:1px solid hsl(var(--border))}
+.registration-skeleton-table{overflow:hidden;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--card))}
+.registration-skeleton-toolbar{display:flex;gap:12px;flex-wrap:wrap;padding:16px;border-bottom:1px solid hsl(var(--border))}
+.registration-skeleton-row{display:flex;justify-content:space-between;align-items:center;gap:16px;height:66px;padding:16px;border-bottom:1px solid hsl(var(--border))}
+@keyframes registration-skeleton-out{to{opacity:0}}
+@keyframes registration-content-in{from{opacity:0}to{opacity:1}}
+@media(max-width:1100px){.registration-form-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.registration-all-card{grid-column:1/-1;min-height:64px;flex-direction:row;align-items:center;justify-content:space-between}.registration-form-cards .registration-form-card:not(.registration-all-card){min-height:126px}}
+@media(max-width:700px){.registration-header-button{flex:1;padding:0 12px}.registration-form-cards{gap:10px}.registration-form-card{padding:12px}.registration-form-card-title{font-size:14px}.registration-all-card{padding:12px}.registration-workspace-heading>div:first-child{align-items:flex-start;flex-direction:column;gap:6px}.registration-lifecycle{width:100%}.registration-lifecycle .registration-header-button{min-width:120px}.registration-builder{grid-template-columns:minmax(0,1fr);gap:18px}.registration-builder nav{position:static;flex-direction:row;overflow-x:auto;gap:4px;padding:2px 2px 8px}.registration-builder nav button{flex:none;white-space:nowrap;min-height:44px}.registration-summary-grid{grid-template-columns:minmax(0,1fr)}.registration-summary-heading{flex-direction:column}.registration-skeleton-row{height:92px;flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.registration-loading[data-phase=crossfade]>.registration-skeleton,.registration-loading[data-phase=crossfade]>.registration-loaded{animation-duration:90ms}.registration-form-card{transition:none}}
+
+.registration-builder [data-registration-section] section>div:first-child h3{display:none}
+.registration-builder [data-registration-section=questions] .xl\:grid-cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:701px){.registration-builder [data-registration-section=prices] fieldset>div{grid-template-columns:minmax(160px,1fr) 160px auto auto}}
+@media(max-width:700px){.registration-builder [data-registration-section=questions] .xl\:grid-cols-4{grid-template-columns:minmax(0,1fr)}}
+
+[data-slot="admin-dialog"] [data-slot="admin-dialog-footer"] .registration-dialog-action{height:auto;block-size:auto;min-height:38px;min-block-size:38px;padding-block:8px;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:700px){[data-slot="admin-dialog"] [data-slot="admin-dialog-footer"] .registration-dialog-action{min-height:44px;min-block-size:44px;inline-size:100%}}
+.registration-loading[data-phase=refreshing] .registration-workspace-heading{opacity:.7}
+.registration-loading[data-phase=refresh-reveal] .registration-workspace-heading{animation:registration-quiet-reveal 200ms ease-out both}
+@media(prefers-reduced-motion:reduce){.registration-loading[data-phase=refresh-reveal] .registration-workspace-heading{animation-duration:90ms}}
+@keyframes registration-quiet-reveal{from{opacity:.7}to{opacity:1}}
+
+.classic-registrations #registration-form-panel-registrants[hidden],.classic-registrations #registration-form-panel-build[hidden]{display:none}

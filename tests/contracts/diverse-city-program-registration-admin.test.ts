@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -29,6 +30,7 @@ const MEDIA_ID = "44444444-4444-4444-8444-444444444402";
 const ASSET_ID = "55555555-5555-4555-8555-555555555501";
 
 function source(path: string): string {
+  if (path === "app/admin/(protected)/programs/page.tsx") return readProgramsEditorSource();
   return readFileSync(resolve(ROOT, path), "utf8");
 }
 

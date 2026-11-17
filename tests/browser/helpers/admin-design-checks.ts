@@ -145,7 +145,7 @@ export async function checkAdminDialog(
       const left = parseFloat(style.paddingLeft);
       const right = parseFloat(style.paddingRight);
       if (left < 16 || left > 28 || Math.abs(left - right) > 1) issues.push("Dialog body padding is outside 16–28px");
-      const fields = [...body.querySelectorAll("input:not([type=hidden]):not([type=file]):not([type=checkbox]),select,textarea")]
+      const fields = [...body.querySelectorAll("input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=radio]),select,textarea")]
         .filter((element) => box(element).width > 1 && box(element).height > 1);
       const minimum = phone ? 120 : 160;
       for (const field of fields) {
@@ -162,7 +162,7 @@ export async function checkAdminDialog(
             const node = walker.currentNode;
             if (!node.textContent?.trim()) continue;
             const parent = node.parentElement;
-            if (parent?.closest("input,select,textarea,button")) continue;
+            if (parent?.closest("input,select,textarea,button,[aria-hidden='true']")) continue;
             const range = document.createRange();
             range.selectNodeContents(node);
             for (const rect of range.getClientRects()) textBottom = Math.max(textBottom, rect.bottom);

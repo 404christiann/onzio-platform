@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { createPortal } from "react-dom";
+
 import { ADMIN_MOTION_DURATIONS } from "@/lib/admin-motion";
 import styles from "./AdminToast.module.css";
 
@@ -46,7 +48,7 @@ export function useAdminToast() {
   return context;
 }
 
-export function AdminToastProvider({ children }: { children: ReactNode }) {
+export function AdminToastProvider({ children, portalTarget }: { children: ReactNode; portalTarget?: Element | null }) {
   const [toasts, setToasts] = useState<ToastView[]>([]);
   const nextId = useRef(1);
   const actions = useRef(new Map<number, ToastAction>());
@@ -120,9 +122,7 @@ export function AdminToastProvider({ children }: { children: ReactNode }) {
 
   const expireUndo = useCallback((id: number) => dismiss(id, "expire"), [dismiss]);
 
-  return (
-    <AdminToastContext.Provider value={{ showUndo, expireUndo }}>
-      {children}
+  const region = (
       <div className={styles.region} data-admin-toast-region="">
         {toasts.map((toast) => (
           <div
@@ -146,6 +146,12 @@ export function AdminToastProvider({ children }: { children: ReactNode }) {
           </div>
         ))}
       </div>
+  );
+
+  return (
+    <AdminToastContext.Provider value={{ showUndo, expireUndo }}>
+      {children}
+      {portalTarget ? createPortal(region, portalTarget) : region}
     </AdminToastContext.Provider>
   );
 }

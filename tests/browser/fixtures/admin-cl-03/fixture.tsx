@@ -1,6 +1,5 @@
 import { StrictMode, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminSaveActions } from "@/components/admin/ui/AdminSaveButton";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import "@/styles/globals.css";
@@ -27,17 +26,6 @@ function Fixture() {
       setPersisted(draft);
     },
   });
-
-  const pillScope = params.get("pill");
-  if (pillScope) {
-    return (
-      <main className="admin-theme" data-admin-theme={theme}>
-        <div className={pillScope === "classic" ? "admin-portal" : undefined}>
-          <AdminSaveFeedback saving saved={false} />
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="admin-theme" data-admin-theme={theme}>

@@ -280,3 +280,23 @@ test.describe("toast lifetime and reduced motion", () => {
   });
 });
 
+
+
+test("removal respects focus deliberately moved by its caller", async ({ page }) => {
+  const errors = await openFixture(page, "light");
+  await page.getByRole("checkbox", { name: "Preserve search focus", exact: true }).check();
+  await page.getByRole("button", { name: "Remove Jordan Lee", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "List search", exact: true })).toBeFocused();
+  await expect(page.getByLabel("Player count")).toHaveText("3");
+  expect(errors).toEqual([]);
+});
+
+test("last-row removal retains the existing list fallback", async ({ page }) => {
+  const errors = await openFixture(page, "light");
+  for (const name of ["Maya Torres", "Jordan Lee", "Sam Okafor", "Ava Chen"]) {
+    await page.getByRole("button", { name: `Remove ${name}`, exact: true }).click();
+  }
+  await expect(page.getByLabel("Player count")).toHaveText("0");
+  await expect(page.locator("[data-admin-animated-list]")).toBeFocused();
+  expect(errors).toEqual([]);
+});

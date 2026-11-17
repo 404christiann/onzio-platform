@@ -1,0 +1,5 @@
+* { box-sizing: border-box; }
+body { margin: 0; }
+.cl23-fixture { min-height: 100vh; padding: 24px 32px; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+.cl23-fixture > nav { display: flex; gap: 16px; margin-bottom: 20px; }
+@media (max-width: 640px) { .cl23-fixture { padding: 20px 16px; } }

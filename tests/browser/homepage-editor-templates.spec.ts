@@ -1,3 +1,4 @@
+import { openHomepagePlayback } from "./helpers/homepage-editor-controls";
 import { createHash, randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test } from "@playwright/test";
@@ -112,8 +113,8 @@ test("homepage editor mirrors each published template and keeps public pages una
       await publishFixture(db, source, templateId, original.updated_by);
 
       await page.goto("/admin/homepage");
-      await expect(page.getByText("Preview · Changes appear on your website after you save.")).toBeVisible();
-      const preview = page.frameLocator('iframe[title="Homepage preview"]');
+      await expect(page.getByText("Changes appear on your website after you save.")).toBeVisible();
+      const preview = page.frameLocator(".hc-canvas iframe");
       await expect(preview.locator("h1").first()).toBeVisible();
       await preview.locator("html").evaluate(async () => { await document.fonts.ready; });
       const frameWidth = await preview.locator("html").evaluate((element) => element.clientWidth);
@@ -197,9 +198,9 @@ test("clean preview matches full public content and typography, including the le
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(`${origin}/admin/homepage`);
-        const preview = page.frameLocator('iframe[title="Homepage preview"]');
+        let preview = page.frameLocator(".hc-canvas iframe");
         await expect(preview.locator(template === "legacy" ? "main section" : "h1").first()).toBeVisible();
-        await page.getByRole("button", { name: "Playback preview", exact: true }).click();
+        preview = await openHomepagePlayback(page);
         await expect(preview.locator("[data-homepage-piece]")).toHaveCount(0);
         const size = await preview.locator("html").evaluate(() => ({ width: innerWidth, height: innerHeight }));
         expect(await preview.locator("html").evaluate(() => document.compatMode)).toBe("CSS1Compat");

@@ -22,15 +22,22 @@ export type RegistrationMixItem = {
 type MixForm = { id: string; title: string; createdAt: string };
 type PaidRegistration = { formId: string };
 
+// The single definition of "current forms" for paid counts: paid rows on archived (non-current) forms are excluded.
+export function paidRowsOnCurrentForms(
+  forms: readonly { id: string }[],
+  registrations: readonly PaidRegistration[],
+): PaidRegistration[] {
+  const current = new Set(forms.map((form) => form.id));
+  return registrations.filter((registration) => current.has(registration.formId));
+}
+
 export function buildRegistrationMix(
   forms: readonly MixForm[],
   registrations: readonly PaidRegistration[],
 ): RegistrationMixItem[] {
   const counts = new Map(forms.map((form) => [form.id, 0]));
-  for (const registration of registrations) {
-    if (counts.has(registration.formId)) {
-      counts.set(registration.formId, (counts.get(registration.formId) ?? 0) + 1);
-    }
+  for (const registration of paidRowsOnCurrentForms(forms, registrations)) {
+    counts.set(registration.formId, (counts.get(registration.formId) ?? 0) + 1);
   }
 
   const sorted = forms
@@ -65,10 +72,13 @@ export function buildRegistrationMix(
     : leading;
   const total = grouped.reduce((sum, item) => sum + item.count, 0);
 
-  const shares = grouped.map((item, index) => {
-    const exact = (item.count / total) * 100;
-    return { index, floor: Math.floor(exact), remainder: exact - Math.floor(exact) };
-  });
+  // Integer arithmetic only (largest-remainder method): float division can
+  // push an exact share just under a whole number and skew the tie-break.
+  const shares = grouped.map((item, index) => ({
+    index,
+    floor: Math.floor((item.count * 100) / total),
+    remainder: (item.count * 100) % total,
+  }));
   let pointsLeft = 100 - shares.reduce((sum, share) => sum + share.floor, 0);
   for (const share of [...shares].sort(
     (left, right) => right.remainder - left.remainder || left.index - right.index,

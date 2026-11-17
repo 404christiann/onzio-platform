@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,7 +10,7 @@ import { codeSiteAdminFor } from "@/lib/code-site-admin";
 // competition taken from the game. No schema change.
 
 const ROOT = resolve(__dirname, "../..");
-const read = (path: string) => readFileSync(resolve(ROOT, path), "utf8");
+const read = (path: string) => path === "app/admin/(protected)/programs/page.tsx" ? readProgramsEditorSource() : readFileSync(resolve(ROOT, path), "utf8");
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(join(ROOT, dir)).flatMap((name) => {
@@ -56,7 +57,7 @@ describe("Next Match on Diverse City's homepage", () => {
   it("the Games form says where the competition shows, for Diverse City only", () => {
     expect(diverseCitySite.admin.schedule.competitionShowsOnNextMatch).toBe(true);
     expect(codeSiteAdminFor({ presentationTemplateKey: "clubhouse@1" })).toBeNull();
-    const schedule = read("app/admin/(protected)/schedule/page.tsx");
+    const schedule = read("app/admin/(protected)/schedule/page.tsx") + read("components/admin/schedule/ScheduleMatchForm.tsx") + read("components/admin/schedule/schedule-model.ts");
     expect(schedule).toContain("competitionShowsOnNextMatch === true");
     expect(schedule).toContain("Shows under VS on your homepage Next Match card");
   });

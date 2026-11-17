@@ -1,4 +1,4 @@
-import { StrictMode, useState } from "react";
+import { StrictMode, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import { AdminToastProvider, useAdminToast } from "@/components/admin/ui/AdminToast";
@@ -26,12 +26,15 @@ function PlayerList({ onExpire }: { onExpire: () => void }) {
   const [players, setPlayers] = useState(initial);
   const [added, setAdded] = useState(0);
   const [listVersion, setListVersion] = useState(0);
+  const [preserveSearch, setPreserveSearch] = useState(false);
+  const search = useRef<HTMLInputElement>(null);
   const { listRef, rowProps, change } = useAnimatedList();
   const { showUndo } = useAdminToast();
 
   function remove(player: Player) {
     if (!change({ type: "remove", key: player.id }, () => {
       setPlayers((current) => current.filter((item) => item.id !== player.id));
+      if (preserveSearch) search.current?.focus();
     })) return;
     showUndo({
       message: `Removed ${player.name}`,
@@ -73,6 +76,8 @@ function PlayerList({ onExpire }: { onExpire: () => void }) {
   return (
     <>
       <div className="toolbar">
+        <input ref={search} aria-label="List search" />
+        <label><input type="checkbox" checked={preserveSearch} onChange={event => setPreserveSearch(event.target.checked)} />Preserve search focus</label>
         <button type="button" onClick={add}>Add player</button>
         <button type="button" onClick={addLong}>Add long name</button>
         <button type="button" onClick={reorder}>Reverse order</button>

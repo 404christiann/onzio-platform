@@ -7,7 +7,7 @@ import {
   IconShop,
 } from "@/components/admin/icons";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import AcademyHomeShopFeature from "@/components/AcademyHomeShopFeature";
 import AcademyShopPage from "@/components/sites/diverse-city/AcademyShopPage";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
@@ -30,6 +30,7 @@ import type { ShopKitContent } from "@/lib/queries";
 import { hasShopPurchaseDetails } from "@/lib/shop-purchase-details";
 import { SHOP_OFF_BANNER } from "@/lib/store-visibility";
 import { shopSaveRequestSchema, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
 
 const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };
@@ -55,12 +56,8 @@ function orderPhotos(photos: ShopPhoto[]): ShopPhoto[] {
   return photos.map((photo, order) => ({ ...photo, order }));
 }
 
-export default function ShopPageEditor() {
+export function useShopPresentation() {
   const club = useClubContext();
-  // The Shop switch (clubs.store_enabled) is Onzio's. While it is off the
-  // public Shop does not exist, but owners can still prepare and save kits
-  // here under a banner that says visitors can't see them yet.
-  const storeOff = !club.storeEnabled;
   const template = club.presentationTemplateKey;
   const shopPolicy = codeSiteAdminFor(club)?.shop;
   const isClubhouse = template === "clubhouse@1";
@@ -68,6 +65,23 @@ export default function ShopPageEditor() {
   const generic = !shopPolicy && !isClubhouse;
   const hasHomeFeature = shopPolicy?.showHomeFeature ?? !sharedWithHomepage;
   const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];
+  return {
+    club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly: isClubhouse,
+    renderPreview(content: Record<ShopVariant, ShopKitContent>, surface: ShopSurface, onSelectKit: (variant: ShopVariant) => void, genericContent: ReactNode, emptyPhoto?: ReactNode) {
+      return <TemplateFontScope templateKey={template}>
+        {shopPolicy?.preview === "club-page" ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
+        {isClubhouse && <ClubhouseShopPage editorContent={content} onEditorSelectKit={onSelectKit} />}
+        {generic && genericContent}
+        {emptyPhoto}
+      </TemplateFontScope>;
+    },
+  };
+}
+
+export default function ShopPageEditor() {
+  const presentation = useShopPresentation();
+  const { club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly } = presentation;
+  const storeOff = !club.storeEnabled;
 
   const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>(shopPolicy?.initialSurface ?? "shop");
   const surface: ShopSurface = hasHomeFeature ? surfaceChoice : "shop";
@@ -81,6 +95,7 @@ export default function ShopPageEditor() {
   const [selectedVariant, setSelectedVariant] = useState<ShopVariant>("home");
   const [target, setTarget] = useState<Target | null>(null);
   const [phone, setPhone] = useState(false);
+  const [replaceLatest, setReplaceLatest] = useState(false);
   const saveInFlight = useRef(false);
   const [conflicts, setConflicts] = useState<Partial<Record<ShopSurface, ShopSnapshot>>>({});
   const [pendingSaves, setPendingSaves] = useState<Partial<Record<ShopSurface, ReturnType<typeof toShopSaveRequest>>>>({});
@@ -231,7 +246,8 @@ export default function ShopPageEditor() {
 
   function resolveConflict(keepDraft: boolean) {
     if (!conflict) return;
-    if (!keepDraft && !window.confirm("Discard your Shop draft and use the latest saved page?")) return;
+    if (!keepDraft && !replaceLatest) { setReplaceLatest(true); return; }
+    setReplaceLatest(false);
     setSnapshots((current) => ({ ...current, [surface]: conflict }));
     setDrafts((current) => ({ ...current, [surface]: keepDraft && current[surface] ? rebaseShopDraft(current[surface], conflict) : draftFromShopSnapshot(conflict) }));
     setConflicts((current) => ({ ...current, [surface]: undefined }));
@@ -285,18 +301,13 @@ export default function ShopPageEditor() {
                 {showExtras && <><ToolButton label="Edit photo row" onClick={() => setTarget("photoRows")} /><ToolButton label="Edit purchase details" onClick={() => setTarget("purchase")} /></>}
               </div>
               <ShopPreviewFrame host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} onSelect={(selection) => setTarget(selection as Target)}>
-                <TemplateFontScope templateKey={template}>
-                  {shopPolicy?.preview === "club-page" ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
-                  {isClubhouse && <ClubhouseShopPage editorContent={content} onEditorSelectKit={setSelectedVariant} />}
-                  {generic && <>
+                {presentation.renderPreview(content, surface, setSelectedVariant, <>
                     <div className={surface === "shop" ? "pt-24 sm:pt-28" : ""} style={{ backgroundColor: "var(--color-white)" }}>
                       <ShopKitSectionContainer surface={surface} headingTag={surface === "shop" ? "h1" : "h2"} fadeImageToWhite editorContent={content} selectedVariant={currentVariant} onVariantChange={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
                       {showExtras && draft.photoRows[currentVariant].length > 0 && <ShopPhotoStrip photos={publicPhotoRow(draft.photoRows[currentVariant], currentVariant)} />}
                       {showExtras && hasShopPurchaseDetails(publicPurchase(draft.purchase)) && <ShopPurchaseDetailsSection details={publicPurchase(draft.purchase)} animate={false} />}
                     </div>
-                  </>}
-                  {!content[currentVariant].photos.length && <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button>}
-                </TemplateFontScope>
+                  </>, !content[currentVariant].photos.length ? <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button> : null)}
               </ShopPreviewFrame>
             </div>
             <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`shop-page-inspector min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
@@ -305,18 +316,18 @@ export default function ShopPageEditor() {
                 <fieldset disabled={locked} className="min-w-0">
                 {target === "fixed" ? <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">This copy belongs to the website design and is managed by Onzio.</p> : null}
                 {(target === "copy" || target === "kit" || target === "cta") && currentKit && <>
-                  {isClubhouse ? <p className="mb-3 text-xs text-muted-foreground">The Shop and homepage use this kit name and its first photo. Campaign copy, price, sizes, and checkout are managed by Onzio.</p> : null}
+                  {nameOnly ? <p className="mb-3 text-xs text-muted-foreground">The Shop and homepage use this kit name and its first photo. Campaign copy, price, sizes, and checkout are managed by Onzio.</p> : null}
                   {target !== "cta" && <div className="space-y-3">
-                    {!isClubhouse && <TextField label="Small heading" value={currentKit.section.eyebrow} onChange={(value) => setSectionField("eyebrow", value)} />}
+                    {!nameOnly && <TextField label="Small heading" value={currentKit.section.eyebrow} onChange={(value) => setSectionField("eyebrow", value)} />}
                     <TextField label="Kit title" value={currentKit.section.title} onChange={(value) => setSectionField("title", value)} />
-                    {!isClubhouse && <TextAreaField label="Description" value={currentKit.section.description} onChange={(value) => setSectionField("description", value)} />}
-                    {!isClubhouse && <>
+                    {!nameOnly && <TextAreaField label="Description" value={currentKit.section.description} onChange={(value) => setSectionField("description", value)} />}
+                    {!nameOnly && <>
                       <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, 8))} />
                       {surface === "shop" && shopPolicy?.shopPageShows ? <p className="text-xs text-muted-foreground">Your Shop page shows the first {shopPolicy.shopPageShows.bullets} bullet points, each split at its first colon into a label and a value (for example “Sizes: Youth and adult”). Any more are saved but not shown.</p> : null}
                       <TextAreaField label="Store information" value={currentKit.section.store_note} onChange={(value) => setSectionField("store_note", value)} />
                     </>}
                   </div>}
-                  {!isClubhouse && <div className="mt-4 space-y-3 border-t border-border pt-4">
+                  {!nameOnly && <div className="mt-4 space-y-3 border-t border-border pt-4">
                     <TextField label="Button text" value={currentKit.section.cta_label} onChange={(value) => setSectionField("cta_label", value)} />
                     {surface === "home" ? <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">The homepage button opens this club’s Shop page.</p> : <TextField label="Buy link" value={currentKit.section.cta_link} onChange={(value) => setSectionField("cta_link", value)} help="The full https:// address of your store or merchandise partner, or an email address if supporters order by email." />}
                   </div>}
@@ -340,6 +351,7 @@ export default function ShopPageEditor() {
           </div>
         )}
       </div>
+    <AdminConfirmDialog open={replaceLatest} title="Use the latest saved page?" confirmLabel="Use latest saved page" onCancel={() => setReplaceLatest(false)} onConfirm={() => resolveConflict(false)}>Discard your Shop draft and use the latest saved page?</AdminConfirmDialog>
     </AdminPage>
   );
 }

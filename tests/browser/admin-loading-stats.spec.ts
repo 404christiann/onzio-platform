@@ -78,7 +78,7 @@ test("Match Stats keeps its selector skeleton until matches arrive and ignores a
   await expect(page.getByRole("heading", { name: "Stats", exact: true })).toBeVisible();
   await expect(page.getByRole("status", { name: "Loading matches", exact: true })).toBeVisible();
   await expect(page.getByText("No matches are assigned to this season.")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Save match stats" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
   matches.release();
   const matchSelect = page.getByRole("combobox", { name: "Match", exact: true });
   await expect(matchSelect).toBeEnabled();
@@ -98,7 +98,7 @@ test("Match Stats keeps its selector skeleton until matches arrive and ignores a
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(page.getByRole("status", { name: "Loading match stats", exact: true })).toHaveCount(0);
   await expect(page.getByRole("spinbutton", { name: "Loading Fixture Player: goals", exact: true })).toHaveValue("8");
-  await expect(page.getByRole("button", { name: "Save match stats" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
 });
 
 test("Season Stats keeps old totals hidden while a new season loads and ignores its late response", async ({ page }) => {
@@ -130,7 +130,7 @@ test("Season Stats keeps old totals hidden while a new season loads and ignores 
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(page.getByRole("status", { name: "Loading season stats", exact: true })).toHaveCount(0);
   await expect(page.getByRole("spinbutton", { name: "Loading Fixture Player: goals", exact: true })).toHaveValue("8");
-  await expect(page.getByRole("button", { name: "Save season totals", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
 });
 
 test("a failed Match Stats request ends the skeleton without exposing default editable totals", async ({ page }) => {
@@ -146,14 +146,14 @@ test("a failed Match Stats request ends the skeleton without exposing default ed
   await expect(page.getByRole("alert").filter({ hasText: "Error:" })).toBeVisible();
   await expect(page.getByRole("status", { name: "Loading match stats", exact: true })).toHaveCount(0);
   await expect(page.locator('[data-slot="stat-input"]')).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Save match stats" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
   await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(SEASON_B);
   await expect(matchSelect).toBeEnabled();
   await matchSelect.selectOption(MATCH_C);
   await expect(page.getByText("No players are assigned to this season.", { exact: true })).toBeVisible();
   await expect(page.getByRole("status", { name: "Loading match stats", exact: true })).toHaveCount(0);
   await expect(page.getByRole("alert").filter({ hasText: "Error:" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Save match stats" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
 });
 
 test("failed schedule reads end loading and keep Add Match unavailable", async ({ page }) => {

@@ -64,9 +64,10 @@ describe("the pages", () => {
   it("gives a reimagined club the one-list page and a classic club its own page, at the same address", () => {
     const page = source("app/admin/(protected)/sponsors/page.tsx");
     expect(page).toContain('portal === "reimagined" ? <Sponsors /> : <ClassicSponsorsPage />');
-    expect(page).toContain("diffSponsorLogos(");
-    expect(page).toContain("maxLength={SPONSOR_NAME_LIMIT}");
-    expect(page).not.toMatch(/\.eq\("placement"/);
+    const classic = source("components/admin/sponsors/ClassicSponsorsPage.tsx");
+    expect(classic).toContain("diffSponsorLogos(");
+    expect(classic).toContain("maxLength={SPONSOR_NAME_LIMIT}");
+    expect(classic).not.toMatch(/\.eq\("placement"/);
   });
 
   it("shows the Footer switch only where the club's website footer shows sponsors, from the site definition", () => {

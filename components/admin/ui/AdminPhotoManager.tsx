@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef, useState, type DragEvent } from "react";
+import { useCallback, useId, useLayoutEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from "lucide-react";
 
 import ResilientImage from "@/components/ResilientImage";
@@ -25,6 +25,14 @@ export type AdminPhotoManagerProps = AdminImageRules & {
   onChange: (photos: AdminPhoto[]) => void;
   onUpload: (files: File[]) => Promise<AdminPhoto[]>;
   onDirty?: () => void;
+  onPendingChange?: (pending: boolean) => void;
+  onUndoPendingChange?: (pending: boolean) => void;
+  showDescriptions?: boolean;
+  descriptionLabel?: string;
+  /** The caller may already present per-file failures or an intentional cancellation. */
+  emptyUploadMessage?: string;
+  removalMessage?: string;
+  reorderLabels?: "up-down" | "earlier-later";
   disabled?: boolean;
 };
 
@@ -37,6 +45,7 @@ export function AdminPhotoManager({ collectionId, ...props }: AdminPhotoManagerP
 function PhotoCollection({
   collectionId, label, variant, photos, onChange, onUpload, onAbandonedUpload, onDirty, disabled = false,
   allowedTypes, maxBytes,
+  onPendingChange, onUndoPendingChange, showDescriptions = true, descriptionLabel = "Description", emptyUploadMessage = "The photos could not be uploaded. Try again.", removalMessage, reorderLabels = "up-down",
 }: AdminPhotoManagerProps) {
   const input = useRef<HTMLInputElement>(null);
   const current = useRef(photos);
@@ -61,15 +70,58 @@ function PhotoCollection({
   const { showUndo, expireUndo } = useAdminToast();
   const alive = useRef(true);
   const undoToastIds = useRef(new Set<number>());
+  const preparation = useRef<{ count: number; notify?: (pending: boolean) => void }>({ count: 0 });
+  const pendingCallback = useRef(onPendingChange);
+  pendingCallback.current = onPendingChange;
+  const chooser = useRef<typeof preparation.current | null>(null);
+  function beginPreparation() {
+    if (!preparation.current.count) preparation.current = { count: 0, notify: pendingCallback.current };
+    const attempt = preparation.current;
+    attempt.count++;
+    if (attempt.count === 1) attempt.notify?.(true);
+    return attempt;
+  }
+  const finishPreparation = useCallback((attempt: typeof preparation.current) => {
+    if (preparation.current !== attempt) return;
+    attempt.count--;
+    if (!attempt.count) attempt.notify?.(false);
+  }, []);
+  const cancelChooser = useCallback(() => {
+    const attempt = chooser.current;
+    chooser.current = null;
+    if (attempt) finishPreparation(attempt);
+  }, [finishPreparation]);
+  const undoCallback = useRef(onUndoPendingChange);
+  undoCallback.current = onUndoPendingChange;
+  const undoNotified = useRef(false);
+  function updateUndoCount() {
+    const pending = undoSlots.current.size > 0;
+    setUndoCount(undoSlots.current.size);
+    if (pending !== undoNotified.current) {
+      undoNotified.current = pending;
+      undoCallback.current?.(pending);
+    }
+  }
   useLayoutEffect(() => {
     alive.current = true;
     const ids = undoToastIds.current;
+    const picker = input.current;
+    picker?.addEventListener("cancel", cancelChooser);
     return () => {
       alive.current = false;
+      picker?.removeEventListener("cancel", cancelChooser);
+      chooser.current = null;
+      const attempt = preparation.current;
+      preparation.current = { count: 0 };
+      if (attempt.count) attempt.notify?.(false);
+      if (undoNotified.current) {
+        undoNotified.current = false;
+        undoCallback.current?.(false);
+      }
       for (const id of ids) expireUndo(id);
       ids.clear();
     };
-  }, [expireUndo]);
+  }, [expireUndo, cancelChooser]);
   const animated = useAnimatedList({ axis: variant === "tiles" ? "both" : "vertical" });
   const busy = disabled || pending;
   const availableSlots = Math.max(0, limit - photos.length - reservedSlots.current - undoCount);
@@ -113,15 +165,15 @@ function PhotoCollection({
     const removed = before[index];
     const slot = ++nextUndoSlot.current;
     undoSlots.current.add(slot);
-    setUndoCount(undoSlots.current.size);
+    updateUndoCount();
     animated.change({ type: "remove", key: id }, () => update(before.filter((photo) => photo.id !== id)));
     const toastId = showUndo({
-      message: `Removed ${removed.name || (index === 0 ? "cover photo" : `photo ${index + 1}`)}`,
+      message: removalMessage ?? `Removed ${removed.name || (index === 0 ? "cover photo" : `photo ${index + 1}`)}`,
       onUndo: () => {
         undoToastIds.current.delete(toastId);
         if (!alive.current) return;
         undoSlots.current.delete(slot);
-        setUndoCount(undoSlots.current.size);
+        updateUndoCount();
         const latest = [...current.current];
         if (latest.some((photo) => photo.id === id)) return;
         const orderIndex = logicalOrder.current.indexOf(id);
@@ -136,14 +188,16 @@ function PhotoCollection({
         if (!alive.current) return;
         logicalOrder.current = logicalOrder.current.filter((key) => key !== id);
         undoSlots.current.delete(slot);
-        setUndoCount(undoSlots.current.size);
+        updateUndoCount();
       },
     });
     undoToastIds.current.add(toastId);
   }
 
   async function addFiles(files: FileList | null) {
-    if (!files?.length || disabled) return;
+    if (!files?.length || disabled) { cancelChooser(); return; }
+    const attempt = chooser.current ?? beginPreparation();
+    chooser.current = null;
     const incoming = Array.from(files);
     const wasIdle = activeBatches.current === 0;
     const held = Math.min(incoming.length, Math.max(0,
@@ -194,7 +248,7 @@ function PhotoCollection({
         setMessage((previous) => [previous, `Only 6 photos fit. ${unique.length - committed.length} were not added.`].filter(Boolean).join(" "));
       }
       if (!committed.length) {
-        setMessage((previous) => [previous, "The photos could not be uploaded. Try again."].filter(Boolean).join(" "));
+        if (emptyUploadMessage) setMessage((previous) => [previous, emptyUploadMessage].filter(Boolean).join(" "));
         return;
       }
       for (const photo of committed) {
@@ -207,6 +261,7 @@ function PhotoCollection({
       if (!alive.current) return;
       setMessage((previous) => [previous, "The photos could not be uploaded. Try again."].filter(Boolean).join(" "));
     } finally {
+      finishPreparation(attempt);
       if (!alive.current) return;
       reservedSlots.current -= selectedCount;
       if (pendingIds.length) {
@@ -280,12 +335,12 @@ function PhotoCollection({
                 <ResilientImage src={photo.url} alt={photo.description || photo.name || `Photo ${index + 1}`} fill sizes={variant === "tiles" ? "160px" : "96px"} className={styles.image} />
                 {index === 0 && <span className={styles.badge}>{variant === "rows" ? "Slide 1" : "Cover"}</span>}
               </div>
-              <div className={styles.itemBody}>
+              {showDescriptions && <div className={styles.itemBody}>
                 <div className={styles.itemTitle}>
                   <GripVertical size={16} aria-hidden="true" />
                   <span>{photo.name || `Photo ${index + 1}`}</span>
                 </div>
-                <label htmlFor={`${hintId}-description-${photo.id}`}>Description</label>
+                <label htmlFor={`${hintId}-description-${photo.id}`}>{descriptionLabel}</label>
                 <input
                   id={`${hintId}-description-${photo.id}`}
                   type="text"
@@ -297,10 +352,10 @@ function PhotoCollection({
                   onChange={(event) => update(current.current.map((item) =>
                     item.id === photo.id ? { ...item, description: event.target.value } : item))}
                 />
-              </div>
+              </div>}
               <div className={styles.itemActions}>
-                <button type="button" data-move="up" onClick={() => move(photo.id, -1)} disabled={busy || index === 0} aria-label={`Move ${photo.name || `photo ${index + 1}`} up`}><ArrowUp size={16} aria-hidden="true" /></button>
-                <button type="button" data-move="down" onClick={() => move(photo.id, 1)} disabled={busy || index === photos.length - 1} aria-label={`Move ${photo.name || `photo ${index + 1}`} down`}><ArrowDown size={16} aria-hidden="true" /></button>
+                <button type="button" data-move="up" onClick={() => move(photo.id, -1)} disabled={busy || index === 0} aria-label={`Move ${photo.name || `photo ${index + 1}`} ${reorderLabels === "earlier-later" ? "earlier" : "up"}`}><ArrowUp size={16} aria-hidden="true" /></button>
+                <button type="button" data-move="down" onClick={() => move(photo.id, 1)} disabled={busy || index === photos.length - 1} aria-label={`Move ${photo.name || `photo ${index + 1}`} ${reorderLabels === "earlier-later" ? "later" : "down"}`}><ArrowDown size={16} aria-hidden="true" /></button>
                 <button type="button" onClick={() => remove(photo.id)} disabled={busy} aria-label={`Remove ${photo.name || `photo ${index + 1}`}`}><Trash2 size={16} aria-hidden="true" /></button>
               </div>
             </article>
@@ -327,7 +382,11 @@ function PhotoCollection({
             event.target.value = "";
           }}
         />
-        <button type="button" className={styles.add} disabled={busy || availableSlots === 0} onClick={() => input.current?.click()} aria-describedby={hintId}>
+        <button type="button" className={styles.add} disabled={busy || availableSlots === 0} onClick={() => {
+          if (!input.current || chooser.current) return;
+          chooser.current = beginPreparation();
+          try { input.current.click(); } catch { cancelChooser(); }
+        }} aria-describedby={hintId}>
           <Plus size={16} aria-hidden="true" /> Add photos
         </button>
       </div>

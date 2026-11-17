@@ -58,8 +58,8 @@
 }
 
 @media (max-width: 639px) {
-  .actions > *,
-  .actions > [data-admin-page-action-group] > * {
+  .actions > *:not(:global(.sr-only)),
+  .actions > [data-admin-page-action-group] > *:not(:global(.sr-only)) {
     flex: 1 1 100%;
     width: 100%;
     min-width: 0;

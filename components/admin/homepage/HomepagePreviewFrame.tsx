@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
 
 const DECORATIONS = ["hp-piece-corners", "hp-piece-tag"];
 const isDecoration = (node: Node) => node.nodeType === 1 && DECORATIONS.some(name => (node as HTMLElement).classList.contains(name));
@@ -11,10 +12,25 @@ const isDecoration = (node: Node) => node.nodeType === 1 && DECORATIONS.some(nam
  * `tags` (the reimagined admin, ADMIN-RE-09) adds a "Click to change" tag on
  * hover and a "Changed" tag on the pieces listed in `tags.changed`.
  */
-export default function HomepagePreviewFrame({ children, host, playback = false, tags }: { children: ReactNode; host: string; playback?: boolean; tags?: { changed: readonly string[] } }) {
+export default function HomepagePreviewFrame({ children, host, playback = false, tags, classic = false, loading = false, theme = "light" }: { children: ReactNode; host: string; playback?: boolean; tags?: { changed: readonly string[] }; classic?: boolean; loading?: boolean; theme?: "light" | "dark" }) {
   const iframe = useRef<HTMLIFrameElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const tagsOn = !!tags;
+  const delayed = useDelayedLoading(loading || !body);
+  const initialDocument = useRef(classic ? classicLoadingDocument(theme) : "<!doctype html><html lang='en'><head></head><body></body></html>");
+  useEffect(() => {
+    const placeholder = iframe.current?.contentDocument?.getElementById("homepage-frame-loading");
+    if (!placeholder || !classic) return;
+    const root = placeholder.ownerDocument.documentElement;
+    root.style.setProperty("--hp-frame-background", theme === "dark" ? "#111827" : "#fff");
+    root.style.setProperty("--hp-frame-block", theme === "dark" ? "#273448" : "#e7ebf0");
+    root.style.setProperty("--hp-frame-shine", theme === "dark" ? "#ffffff12" : "#ffffffa0");
+    placeholder.dataset.theme = theme;
+    placeholder.dataset.phase = delayed.phase;
+    placeholder.hidden = delayed.phase === "content";
+    placeholder.setAttribute("aria-hidden", String(delayed.showContent));
+    if (body && delayed.showContent) body.style.background = "white";
+  }, [body, classic, delayed.phase, delayed.showContent, theme]);
   const changedKey = tags ? tags.changed.join(" ") : "";
   useEffect(() => {
     if (!body || playback) return;
@@ -127,10 +143,10 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
     mount();
     return () => { active = false; observer?.disconnect(); frame.removeEventListener("load", mount); };
   }, []);
-  return <div className="hp-browser">
+  return <div className="hp-browser" data-classic={classic || undefined} aria-busy={classic ? loading || !delayed.showContent : undefined}>
     <div className="hp-browser-chrome"><span aria-hidden="true">● ● ●</span><span>{host} · Homepage preview</span></div>
-    <iframe ref={iframe} title="Homepage preview" className="hp-preview-frame" srcDoc="<!doctype html><html lang='en'><head></head><body></body></html>" />
-    {body && createPortal(<div data-homepage-preview="true" data-playback={playback} data-homepage-tags={tagsOn || undefined} onClickCapture={event => {
+    <iframe ref={iframe} title="Homepage preview" className="hp-preview-frame" srcDoc={initialDocument.current} />
+    {body && createPortal(<div style={classic && !delayed.showContent ? { display: "none" } : undefined} data-homepage-preview="true" data-playback={playback} data-homepage-tags={tagsOn || undefined} onClickCapture={event => {
       const target = event.target as HTMLElement;
       const blocked = target.closest(playback ? "a,form" : "a,button,iframe");
       if (blocked) event.preventDefault();
@@ -170,4 +186,23 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
       {children}
     </div>, body)}
   </div>;
+}
+
+/** Painted inside the isolated viewport, before copied styles or fonts settle. */
+function classicLoadingDocument(theme: "light" | "dark") {
+  const dark = theme === "dark";
+  const background = dark ? "#111827" : "#fff";
+  const block = dark ? "#273448" : "#e7ebf0";
+  return `<!doctype html><html lang="en"><head><style>
+    html{--hp-frame-background:${background};--hp-frame-block:${block};--hp-frame-shine:${dark ? "#ffffff12" : "#ffffffa0"}}html,body{margin:0;background:var(--hp-frame-background)}html:has(#homepage-frame-loading:not([hidden])),body:has(#homepage-frame-loading:not([hidden])){height:100%;overflow:hidden}
+    #homepage-frame-loading{position:absolute;inset:0;z-index:10;background:var(--hp-frame-background);opacity:0;animation:hp-skeleton-reveal 1ms 150ms forwards;transition:opacity 160ms ease-out;padding:clamp(24px,5vw,64px);box-sizing:border-box}
+    #homepage-frame-loading[data-phase="skeleton"]{opacity:1;animation:none}
+    #homepage-frame-loading[data-phase="crossfade"],#homepage-frame-loading[data-phase="content"]{opacity:0;pointer-events:none;animation:none}
+    .hp-frame-block{display:block;position:relative;overflow:hidden;background:var(--hp-frame-block);border-radius:8px;height:20px;margin-bottom:18px}
+    .hp-frame-block::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,var(--hp-frame-shine),transparent);animation:hp-frame-shimmer 1.6s ease-in-out infinite}
+    .hp-frame-eyebrow{width:26%;height:16px;margin-top:6%}.hp-frame-title{width:80%;height:54px}.hp-frame-line{width:65%}.hp-frame-image{margin-top:40px;width:100%;height:280px}.hp-frame-buttons{display:flex;gap:12px}.hp-frame-buttons i{width:140px;height:44px}
+    @keyframes hp-skeleton-reveal{to{opacity:1}}@keyframes hp-frame-shimmer{to{transform:translateX(100%)}}
+    @media(max-width:500px){.hp-frame-title{height:42px;width:94%}.hp-frame-line{width:92%}.hp-frame-image{height:250px}.hp-frame-buttons i{width:45%}}
+    @media(prefers-reduced-motion:reduce){.hp-frame-block::after{animation:none;display:none}#homepage-frame-loading{transition-duration:120ms}}
+  </style></head><body><div id="homepage-frame-loading" role="status" aria-label="Loading homepage preview" data-theme="${theme}"><i class="hp-frame-block hp-frame-eyebrow"></i><i class="hp-frame-block hp-frame-title"></i><i class="hp-frame-block hp-frame-title"></i><i class="hp-frame-block hp-frame-line"></i><i class="hp-frame-block hp-frame-line"></i><div class="hp-frame-buttons"><i class="hp-frame-block"></i><i class="hp-frame-block"></i></div><i class="hp-frame-block hp-frame-image"></i></div></body></html>`;
 }

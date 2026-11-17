@@ -26,7 +26,7 @@ describe("Academy Sponsors and Shop page ownership", () => {
   });
 
   it("keeps the sponsor editor preview bound to the compact homepage carousel", () => {
-    const editor = source("app/admin/(protected)/sponsors/page.tsx");
+    const editor = source("components/admin/sponsors/ClassicSponsorsPage.tsx");
     const preview = editor.slice(editor.indexOf("<div data-admin-public-preview>"));
     expect(editor).toContain('label="Add sponsor logos"');
     expect(preview).toMatch(/\{placement === "carousel" \? \(\s*<SponsorCarousel sponsors=\{previewLogos\} compact \/>/);

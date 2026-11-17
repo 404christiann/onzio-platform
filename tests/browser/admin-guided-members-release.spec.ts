@@ -111,10 +111,10 @@ for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 844 });
       await page.goto("/admin/members");
       await expect(page.getByText("You · owner", { exact: true })).toBeVisible();
-      const input = page.getByRole("textbox", { name: "Email", exact: true });
+      const input = page.getByRole("textbox", { name: "Administrator email", exact: true });
       await input.fill(email);
       const addition = page.waitForResponse(response => response.url().endsWith("/api/admin/members") && response.request().method() === "POST");
-      await page.getByRole("button", { name: "Send access code", exact: true }).click();
+      await page.getByRole("button", { name: "Add administrator", exact: true }).click();
       const response = await addition;
       expect(response.status()).toBe(200);
       const added = await response.json() as { userId: string; email: string; role: string; codeSent: boolean };
@@ -152,10 +152,11 @@ for (const width of [390, 1440]) {
       expect(await deniedRead.json()).toEqual({ error: "OWNER_REQUIRED" });
       expect((await db.query("select id from auth.users where email=$1", [deniedEmail])).rows).toEqual([]);
       expect((await db.query("select status from onzio.club_members where club_id=$1 and user_id=$2", [ALPHA, createdUserId])).rows).toEqual([{ status: "active" }]);
-      const row = page.locator("section > div").filter({ has: page.getByText(email, { exact: true }) });
+      const row = page.locator("[data-admin-animated-key]").filter({ has: page.getByText(email, { exact: true }) });
       await expect(row).toHaveCount(1);
       const removal = page.waitForResponse(result => result.url().endsWith("/api/admin/members") && result.request().method() === "POST");
       await row.getByRole("button", { name: "Remove", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Remove access", exact: true }).click();
       const removed = await removal;
       expect(removed.status()).toBe(200);
       const removedBody = await removed.json();

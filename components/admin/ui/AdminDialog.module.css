@@ -273,8 +273,11 @@
   }
 
   .popup .footer :is(button, a[role="button"]) {
-    width: 100%;
     min-block-size: 44px;
+  }
+
+  .popup .footer :is(.actions, .destructive) :is(button, a[role="button"]) {
+    width: 100%;
   }
 }
 
