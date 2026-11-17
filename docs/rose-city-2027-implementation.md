@@ -325,7 +325,7 @@ The rehearsal uses Supabase API55321, PostgreSQL55322, Mailpit55324 and site3198
 
 A release requires a separate approved hosted rollout: backup and review the target, apply `20261112010000_rose_city_cinematic_v2_homepage.sql`, publish the reviewed media through the normal pipeline, map current tenant sponsor UUIDs to approved display treatments, create a validated immutable cinematic2 presentation document and update only the Rose City published pointer. Preserve existing social destinations, Schedule, Shop ownership and all other clubs. The script's synthetic local subscription, membership and club identity fixture must never be applied to hosted data. Account/API secrets are not part of the asset bundle.
 
-MuseoModerno is bundled with its official OFL notice. Avenir currently resolves the approved local installed font with a portable fallback; an appropriate commercial webfont license/file is required for identical appearance across all devices. The existing LEMON MILK commercial-use receipt remains to be confirmed. Neither was purchased or redistributed from macOS. Phosphor lettering remains within supplied artwork.
+MuseoModerno is bundled with its official OFL notice. Avenir loads from the onzio-fonts bucket through `NEXT_PUBLIC_FONT_BASE_URL`, with Figtree as the fallback. On 2026-11-17 Christian accepted hosting the supplied files for launch without a webfont license; the exit plan and follow-up are in `docs/rose-city-2027-fonts.md`. The existing LEMON MILK commercial-use receipt remains to be confirmed. Neither was purchased or redistributed from macOS. Phosphor lettering remains within supplied artwork.
 
 ## Verification
 

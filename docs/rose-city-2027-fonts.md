@@ -9,6 +9,8 @@ Launch is on hold at Christian's request on 2026-10-13. This work is local only.
 
 ## Local integration
 
+Superseded for production on 2026-11-17: see Launch decision below.
+
 The supplied Avenir Medium is extracted unchanged to `public/fonts/avenir-local/Avenir-Medium.ttf` and is the first source for `CinematicAvenir`, with existing installed-font fallbacks retained. The existing400–600 mapping preserves the approved appearance; this is a static Medium face, not a variable font. The entire local font directory is excluded by both `.gitignore` and `.vercelignore`. Do not force-add it or remove the exclusions merely to make a hosted build work. No proprietary system font is copied. LEMON MILK continues using the matching existing BoldItalic file.
 
 ## Verified licensing paths
@@ -42,3 +44,11 @@ bytes match the supplied local file. No new licensing receipt was inspected.
 The main checkout retains its existing local-only exclusions pending a future
 production packaging review; production remains on hold. LEMON MILK receipt
 status is unchanged. See `rose-city-2027-phone-preview.md`.
+
+## Launch decision — 2026-11-17
+
+On 2026-11-17 Christian knowingly accepted hosting the FontsGeek Avenir files for launch, with no Avenir webfont license on file. `Avenir-Medium.ttf` and `Avenir-Heavy.ttf` are not in Git. Anyone can download them from the public production Supabase Storage bucket `onzio-fonts`. The site loads them from `NEXT_PUBLIC_FONT_BASE_URL` (`components/cinematic/CinematicAvenirFonts.tsx`) and falls back to the self-hosted Figtree (SIL OFL 1.1, `public/fonts/figtree/`), then sans-serif. The bucket was a deliberate one-off production change made outside migrations; see `HANDOFF.md`.
+
+- Exit plan: delete the two objects from the `onzio-fonts` bucket, or unset `NEXT_PUBLIC_FONT_BASE_URL` in Vercel production and redeploy (the value is baked in at build time). Either way the site falls back to Figtree, with no code change.
+- Follow-up: buy an Avenir webfont license (see Verified licensing paths above) and record the license holder, domain and receipt here, or switch fonts.
+- LEMON MILK is unchanged. Its commercial-use receipt is still open, and it is a launch gate in the PR 151 launch checklist.

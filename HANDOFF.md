@@ -1,3 +1,19 @@
+## 2026-11-17 - onzio-fonts: one-off production storage bucket (outside migrations)
+
+- **Status:** `done`, a deliberate one-off. Recorded for draft PR 151 (Rose City 2027).
+- **What:** Christian created the Supabase Storage bucket `onzio-fonts` by hand in the
+  production project, not through a checked-in migration. It is public, accepts only
+  ttf/woff2, and has a 512 KB file limit. It holds `Avenir-Medium.ttf` and
+  `Avenir-Heavy.ttf`, which the Rose City cinematic site loads through
+  `NEXT_PUBLIC_FONT_BASE_URL` (set in Vercel production on 2026-11-17).
+- **Outside migrations on purpose:** Christian's decision. Staging and fresh local stacks
+  don't have the bucket. Without the variable, the site uses the self-hosted Figtree.
+- **Licensing:** no Avenir webfont license is on file. Christian accepted hosting the
+  FontsGeek files for launch on 2026-11-17. The exit plan (delete the two objects, or unset
+  the variable and redeploy, which falls back to Figtree) and the follow-up (buy a webfont
+  license or switch fonts) are in `docs/rose-city-2027-fonts.md`. The LEMON MILK receipt
+  is still an open launch gate.
+
 ## 2026-11-10 - Unit tests run in parallel: test:contracts and test:legacy about 5 times faster
 
 - **Status:** `in_progress`, draft PR open, merged with `main` and verified in full

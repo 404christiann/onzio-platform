@@ -7,5 +7,6 @@ playwright-report
 coverage
 lions-font-comparison.html
 
-# Local supplied font; webfont license remains unverified.
+# Local copy of the supplied Avenir; never deployed. Production loads Avenir from the onzio-fonts bucket
+# (hosted without a webfont license, accepted by Christian on 2026-11-17; see docs/rose-city-2027-fonts.md).
 public/fonts/avenir-local/
