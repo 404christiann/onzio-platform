@@ -58,6 +58,7 @@ import {
   EMPTY_HOMEPAGE_HERO_CONTENT,
 } from "@/lib/homepage-content";
 import {
+  CINEMATIC_KIT_BULLET_POINTS,
   normalizeKitBulletPoints,
   normalizeKitStoreNote,
 } from "@/lib/shop-kit";
@@ -988,7 +989,9 @@ export async function fetchShopKitContent(
     section: rawSection
       ? {
           ...rawSection,
-          bullet_points: normalizeKitBulletPoints(rawSection.bullet_points),
+          // The highest per-template limit: only cinematic@2 kits can hold more than 8 (the database
+          // keeps every other template at 8), so no club is shown more than it saved.
+          bullet_points: normalizeKitBulletPoints(rawSection.bullet_points, CINEMATIC_KIT_BULLET_POINTS),
           store_note: normalizeKitStoreNote(rawSection.store_note),
         }
       : null,

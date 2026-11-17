@@ -87,8 +87,8 @@ describe("RC2027 Shop update joins the atomic Shop save", () => {
     expect((await load()).presentation).toEqual({ ...content, mapAssetId: null });
   });
 
-  it("saves the Third kit and its photo row on the cinematic@2 Shop page only", async () => {
-    const lead = await asset(), row = await asset(), other = await asset();
+  it("saves the Third kit and its photo row on the Shop page for any template, never on the homepage feature", async () => {
+    const lead = await asset(), row = await asset(), other = await asset(), olderLead = await asset(), olderRow = await asset();
     await saveKit("shop", { variants: { third: thirdKit("Going Good Places", lead) }, photoRows: { third: [{ rowId: null, assetId: row, order: 0 }] } });
     const after = await load();
     type Item = { kit_variant: string; assetId?: string; title?: string };
@@ -96,9 +96,16 @@ describe("RC2027 Shop update joins the atomic Shop save", () => {
     expect(after.photos.filter((item: Item) => item.kit_variant === "third").map((item: Item) => item.assetId)).toEqual([lead]);
     expect(after.photoRows.filter((item: Item) => item.kit_variant === "third").map((item: Item) => item.assetId)).toEqual([row]);
     await rejects(() => saveKit("home", { variants: { third: thirdKit("Homepage third", other) } }), "SECTION_UNAVAILABLE");
+    // Main's Shop content policy: a third kit and third photo row are not template-gated.
     await design(1);
-    await rejects(() => saveKit("shop", { variants: { third: thirdKit("Older design", other) } }), "SECTION_UNAVAILABLE");
-    await rejects(() => saveKit("shop", { photoRows: { third: [{ rowId: null, assetId: other, order: 0 }] } }), "SECTION_UNAVAILABLE");
+    await saveKit("shop", { variants: { third: thirdKit("Older design", olderLead) } });
+    await saveKit("shop", { photoRows: { third: [{ rowId: null, assetId: olderRow, order: 0 }] } });
+    const older = await load();
+    expect(older.sections.find((item: Item) => item.kit_variant === "third")?.title).toBe("Older design");
+    expect(older.photos.filter((item: Item) => item.kit_variant === "third").map((item: Item) => item.assetId)).toEqual([olderLead]);
+    expect(older.photoRows.filter((item: Item) => item.kit_variant === "third").map((item: Item) => item.assetId)).toEqual([olderRow]);
+    // Shop presentation content stays cinematic@2 only.
+    await rejects(() => save(sam()), "SECTION_UNAVAILABLE");
   });
 
   it("still loads and saves Shop settings written before the update", async () => {

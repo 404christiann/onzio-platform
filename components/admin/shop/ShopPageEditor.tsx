@@ -31,9 +31,9 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 import { createClient } from "@/lib/admin-client";
 import type { ShopKitContent } from "@/lib/queries";
 import { hasShopPurchaseDetails } from "@/lib/shop-purchase-details";
-import { MAX_KIT_BULLET_POINTS } from "@/lib/shop-kit";
+import { CINEMATIC_KIT_BULLET_POINTS, MAX_KIT_BULLET_POINTS } from "@/lib/shop-kit";
 import { SHOP_OFF_BANNER } from "@/lib/store-visibility";
-import { shopSaveRequestSchema, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
+import { shopSaveRequestSchemaFor, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
 
@@ -70,10 +70,15 @@ export function useShopPresentation() {
   const sharedWithHomepage = isClubhouse;
   const generic = !shopPolicy && !isClubhouse;
   const hasHomeFeature = shopPolicy?.showHomeFeature ?? !sharedWithHomepage;
-  // Cinematic jersey options map to Home / Away / Third, so its Shop page edits all three kits.
-  const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants] : sharedWithHomepage ? SHOP_VARIANTS : isCinematic ? [...SHOP_EDITION_VARIANTS] : ["home", "away"];
+  // Cinematic jersey options map to Home / Away / Third, so its Shop page edits all three kits. Its kits (Shop page and
+  // homepage jersey) may also list 10 bullets; every other design keeps 8 (the database rule). The limit rides on this
+  // existing per-design branch so it adds no template selector.
+  const { variants, maxBulletPoints }: { variants: ShopVariant[]; maxBulletPoints: number } = shopPolicy ? { variants: [...shopPolicy.variants], maxBulletPoints: MAX_KIT_BULLET_POINTS }
+    : sharedWithHomepage ? { variants: SHOP_VARIANTS, maxBulletPoints: MAX_KIT_BULLET_POINTS }
+    : isCinematic ? { variants: [...SHOP_EDITION_VARIANTS], maxBulletPoints: CINEMATIC_KIT_BULLET_POINTS }
+    : { variants: ["home", "away"], maxBulletPoints: MAX_KIT_BULLET_POINTS };
   return {
-    club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly: isClubhouse, isCinematic,
+    club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly: isClubhouse, isCinematic, maxBulletPoints,
     renderPreview(content: Record<ShopVariant, ShopKitContent>, surface: ShopSurface, onSelectKit: (variant: ShopVariant) => void, genericContent: ReactNode, emptyPhoto?: ReactNode) {
       return <TemplateFontScope templateKey={template}>
         {shopPolicy?.preview === "club-page" ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
@@ -87,7 +92,7 @@ export function useShopPresentation() {
 
 export default function ShopPageEditor() {
   const presentation = useShopPresentation();
-  const { club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly, isCinematic } = presentation;
+  const { club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly, isCinematic, maxBulletPoints } = presentation;
   const storeOff = !club.storeEnabled;
 
   const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>(shopPolicy?.initialSurface ?? "shop");
@@ -293,7 +298,7 @@ export default function ShopPageEditor() {
   async function savePage() {
     if (!draft || !snapshot || (!dirty && !pendingSaves[surface]) || saveInFlight.current || uploading || conflict) return;
     const request = pendingSaves[surface] ?? toShopSaveRequest(snapshot, draft, crypto.randomUUID());
-    const parsed = shopSaveRequestSchema.safeParse(request);
+    const parsed = shopSaveRequestSchemaFor(maxBulletPoints).safeParse(request);
     if (!parsed.success) { setSaveError(parsed.error.issues[0]?.message ?? "Check the fields on this page."); return; }
     saveInFlight.current = true;
     setSaving(true); setSaveError(null); setSaved(false); setPendingSaves((current) => ({ ...current, [surface]: request }));
@@ -380,7 +385,7 @@ export default function ShopPageEditor() {
               <ShopPreviewFrame host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} onSelect={(selection) => setTarget(selection as Target)}>
                 {presentation.renderPreview(content, surface, setSelectedVariant, isCinematic && surface === "shop" ? <CinematicShopCanvas kits={content} draft={draft} variant={currentVariant} onVariantChange={variant => { setSelectedVariant(variant); setTarget(current => current === "editions" ? current : "copy"); }} /> : <>
                     <div className={surface === "shop" ? "pt-24 sm:pt-28" : ""} style={{ backgroundColor: "var(--color-white)" }}>
-                      <ShopKitSectionContainer surface={surface} headingTag={surface === "shop" ? "h1" : "h2"} fadeImageToWhite editorContent={content} selectedVariant={currentVariant} onVariantChange={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
+                      <ShopKitSectionContainer surface={surface} headingTag={surface === "shop" ? "h1" : "h2"} fadeImageToWhite editorContent={content} maxBulletPoints={maxBulletPoints} selectedVariant={currentVariant} onVariantChange={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
                       {showExtras && draft.photoRows[currentVariant].length > 0 && <ShopPhotoStrip photos={publicPhotoRow(draft.photoRows[currentVariant], currentVariant)} />}
                       {showExtras && hasShopPurchaseDetails(publicPurchase(draft.purchase)) && <ShopPurchaseDetailsSection details={publicPurchase(draft.purchase)} animate={false} />}
                     </div>
@@ -399,7 +404,7 @@ export default function ShopPageEditor() {
                     <TextField label="Kit title" value={currentKit.section.title} onChange={(value) => setSectionField("title", value)} />
                     {!nameOnly && <TextAreaField label="Description" value={currentKit.section.description} onChange={(value) => setSectionField("description", value)} />}
                     {!nameOnly && <>
-                      <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, MAX_KIT_BULLET_POINTS))} />
+                      <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, maxBulletPoints))} />
                       {surface === "shop" && shopPolicy?.shopPageShows ? <p className="text-xs text-muted-foreground">Your Shop page shows the first {shopPolicy.shopPageShows.bullets} bullet points, each split at its first colon into a label and a value (for example “Sizes: Youth and adult”). Any more are saved but not shown.</p> : null}
                       <TextAreaField label="Store information" value={currentKit.section.store_note} onChange={(value) => setSectionField("store_note", value)} />
                     </>}

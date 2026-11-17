@@ -1,24 +1,43 @@
--- Rose City jersey options: three whole-kit options (Home, Away, Third) on the cinematic@2 Shop page,
--- with an editable "Select your jersey" heading. Mirrors lib/cinematic-shop-content.ts.
--- Both functions below are exact copies of their definitions in 20261104040000_cinematic_shop_update.sql
--- (the newest ones), with only these replacements:
---   onzio_private.validate_cinematic_shop_content
---     1. added keys: 'editionsHeading' appended to the optional key list.
---     2. string limits: "when 'editionsHeading' then 80" added beside detailsHeading/mapHeading.
---     3. comment above the editions check: Authentic / Replica, up to two -> Jersey options (Home, Away, Third kits), up to three.
---     4. editions cap: jsonb_array_length(p_content->'editions')>2 -> >3.
---   onzio.save_shop_page
---     5. variant 'third': also allowed when template is cinematic@2 on the shop surface
---        (and not (coalesce(template,'')='cinematic@2' and page_surface='shop')).
---     6. photoRows 'third': rejected unless template is cinematic@2 on the shop surface (same condition).
--- Additive only: no drops, renames, table or column changes, signature changes or data writes. Both functions keep
--- their names, argument lists, security invoker and search_path; their revoke/grant lines are re-applied exactly as
--- first granted (validate_cinematic_shop_content in 20261013224434, save_shop_page in 20261104040000).
--- Behaviour changes only for template cinematic@2 on the shop surface, and only when a third option, the heading or
--- the Third kit is used: a save with up to two options, no heading and only Home/Away kits passes exactly as before.
--- The homepage surface, academy@1 and every other template keep their existing rejections.
--- shop_page_snapshot, validate_shop_photos, replace_shop_photos and the media retirement in save_shop_page are
--- already variant-generic, so they are not redefined.
+-- Rose City shop and homepage, reconciled with main (6b9a7d07, after PR 149).
+-- Dated after main's newest migration (20261111080000), so these definitions are the final ones whatever order the
+-- branch and main migrations are applied in. Each function starts from its newest definition on main and adds only what
+-- the Rose City branch still needs:
+--   onzio_private.validate_cinematic_shop_section NEW: up to 10 bullets for cinematic@2 kits (Shop page and homepage jersey); every
+--                                                  other rule is main's validate_shop_section(jsonb), which is not changed,
+--                                                  so every other club and template keeps its limit of 8.
+--   onzio_private.validate_cinematic_shop_content  not on main: branch 20261104040000 plus the optional editionsHeading
+--                                                  (max 80) and up to 3 jersey options (was 2).
+--   onzio.save_shop_page                          main 20261022193528 (content policy: no template rules on the Shop page,
+--                                                  so third kits and third photo rows are already allowed) plus the branch's
+--                                                  cinematic presentation save from 20261104040000, unchanged, and the
+--                                                  cinematic@2 kits on both surfaces checked by validate_cinematic_shop_section.
+--   onzio_private.homepage_binding_identity       main 20261021181721 plus templateKey cinematic@2, and slideshowVariant
+--                                                  'cinematic' only for cinematic@2 (every other template still rejects it).
+--   onzio_private.homepage_snapshot               main 20261021181721 plus the cinematic homepage content and its artwork
+--                                                  media, as in branch 20261104020000.
+--   onzio.save_homepage                           main 20261022183955 (content policy) plus the cinematic homepage section
+--                                                  (raffle, ticket, trophy and footer-logo artwork and words) and the 7-photo
+--                                                  slideshow, both for cinematic@2 only, as in branch 20261104020000.
+-- Additive only: create or replace with the same names and argument lists; grants re-applied as first granted.
+-- No drops, renames, table or column changes, or data writes. The 2-argument validate_shop_section(jsonb,boolean), which
+-- main dropped and branch 20261104030000 recreates, is left in place and no longer called.
+
+create or replace function onzio_private.validate_cinematic_shop_section(p_section jsonb) returns void
+language plpgsql immutable security invoker set search_path='' as $$
+declare bullets jsonb:=p_section->'bullet_points';
+begin
+  if jsonb_typeof(bullets)='array' and jsonb_array_length(bullets)>8 then
+    if jsonb_array_length(bullets)>10 then raise exception 'INVALID_SHOP_PAYLOAD' using errcode='22023'; end if;
+    perform onzio_private.validate_shop_section(jsonb_set(p_section,'{bullet_points}',
+      (select jsonb_agg(b.value order by b.position) from jsonb_array_elements(bullets) with ordinality as b(value,position) where b.position<=8)));
+    perform onzio_private.validate_shop_section(jsonb_set(p_section,'{bullet_points}',
+      (select jsonb_agg(b.value order by b.position) from jsonb_array_elements(bullets) with ordinality as b(value,position) where b.position>8)));
+  else
+    perform onzio_private.validate_shop_section(p_section);
+  end if;
+end $$;
+revoke all on function onzio_private.validate_cinematic_shop_section(jsonb) from public,anon;
+grant execute on function onzio_private.validate_cinematic_shop_section(jsonb) to authenticated;
 
 create or replace function onzio_private.validate_cinematic_shop_content(p_club_id uuid,p_content jsonb) returns void
 language plpgsql stable security invoker set search_path='' as $$
@@ -119,10 +138,10 @@ grant execute on function onzio_private.validate_cinematic_shop_content(uuid,jso
 create or replace function onzio.save_shop_page(p_club_id uuid,p_request jsonb) returns jsonb
 language plpgsql security invoker set search_path='' as $$
 declare
-  page_surface text; op uuid; hash text; saved_hash text; receipt jsonb; initial jsonb; result jsonb; template text;
+  page_surface text; op uuid; hash text; saved_hash text; receipt jsonb; initial jsonb; result jsonb;
   variants jsonb; photo_rows jsonb; purchase jsonb; variant text; product jsonb; section jsonb; photos jsonb; item jsonb;
-  presentation jsonb; old_map uuid; old_details uuid[]:='{}'; new_details uuid[]; kept uuid[]; old_asset uuid;
   retired uuid[]:='{}'; removed uuid[]; key text; value jsonb;
+  template text; presentation jsonb; old_map uuid; old_details uuid[]:='{}'; new_details uuid[]; kept uuid[]; old_asset uuid;
 begin
   perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901283);
@@ -144,20 +163,14 @@ begin
     if saved_hash<>hash then raise exception 'OPERATION_REUSED' using errcode='PT409'; end if;
     return receipt;
   end if;
-  if onzio_private.homepage_design(p_club_id)->>'templateKey'='editorial@1'
-    and not coalesce((select store_enabled from onzio.clubs where id=p_club_id),false) then
-    raise exception 'PAGE_UNAVAILABLE' using errcode='22023';
-  end if;
   initial:=onzio_private.shop_page_snapshot(p_club_id,page_surface); template:=initial->>'templateKey';
-  if page_surface='home' and template in ('clubhouse@1','editorial@1') then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   if (initial->>'designRevision') is distinct from (p_request->>'designRevision') then raise exception 'DESIGN_CHANGED' using errcode='PT409'; end if;
   if (initial->>'revision') is distinct from (p_request->>'expectedRevision') then raise exception 'CONTENT_CHANGED' using errcode='PT409'; end if;
   variants:=p_request->'variants'; photo_rows:=p_request->'photoRows'; purchase:=p_request->'purchase'; presentation:=p_request->'presentation';
   perform onzio_private.check_shop_object(variants,array['home','third','away']);
   if variants='{}'::jsonb and photo_rows is null and purchase is null and presentation is null then raise exception 'INVALID_SHOP_PAYLOAD' using errcode='22023'; end if;
-  if (page_surface='home' or template='academy@1') and (variants ? 'third' or variants ? 'away') then raise exception 'SECTION_UNAVAILABLE' using errcode='22023'; end if;
-  if coalesce(template,'') not in ('clubhouse@1','editorial@1') and not (coalesce(template,'')='cinematic@2' and page_surface='shop') and variants ? 'third' then raise exception 'SECTION_UNAVAILABLE' using errcode='22023'; end if;
-  if (page_surface='home' or template in ('academy@1','clubhouse@1','editorial@1')) and (photo_rows is not null or purchase is not null) then
+  if page_surface='home' and (variants ? 'third' or variants ? 'away') then raise exception 'SECTION_UNAVAILABLE' using errcode='22023'; end if;
+  if page_surface='home' and (photo_rows is not null or purchase is not null) then
     raise exception 'SECTION_UNAVAILABLE' using errcode='22023';
   end if;
   if presentation is not null then
@@ -167,12 +180,12 @@ begin
   for variant,product in select * from jsonb_each(variants) loop
     perform onzio_private.check_shop_object(product,array['section','photos'],array['section','photos']);
     section:=product->'section'; photos:=product->'photos';
-    perform onzio_private.validate_shop_section(section,template in ('editorial@1','clubhouse@1'));
+    if template='cinematic@2' then perform onzio_private.validate_cinematic_shop_section(section);
+    else perform onzio_private.validate_shop_section(section); end if;
     perform onzio_private.validate_shop_photos(p_club_id,page_surface,variant,photos,false);
   end loop;
   if photo_rows is not null then
     perform onzio_private.check_shop_object(photo_rows,array['home','third','away']);
-    if photo_rows ? 'third' and not (coalesce(template,'')='cinematic@2' and page_surface='shop') then raise exception 'SECTION_UNAVAILABLE' using errcode='22023'; end if;
     for variant,photos in select * from jsonb_each(photo_rows) loop
       perform onzio_private.validate_shop_photos(p_club_id,page_surface,variant,photos,true);
     end loop;
@@ -196,8 +209,6 @@ begin
     if (purchase->>'cta_link')<>'' and (purchase->>'cta_link')!~*'^https?://[^[:space:]]+$' then raise exception 'INVALID_SHOP_PAYLOAD' using errcode='22023'; end if;
   end if;
 
-  -- No application-level partial writes: any later failure rolls back every
-  -- kit, photo row, purchase card, audit trigger, revision and receipt.
   for variant,product in select * from jsonb_each(variants) loop
     section:=product->'section';
     insert into onzio.shop_kit_section(club_id,surface,kit_variant,eyebrow,title,description,bullet_points,store_note,cta_label,cta_link)
@@ -244,4 +255,187 @@ begin
 end $$;
 revoke all on function onzio.save_shop_page(uuid,jsonb) from public,anon;
 grant execute on function onzio.save_shop_page(uuid,jsonb) to authenticated;
+
+create or replace function onzio_private.homepage_binding_identity(p_design jsonb) returns jsonb
+language plpgsql immutable security definer set search_path='' as $$
+declare k text:=p_design->>'templateKey'; profile text; hero text; caption text;
+begin
+  if (k is not null and k not in ('academy@1','editorial@1','clubhouse@1','cinematic@1','heritage@1','cinematic@2'))
+    or (p_design->>'heroVariant') is null or (p_design->>'heroVariant') not in ('editable','legacy-fixed')
+    or (p_design->>'slideshowVariant') is null or (p_design->>'slideshowVariant') not in ('none','editorial','matchday','legacy','cinematic')
+    or ((p_design->>'slideshowVariant')='cinematic' and k is distinct from 'cinematic@2') then
+    raise exception 'INVALID_HOMEPAGE_BINDING' using errcode='22023';
+  end if;
+  profile:=case when k='academy@1' then 'legacy/homepage-story/home-kit'
+    when k in ('editorial@1','clubhouse@1') then 'legacy/about-story/shop-kits' else 'legacy/video/home-kit' end;
+  hero:=case when p_design->>'heroVariant'='legacy-fixed' then 'fixed-hero'
+    when k in ('editorial@1','clubhouse@1') then 'compact-hero' else 'full-hero' end;
+  caption:=case when coalesce(k,'') not in ('academy@1','editorial@1') and p_design->>'slideshowVariant'='legacy'
+    then 'caption' else 'no-caption' end;
+  return jsonb_build_object('key',profile||'/'||hero||'/'||caption,'revision',1);
+end $$;
+revoke all on function onzio_private.homepage_binding_identity(jsonb) from public,anon,authenticated,service_role;
+
+create or replace function onzio_private.homepage_snapshot(p_club_id uuid) returns jsonb
+language sql stable security invoker set search_path='' as $$
+  select jsonb_build_object(
+    'revision', coalesce((select revision::text from onzio_private.homepage_revisions where club_id=p_club_id),'0'),
+    'designRevision', onzio_private.homepage_save_design(p_club_id)->>'designRevision',
+    'design', onzio_private.homepage_save_design(p_club_id),
+    'content', jsonb_build_object(
+      'hero', coalesce((select to_jsonb(h)-'club_id'-'updated_at' from onzio.homepage_hero_content h where club_id=p_club_id),
+        '{"eyebrow":"","headline_line_one":"","headline_line_two":"","intro":"","primary_cta_label":"","primary_cta_href":"","secondary_cta_label":"","secondary_cta_href":""}'::jsonb),
+      'story', coalesce((select jsonb_build_object('visible',visible,'heading',heading,'bodyPrimary',body_primary,'bodySecondary',body_secondary,'ctaLabel',cta_label) from onzio.homepage_story_section where club_id=p_club_id),
+        '{"visible":true,"heading":"","bodyPrimary":"","bodySecondary":"","ctaLabel":""}'::jsonb),
+      'video', coalesce((select to_jsonb(v)-'club_id'-'updated_at'-'video_url' from onzio.behind_the_rose_section v where club_id=p_club_id),
+        '{"visible":false,"eyebrow":"","title":"","description":"","video_title":"","caption":""}'::jsonb),
+      'photos', jsonb_build_object('seasonLabel',coalesce((select season_label from onzio.homepage_slideshow_settings where club_id=p_club_id),''),
+        'items',coalesce((select jsonb_agg(jsonb_build_object('clientId','photo-'||p.id,'rowId',p.id,'assetId',p.media_asset_id,'url',p.url,'alt',p.alt,'order',p.sort_order,'upload','ready') order by p.sort_order,p.id)
+          from onzio.homepage_slideshow_photos p where p.club_id=p_club_id),'[]'::jsonb))) || case when onzio_private.cinematic_homepage_json(p_club_id) is null then '{}'::jsonb else jsonb_build_object('revamp',onzio_private.cinematic_homepage_json(p_club_id)) end,
+    'videoSource',coalesce((select video_url from onzio.behind_the_rose_section where club_id=p_club_id),''),
+    'media',coalesce((select jsonb_agg(jsonb_build_object('id',m.id,'storage_bucket',m.storage_bucket,'storage_path',m.storage_path))
+      from onzio.media_assets m where m.club_id=p_club_id and m.status='published' and m.deleted_at is null and m.storage_bucket='onzio-media'
+      and (exists(select 1 from onzio.homepage_slideshow_photos p where p.club_id=p_club_id and p.media_asset_id=m.id)
+        or exists(select 1 from onzio.homepage_revamp_content r where r.club_id=p_club_id and m.id=any(array[r.raffle_media_asset_id,r.ticket_media_asset_id,r.trophy_media_asset_id,r.header_partner_media_asset_id,r.hero_poster_media_asset_id,r.seats_background_media_asset_id,r.episode_poster_media_asset_id,r.footer_logo_media_asset_id])))),'[]'::jsonb)
+  );
+$$;
+
+create or replace function onzio.save_homepage(p_club_id uuid,p_request jsonb) returns jsonb
+language plpgsql security invoker set search_path='' as $$
+declare
+  initial jsonb; result jsonb; sections jsonb; section text; fields jsonb; k text; v jsonb;
+  op uuid; saved_hash text; request_hash text; receipt jsonb; maximum integer; template text;
+  h jsonb; s jsonb; video jsonb; p jsonb; a onzio.media_assets; old_photo onzio.homepage_slideshow_photos;
+  photo_id uuid; asset_id uuid; ids uuid[]:='{}'; clients text[]:='{}'; assets uuid[]:='{}'; idx integer:=0; photo_url text;
+  old_asset_ids uuid[]; new_asset_ids uuid[]; retired_asset_ids uuid[]:='{}';
+begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
+  if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  perform onzio_private.check_homepage_object(p_request,array['operationId','expectedRevision','designRevision','sections'],array['operationId','expectedRevision','designRevision','sections']);
+  if jsonb_typeof(p_request->'operationId')<>'string' or jsonb_typeof(p_request->'expectedRevision')<>'string'
+    or jsonb_typeof(p_request->'designRevision')<>'string' or length(p_request->>'expectedRevision') not between 1 and 200
+    or length(p_request->>'designRevision') not between 1 and 200 then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+  begin op:=(p_request->>'operationId')::uuid; exception when invalid_text_representation then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end;
+  if op is null then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+  request_hash:=encode(sha256(convert_to(p_request::text,'UTF8')),'hex');
+  select r.request_hash,r.response into saved_hash,receipt from onzio_private.homepage_save_receipts r
+    where club_id=p_club_id and actor_id=auth.uid() and operation_id=op;
+  if found then
+    if saved_hash<>request_hash then raise exception 'OPERATION_REUSED' using errcode='22023'; end if;
+    return receipt;
+  end if;
+  initial:=onzio_private.homepage_snapshot(p_club_id); template:=initial#>>'{design,templateKey}';
+  if initial->>'designRevision'<>p_request->>'designRevision' then raise exception 'DESIGN_CHANGED' using errcode='PT409'; end if;
+  if initial->>'revision'<>p_request->>'expectedRevision' then raise exception 'CONTENT_CHANGED' using errcode='PT409'; end if;
+  sections:=p_request->'sections';
+  perform onzio_private.check_homepage_object(sections,array['hero','photos','story','video','revamp']);
+  if sections='{}'::jsonb then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+  for section,fields in select * from jsonb_each(sections) loop
+    if section='revamp' and coalesce(template,'')<>'cinematic@2' then raise exception 'SECTION_UNAVAILABLE' using errcode='22023'; end if;
+    if section='revamp' then
+      perform onzio_private.check_cinematic_homepage(fields);
+      continue;
+    elsif section='hero' then
+      perform onzio_private.check_homepage_object(fields,array['eyebrow','headline_line_one','headline_line_two','intro','primary_cta_label','primary_cta_href','secondary_cta_label','secondary_cta_href']);
+      if fields='{}'::jsonb then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+    elsif section='story' then
+      perform onzio_private.check_homepage_object(fields,array['visible','heading','bodyPrimary','bodySecondary','ctaLabel'],array['visible','heading','bodyPrimary','bodySecondary','ctaLabel']);
+    elsif section='video' then
+      perform onzio_private.check_homepage_object(fields,array['visible','eyebrow','title','description','video_title','caption'],array['visible','eyebrow','title','description','video_title','caption']);
+    else
+      perform onzio_private.check_homepage_object(fields,array['items','seasonLabel'],array['items']);
+    end if;
+    for k,v in select * from jsonb_each(fields) loop
+      if k='items' then continue; end if;
+      if k='visible' then
+        if jsonb_typeof(v)<>'boolean' then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+      else
+        maximum:=case when section='hero' and k in ('headline_line_one','headline_line_two') then 80 when section='hero' and k='intro' then 320
+          when section='story' and k='heading' then 120 when section='story' and k in ('bodyPrimary','bodySecondary') then 1200 when section='story' and k='ctaLabel' then 40 else 20000 end;
+        if jsonb_typeof(v)<>'string' or char_length(v#>>'{}')>maximum then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+        if section='hero' and k in ('primary_cta_href','secondary_cta_href') and (v#>>'{}')<>'' and (v#>>'{}')!~'^/[-A-Za-z0-9_/?#=&%.]*$' then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+      end if;
+    end loop;
+  end loop;
+
+  if sections ? 'hero' then
+    h:=(initial#>'{content,hero}')||(sections->'hero');
+    insert into onzio.homepage_hero_content(club_id,eyebrow,headline_line_one,headline_line_two,intro,primary_cta_label,primary_cta_href,secondary_cta_label,secondary_cta_href)
+      values(p_club_id,h->>'eyebrow',h->>'headline_line_one',h->>'headline_line_two',h->>'intro',h->>'primary_cta_label',h->>'primary_cta_href',h->>'secondary_cta_label',h->>'secondary_cta_href')
+      on conflict(club_id) do update set eyebrow=excluded.eyebrow,headline_line_one=excluded.headline_line_one,headline_line_two=excluded.headline_line_two,intro=excluded.intro,primary_cta_label=excluded.primary_cta_label,primary_cta_href=excluded.primary_cta_href,secondary_cta_label=excluded.secondary_cta_label,secondary_cta_href=excluded.secondary_cta_href;
+  end if;
+  if sections ? 'photos' then
+    if jsonb_typeof(sections#>'{photos,items}') is distinct from 'array' or jsonb_array_length(sections#>'{photos,items}')>(case when template='cinematic@2' then 7 else 6 end) then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+    select coalesce(array_agg(media_asset_id) filter (where media_asset_id is not null),'{}') into old_asset_ids
+      from onzio.homepage_slideshow_photos where club_id=p_club_id;
+    for p in select * from jsonb_array_elements(sections#>'{photos,items}') loop
+      perform onzio_private.check_homepage_object(p,array['clientId','rowId','assetId','alt','order'],array['clientId','rowId','assetId','alt','order']);
+      if jsonb_typeof(p->'clientId')<>'string' or length(p->>'clientId') not between 1 and 200 or (p->>'clientId')=any(clients)
+        or jsonb_typeof(p->'alt')<>'string' or length(p->>'alt')>20000 or jsonb_typeof(p->'order')<>'number' or (p->>'order')::numeric<>idx then raise exception 'INVALID_HOMEPAGE_PAYLOAD' using errcode='22023'; end if;
+      begin photo_id:=(p->>'rowId')::uuid; asset_id:=(p->>'assetId')::uuid;
+      exception when invalid_text_representation then raise exception 'INVALID_PHOTO' using errcode='22023'; end;
+      if photo_id=any(ids) or asset_id=any(assets) or (photo_id is null and asset_id is null) then raise exception 'INVALID_PHOTO' using errcode='22023'; end if;
+      if photo_id is not null then
+        select * into old_photo from onzio.homepage_slideshow_photos where club_id=p_club_id and id=photo_id;
+        if not found then raise exception 'INVALID_PHOTO' using errcode='22023'; end if;
+        if asset_id is null and old_photo.media_asset_id is not null then raise exception 'INVALID_PHOTO' using errcode='22023'; end if;
+      end if;
+      if asset_id is not null then
+        select * into a from onzio.media_assets where club_id=p_club_id and id=asset_id and status='published' and deleted_at is null and storage_bucket='onzio-media' and surface='homepage';
+        if not found then raise exception 'INVALID_PHOTO' using errcode='22023'; end if;
+      end if;
+      clients:=array_append(clients,p->>'clientId'); ids:=array_append(ids,photo_id); assets:=array_append(assets,asset_id); idx:=idx+1;
+    end loop;
+    idx:=0; ids:='{}';
+    for p in select * from jsonb_array_elements(sections#>'{photos,items}') loop
+      photo_id:=coalesce((p->>'rowId')::uuid,gen_random_uuid()); asset_id:=(p->>'assetId')::uuid;
+      if asset_id is not null then select storage_path into photo_url from onzio.media_assets where club_id=p_club_id and id=asset_id;
+      else select url into photo_url from onzio.homepage_slideshow_photos where club_id=p_club_id and id=photo_id; end if;
+      insert into onzio.homepage_slideshow_photos(id,club_id,media_asset_id,url,alt,sort_order)
+        values(photo_id,p_club_id,asset_id,photo_url,coalesce(nullif(btrim(p->>'alt'),''),'Club photo '||(idx+1)),idx)
+        on conflict(id) do update set media_asset_id=excluded.media_asset_id,url=excluded.url,alt=excluded.alt,sort_order=excluded.sort_order;
+      ids:=array_append(ids,photo_id); idx:=idx+1;
+    end loop;
+    delete from onzio.homepage_slideshow_photos where club_id=p_club_id and not(id=any(ids));
+    if sections->'photos' ? 'seasonLabel' then
+      insert into onzio.homepage_slideshow_settings(club_id,season_label) values(p_club_id,sections#>>'{photos,seasonLabel}')
+        on conflict(club_id) do update set season_label=excluded.season_label;
+    end if;
+    select coalesce(array_agg(media_asset_id) filter (where media_asset_id is not null),'{}') into new_asset_ids
+      from onzio.homepage_slideshow_photos where club_id=p_club_id;
+    select coalesce(array_agg(x),'{}') into retired_asset_ids from unnest(old_asset_ids) x where not(x=any(new_asset_ids));
+  end if;
+  if sections ? 'story' then
+    s:=sections->'story';
+    insert into onzio.homepage_story_section(club_id,visible,heading,body_primary,body_secondary,cta_label)
+      values(p_club_id,(s->>'visible')::boolean,s->>'heading',s->>'bodyPrimary',s->>'bodySecondary',s->>'ctaLabel')
+      on conflict(club_id) do update set visible=excluded.visible,heading=excluded.heading,body_primary=excluded.body_primary,body_secondary=excluded.body_secondary,cta_label=excluded.cta_label;
+  end if;
+  if sections ? 'video' then
+    video:=sections->'video';
+    if (video->>'visible')::boolean and coalesce(initial->>'videoSource','')='' then raise exception 'VIDEO_SOURCE_REQUIRED' using errcode='22023'; end if;
+    insert into onzio.behind_the_rose_section(club_id,visible,eyebrow,title,description,video_title,caption)
+      values(p_club_id,(video->>'visible')::boolean,video->>'eyebrow',video->>'title',video->>'description',video->>'video_title',video->>'caption')
+      on conflict(club_id) do update set visible=excluded.visible,eyebrow=excluded.eyebrow,title=excluded.title,description=excluded.description,video_title=excluded.video_title,caption=excluded.caption;
+  end if;
+  if sections ? 'revamp' then
+    s:=sections->'revamp';
+    for asset_id in select x from unnest(array[(s#>>'{raffle,assetId}')::uuid,(s#>>'{ticket,assetId}')::uuid,(s#>>'{championship,trophy,assetId}')::uuid,(s#>>'{footerLogo,assetId}')::uuid]) x where x is not null loop
+      if not exists(select 1 from onzio.media_assets where club_id=p_club_id and id=asset_id and status='published' and deleted_at is null and storage_bucket='onzio-media' and surface='homepage') then
+        raise exception 'INVALID_PHOTO' using errcode='22023';
+      end if;
+    end loop;
+    select array_remove(array[raffle_media_asset_id,ticket_media_asset_id,trophy_media_asset_id,footer_logo_media_asset_id],null) into old_asset_ids from onzio.homepage_revamp_content where club_id=p_club_id;
+    new_asset_ids:=array_remove(array[(s#>>'{raffle,assetId}')::uuid,(s#>>'{ticket,assetId}')::uuid,(s#>>'{championship,trophy,assetId}')::uuid,(s#>>'{footerLogo,assetId}')::uuid],null);
+    insert into onzio.homepage_revamp_content(club_id,content,raffle_media_asset_id,ticket_media_asset_id,trophy_media_asset_id,footer_logo_media_asset_id)
+      values(p_club_id,s#-'{raffle,assetId}'#-'{ticket,assetId}'#-'{championship,trophy,assetId}'#-'{footerLogo,assetId}',(s#>>'{raffle,assetId}')::uuid,(s#>>'{ticket,assetId}')::uuid,(s#>>'{championship,trophy,assetId}')::uuid,(s#>>'{footerLogo,assetId}')::uuid)
+      on conflict(club_id) do update set content=excluded.content,raffle_media_asset_id=excluded.raffle_media_asset_id,ticket_media_asset_id=excluded.ticket_media_asset_id,trophy_media_asset_id=excluded.trophy_media_asset_id,footer_logo_media_asset_id=excluded.footer_logo_media_asset_id;
+    select retired_asset_ids||coalesce(array_agg(x),'{}') into retired_asset_ids from unnest(old_asset_ids) x where not(x=any(new_asset_ids));
+  end if;
+  result:=onzio_private.homepage_snapshot(p_club_id)||jsonb_build_object('operationId',op,'retiredMediaAssetIds',to_jsonb(retired_asset_ids));
+  insert into onzio_private.homepage_save_receipts(club_id,actor_id,operation_id,request_hash,response) values(p_club_id,auth.uid(),op,request_hash,result);
+  return result;
+end $$;
+revoke all on function onzio.save_homepage(uuid,jsonb) from public,anon;
+grant execute on function onzio.save_homepage(uuid,jsonb) to authenticated;
 notify pgrst,'reload schema';

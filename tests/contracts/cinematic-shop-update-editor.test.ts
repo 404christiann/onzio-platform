@@ -68,7 +68,11 @@ describe("RC2027 Shop update editor draft", () => {
 
   it("gives the cinematic Shop page Home, Away and Third kit tabs, leaving other designs and the homepage feature alone", () => {
     const editor = readFileSync(resolve(process.cwd(), "components/admin/shop/ShopPageEditor.tsx"), "utf8");
-    expect(editor).toContain('const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants] : sharedWithHomepage ? SHOP_VARIANTS : isCinematic ? [...SHOP_EDITION_VARIANTS] : ["home", "away"];');
+    const designBranch = editor.replace(/\r\n/g, "\n");
+    expect(designBranch).toContain("= shopPolicy ? { variants: [...shopPolicy.variants], maxBulletPoints: MAX_KIT_BULLET_POINTS }\n"
+      + "    : sharedWithHomepage ? { variants: SHOP_VARIANTS, maxBulletPoints: MAX_KIT_BULLET_POINTS }\n"
+      + "    : isCinematic ? { variants: [...SHOP_EDITION_VARIANTS], maxBulletPoints: CINEMATIC_KIT_BULLET_POINTS }\n"
+      + '    : { variants: ["home", "away"], maxBulletPoints: MAX_KIT_BULLET_POINTS };');
     expect(editor).toContain('const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };');
     expect(editor).toContain('const currentVariant: ShopVariant = surface === "home" || !variants.includes(selectedVariant) ? "home" : selectedVariant;');
     expect(editor).toContain('{surface === "shop" && variants.length > 1 && <div className="flex flex-wrap items-center gap-2" aria-label="Edit kit">');
