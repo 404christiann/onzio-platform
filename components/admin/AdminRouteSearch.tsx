@@ -2,6 +2,7 @@
 
 import { AdminModal } from "@/components/admin/AdminModal";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import guided from "@/components/admin/AdminGuided.module.css";
 import { Search, X } from "@/components/admin/icons";
 import {
@@ -21,6 +22,7 @@ export type AdminSearchRoute = {
 };
 
 export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute[] }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -32,6 +34,10 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
     setQuery("");
     setActiveIndex(0);
   }, []);
+
+  useEffect(() => {
+    close();
+  }, [pathname, close]);
 
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
@@ -144,7 +150,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
                     role="option"
                     aria-selected={index === activeIndex}
                     onMouseEnter={() => setActiveIndex(index)}
-                    onClick={close}
+                    onClick={(event) => { if (!event.defaultPrevented) close(); }}
                     className="flex min-h-11 items-center justify-between gap-4 rounded-lg px-3 py-2.5 text-sm outline-none transition hover:bg-accent aria-selected:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <span className="font-medium text-foreground">{route.label}</span>

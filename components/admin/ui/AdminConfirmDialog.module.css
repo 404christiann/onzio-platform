@@ -1,0 +1,24 @@
+.action[data-slot="button"] {
+  height: auto;
+  min-height: 38px;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.action[aria-disabled="true"] {
+  cursor: default;
+}
+
+.destructive[data-slot="button"] {
+  border: 1px solid hsl(var(--destructive) / .5);
+  background: transparent;
+  color: hsl(var(--destructive));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .destructive[data-slot="button"]:hover:not([aria-disabled="true"]) {
+    background: hsl(var(--destructive) / .1);
+  }
+}

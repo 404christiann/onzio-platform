@@ -1,0 +1,139 @@
+.button {
+  display: inline-grid;
+  min-inline-size: 150px;
+  min-block-size: 38px;
+  padding: 0 16px;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: .875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.button[aria-disabled="true"] {
+  cursor: default;
+}
+
+.button[aria-disabled="true"]:active {
+  filter: none;
+}
+
+.button[data-state="clean"] {
+  border-color: hsl(var(--border));
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--muted-foreground));
+}
+
+.button[data-state="saving"] {
+  opacity: .9;
+}
+
+.button[data-state="saved"] {
+  background-color: var(--ios-green);
+}
+
+.label {
+  display: inline-flex;
+  grid-area: 1 / 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity var(--admin-motion-save-label) ease;
+}
+
+.label[aria-hidden="true"] {
+  opacity: 0;
+}
+
+.check {
+  flex: none;
+}
+
+.actions,
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.status {
+  min-inline-size: 110px;
+  min-block-size: 1lh;
+  color: hsl(var(--muted-foreground));
+  font-size: .8125rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :global(.admin-portal) .button[data-state] {
+    transition:
+      transform var(--admin-motion-press) var(--admin-motion-ease-out),
+      background-color var(--admin-motion-save-color) ease,
+      color var(--admin-motion-save-color) ease,
+      border-color var(--admin-motion-save-color) ease,
+      opacity var(--admin-motion-save-color) ease;
+  }
+
+  .button[data-state="saved"] {
+    animation: savePop var(--admin-motion-save-pop) var(--admin-motion-ease-out);
+  }
+
+  .button[data-state="saved"] .check {
+    animation: checkDraw var(--admin-motion-save-check-draw)
+      var(--admin-motion-ease-out) var(--admin-motion-save-check-delay) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .label {
+    transition: opacity var(--admin-motion-reduced-motion-fade) ease-out;
+  }
+}
+
+@media (max-width: 640px) {
+  .actions[data-stack-on-mobile] {
+    display: grid;
+    inline-size: 100%;
+    text-align: center;
+  }
+
+  .actions[data-stack-on-mobile] .buttons {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .actions[data-stack-on-mobile] .button {
+    min-block-size: 44px;
+  }
+}
+
+@keyframes savePop {
+  0% {
+    transform: scale(.97);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes checkDraw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}

@@ -15,6 +15,7 @@
     "test:db": "SUPABASE_LOCAL=1 vitest run --project db",
     "test:architecture": "vitest run tests/architecture",
     "test:pilot": "vitest run --project pilot",
+    "test:browser:admin-classic": "playwright test --config=playwright.admin-classic.config.ts",
     "test:browser:roster": "playwright test --config=playwright.roster.config.ts",
     "test:browser:dcfc-304": "playwright test --config=playwright.dcfc-304.config.ts",
     "test:browser:dcfc-403": "playwright test --config=playwright.dcfc-403.config.ts",

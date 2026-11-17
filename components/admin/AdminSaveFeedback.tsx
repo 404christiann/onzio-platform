@@ -35,7 +35,7 @@ export default function AdminSaveFeedback({
         aria-atomic="true"
       >
         <span
-          className="h-5 w-5 flex-none rounded-full border-2 border-border border-t-brand animate-[spin_700ms_linear_infinite] motion-reduce:animate-none"
+          className="h-5 w-5 flex-none rounded-full border-2 border-border border-t-brand animate-[spin_var(--admin-motion-pending-ring,700ms)_linear_infinite] motion-reduce:animate-none"
           aria-hidden="true"
         />
         <span className="whitespace-nowrap">{savingLabel}</span>

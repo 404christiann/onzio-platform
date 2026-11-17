@@ -572,7 +572,7 @@ export default function SchedulePage() {
       <AdminPageHeader
         title="Schedule"
         description="Add, edit, or remove matches."
-        actions={<div className="flex flex-wrap items-end gap-3">
+        actions={<div data-admin-page-action-group="" className="flex flex-wrap items-end gap-3">
           <SeasonSelect
             seasons={seasons}
             loading={seasonsLoading}

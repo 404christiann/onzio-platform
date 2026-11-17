@@ -1,0 +1,71 @@
+.region {
+  position: relative;
+  min-width: 0;
+  border-radius: 8px;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  cursor: pointer;
+}
+
+.region::before {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  content: "";
+}
+
+.region:hover,
+.region:focus-visible {
+  outline-color: hsl(var(--primary));
+}
+
+.region[data-invalid] {
+  outline-color: hsl(var(--warning, 38 92% 50%));
+}
+
+.content {
+  min-width: 0;
+}
+
+.tag {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 8px;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  padding: 5px 9px;
+  border: 1px solid hsl(var(--primary) / 0.22);
+  border-radius: 6px;
+  background: hsl(var(--card) / 0.96);
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+  pointer-events: none;
+}
+
+.region:hover .tag,
+.region:focus-visible .tag {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tag {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tag {
+    transition: opacity 120ms ease-out;
+    transform: none;
+  }
+}

@@ -47,6 +47,7 @@ import {
 } from "@/lib/sponsor-content";
 import { createClient } from "@/lib/admin-client";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { Sponsors } from "@/components/admin/reimagined/Sponsors";
 
 const PLACEMENT_ORDER: SponsorLogoPlacement[] = ["carousel", "footer"];
@@ -234,6 +235,7 @@ function ClassicSponsorsPage() {
   }
 
   async function handleSave() {
+    if (saving || uploading) return false;
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -289,12 +291,20 @@ function ClassicSponsorsPage() {
       setDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      return true;
     } catch (saveError: unknown) {
       setError(saveError instanceof Error ? saveError.message : "Save failed");
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  useUnsavedGuard({
+    dirty,
+    edited: placement === "carousel" ? "homepage carousel sponsor logos" : "footer sponsor logos",
+    onSave: handleSave,
+  });
 
   const limit = sponsorLimitForPlacement(placement);
   const saveDisabled = saving || uploading || !dirty;

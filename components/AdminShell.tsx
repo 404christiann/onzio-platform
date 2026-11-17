@@ -47,6 +47,7 @@ import {
   type AdminSearchRoute,
 } from "@/components/admin/AdminRouteSearch";
 import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import {
   Sidebar,
   SidebarContent,
@@ -108,6 +109,7 @@ function isPathActive(pathname: string, href: string) {
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const requestNavigation = useUnsavedGuard();
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -143,6 +145,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     setOpenGroupKey(activeGroup);
+    setSidebarOpen(false);
   }, [activeGroup, pathname]);
 
   useEffect(() => {
@@ -190,11 +193,20 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     [closeSidebar],
   );
 
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/admin/login");
-    router.refresh();
+  function handleSignOut(opener: HTMLElement) {
+    requestNavigation({
+      kind: "page",
+      label: "Sign in",
+      opener,
+      continue: () => {
+        void (async () => {
+          const supabase = createClient();
+          await supabase.auth.signOut();
+          router.push("/admin/login");
+          router.refresh();
+        })();
+      },
+    });
   }
 
   const groupLabels = useMemo(() => {
@@ -223,7 +235,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <SidebarMenuItem key={route.href}>
         <SidebarMenuButton
           render={<Link href={route.href} />}
-          onClick={() => closeSidebar(false)}
+          onClick={(event) => { if (!event.defaultPrevented) closeSidebar(false); }}
           isActive={active}
           className="h-11 gap-3 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground [&>svg]:size-6"
         >

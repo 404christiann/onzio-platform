@@ -394,7 +394,7 @@ function TryoutsPageEditorContent() {
     <AdminPage className="overflow-x-clip pb-4 lg:pb-8 [&>*]:shrink-0">
     <AdminPageHeader eyebrow="Public website" title="Tryouts"
       description="Tap the page introduction or an event card to edit what visitors see. One Save page publishes all changes together."
-      actions={<div className="flex flex-wrap gap-2">
+      actions={<div data-admin-page-action-group="" className="flex flex-wrap gap-2">
         <button type="button" onClick={addEvent} disabled={!canEdit || loading} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 font-body text-sm font-semibold normal-case text-foreground hover:bg-accent disabled:opacity-40"><Plus size={16} />Add event</button>
         <button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold normal-case text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button>
       </div>} />
