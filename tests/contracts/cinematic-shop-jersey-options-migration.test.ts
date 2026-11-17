@@ -104,11 +104,15 @@ describe("Rose City shop and homepage migration, reconciled with main", () => {
     for (const name of SIX) expect(header, name).toContain(name);
   });
 
-  it("is dated after every other migration, so its definitions are the final ones", () => {
+  it("is dated after every main migration, and no later migration redefines its functions, so its definitions are final", () => {
     const others = readdirSync(MIGRATIONS).filter((file) => file.endsWith(".sql") && file !== NAME);
     // Main's newest migration at the merge (6b9a7d07).
     expect(others).toContain("20261111080000_purge_archived_club.sql");
-    for (const file of others) expect(file < NAME, file).toBe(true);
+    const later = others.filter((file) => file > NAME);
+    // Only Rose City's own later migrations may sort after it (today: the archived-club purge tables).
+    expect(later.every((file) => file.includes("_cinematic_")), later.join(", ")).toBe(true);
+    const ours = /function (onzio_private\.validate_cinematic_shop_section|onzio\.save_shop_page|onzio_private\.validate_cinematic_shop_content|onzio_private\.homepage_binding_identity|onzio_private\.homepage_snapshot|onzio\.save_homepage)\(/;
+    for (const file of later) expect(ours.test(readFileSync(resolve(MIGRATIONS, file), "utf8")), file).toBe(false);
   });
 
   it("does not redefine main's validate_shop_section and never calls the unused 2-argument version", () => {
