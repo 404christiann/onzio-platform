@@ -86,7 +86,7 @@ Conduct, row 6: enter a row heading."
 
 ## Migration (applied to the isolated local rehearsal only)
 
-- `supabase/migrations/20261105020000_cinematic_policy_pages.sql`.
+- `supabase/migrations/20261112160000_cinematic_policy_pages.sql`.
 - `scripts/apply-rose-city-policies-migration-local.ts --execute-local` applies it. It accepts only
   loopback 55321/55322 and records the migration in the ledger.
 - Before any hosted deploy, the CLAUDE.md migration gate applies.

@@ -5,7 +5,7 @@ import { Client } from "pg";
 import { cinematicContactContentSchema } from "../lib/cinematic-contact-content";
 
 const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7";
-const version = "20261103020000";
+const version = "20261112080000";
 const name = "cinematic_contact_page";
 const content = cinematicContactContentSchema.parse({
   title: "Contact us", subtitle: "Get in touch",

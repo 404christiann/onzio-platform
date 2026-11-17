@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { Client } from "pg";
 
 const MIGRATIONS = [
-  ["20261105050000", "cinematic_robinson_page"],
+  ["20261112190000", "cinematic_robinson_page"],
 ] as const;
 
 async function main() {

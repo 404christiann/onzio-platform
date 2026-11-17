@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 import { Client } from "pg";
 
 const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7";
-const migration = "20261103010000";
+const migration = "20261112070000";
 const destinations = {
   tryouts: "https://docs.google.com/forms/d/1qs_nBHqzLAISgW-B-f2i5Ep5leScHDTHODKf-Bbir0M/viewform?edit_requested=true",
   mediaCredentials: "https://forms.gle/jG5yF7kjhC93MLsA6",

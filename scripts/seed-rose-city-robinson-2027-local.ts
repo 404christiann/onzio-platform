@@ -20,7 +20,7 @@ import { ROBINSON_IMAGE_SLOTS, robinsonContentSchema, type RobinsonContent, type
 import { ROBINSON_IMAGE_COLUMNS } from "@/lib/cinematic-robinson-query";
 import { robinsonReferenceContent } from "@/lib/robinson-reference-content";
 
-const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7", actorId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", version = "20261105050000";
+const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7", actorId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", version = "20261112190000";
 const SOURCES: Record<Exclude<RobinsonImageSlot, "partner">, { file: string; sha256: string }> = {
   seating: { file: "seating.jpg", sha256: "809585a4ffa24dee414ab397cc7333feb1e480451ee49d13b7eab8446e9cfcb9" },
   lockers: { file: "lockers.png", sha256: "da057bdc855e605213f78555f5ddd6426d53b2519826661de094673912ca8048" },

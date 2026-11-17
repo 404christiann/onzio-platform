@@ -155,7 +155,7 @@ begin
   for variant,product in select * from jsonb_each(variants) loop
     perform onzio_private.check_shop_object(product,array['section','photos'],array['section','photos']);
     section:=product->'section'; photos:=product->'photos';
-    perform onzio_private.validate_shop_section(section,template in ('editorial@1','clubhouse@1'));
+    perform onzio_private.validate_shop_section(section);
     perform onzio_private.validate_shop_photos(p_club_id,page_surface,variant,photos,false);
   end loop;
   if photo_rows is not null then

@@ -1,0 +1,278 @@
+{
+  "app/%5Fclubs/[slug]/[...revamp]/page.tsx": {
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/club/about/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/club/logo/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/community/national-anthem/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/community/partnership/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/contact/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/layout.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 2
+  },
+  "app/%5Fclubs/[slug]/news/[articleSlug]/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/news/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/sponsors/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/stadium/chick-fil-a/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/stadium/foothill-transit/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/stadium/media-credentials/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/stadium/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/stadium/parking/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/tickets/know-before-you-go/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/tickets/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/tickets/season-membership/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/tryouts/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/(public)/roster/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/(public)/schedule/[fixtureId]/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/(public)/schedule/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/(public)/shop/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/admin/(protected)/about/page.tsx": {
+    "literal:cinematic@2": 3,
+    "read:presentationTemplateKey": 3
+  },
+  "app/admin/(protected)/contact/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/admin/(protected)/schedule/page.tsx": {
+    "flag:isCinematic": 1,
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/admin/(protected)/shop/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/admin/(protected)/sponsors/page.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/api/admin/cinematic-contact/route.ts": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/api/admin/cinematic-injury-report/route.ts": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/api/admin/cinematic-news/route.ts": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/api/admin/cinematic-partners/route.ts": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/api/admin/cinematic-policies/route.ts": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/api/admin/homepage/route.ts": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/Footer.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/HomePageClient.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/Nav.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/PlayerModal.tsx": {
+    "id:cinematic": 2
+  },
+  "components/TemplateFontScope.tsx": {
+    "literal:cinematic@2": 1,
+    "read:templateKey": 1
+  },
+  "components/admin/about/AboutPageCanvas.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 2
+  },
+  "components/admin/chick-fil-a/ChickFilAEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/contact/CinematicContactEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/homepage/HomepageEditor.tsx": {
+    "literal:cinematic@2": 4,
+    "read:presentationTemplateKey": 2,
+    "read:templateKey": 2
+  },
+  "components/admin/injury-report/CinematicInjuryReportEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/news/CinematicNewsEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/partners/CinematicPartnersEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/policies/CinematicPolicyEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/schedule/ScheduleMatchForm.tsx": {
+    "literal:cinematic@2": 4,
+    "read:presentationTemplateKey": 4
+  },
+  "components/admin/shop/ShopPageEditor.tsx": {
+    "flag:isCinematic": 10,
+    "flag:template": 1,
+    "literal:cinematic@2": 1
+  },
+  "components/admin/stadium/RobinsonStadiumEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/stadium/StadiumEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/ticket-pages/TicketPageEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/admin/tickets/TicketsEditor.tsx": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 3
+  },
+  "components/cinematic/CinematicPolicyRoute.tsx": {
+    "literal:cinematic@2": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/cinematic/CinematicShell.tsx": {
+    "read:data-site-template": 1
+  },
+  "lib/admin-route-manifest.ts": {
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 2
+  },
+  "lib/cinematic-routes.ts": {
+    "literal:cinematic@2": 1,
+    "read:templateKey": 2
+  },
+  "lib/homepage-editor/adapter.ts": {
+    "literal:cinematic@2": 1,
+    "read:templateKey": 1
+  },
+  "lib/homepage-editor/capabilities.ts": {
+    "flag:cinematic": 2,
+    "flag:key": 2,
+    "literal:cinematic@2": 3,
+    "read:templateKey": 1
+  },
+  "middleware.ts": {
+    "literal:cinematic@2": 1,
+    "read:templateKey": 2
+  },
+  "packages/presentation/index.ts": {
+    "literal:cinematic@2": 12
+  },
+  "scripts/seed-rose-city-2027-local.ts": {
+    "flag:template": 1,
+    "literal:cinematic@2": 3
+  },
+  "scripts/seed-rose-city-contact-2027-local.ts": {
+    "id:cinematic": 1
+  },
+  "scripts/seed-rose-city-injury-report-2027-local.ts": {
+    "id:cinematic": 1
+  },
+  "scripts/seed-rose-city-national-anthem-2027-local.ts": {
+    "id:cinematic": 1
+  },
+  "scripts/seed-rose-city-news-2027-local.ts": {
+    "id:cinematic": 1
+  },
+  "scripts/seed-rose-city-news-2027-placeholders-local.ts": {
+    "id:cinematic": 1
+  },
+  "scripts/seed-rose-city-partners-2027-local.ts": {
+    "id:cinematic": 1
+  },
+  "scripts/seed-rose-city-policies-2027-local.ts": {
+    "id:cinematic": 1
+  },
+  "scripts/seed-rose-city-robinson-2027-local.ts": {
+    "id:cinematic": 1
+  },
+  "scripts/seed-rose-city-ticket-pages-2027-local.ts": {
+    "id:cinematic": 1
+  }
+}

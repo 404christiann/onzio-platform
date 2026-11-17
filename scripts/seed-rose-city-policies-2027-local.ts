@@ -5,7 +5,7 @@ import { Client } from "pg";
 import { cinematicPolicyContentSchema } from "../lib/cinematic-policies-content";
 
 const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7";
-const version = "20261105020000";
+const version = "20261112160000";
 
 // Every row in Sam's references, in his order, including his second, empty "Animals" row
 // (Christian, 2026-11-04: include all of the sections; the owner edits them in the admin portal).

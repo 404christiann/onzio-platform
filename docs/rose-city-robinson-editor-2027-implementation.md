@@ -77,7 +77,7 @@ homepage-artwork pipeline.
   `save_robinson_editor`.
 - **Editor screen.** `components/admin/stadium/RobinsonStadiumEditor.tsx`, laid out like the
   Stadium, Policies and Partners editors.
-- **Database.** Migration `supabase/migrations/20261105050000_cinematic_robinson_page.sql`:
+- **Database.** Migration `supabase/migrations/20261112190000_cinematic_robinson_page.sql`:
   - table `onzio.cinematic_robinson_content`, with RLS and column-level grants;
   - nine image FK columns, each tied to `onzio.media_assets(club_id,id)` and protected by a
     `guard_media_reference` trigger;
@@ -154,7 +154,7 @@ All results below were run locally on 2026-11-04.
 ## Open items
 
 - Physical-phone, Safari and VoiceOver checks remain open, as for every 2027 page.
-- Before any hosted release, migration `20261105050000` must pass the CLAUDE.md production
+- Before any hosted release, migration `20261112190000` must pass the CLAUDE.md production
   migration gate. It must be applied before code that reads `cinematic_robinson_content` is
   deployed.
 - Merging this branch will conflict in `HANDOFF.md`, `docs/phase-11/diverse-city/STATUS.md`,

@@ -89,7 +89,7 @@ Sources: Sam's `Rose City FC Club Partners website 2027.jpg` and
 
 ## Migration (applied to the isolated local rehearsal only)
 
-- `supabase/migrations/20261105030000_cinematic_partners.sql`. It only adds new objects.
+- `supabase/migrations/20261112170000_cinematic_partners.sql`. It only adds new objects.
 - `scripts/apply-rose-city-partners-migration-local.ts --execute-local` applied it. The script
   accepts only loopback 55321/55322 and records the migration in the ledger.
 - `lib/database.generated.ts` gains only the two new tables.

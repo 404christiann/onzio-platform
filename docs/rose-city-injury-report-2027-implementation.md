@@ -115,7 +115,7 @@ sidebar entry, so the exact admin-navigation tests stay as they are. Sections:
 
 ## Migration (applied to the isolated local rehearsal only)
 
-- `supabase/migrations/20261105040000_cinematic_injury_report.sql`.
+- `supabase/migrations/20261112180000_cinematic_injury_report.sql`.
 - `scripts/apply-rose-city-injury-report-migration-local.ts --execute-local` applies it. It accepts
   only loopback 55321/55322 and records the migration in the ledger. A dry run inside a rolled-back
   transaction passed first.

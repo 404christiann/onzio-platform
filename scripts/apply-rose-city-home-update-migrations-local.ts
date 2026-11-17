@@ -4,9 +4,9 @@ import { readFile } from "node:fs/promises";
 import { Client } from "pg";
 
 const MIGRATIONS = [
-  ["20261104010000", "match_replay_video_url"],
-  ["20261104020000", "cinematic_footer_logo"],
-  ["20261104030000", "shop_kit_ten_bullets"],
+  ["20261112100000", "match_replay_video_url"],
+  ["20261112110000", "cinematic_footer_logo"],
+  ["20261112120000", "shop_kit_ten_bullets"],
 ] as const;
 
 async function main() {

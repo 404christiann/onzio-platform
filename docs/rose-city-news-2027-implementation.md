@@ -102,12 +102,12 @@ Below 700px each card stacks: photo, then title and number, then the band. The l
 
 ## Migration (applied to the isolated local rehearsal only)
 
-- `supabase/migrations/20261105010000_cinematic_news.sql`.
+- `supabase/migrations/20261112150000_cinematic_news.sql`.
 - `scripts/apply-rose-city-news-migration-local.ts --execute-local` applies it. It accepts only
   loopback 55321/55322 and records the migration in the ledger.
 - **Before any hosted deploy, the CLAUDE.md migration gate applies.** Note: on the local ledger
-  this migration was applied after the Policies (`20261105020000`) and Partners
-  (`20261105030000`) migrations, which carry later timestamps.
+  this migration was applied after the Policies (`20261112160000`) and Partners
+  (`20261112170000`) migrations, which carry later timestamps.
 
 ## Local content
 

@@ -12,7 +12,7 @@ async function main() {
     const club = (await db.query("select kind,slug from onzio.clubs where id=$1", ["32ceba0b-4e25-52c2-bb6b-d82fb87637a7"])).rows[0];
     if (club?.kind !== "test" || club?.slug !== "rose-city") throw new Error("Expected the isolated Rose City test tenant.");
     const correction = process.argv.includes("--restaurant-correction");
-    const version = correction ? "20261014002445" : "20261014001648";
+    const version = correction ? "20261112050000" : "20261112040000";
     const name = correction ? "cinematic_visitor_restaurant_photograph" : "cinematic_chick_fil_a_and_stadium_pages";
     if ((await db.query("select 1 from supabase_migrations.schema_migrations where version=$1", [version])).rowCount) throw new Error("Migration already recorded; refusing to apply twice.");
     const tables: string[] = (await db.query("select tablename from pg_catalog.pg_tables where schemaname='onzio' order by tablename")).rows.map(r => r.tablename);

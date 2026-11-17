@@ -40,7 +40,7 @@ Competition supplies its accessible label and text fallback on removal.
 Opponent removal falls back to its crest monogram; sponsor removal hides the
 Presented by line. The sponsor name remains required when its logo is set.
 
-Migration20261014011304 adds nullable league_logo_url/league_logo_asset_id to
+Migration20261112060000 adds nullable league_logo_url/league_logo_asset_id to
 matches, a bounded image URL check, composite club/media foreign key, and both
 asset and URL retirement guards. Existing RLS/grants and authenticated
 server-mediated mutations remain. Catalog-driven reference retirement

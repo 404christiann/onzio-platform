@@ -59,7 +59,7 @@ async function main() {
     assert(club?.slug === "rose-city" && club.kind === "test", "Expected the isolated Rose City test tenant.");
     const design = (await db.query("select d.template_id,d.template_version from onzio.presentation_state s join onzio.presentation_documents d on d.id=s.published_document_id and d.club_id=s.club_id where s.club_id=$1", [clubId])).rows[0];
     assert(design?.template_id === "cinematic" && design.template_version === 2, "Expected a published cinematic@2 design.");
-    assert((await db.query("select 1 from supabase_migrations.schema_migrations where version='20261105030000'")).rowCount, "Apply the Partners migration first.");
+    assert((await db.query("select 1 from supabase_migrations.schema_migrations where version='20261112170000'")).rowCount, "Apply the Partners migration first.");
     const logos = (await db.query("select id from onzio.media_assets where club_id=$1 and id=any($2::uuid[]) and status='published' and deleted_at is null and media_kind='graphic'", [clubId, Object.values(LOGOS)])).rows;
     assert.equal(logos.length, Object.values(LOGOS).length, "Every reused logo must be a published local graphic.");
     await db.query("begin");

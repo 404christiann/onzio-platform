@@ -71,7 +71,7 @@ Robinson page. Sam's icons are in `public/rose-city/icons/`; the originals are i
 
 ## Migration (applied to the isolated local rehearsal only)
 
-- `supabase/migrations/20261104050000_match_summary.sql`. The validator checks each value's type
+- `supabase/migrations/20261112140000_match_summary.sql`. The validator checks each value's type
   before reading inside it, because SQL does not promise to evaluate AND/OR left to right.
 - `scripts/apply-rose-city-match-summary-migration-local.ts --execute-local` applies it (loopback
   55321/55322 only).

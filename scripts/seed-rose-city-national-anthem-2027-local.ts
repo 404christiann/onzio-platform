@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 import { Client } from "pg";
 
 const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7";
-const version = "20261103030000";
+const version = "20261112090000";
 const name = "cinematic_national_anthem_destination";
 const destination = "https://forms.gle/tAezhCRdXH1Z1bMR7";
 const expectedTryouts = "https://docs.google.com/forms/d/1qs_nBHqzLAISgW-B-f2i5Ep5leScHDTHODKf-Bbir0M/viewform?edit_requested=true";

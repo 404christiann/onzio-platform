@@ -10,8 +10,8 @@ const migration = read(NAME);
 const mainShop = read("20261022193528_shop_content_policy.sql");
 const mainAssignment = read("20261021181721_homepage_assignment_saves.sql");
 const mainHomepage = read("20261022183955_homepage_content_policy.sql");
-const branchShop = read("20261104040000_cinematic_shop_update.sql");
-const branchHomepage = read("20261104020000_cinematic_footer_logo.sql");
+const branchShop = read("20261112130000_cinematic_shop_update.sql");
+const branchHomepage = read("20261112110000_cinematic_footer_logo.sql");
 
 const between = (text: string, start: string, end: string) => {
   const i = text.indexOf(start);
@@ -89,8 +89,8 @@ describe("Rose City shop and homepage migration, reconciled with main", () => {
     expect(migration.trimEnd().endsWith("notify pgrst,'reload schema';")).toBe(true);
     // Grants are re-applied exactly as main or the branch first granted them.
     for (const [grant, origin] of [
-      ["revoke all on function onzio_private.validate_cinematic_shop_content(uuid,jsonb) from public,anon;", "20261013224434_cinematic_shop_page_content.sql"],
-      ["grant execute on function onzio_private.validate_cinematic_shop_content(uuid,jsonb) to authenticated,service_role;", "20261013224434_cinematic_shop_page_content.sql"],
+      ["revoke all on function onzio_private.validate_cinematic_shop_content(uuid,jsonb) from public,anon;", "20261112020000_cinematic_shop_page_content.sql"],
+      ["grant execute on function onzio_private.validate_cinematic_shop_content(uuid,jsonb) to authenticated,service_role;", "20261112020000_cinematic_shop_page_content.sql"],
       ["revoke all on function onzio.save_shop_page(uuid,jsonb) from public,anon;", "20261022193528_shop_content_policy.sql"],
       ["grant execute on function onzio.save_shop_page(uuid,jsonb) to authenticated;", "20261022193528_shop_content_policy.sql"],
       ["revoke all on function onzio_private.homepage_binding_identity(jsonb) from public,anon,authenticated,service_role;", "20261021181721_homepage_assignment_saves.sql"],

@@ -1,6 +1,6 @@
 -- RC2027-TICKET-PAGES: Tickets becomes a drop-down (Tickets, Season ticket membership, Know before you go).
 -- The homepage editor may rename the two new menu entries, so their label IDs join the allowed list.
--- Know before you go reuses the existing 'know-before-you' label. This is the 20261104020000 definition
+-- Know before you go reuses the existing 'know-before-you' label. This is the 20261112110000 definition
 -- of onzio_private.check_cinematic_homepage with only the label list extended.
 
 create or replace function onzio_private.check_cinematic_homepage(v jsonb) returns void

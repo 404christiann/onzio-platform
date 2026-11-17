@@ -5,22 +5,22 @@
 --   onzio_private.validate_cinematic_shop_section NEW: up to 10 bullets for cinematic@2 kits (Shop page and homepage jersey); every
 --                                                  other rule is main's validate_shop_section(jsonb), which is not changed,
 --                                                  so every other club and template keeps its limit of 8.
---   onzio_private.validate_cinematic_shop_content  not on main: branch 20261104040000 plus the optional editionsHeading
+--   onzio_private.validate_cinematic_shop_content  not on main: branch 20261112130000 plus the optional editionsHeading
 --                                                  (max 80) and up to 3 jersey options (was 2).
 --   onzio.save_shop_page                          main 20261022193528 (content policy: no template rules on the Shop page,
 --                                                  so third kits and third photo rows are already allowed) plus the branch's
---                                                  cinematic presentation save from 20261104040000, unchanged, and the
+--                                                  cinematic presentation save from 20261112130000, unchanged, and the
 --                                                  cinematic@2 kits on both surfaces checked by validate_cinematic_shop_section.
 --   onzio_private.homepage_binding_identity       main 20261021181721 plus templateKey cinematic@2, and slideshowVariant
 --                                                  'cinematic' only for cinematic@2 (every other template still rejects it).
 --   onzio_private.homepage_snapshot               main 20261021181721 plus the cinematic homepage content and its artwork
---                                                  media, as in branch 20261104020000.
+--                                                  media, as in branch 20261112110000.
 --   onzio.save_homepage                           main 20261022183955 (content policy) plus the cinematic homepage section
 --                                                  (raffle, ticket, trophy and footer-logo artwork and words) and the 7-photo
---                                                  slideshow, both for cinematic@2 only, as in branch 20261104020000.
+--                                                  slideshow, both for cinematic@2 only, as in branch 20261112110000.
 -- Additive only: create or replace with the same names and argument lists; grants re-applied as first granted.
 -- No drops, renames, table or column changes, or data writes. The 2-argument validate_shop_section(jsonb,boolean), which
--- main dropped and branch 20261104030000 recreates, is left in place and no longer called.
+-- main dropped and branch 20261112120000 recreates, is left in place and no longer called.
 
 create or replace function onzio_private.validate_cinematic_shop_section(p_section jsonb) returns void
 language plpgsql immutable security invoker set search_path='' as $$

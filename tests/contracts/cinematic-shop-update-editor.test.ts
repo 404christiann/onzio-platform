@@ -121,8 +121,8 @@ describe("RC2027 Shop update editor draft", () => {
   });
 
   it("sends exactly the payload the database before the jersey-options migration accepts when no new feature is used", () => {
-    // The keys that 20261104040000's validate_cinematic_shop_content allows (legacy required, added optional).
-    const oldSql = readFileSync(resolve(process.cwd(), "supabase/migrations/20261104040000_cinematic_shop_update.sql"), "utf8");
+    // The keys that 20261112130000's validate_cinematic_shop_content allows (legacy required, added optional).
+    const oldSql = readFileSync(resolve(process.cwd(), "supabase/migrations/20261112130000_cinematic_shop_update.sql"), "utf8");
     const list = (name: string) => [...oldSql.match(new RegExp(`${name} text\\[\\]:=array\\[([^\\]]*)\\]`))![1].matchAll(/'([^']+)'/g)].map(match => match[1]);
     const legacyKeys = list("legacy"), addedKeys = list("added");
     expect(addedKeys).not.toContain("editionsHeading");

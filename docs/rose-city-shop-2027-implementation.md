@@ -12,7 +12,7 @@ The Shop canvas supports kit headings, descriptions, bullet points, store inform
 
 `onzio.cinematic_shop_content` stores settings and a composite tenant/media foreign key for the map. Public URLs and dimensions are hydrated from published, unretired media; they cannot be persisted in the client save payload. The map uses the original PNG through the normal graphic publication pipeline, with crop performed only in CSS. `shop-artwork` is a compatibility alias for Shop graphic uploads.
 
-Migration `20261013224434_cinematic_shop_page_content.sql` extends the existing Shop snapshot/save transaction and revision. It preserves fresh-session authorization, RLS, design/version checks, actor-scoped idempotent receipts, request hashes, recovery, conflict rebase and post-commit reference-aware cleanup. Settings are accepted only for the cinematic@2 Shop surface. Homepage saves cannot write them. Late failures roll back kit, purchase, map, revision and receipt together. Direct writes validate crop/settings and the same-club published Shop graphic. Media reference guards prevent retiring a referenced map.
+Migration `20261112020000_cinematic_shop_page_content.sql` extends the existing Shop snapshot/save transaction and revision. It preserves fresh-session authorization, RLS, design/version checks, actor-scoped idempotent receipts, request hashes, recovery, conflict rebase and post-commit reference-aware cleanup. Settings are accepted only for the cinematic@2 Shop surface. Homepage saves cannot write them. Late failures roll back kit, purchase, map, revision and receipt together. Direct writes validate crop/settings and the same-club published Shop graphic. Media reference guards prevent retiring a referenced map.
 
 ## Local import and verification
 

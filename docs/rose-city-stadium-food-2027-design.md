@@ -48,7 +48,7 @@ models, editors and assets; the main agent owns shared routes, atomic Save/API,
 migrations, generated types, local publication and combined verification. Both
 public routes and independent admin editors now run on local3198.
 
-Migrations20261014001648 and20261014002445 applied only to guarded isolated
+Migrations20261112040000 and20261112050000 applied only to guarded isolated
 55321/55322 test tenant, without a reset. Eleven media references use seven new
 normal-pipeline publications plus four verified existing Tickets assets. Original
 content/media identities were preserved. Independent strict revisions, actor
@@ -100,7 +100,7 @@ include conflict, strict scope, actor receipts, exact retry and media guards.
 RLS is enabled; all four load/save RPCs are invoker functions; anon has no table
 write grants. No broad suite rerun after CSS/root timing changes was necessary.
 
-Migrations20261014001648 and20261014002445 plus initial guarded import
+Migrations20261112040000 and20261112050000 plus initial guarded import
 preserved all existing rows at execution. Full-suite synthetic fixtures later
 changed eight global table digests; this is distinguished from page migration
 preservation. Rose City clubs/branding/presentation-state timestamps precede

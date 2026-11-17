@@ -323,7 +323,7 @@ The rehearsal uses Supabase API55321, PostgreSQL55322, Mailpit55324 and site3198
 
 ## Release follow-up
 
-A release requires a separate approved hosted rollout: backup and review the target, apply `20261013145029_rose_city_cinematic_v2_homepage.sql`, publish the reviewed media through the normal pipeline, map current tenant sponsor UUIDs to approved display treatments, create a validated immutable cinematic2 presentation document and update only the Rose City published pointer. Preserve existing social destinations, Schedule, Shop ownership and all other clubs. The script's synthetic local subscription, membership and club identity fixture must never be applied to hosted data. Account/API secrets are not part of the asset bundle.
+A release requires a separate approved hosted rollout: backup and review the target, apply `20261112010000_rose_city_cinematic_v2_homepage.sql`, publish the reviewed media through the normal pipeline, map current tenant sponsor UUIDs to approved display treatments, create a validated immutable cinematic2 presentation document and update only the Rose City published pointer. Preserve existing social destinations, Schedule, Shop ownership and all other clubs. The script's synthetic local subscription, membership and club identity fixture must never be applied to hosted data. Account/API secrets are not part of the asset bundle.
 
 MuseoModerno is bundled with its official OFL notice. Avenir currently resolves the approved local installed font with a portable fallback; an appropriate commercial webfont license/file is required for identical appearance across all devices. The existing LEMON MILK commercial-use receipt remains to be confirmed. Neither was purchased or redistributed from macOS. Phosphor lettering remains within supplied artwork.
 
@@ -419,7 +419,7 @@ Next: review the local homepage; separately authorize any future release.
 
 ## Tickets page complete locally — 2026-10-13
 
-Approved /tickets and /admin/tickets are implemented only for cinematic@2. Reference-matching composition, larger perk icons, shared Homepage prices/match copy, real Schedule fixture, editable Tickets copy/artwork and external HTTPS purchase field are verified locally. Independent strict atomic save/revision/receipt/media contract uses migration20261014000100. Full details, local publication and208-file/1915-test/browser/persistence evidence: docs/rose-city-tickets-2027-implementation.md. Buy Tickets remains inactive until the actual purchase URL is supplied. No deployment or production launch; physical-device gate and existing font boundary remain. Shop chat owns the next shared integration window.
+Approved /tickets and /admin/tickets are implemented only for cinematic@2. Reference-matching composition, larger perk icons, shared Homepage prices/match copy, real Schedule fixture, editable Tickets copy/artwork and external HTTPS purchase field are verified locally. Independent strict atomic save/revision/receipt/media contract uses migration20261112030000. Full details, local publication and208-file/1915-test/browser/persistence evidence: docs/rose-city-tickets-2027-implementation.md. Buy Tickets remains inactive until the actual purchase URL is supplied. No deployment or production launch; physical-device gate and existing font boundary remain. Shop chat owns the next shared integration window.
 
 Tickets reference placement refinement verified: seat legs meet section boundary; desktop subtitle starts after G, phone centered. CSS-only change; combined Shop build includes it. See Tickets implementation document and placement-actual-checks.json.
 
@@ -456,7 +456,7 @@ models, editors and assets; the main agent owns shared routes, atomic Save/API,
 migrations, generated types, local publication and combined verification. Both
 public routes and independent admin editors now run on local3198.
 
-Migrations20261014001648 and20261014002445 applied only to guarded isolated
+Migrations20261112040000 and20261112050000 applied only to guarded isolated
 55321/55322 test tenant, without a reset. Eleven media references use seven new
 normal-pipeline publications plus four verified existing Tickets assets. Original
 content/media identities were preserved. Independent strict revisions, actor

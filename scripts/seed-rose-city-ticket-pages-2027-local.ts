@@ -10,7 +10,7 @@ import { Client } from "pg";
 import { TICKET_PAGE_KEYS, ticketPageSchemas, type TicketPageContent, type TicketPageKey } from "@/lib/cinematic-ticket-pages-content";
 import { knowBeforeYouGoReferenceContent, seasonMembershipReferenceContent } from "@/lib/ticket-pages-reference-content";
 
-const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7", version = "20261105060000";
+const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7", version = "20261112200000";
 const REFERENCE: Record<TicketPageKey, TicketPageContent> = { "season-membership": seasonMembershipReferenceContent, "know-before-you-go": knowBeforeYouGoReferenceContent };
 
 async function main() {

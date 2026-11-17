@@ -69,12 +69,12 @@ New tool buttons:
 
 ## Migration (applied to the isolated local rehearsal only)
 
-- `supabase/migrations/20261104040000_cinematic_shop_update.sql`
+- `supabase/migrations/20261112130000_cinematic_shop_update.sql`
   - Adds the columns, FKs, grants and guards.
   - Adds helper functions.
   - Redefines `validate_cinematic_shop_content`, `validate_cinematic_shop_row`,
     `shop_page_snapshot` and `save_shop_page`. The last two were generated from the newest
-    definitions (20261013224434) with counted text replacements.
+    definitions (20261112020000) with counted text replacements.
 - `scripts/apply-rose-city-shop-update-migration-local.ts --execute-local` applies it. It
   accepts only loopback 55321/55322 and records the migration in the ledger.
 - Before any hosted deploy, the CLAUDE.md migration gate applies.

@@ -67,14 +67,14 @@ this, because Sam's list has nine. The limit is enforced in
 
 ## Migrations (applied to the isolated local rehearsal only)
 
-- `20261104010000_match_replay_video_url.sql`
-- `20261104020000_cinematic_footer_logo.sql`
+- `20261112100000_match_replay_video_url.sql`
+- `20261112110000_cinematic_footer_logo.sql`
   - Adds the column, FK, column grant and guard trigger.
   - Redefines `check_cinematic_homepage`, `cinematic_homepage_json`,
     `validate_cinematic_homepage_row`, `homepage_snapshot` and `save_homepage`.
     The new definitions were generated from the newest ones with counted text
     replacements, so nothing else changed.
-- `20261104030000_shop_kit_ten_bullets.sql`
+- `20261112120000_shop_kit_ten_bullets.sql`
 
 `scripts/apply-rose-city-home-update-migrations-local.ts --execute-local`
 applies them. It accepts only loopback 55321/55322, skips migrations already in
