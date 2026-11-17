@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Upload, X } from "@/components/admin/icons";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import pendingRing from "@/components/admin/ui/AdminImageField.module.css";
 import ResilientImage from "@/components/ResilientImage";
 import { cn } from "@/lib/utils";
 
@@ -232,7 +232,7 @@ function FileUpload({
           )}
           aria-busy="true"
         >
-          <AdminLoadingDots className="shrink-0 text-lg text-muted-foreground" />
+          <span className={cn(pendingRing.ring, "shrink-0")} data-admin-pending-ring="" aria-hidden="true" />
           <div className="min-w-0 text-left">
             <p className="truncate font-body text-sm font-medium text-foreground">
               Uploading{fileMeta ? ` ${fileMeta.name}` : ""}…

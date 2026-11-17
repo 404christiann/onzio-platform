@@ -16,7 +16,7 @@ export function prepareAboutPageSave(input: {
   page: "about" | "logo";
   about: DBAboutPageContent;
   logo: DBClubLogoPageContent;
-  academy: boolean;
+  fixedClosingCtaHref: string | null;
   now: string;
 }): AboutPageSave {
   if (input.page === "about") {
@@ -30,7 +30,7 @@ export function prepareAboutPageSave(input: {
         values: normalizeAboutValues(input.about.values, []),
         closing_text: input.about.closing_text.trim(),
         closing_cta_label: input.about.closing_cta_label.trim(),
-        closing_cta_href: input.academy ? "/schedule" : input.about.closing_cta_href.trim(),
+        closing_cta_href: input.fixedClosingCtaHref ?? input.about.closing_cta_href.trim(),
         updated_at: input.now,
       },
     };

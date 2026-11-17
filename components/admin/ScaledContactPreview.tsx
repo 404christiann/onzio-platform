@@ -1,6 +1,6 @@
 "use client";
 
-import AcademyContactPage from "@/components/AcademyContactPage";
+import AcademyContactPage from "@/components/sites/diverse-city/AcademyContactPage";
 import ScaledPagePreview from "@/components/admin/ScaledPagePreview";
 import type { ContactContent } from "@/lib/queries";
 

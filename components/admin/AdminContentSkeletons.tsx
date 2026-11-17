@@ -170,18 +170,18 @@ export function HomepageContentSkeleton({
 
 export function ContactContentSkeleton({
   label,
-  isAcademy,
+  showContactPreviewSkeleton,
   hidesHeroImageField,
 }: {
   label: string;
-  isAcademy: boolean;
+  showContactPreviewSkeleton: boolean;
   hidesHeroImageField: boolean;
 }) {
   return (
     <>
       <div
         className={
-          isAcademy
+          showContactPreviewSkeleton
             ? "grid items-start gap-6 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(320px,380px)]"
             : "grid gap-6 lg:grid-cols-2"
         }
@@ -236,7 +236,7 @@ export function ContactContentSkeleton({
             </div>
           </AdminPanel>
         </AdminSkeletonRegion>
-        {isAcademy && (
+        {showContactPreviewSkeleton && (
           <AdminSkeletonRegion
             label="Loading Contact page preview"
             className="min-w-0 lg:col-span-2 xl:col-span-1"

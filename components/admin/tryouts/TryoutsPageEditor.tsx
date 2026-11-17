@@ -5,7 +5,6 @@ import { IconCaretDown as AdminSelectChevron, ArrowDown, ArrowUp, Plus, X } from
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { AlertDialog } from "@base-ui/react/alert-dialog";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { TryoutsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
@@ -16,10 +15,15 @@ import { submitPageSave } from "@/lib/page-editor-save";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
 import type { DBContactProfile, DBProgram, DBRegistrationForm, DBTryout, DBTryoutsPageContent } from "@/lib/db-types";
 import { mapTryout } from "@/lib/queries";
+import { compareTryoutsByDate } from "@/lib/sign-up-state";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import ClassicTryoutsPageEditor from "./ClassicTryoutsPageEditor";
+import { clubToday } from "@/lib/club-time";
 import {
   buildTryoutMutationPayload, buildTryoutsPageMutationPayload, emptyTryoutDraft,
   emptyTryoutsPageDraft, moveTryout, tryoutDraftToRow, tryoutsPageToDraft,
@@ -31,7 +35,11 @@ import { resolveTryoutsPageContent, TRYOUTS_PAGE_LIMITS } from "@/lib/tryouts-pa
 import type { TryoutsPageSaveRequest } from "@/lib/tryouts-page-editor/contract";
 import type { PublicRegistrationForm } from "@/lib/registration-public";
 
-type EventDraft = TryoutDraft & { clientKey: string };
+// ADMIN-RE-12b/12c: hidden, reopened and "They contact you" are set on the new
+// admin's Programs and tryouts page. This editor never changes them (its save
+// doesn't send them); it only carries them so the preview matches the website.
+type SignUpFields = Pick<DBTryout, "hidden" | "stays_open_after_date" | "sign_up_by_contact">;
+type EventDraft = TryoutDraft & { clientKey: string; signUp?: SignUpFields };
 type DeletedEvent = { event: EventDraft; index: number };
 type Snapshot = { revision: string; page: Partial<DBTryoutsPageContent>; events: DBTryout[];
   registrationForms?: Record<string, PublicRegistrationForm>;
@@ -52,7 +60,15 @@ async function getSnapshot(operationId?: string): Promise<Snapshot> {
 }
 
 function fromSnapshot(row: DBTryout): EventDraft {
-  return { ...tryoutToDraft(row), clientKey: row.id };
+  return {
+    ...tryoutToDraft(row),
+    clientKey: row.id,
+    signUp: {
+      hidden: row.hidden === true,
+      stays_open_after_date: row.stays_open_after_date === true,
+      sign_up_by_contact: row.sign_up_by_contact === true,
+    },
+  };
 }
 
 function ordered(events: EventDraft[]): EventDraft[] {
@@ -70,21 +86,24 @@ function serverPhoneViewport() { return false; }
 
 export default function TryoutsPageEditor() {
   const club = useClubContext();
-  if (club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1") {
+  const { portal } = useAdminPortal();
+  const policy = codeSiteAdminFor(club)?.tryouts;
+  if (!policy?.routeVisible) {
     return <AdminPage><AdminPageHeader eyebrow="Public website" title="Tryouts"
       description="This website design does not publish a Tryouts page." />
       <p className="rounded-xl border border-border bg-card p-6 font-body text-sm text-muted-foreground">Choose a supported website design before editing a public Tryouts page.</p>
     </AdminPage>;
   }
-  return <TryoutsPageEditorContent />;
+  return portal === "classic" ? <ClassicTryoutsPageEditor policy={policy} /> : <TryoutsPageEditorContent />;
 }
 
 function TryoutsPageEditorContent() {
   const club = useClubContext();
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const showsProgramAndHeroFields = !isAcademy && !isEditorial;
-  const showsHeroImage = isAcademy;
+  // The preview closes past tryouts the way the public page does: by the club's date.
+  const today = clubToday(useAdminPortal().timeZone);
+  const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;
+  const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? true;
+  const showsHeroImage = tryoutsPolicy?.showHeroImageField ?? false;
   const [events, setEvents] = useState<EventDraft[]>([]);
   const [deleted, setDeleted] = useState<DeletedEvent[]>([]);
   const [pageCopy, setPageCopy] = useState<TryoutsPageDraft>(emptyTryoutsPageDraft);
@@ -361,9 +380,14 @@ function TryoutsPageEditorContent() {
     setError("Your draft is ready to save over the reviewed page. Events added elsewhere are preserved. Select Save page to continue.");
   }
 
-  const previewTryouts = events.map((event) => mapTryout(tryoutDraftToRow({
-    ...event, id: event.id ?? event.clientKey,
-  }), contactEmail, event.registrationFormId ? nativeForms[event.registrationFormId] : undefined));
+  // As the public page: hidden tryouts left out, the rest by date, soonest first.
+  const previewTryouts = events
+    .filter((event) => !event.signUp?.hidden)
+    .map((event) => mapTryout({
+      ...tryoutDraftToRow({ ...event, id: event.id ?? event.clientKey }),
+      ...(event.signUp ?? {}),
+    }, contactEmail, event.registrationFormId ? nativeForms[event.registrationFormId] : undefined, today))
+    .sort(compareTryoutsByDate);
   const previewPageContent = resolveTryoutsPageContent(
     buildTryoutsPageMutationPayload(pageCopy) as Partial<DBTryoutsPageContent>);
   const canEdit = !saving && !uploading && !unconfirmed;
@@ -372,7 +396,7 @@ function TryoutsPageEditorContent() {
     <AdminPage className="overflow-x-clip pb-4 lg:pb-8 [&>*]:shrink-0">
     <AdminPageHeader eyebrow="Public website" title="Tryouts"
       description="Tap the page introduction or an event card to edit what visitors see. One Save page publishes all changes together."
-      actions={<div className="flex flex-wrap gap-2">
+      actions={<div data-admin-page-action-group="" className="flex flex-wrap gap-2">
         <button type="button" onClick={addEvent} disabled={!canEdit || loading} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 font-body text-sm font-semibold normal-case text-foreground hover:bg-accent disabled:opacity-40"><Plus size={16} />Add event</button>
         <button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold normal-case text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button>
       </div>} />
@@ -411,7 +435,10 @@ function TryoutsPageEditorContent() {
             <Field label="Intro shown when none are published" error={pageErrors.introNoTryouts}><Textarea value={pageCopy.introNoTryouts} onChange={(event) => changePage("introNoTryouts", event.target.value)} maxLength={TRYOUTS_PAGE_LIMITS.introNoTryouts} className="min-h-28" /></Field>
           </fieldset> : selectedEvent ? <fieldset disabled={!canEdit} className="space-y-5 disabled:opacity-60">
             <Field label="Name" error={eventErrors[selectedEvent.clientKey]?.headline}><input className={ADMIN_INPUT_CLASS} value={selectedEvent.headline} onChange={(event) => changeEvent("headline",event.target.value)} maxLength={80} /></Field>
-            <Field label="Status"><NativeSelect chevronIcon={AdminSelectChevron} value={selectedEvent.status} onChange={(event) => changeEvent("status",event.target.value as TryoutDraft["status"])}><NativeSelectOption value="upcoming">Upcoming</NativeSelectOption><NativeSelectOption value="open">Open</NativeSelectOption><NativeSelectOption value="closed">Closed</NativeSelectOption></NativeSelect></Field>
+            {/* ADMIN-RE-12b: the card's word follows the sign-up way and the date, so
+                the only choice left is whether the owner closed it. A tryout
+                still saved as Upcoming shows as open here and saves unchanged. */}
+            <Field label="Sign-ups"><NativeSelect chevronIcon={AdminSelectChevron} value={selectedEvent.status === "closed" ? "closed" : "open"} onChange={(event) => changeEvent("status",event.target.value as TryoutDraft["status"])}><NativeSelectOption value="open">Open, closes by itself the day after its date</NativeSelectOption><NativeSelectOption value="closed">Closed</NativeSelectOption></NativeSelect></Field>
             {showsProgramAndHeroFields && <Field label="Program association"><NativeSelect chevronIcon={AdminSelectChevron} value={selectedEvent.programId ?? ""} onChange={(event) => changeEvent("programId",event.target.value || null)}><NativeSelectOption value="">General club tryout</NativeSelectOption>{programs.map((program) => <NativeSelectOption key={program.id} value={program.id}>{program.display_title}</NativeSelectOption>)}</NativeSelect></Field>}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1"><Field label="Event date" error={eventErrors[selectedEvent.clientKey]?.eventDate}><input type="date" className={ADMIN_INPUT_CLASS} value={selectedEvent.eventDate} onChange={(event) => changeEvent("eventDate",event.target.value)} /></Field><Field label="Location" error={eventErrors[selectedEvent.clientKey]?.location}><input className={ADMIN_INPUT_CLASS} value={selectedEvent.location} onChange={(event) => changeEvent("location",event.target.value)} maxLength={160} /></Field><Field label="Cost" error={eventErrors[selectedEvent.clientKey]?.costText}><input className={ADMIN_INPUT_CLASS} value={selectedEvent.costText} onChange={(event) => changeEvent("costText",event.target.value)} maxLength={120} /></Field></div>
             <p className="font-body text-xs leading-5 text-muted-foreground">Leave date, location, or cost blank to show TBA to visitors.</p>
@@ -431,7 +458,7 @@ function TryoutsPageEditorContent() {
       </PageEditorInspector>
     </div>}
     <div ref={scrollport.saveBar} data-tryouts-save-bar className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 [padding-left:max(1rem,env(safe-area-inset-left,0px))] [padding-right:max(1rem,env(safe-area-inset-right,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"><span className="font-body text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "Tryouts page"}</span><button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button></div>
-    <AdminSaveFeedback saving={saving || uploading} saved={saved} savingLabel={uploading ? "Uploading hero image…" : "Saving Tryouts page…"} successLabel="Tryouts page saved" />
+    <p className="sr-only" role="status">{saving || uploading ? uploading ? "Uploading hero image…" : "Saving Tryouts page…" : saved ? "Tryouts page saved" : ""}</p>
     <AlertDialog.Root open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
       <AlertDialog.Portal container={dialogContainer}>
         <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/45" />

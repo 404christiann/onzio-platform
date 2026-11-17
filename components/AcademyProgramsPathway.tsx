@@ -11,7 +11,7 @@ import {
   type ProgramsPageContent,
 } from "@/lib/programs-page-content";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { loadPathwayData } from "@/components/academy-pathway-data";
 
 // Mockup-parity programs-pathway homepage block for academy@1

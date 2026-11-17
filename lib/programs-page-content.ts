@@ -3,7 +3,7 @@ import type { DBProgramsPageContent } from "@/lib/db-types";
 /**
  * Resolved copy for the three academy@1 programs prose bands: the homepage
  * pathway block (components/AcademyProgramsPathway.tsx) and the /programs hero
- * and closing band (components/AcademyProgramsPage.tsx).
+ * and closing band (components/sites/diverse-city/AcademyProgramsPage.tsx).
  *
  * The programs themselves are not here — they are rows in onzio.programs,
  * already editable at /admin/programs. This is only the copy wrapped around

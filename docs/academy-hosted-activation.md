@@ -1,0 +1,22 @@
+# Diverse City Academy rollout
+
+Christian approved preparation on November 3, 2026. The read-only #80 preflight found that Diverse City's public site already served the code-authored Academy shell. Christian accepted a shared-project rollout affecting Rose City, then directed the public-only hold in [PR #85](https://github.com/404christiann/onzio-platform/pull/85) to be merged while hosted staging stayed deferred. PR #85 merged as `c021ea7` and its automatic Vercel production deployment `dpl_J5QHWSTsd71tKXtXGHZbe9SSabMH` is READY. No hosted database, DNS, or manual traffic change was made.
+
+[Decision record in #54](https://github.com/404christiann/onzio-platform/issues/54#issuecomment-6612002195) · [#80 preflight](verification/site07-shell/ticket-80/README.md)
+
+| When | Owner | What must happen |
+| --- | --- | --- |
+| Before scheduling | Christian and the release operator | The shared-project effect is accepted for now. Confirm the current tenant domains, aliases, and traffic inventory for the specific change. |
+| Before scheduling | Implementation owner | Identify a fallback that actually restores the intended Diverse City visual and editor state. Prove the target, both tenants' routes and previews, and an exact way back to the starting deployment. Hosted staging proof remains deferred by Christian. |
+| Before any production change | Release operator | Confirm the exact current deployment and source commit, current alias inventory, production migration parity, and backup requirements. Stop on a mismatch. Do not use an older deployment merely because it is `READY`. |
+| During an approved window | Release operator | Apply only the separately approved, proven change. Check both Diverse City and Rose City public routes and owner editor previews, alias mapping, cache behavior, and runtime errors. |
+| If a check fails | Release operator | Restore the recorded starting deployment by the proven exact method and verify both tenants again. |
+| After checks pass | Christian and the release operator | Record the decision, action, checks, and exact restoration target in #54. |
+
+The #80 preflight did not establish a distinct pre-Academy visual fallback. Vercel Hobby rollback is limited to the immediately previous production deployment. At the #85 release, the immediately preceding READY deployment was `dpl_5bd9GAtWVCBPJ62tdeLuKh8MDFLE` from `ae56a92`, and Vercel marked it as a rollback candidate. A rollback was not exercised because it would re-expose the old Rose City public site. Before a future 2027 cutover, record the then-current lock deployment as the starting point and verify its eligibility immediately before release. This shared-project method changes both tenants at once.
+
+## Rose City public hold and 2027 release
+
+On November 3, Christian chose a temporary public-only Rose City lock while its 2027 revamp is prepared. The deployed middleware rule blocks Rose City public pages, direct internal site paths, and new registration submissions with uncached, nonindexable 404 responses. Live checks found Rose City's homepage, roster, and direct internal route at 404, admin login at 200, and registration status routable at 400 without a token. Diverse City's homepage, roster, programs, and shop returned 200. The expected shared aliases remained attached, production retained 57 migrations matching the local version digest, and no error or fatal logs were returned for the new deployment. Existing public media URLs are outside this page lock. Authenticated owner editing has not yet been verified live.
+
+Treat the lock and the 2027 replacement as separate shared-project releases. For the 2027 cutover, record the exact starting deployment and an eligible lock-preserving restoration target, then verify Rose City and Diverse City public pages, authenticated admin editing, aliases, and cache behavior. The 2027 implementation is currently in a separate dirty checkout more than 100 commits behind current main and still uses the old template dispatch; integrate it as a code-authored site and review it before treating it as a release candidate. Its five untracked migrations and hosted content/media publication need a verified backup and reconciliation; this account's backup inventory returned 403. Hosted staging remains deferred. The authenticated owner-editor and rollback proofs remain open in [#54](https://github.com/404christiann/onzio-platform/issues/54).

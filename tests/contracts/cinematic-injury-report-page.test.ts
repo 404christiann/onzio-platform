@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@/lib/queries", () => ({ fetchSiteSponsorLogos: vi.fn(async () => []) }));
 vi.mock("@/components/cinematic/CinematicNewsPartners", () => ({ default: () => createElement("p", null, "Partner strip") }));
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: mocks.club }));
-vi.mock("@/lib/editorial-identity", () => ({ fetchClubIdentity: vi.fn(async () => null) }));
+vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: vi.fn(async () => null) }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("not found"); } }));
 
 /** A stand-in for the trusted server client: every filter chains, awaiting returns the table's rows. */

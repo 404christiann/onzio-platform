@@ -25,3 +25,4 @@ assets/rose-city-shop-2027/local-import-receipt.json
 
 # Local supplied font; webfont license remains unverified.
 public/fonts/avenir-local/
+.onzio-pilot-build.lock

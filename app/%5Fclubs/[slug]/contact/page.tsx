@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
+import { codeSiteFor } from "@/lib/code-site";
 import CinematicDestination from "@/components/cinematic/CinematicDestination";
 import CinematicContact from "@/components/cinematic/CinematicContact";
-import AcademyContactPage from "@/components/AcademyContactPage";
-import EditorialContactPage from "@/components/editorial/EditorialContactPage";
+import AcademyContactPage from "@/components/sites/diverse-city/AcademyContactPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchContactContent } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
@@ -19,13 +19,7 @@ export default async function TenantContactPage({
     return content ? <CinematicContact content={content} /> : <CinematicDestination clubId={club.id} labelId="contact" />;
   }
 
-  if (club.presentationTemplateKey === "editorial@1") {
-    const onzio = (await createClient()).schema("onzio");
-    const content = await fetchContactContent(club.id, onzio);
-    return <EditorialContactPage content={content} />;
-  }
-
-  if (club.presentationTemplateKey !== "academy@1") notFound();
+  if (codeSiteFor(club) !== "diverse-city") notFound();
   const onzio = (await createClient()).schema("onzio");
   const content = await fetchContactContent(club.id, onzio);
   return <AcademyContactPage content={content} clubName={club.name} />;

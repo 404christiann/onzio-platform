@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { clubToday, DEFAULT_CLUB_TIME_ZONE } from "@/lib/club-time";
 import {
   buildRegistrationMix,
+  paidRowsOnCurrentForms,
   type RegistrationMixItem,
 } from "@/lib/admin-dashboard-mix";
 
@@ -73,19 +75,13 @@ function failed<T>(message: string): DashboardSection<T> {
 export async function loadAdminDashboardData(
   supabase: SupabaseClient,
   clubId: string,
+  timeZone: string = DEFAULT_CLUB_TIME_ZONE,
 ): Promise<AdminDashboardData> {
   const onzio = supabase.schema("onzio");
-  // "Today" in the server's local timezone, matching how fixture/tryout dates
-  // are entered and displayed (plain YYYY-MM-DD, local — see formatDateInput
-  // in app/admin/(protected)/schedule/page.tsx). toISOString() would compute
-  // the UTC date, which drops tonight's events off "Upcoming Fixtures &
-  // Events" hours before local midnight for US-timezone clubs.
-  const now = new Date();
-  const today = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("-");
+  // ADMIN-RE-03: "today" is the club's own calendar date (decision 0014). The
+  // server's local date put tonight's Chicago games on the wrong side of
+  // midnight on a UTC server, and UTC dropped them hours early.
+  const today = clubToday(timeZone);
 
   const activeSeasonPromise = onzio
     .from("seasons")
@@ -108,6 +104,7 @@ export async function loadAdminDashboardData(
     .select("id,event_date,headline,location,status,sort_order")
     .eq("club_id", clubId)
     .in("status", ["upcoming", "open"])
+    .eq("hidden", false)
     .gte("event_date", today)
     .order("event_date", { ascending: true })
     .order("sort_order", { ascending: true });
@@ -176,7 +173,9 @@ export async function loadAdminDashboardData(
     if (result.status === "rejected" || result.value.error) {
       return failed(`Could not load ${label}.`);
     }
-    return ready(result.value.count ?? 0);
+    // A null count with no error is an unknown, never a zero.
+    if (result.value.count === null) return failed(`Could not load ${label}.`);
+    return ready(result.value.count);
   };
 
   const players = countSection(playersResult, "active players");
@@ -281,9 +280,11 @@ export async function loadAdminDashboardData(
       : failed("Could not load registration mix.");
   }
 
-  const paidRegistrations = paidRows
-    ? ready(paidRows.length)
-    : failed<number>("Could not load paid registrations.");
+  // Same current-form set as the mix, so the KPI and the mix total cannot drift.
+  const paidRegistrations =
+    paidRows && formRows
+      ? ready(paidRowsOnCurrentForms(formRows, paidRows).length)
+      : failed<number>("Could not load paid registrations.");
 
   return {
     activeSeasonLabel: activeSeason?.label ?? null,

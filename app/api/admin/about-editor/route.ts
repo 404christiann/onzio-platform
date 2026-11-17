@@ -5,7 +5,7 @@ import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
 import { aboutEditorSaveSchema, type AboutEditorSaveRequest, type AboutEditorSnapshot } from "@/lib/about-editor/contract";
-import { loadAboutDestinationOptions } from "@/lib/about-editor/destinations";
+import { isAboutContentDestination } from "@/lib/about-editor/content-policy";
 import { retirePublishedMedia } from "@/lib/media-processing";
 import { hydrateAboutEditorMedia } from "@/lib/about-editor/media";
 import { resolveMediaReferences } from "@/lib/media-assets";
@@ -72,8 +72,7 @@ async function handle(request:Request,mutation:boolean) {
      if(path&&(new URL(url).origin!==base.origin||!path.startsWith(`${club.id}/`)))return failure("INVALID_ABOUT_MEDIA",400);
     }
     if(payload.page==="about"){
-     const options=await loadAboutDestinationOptions(supabase,club);
-     if(club.presentationTemplateKey==="academy@1"?payload.content.closing_cta_href!=="/schedule":!options.some(option=>option.href===payload!.content.closing_cta_href))return failure("INVALID_ABOUT_DESTINATION",400);
+     if(!isAboutContentDestination(payload.content.closing_cta_href))return failure("INVALID_ABOUT_DESTINATION",400);
     }
    }
   }

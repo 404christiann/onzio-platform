@@ -1,23 +1,27 @@
 "use client";
 
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import ClassicStandingsPage from "@/components/admin/standings/ClassicStandingsPage";
+
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import LeagueStandingsTable from "@/components/LeagueStandingsTable";
-import AcademyLeagueStandingsTable from "@/components/AcademyLeagueStandingsTable";
+import AcademyLeagueStandingsTable from "@/components/sites/diverse-city/AcademyStandingsTable";
 import type {
   DBLeagueStandingRow,
   DBLeagueStandingsSettings,
+  DBSeason,
 } from "@/lib/db-types";
-import { fetchLeagueStandings } from "@/lib/queries";
+import { LEAGUE_TEAM_NAME_LIMIT } from "@/lib/admin-data-contract";
+import { fetchLeagueStandings, fetchSeasons } from "@/lib/queries";
 import {
   DEFAULT_STANDINGS_SETTINGS,
   normalizeStandingsRows,
@@ -25,6 +29,7 @@ import {
   teamAbbreviation,
 } from "@/lib/standings-content";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { logoUrlsNoLongerUsed } from "@/lib/standings-logo-cleanup";
 import { createClient } from "@/lib/admin-client";
 import { cn } from "@/lib/utils";
 
@@ -81,13 +86,16 @@ async function uploadStandingLogo(file: File): Promise<string> {
   return data.publicUrl;
 }
 
-export default function AdminStandingsPage() {
+function LegacyStandingsPage() {
   const club = useClubContext();
   const clubId = useClubId();
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const standingsPolicy = codeSiteAdminFor(club)?.standings;
   const [settings, setSettings] =
     useState<DBLeagueStandingsSettings>(DEFAULT_STANDINGS_SETTINGS);
+  // ADMIN-RE-11b: every season has its own table. Opens on the season the website shows.
+  const [seasons, setSeasons] = useState<DBSeason[]>([]);
+  const [seasonId, setSeasonId] = useState<string | null>(null);
+  const [seasonsLoaded, setSeasonsLoaded] = useState(false);
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [originalRows, setOriginalRows] = useState<DBLeagueStandingRow[]>([]);
   const [pendingDeleteUrls, setPendingDeleteUrls] = useState<string[]>([]);
@@ -103,10 +111,29 @@ export default function AdminStandingsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    fetchSeasons(clubId)
+      .then((list) => {
+        if (cancelled) return;
+        setSeasons(list);
+        setSeasonId((list.find((season) => season.active) ?? list[0])?.id ?? null);
+        setSeasonsLoaded(true);
+      })
+      .catch((loadError: unknown) => {
+        if (cancelled) return;
+        setLoadFailed(true);
+        setLoading(false);
+        setError(loadError instanceof Error ? loadError.message : "Failed to load standings");
+      });
+    return () => { cancelled = true; };
+  }, [clubId]);
+
+  useEffect(() => {
+    if (!seasonsLoaded) return;
+    let cancelled = false;
     setLoading(true);
     setLoadFailed(false);
     setError(null);
-    fetchLeagueStandings(clubId, { strict: true })
+    fetchLeagueStandings(clubId, { strict: true, seasonId: seasonId ?? undefined })
       .then((content) => {
         if (cancelled) return;
         setSettings(content.settings);
@@ -125,7 +152,10 @@ export default function AdminStandingsPage() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [clubId]);
+  }, [clubId, seasonId, seasonsLoaded]);
+
+  // In a season that works out our row from saved scores, those six numbers come from the scores.
+  const autoSeason = seasons.find((season) => season.id === seasonId)?.standings_from_scores === true;
 
   function markDirty() {
     setDirty(true);
@@ -229,7 +259,7 @@ export default function AdminStandingsPage() {
     setLoading(true);
     setError(null);
     try {
-      const fresh = await fetchLeagueStandings(clubId, { strict: true });
+      const fresh = await fetchLeagueStandings(clubId, { strict: true, seasonId: seasonId ?? undefined });
       setSettings(fresh.settings);
       setRows(fresh.rows.map((row) => ({ ...row })));
       setOriginalRows(fresh.rows);
@@ -246,6 +276,10 @@ export default function AdminStandingsPage() {
 
   async function handleSave() {
     if (loading || loadFailed || saving || uploading || !dirty) return;
+    if (!seasonId) {
+      setError("Add a season on the Seasons page before adding a league table.");
+      return;
+    }
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -256,7 +290,8 @@ export default function AdminStandingsPage() {
         ...settings,
         id: 1,
         eyebrow: settings.eyebrow.trim() || DEFAULT_STANDINGS_SETTINGS.eyebrow,
-        title: settings.title.trim() || DEFAULT_STANDINGS_SETTINGS.title,
+        // A blank title stays blank; it never borrows a default league name.
+        title: settings.title.trim(),
         intro: settings.intro.trim(),
         updated_at: now,
       };
@@ -264,6 +299,7 @@ export default function AdminStandingsPage() {
         .filter((row) => row.team_name.trim())
         .map((row, index) => ({
           id: isPersistedRow(row) ? row.id : null,
+          season_id: seasonId,
           team_name: row.team_name.trim(),
           team_abbreviation:
             row.team_abbreviation?.trim().toUpperCase() ||
@@ -325,11 +361,12 @@ export default function AdminStandingsPage() {
         if (insertError) throw new Error(insertError.message);
       }
 
-      await deleteStorageUrls("standings", pendingDeleteUrls, ["teams/"]);
+      // A copied table shares its logo files with the other seasons: delete only a file nothing uses any more.
+      await deleteStorageUrls("standings", await logoUrlsNoLongerUsed(supabase, pendingDeleteUrls), ["teams/"]);
 
       let fresh: Awaited<ReturnType<typeof fetchLeagueStandings>>;
       try {
-        fresh = await fetchLeagueStandings(clubId, { strict: true });
+        fresh = await fetchLeagueStandings(clubId, { strict: true, seasonId: seasonId ?? undefined });
       } catch {
         // The writes committed. Recover with a read before allowing another
         // mutation, so temporary row IDs cannot cause duplicate inserts.
@@ -378,12 +415,8 @@ export default function AdminStandingsPage() {
   //
   // academy@1's real public standings table renders nothing when there is no
   // real data, so its preview matches by showing the empty state instead.
-  // editorial@1's public standings table
-  // (components/editorial/EditorialStandingsTable.tsx) reads these same rows
-  // and renders nothing when there are none, so it behaves like academy@1
-  // here: the empty state is the honest preview until rows are entered.
   const previewRows = normalizeStandingsRows(rows, {
-    fallbackToSample: !isAcademy && !isEditorial,
+    fallbackToSample: standingsPolicy?.useSampleFallback ?? true,
   });
 
   return (
@@ -393,7 +426,7 @@ export default function AdminStandingsPage() {
     // overflow-hidden without that landmine, matching the convention used
     // in homepage/page.tsx and shop/page.tsx.
     <AdminPage className="max-w-7xl overflow-x-clip">
-      <AdminSaveFeedback saving={saving} saved={saved} />
+      <p className="sr-only" role="status">{saving ? "Saving changes…" : saved ? "Saved successfully" : ""}</p>
       <AdminPageHeader
         title="Standings"
         description="Edit the homepage league table and optional team logos."
@@ -414,7 +447,6 @@ export default function AdminStandingsPage() {
               disabled={loading || loadFailed || saving || uploading || !dirty}
               className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-body rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Standings"}
             </button>
           </>
@@ -439,6 +471,38 @@ export default function AdminStandingsPage() {
         >
           {loading ? "Loading…" : "Retry loading"}
         </button>
+      )}
+
+      {seasons.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="standings-season">
+          <label htmlFor="standings-season-select" className="font-body text-sm font-semibold text-foreground">
+            Season
+          </label>
+          <select
+            id="standings-season-select"
+            value={seasonId ?? ""}
+            onChange={(event) => setSeasonId(event.target.value)}
+            disabled={loading || saving || dirty || seasons.length < 2}
+            className="min-h-11 rounded-xl border border-input bg-card px-3 font-body text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+          >
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.label}{season.active ? " · on your website" : ""}
+              </option>
+            ))}
+          </select>
+          <span className="font-body text-xs text-muted-foreground">
+            {dirty
+              ? "Save your changes to switch season."
+              : "Your website shows the table of the season it shows. Your team\u2019s numbers update when you save a score."}
+          </span>
+        </div>
+      )}
+
+      {autoSeason && !loading && rows.some((row) => row.is_club) && (
+        <p className="font-body text-xs text-muted-foreground" data-testid="standings-auto-note">
+          Your team&rsquo;s games, wins, draws, losses, goal difference and points come from the scores you save, so they can&rsquo;t be typed here.
+        </p>
       )}
 
       {loading ? (
@@ -505,8 +569,12 @@ export default function AdminStandingsPage() {
                 <input
                   value={settings.title}
                   onChange={(event) => updateSetting("title", event.target.value)}
+                  aria-describedby="standings-title-help"
                   className={ADMIN_INPUT_CLASS}
                 />
+                <span id="standings-title-help" className="mt-1 block font-body text-xs text-muted-foreground">
+                  Usually your league name. Leave it blank to show no title.
+                </span>
               </label>
               <label className="block">
                 <span className={ADMIN_LABEL_CLASS}>Intro</span>
@@ -614,6 +682,7 @@ export default function AdminStandingsPage() {
                         <div className="flex items-center gap-2">
                           <input
                             value={row.team_name}
+                            maxLength={LEAGUE_TEAM_NAME_LIMIT}
                             onChange={(event) => updateRow(row.id, "team_name", event.target.value)}
                             placeholder="Team name"
                             aria-label="Team name"
@@ -646,6 +715,7 @@ export default function AdminStandingsPage() {
                       <td className="px-1 py-3">
                         <TableNumberField
                           ariaLabel="Games played"
+                          readOnly={autoSeason && row.is_club}
                           value={row.played}
                           onChange={(value) => updateRow(row.id, "played", value)}
                         />
@@ -653,6 +723,7 @@ export default function AdminStandingsPage() {
                       <td className="px-1 py-3">
                         <TableNumberField
                           ariaLabel="Wins"
+                          readOnly={autoSeason && row.is_club}
                           value={row.wins}
                           onChange={(value) => updateRow(row.id, "wins", value)}
                         />
@@ -660,6 +731,7 @@ export default function AdminStandingsPage() {
                       <td className="px-1 py-3">
                         <TableNumberField
                           ariaLabel="Draws"
+                          readOnly={autoSeason && row.is_club}
                           value={row.draws}
                           onChange={(value) => updateRow(row.id, "draws", value)}
                         />
@@ -667,6 +739,7 @@ export default function AdminStandingsPage() {
                       <td className="px-1 py-3">
                         <TableNumberField
                           ariaLabel="Losses"
+                          readOnly={autoSeason && row.is_club}
                           value={row.losses}
                           onChange={(value) => updateRow(row.id, "losses", value)}
                         />
@@ -674,6 +747,7 @@ export default function AdminStandingsPage() {
                       <td className="px-1 py-3">
                         <TableNumberField
                           ariaLabel="Goal difference"
+                          readOnly={autoSeason && row.is_club}
                           value={row.goal_difference}
                           onChange={(value) => updateRow(row.id, "goal_difference", value)}
                           allowNegative
@@ -682,6 +756,7 @@ export default function AdminStandingsPage() {
                       <td className="px-1 py-3">
                         <TableNumberField
                           ariaLabel="Points"
+                          readOnly={autoSeason && row.is_club}
                           value={row.points}
                           onChange={(value) => updateRow(row.id, "points", value)}
                           emphasize
@@ -746,14 +821,14 @@ export default function AdminStandingsPage() {
               </div>
               <div data-admin-public-preview className="p-5">
                 {/* previewRows is only ever empty for the templates excluded
-                    from the sample fallback above (academy@1, editorial@1);
+                    from the sample fallback above (academy@1);
                     templates that still get DEFAULT_STANDINGS_ROWS always
                     take a table branch, exactly as before. */}
                 {previewRows.length === 0 ? (
                   <p className="font-body text-sm text-muted-foreground">
                     Add a team above to see a preview of your standings table.
                   </p>
-                ) : isAcademy ? (
+                ) : standingsPolicy?.preview === "academy-table" ? (
                   <AcademyLeagueStandingsTable settings={settings} rows={previewRows} />
                 ) : (
                   <LeagueStandingsTable settings={settings} rows={previewRows} />
@@ -793,26 +868,36 @@ function TableNumberField({
   onChange,
   allowNegative = false,
   emphasize = false,
+  readOnly = false,
 }: {
   ariaLabel: string;
   value: number;
   onChange: (value: number) => void;
   allowNegative?: boolean;
   emphasize?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <input
       type="number"
       aria-label={ariaLabel}
+      readOnly={readOnly}
+      aria-readonly={readOnly || undefined}
+      title={readOnly ? "Worked out from the scores you save" : undefined}
       min={allowNegative ? undefined : 0}
-      value={value}
+      value={String(value)}
       onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
         onChange(Number(event.target.value))
       }
       className={cn(
         "min-h-11 w-full rounded-xl border border-input bg-card px-2 py-1.5 text-center font-body text-sm font-semibold tabular-nums text-foreground outline-none transition-shadow [appearance:textfield] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         emphasize && "border-primary/50 ring-2 ring-primary/15",
+        readOnly && "cursor-default border-transparent bg-muted/60 text-muted-foreground focus-visible:ring-0",
       )}
     />
   );
+}
+
+export default function AdminStandingsPage() {
+  return useAdminPortal().portal === "classic" ? <ClassicStandingsPage /> : <LegacyStandingsPage />;
 }

@@ -1,0 +1,220 @@
+.hc-editor {
+  min-width: 0;
+  max-width: 1200px;
+  margin-inline: auto
+}
+.hc-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px
+}
+.hc-heading h1 {
+  font-size: 28px
+}
+.hc-heading p {
+  margin-top: 6px;
+  color: hsl(var(--muted-foreground));
+  font-size: 14px
+}
+.hc-preview-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px
+}
+.hc-preview-tools button {
+  min-height: 44px
+}
+.hc-preview-caption {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 10px
+}
+.hc-canvas,.hc-whole-preview {
+  min-width: 0;
+  margin-inline: auto;
+  width: 100%;
+  transition: max-width 180ms cubic-bezier(.23,1,.32,1)
+}
+.hc-canvas[data-size="phone"],.hc-whole-preview[data-size="phone"] {
+  max-width: 390px
+}
+.hc-canvas .hp-browser,.hc-whole-preview .hp-browser {
+  border-radius: 12px
+}
+.hc-canvas .hp-preview-frame {
+  height: 680px;
+  min-height: 460px
+}
+.hc-whole-preview .hp-preview-frame {
+  height: 65dvh;
+  min-height: 360px
+}
+.hc-fields {
+  display: grid;
+  gap: 22px;
+  min-width: 0
+}
+.hc-fields fieldset {
+  min-width: 0
+}
+.hc-fields .hp-help {
+  font-size: 13px;
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground))
+}
+.hc-character-count,.hp-character-count {
+  text-align: right
+}
+.hc-switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  font-weight: 500
+}
+.hc-switch-row>span:last-child {
+  max-width: 70%;
+  align-items: flex-end
+}
+.hc-notice {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere
+}
+.hc-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px
+}
+.hc-notice button {
+  min-height: 44px
+}
+.hc-load-error {
+  min-height: 460px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px
+}
+.hc-photo-status {
+  margin-block: 12px;
+  padding: 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px
+}
+.hc-photo-status button {
+  min-height: 44px;
+  margin: 8px 8px 0 0
+}
+.hc-toast-host {
+  position: relative
+}
+.hc-editor .hp-recovery-review button {
+  min-height: 44px
+}
+@media(max-width:700px) {
+  .hc-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px
+  }
+  .hc-heading>div {
+    width: 100%
+  }
+  .hc-preview-tools {
+    align-items: stretch
+  }
+  .hc-preview-tools>button {
+    width: 100%
+  }
+  .hc-notice-actions {
+    display: grid;
+    grid-template-columns: minmax(0,1fr)
+  }
+  .hc-notice-actions button {
+    width: 100%;
+    white-space: normal;
+    min-height: 44px;
+    height: auto;
+    padding-block: 10px
+  }
+  .hc-fields .hp-field {
+    font-size: 16px
+  }
+  .hc-fields .hc-switch-row {
+    align-items: flex-start
+  }
+  .hc-canvas .hp-preview-frame {
+    height: 650px
+  }
+  .hc-whole-preview .hp-preview-frame {
+    height: 65dvh
+  }
+  .hc-notice>button {
+    width: 100%;
+    white-space: normal;
+    height: auto
+  }
+  .hp-leave-dialog button {
+    min-height: 44px
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .hc-canvas,.hc-whole-preview {
+    transition: none
+  }
+}
+.hc-fields [data-admin-photo-manager="rows"] button {
+  min-width: 44px;
+  min-height: 44px
+}
+.hc-fields [data-admin-photo-manager="rows"] input:not([type="file"]) {
+  min-height: 44px
+}
+@media(max-width:560px) {
+  .hc-fields [data-admin-photo-manager="rows"] [data-photo-id] {
+    display: grid;
+    grid-template-columns: 96px minmax(0,1fr);
+    gap: 12px
+  }
+  .hc-fields [data-photo-id]>div:nth-child(2) {
+    grid-column: 1/-1;
+    grid-row: 2
+  }
+  .hc-fields [data-photo-id]>div:nth-child(3) {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    justify-content: flex-end;
+    flex-wrap: wrap
+  }
+}
+.hc-recovery-review {
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere
+}
+.hc-recovery-review .hp-recovery-comparison {
+  margin-block: 18px
+}
+.hc-recovery-review button {
+  min-height: 44px
+}
+@media(max-width:700px) {
+  .hc-toast-host [data-admin-toast-region] button,.hc-undo-host [data-admin-toast-region] button {
+    min-width: 44px;
+    min-height: 44px
+  }
+}

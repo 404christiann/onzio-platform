@@ -4,8 +4,6 @@ import { IconCaretDown as AdminSelectChevron, MoreVertical } from "@/components/
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import {
   AdminPage,
   AdminPageHeader,
@@ -17,11 +15,13 @@ import {
   type AdminSectionRailItem,
 } from "@/components/admin/AdminSectionRail";
 import FileUpload from "@/components/admin/FileUpload";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { OperationsToolbarSkeleton, TryoutsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
 import type {
@@ -32,6 +32,8 @@ import type {
   DBTryoutsPageContent,
 } from "@/lib/db-types";
 import { mapTryout } from "@/lib/queries";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import { clubToday } from "@/lib/club-time";
 import {
   buildTryoutMutationPayload,
   buildTryoutsPageMutationPayload,
@@ -72,15 +74,10 @@ function FieldError({ message }: { message?: string }) {
 // completes integration checks. The route now renders the new editor below.
 function LegacyAdminTryoutsPage() {
   const club = useClubContext();
-  // academy@1 and editorial@1 keep this editor to the fields their public
-  // pages actually show. Program association is not rendered anywhere on
-  // AcademyTryoutsPage or EditorialTryouts, and no hero image has ever been
-  // attached (tryouts.hero_media_asset_id is null for every row), so both are
-  // hidden for these templates. Nothing is deleted: the column, the upload
-  // pipeline, and every other template's editor are untouched.
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const showsProgramAndHeroFields = !isAcademy && !isEditorial;
+  const { timeZone } = useAdminPortal();
+  // Show only fields used by the active public Tryouts page.
+  const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;
+  const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? true;
   const heroInput = useRef<HTMLInputElement>(null);
   // The page intro used to sit as a full-width "wall" above the event list,
   // always rendered whether or not you were there to edit it. It now lives
@@ -98,6 +95,7 @@ function LegacyAdminTryoutsPage() {
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<TryoutDraft | null>(null);
   const [errors, setErrors] = useState<TryoutValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -427,9 +425,6 @@ function LegacyAdminTryoutsPage() {
   async function deleteTryout(tryout: TryoutDraft) {
     if (!tryout.id || deletingId) return;
     setDeleteMenuOpen(false);
-    if (!window.confirm("Delete this tryout event? This cannot be undone.")) {
-      return;
-    }
     const id = tryout.id;
     setDeletingId(id);
     setSaved(false);
@@ -464,7 +459,7 @@ function LegacyAdminTryoutsPage() {
       : [...tryouts, draft]
     : tryouts;
   const previewTryouts = previewRows.map((tryout) =>
-    mapTryout(tryoutDraftToRow(tryout), contactEmail),
+    mapTryout(tryoutDraftToRow(tryout), contactEmail, undefined, clubToday(timeZone)),
   );
   // Resolved through the same rule the public page uses, so a blank field
   // previews the template default rather than an empty paragraph.
@@ -566,16 +561,10 @@ function LegacyAdminTryoutsPage() {
               disabled={saving || uploading || !dirty}
               className="rounded-lg bg-primary px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
             >
-              {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
               Save changes
             </button>
           </div>
-          <AdminSaveFeedback
-            saving={saving || uploading}
-            saved={saved}
-            savingLabel={uploading ? "Uploading hero image…" : "Saving tryout…"}
-            successLabel="Tryout saved"
-          />
+          <p className="sr-only" role="status">{saving || uploading ? uploading ? "Uploading hero image…" : "Saving tryout…" : saved ? "Tryout saved" : ""}</p>
         </AdminPageToolbar>
       )}
 
@@ -767,7 +756,7 @@ function LegacyAdminTryoutsPage() {
                                 <button
                                   type="button"
                                   role="menuitem"
-                                  onClick={() => void deleteTryout(draft)}
+                                  onClick={() => { setDeleteMenuOpen(false); setDeleteTarget(draft); }}
                                   disabled={deletingId === draft.id}
                                   className="flex w-full items-center rounded-md px-3 py-2 text-left font-display text-xs font-bold uppercase tracking-wider text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
@@ -933,6 +922,10 @@ function LegacyAdminTryoutsPage() {
           </div>
         </div>
       )}
+      <AdminConfirmDialog open={deleteTarget !== null} title="Delete this tryout event?" confirmLabel="Delete tryout" destructive busy={deletingId !== null}
+        onCancel={() => setDeleteTarget(null)} onConfirm={() => { const target = deleteTarget; setDeleteTarget(null); if (target) void deleteTryout(target); }}>
+        This cannot be undone.
+      </AdminConfirmDialog>
     </AdminPage>
   );
 }
@@ -942,7 +935,7 @@ export { default } from "@/components/admin/tryouts/TryoutsPageEditor";
 // Matches the "GENERAL TEMPLATES ONLY" pill the mockup shows on the
 // Program association label and the Hero image card header for templates
 // that render those fields — the counterpart to the dashed "not shown here"
-// explanation academy@1/editorial@1 get instead. Reuses the tinted-pill
+// explanation academy@1 gets instead. Reuses the tinted-pill
 // convention already used for AdminTabs' active state (bg-primary/10
 // text-primary), just as a badge rather than a tab.
 function TemplateOnlyBadge() {

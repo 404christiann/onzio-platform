@@ -8,14 +8,17 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
+import { ClubTimeZoneProvider } from "@/components/ClubTimeZoneProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
-import EditorialShell from "@/components/editorial/EditorialShell";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { loadAcademyShellBranding } from "@/lib/academy-shell-branding";
-import AcademyRouteLoadingSkeleton, { AcademyPageLoadingSkeleton } from "@/components/AcademyRouteLoadingSkeleton";
+import { readPublicClubTimeZone } from "@/lib/public-club-time-zone";
+import AcademyRouteLoadingSkeleton from "@/components/sites/diverse-city/RouteLoadingSkeleton";
+import AcademyShell from "@/components/sites/diverse-city/Shell";
 import type { ClubContext } from "@/lib/club-context";
 import type { Metadata, Viewport } from "next";
+import { codeSiteFor } from "@/lib/code-site";
 
 export async function generateViewport({ params }: { params: Promise<{ slug: string }> }): Promise<Viewport> {
   const club = await getClubContextBySlug((await params).slug);
@@ -58,7 +61,7 @@ export async function generateMetadata({
   };
 }
 
-async function AcademyResolvedShell({ club, children }: { club: ClubContext; children: React.ReactNode }) {
+async function AcademyBrandedShell({ club, children }: { club: ClubContext; children: React.ReactNode }) {
   // Keep the first-paint crest when the request is healthy, but never hold
   // every route behind an unbounded branding read. The provider can retry on
   // the client when this request fails or exceeds the budget.
@@ -66,16 +69,7 @@ async function AcademyResolvedShell({ club, children }: { club: ClubContext; chi
 
   return (
     <ClubBrandingProvider initialBranding={branding}>
-      {/* Remove the footer and its links while the page loader is present so
-          slow routes cannot scroll into a blank footer-sized area. */}
-      <style>{`html:has([data-academy-page-loading]) footer { display: none; }`}</style>
-      <Nav />
-      <main>
-        <Suspense fallback={<AcademyPageLoadingSkeleton />}>
-          {children}
-        </Suspense>
-      </main>
-      <Footer />
+      <AcademyShell>{children}</AcademyShell>
     </ClubBrandingProvider>
   );
 }
@@ -96,48 +90,39 @@ export default async function TenantLayout({
     throw error;
   }
 
+  // ADMIN-RE-03: fail-safe and time-boxed; Los Angeles if the read fails.
+  const timeZone = await readPublicClubTimeZone(club.id);
+
   if (club.presentationTemplateKey === "cinematic@2") {
     const initialContent = await fetchCinematicHomepageContent(club.id, (await createClient()).schema("onzio")).catch(() => null);
-    return <ClubContextProvider club={club}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubContextProvider>;
-  }
-  if (club.presentationTemplateKey === "editorial@1") {
-    // editorial@1 is a completely custom shell (own header/motion/main/
-    // footer, see components/editorial/EditorialShell.tsx) -- it does not
-    // reuse Nav/Footer/TemplateFontScope at all, mirroring how the
-    // superseded reference branch built it. Every other template keeps the
-    // exact byte-identical return below.
-    return (
-      <ClubContextProvider club={club}>
-        <ClubBrandingProvider>
-          <EditorialShell>{children}</EditorialShell>
-        </ClubBrandingProvider>
-      </ClubContextProvider>
-    );
+    return <ClubContextProvider club={club}><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></ClubContextProvider>;
   }
 
   // The header remains usable while branding or page content is pending.
   // Programs load independently inside Nav, so they never hold the page.
-  if (club.presentationTemplateKey === "academy@1") {
+  if (codeSiteFor(club) === "diverse-city") {
     return (
       <ClubContextProvider club={club}>
-        <TemplateFontScope templateKey={club.presentationTemplateKey}>
+        <ClubTimeZoneProvider timeZone={timeZone}>
           <Suspense fallback={<AcademyRouteLoadingSkeleton />}>
-            <AcademyResolvedShell club={club}>{children}</AcademyResolvedShell>
+            <AcademyBrandedShell club={club}>{children}</AcademyBrandedShell>
           </Suspense>
-        </TemplateFontScope>
+        </ClubTimeZoneProvider>
       </ClubContextProvider>
     );
   }
 
   return (
     <ClubContextProvider club={club}>
-      <ClubBrandingProvider>
-        <TemplateFontScope templateKey={club.presentationTemplateKey}>
-          <Nav />
-          <main>{children}</main>
-          <Footer />
-        </TemplateFontScope>
-      </ClubBrandingProvider>
+      <ClubTimeZoneProvider timeZone={timeZone}>
+        <ClubBrandingProvider>
+          <TemplateFontScope templateKey={club.presentationTemplateKey}>
+            <Nav />
+            <main>{children}</main>
+            <Footer />
+          </TemplateFontScope>
+        </ClubBrandingProvider>
+      </ClubTimeZoneProvider>
     </ClubContextProvider>
   );
 }

@@ -61,6 +61,33 @@ const CONTENT_INSERT_ORDER = [
 
 const CONTENT_DELETE_ORDER = [...CONTENT_INSERT_ORDER].reverse();
 
+function adjustmentsFromTyped(kind: "player" | "goalkeeper", keys: readonly string[]): string {
+  const sums = keys
+    .map((key) =>
+      key === "starts"
+        ? "(count(*) filter (where ms.starts))::integer as starts"
+        : `coalesce(sum(ms.${key}), 0)::integer as ${key}`,
+    )
+    .join(", ");
+  return `insert into onzio.${kind}_season_adjustments (club_id, player_id, season_id, ${keys.join(", ")})
+    select s.club_id, s.player_id, s.season_id, ${keys.map((key) => `s.${key} - g.${key}`).join(", ")}
+    from onzio.${kind}_season_stats s
+    cross join lateral (
+      select ${sums}
+      from onzio.${kind}_match_stats ms
+      join onzio.matches m on m.club_id = ms.club_id and m.id = ms.match_id
+      where ms.club_id = s.club_id and ms.player_id = s.player_id and m.season_id = s.season_id
+    ) g
+    where s.club_id = $1::uuid
+    on conflict (club_id, player_id, season_id) do update set
+      ${keys.map((key) => `${key} = excluded.${key}`).join(", ")}`;
+}
+
+const SEASON_ADJUSTMENTS_FROM_TYPED = [
+  adjustmentsFromTyped("player", ["goals", "assists", "tackles", "starts", "yellow", "red", "mins", "offsides", "fouls", "fouls_suffered"]),
+  adjustmentsFromTyped("goalkeeper", ["goals_against", "saves", "clean_sheets", "starts", "yellow", "red", "mins"]),
+];
+
 const CONFLICT_COLUMNS: Record<string, readonly string[]> = {
   clubs: ["id"],
   club_domains: ["id"],
@@ -447,6 +474,11 @@ async function applyDatabasePlan(input: {
       const rows = materializedTables[table];
       if (!rows) throw new Error(`Import plan is missing ${table}.`);
       for (const row of rows) await upsertRow(input.client, table, row);
+    }
+    // ADMIN-RE-11c: season totals are games + adjustment, so the export's typed
+    // totals become each player's adjustment (typed - games), as on production.
+    for (const sql of SEASON_ADJUSTMENTS_FROM_TYPED) {
+      await input.client.query(sql, [input.plan.club.id]);
     }
     await input.client.query(
       `insert into onzio.audit_events

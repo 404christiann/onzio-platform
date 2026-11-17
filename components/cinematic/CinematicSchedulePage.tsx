@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
-import { fetchClubIdentity } from "@/lib/editorial-identity";
+import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import CinematicSchedule, { type CinematicScheduleData } from "./CinematicSchedule";
 
 export default function CinematicSchedulePage() {

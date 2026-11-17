@@ -73,15 +73,17 @@ export default function LeagueStandingsTable({
             >
               {settings.eyebrow}
             </span>
-            <h2
-              className="font-display mt-2 font-black uppercase leading-none"
-              style={{
-                color: "#141414",
-                fontSize: "clamp(2rem, 6vw, 4.25rem)",
-              }}
-            >
-              {settings.title}
-            </h2>
+            {settings.title && (
+              <h2
+                className="font-display mt-2 font-black uppercase leading-none"
+                style={{
+                  color: "#141414",
+                  fontSize: "clamp(2rem, 6vw, 4.25rem)",
+                }}
+              >
+                {settings.title}
+              </h2>
+            )}
           </div>
           {settings.intro && (
             <p

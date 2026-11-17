@@ -11,7 +11,7 @@ describe("site-wide media resilience", () => {
     expect(source("components/ChampionsBadge.tsx")).toContain(
       'fallbackVariant="trophy"',
     );
-    expect(source("components/AboutClubPageClient.tsx")).toContain(
+    expect(source("components/sites/diverse-city/AcademyAboutPage.tsx")).toContain(
       'fallbackVariant="photo"',
     );
     expect(source("components/ShopPhotoStrip.tsx")).toContain(

@@ -1212,6 +1212,7 @@ export type Database = {
         Row: {
           club_id: string
           created_at: string
+          display_name: string | null
           removed_at: string | null
           role: string
           status: string
@@ -1221,6 +1222,7 @@ export type Database = {
         Insert: {
           club_id: string
           created_at?: string
+          display_name?: string | null
           removed_at?: string | null
           role: string
           status?: string
@@ -1230,6 +1232,7 @@ export type Database = {
         Update: {
           club_id?: string
           created_at?: string
+          display_name?: string | null
           removed_at?: string | null
           role?: string
           status?: string
@@ -1346,6 +1349,8 @@ export type Database = {
       clubs: {
         Row: {
           accent_color: string | null
+          admin_flags: Json
+          admin_portal: string
           archived_at: string | null
           created_at: string
           id: string
@@ -1359,10 +1364,14 @@ export type Database = {
           store_enabled: boolean
           stripe_price_id: string | null
           tier: string
+          time_zone: string
+          time_zone_set_at: string | null
           updated_at: string
         }
         Insert: {
           accent_color?: string | null
+          admin_flags?: Json
+          admin_portal?: string
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -1376,10 +1385,14 @@ export type Database = {
           store_enabled?: boolean
           stripe_price_id?: string | null
           tier?: string
+          time_zone?: string
+          time_zone_set_at?: string | null
           updated_at?: string
         }
         Update: {
           accent_color?: string | null
+          admin_flags?: Json
+          admin_portal?: string
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -1393,6 +1406,8 @@ export type Database = {
           store_enabled?: boolean
           stripe_price_id?: string | null
           tier?: string
+          time_zone?: string
+          time_zone_set_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1510,6 +1525,7 @@ export type Database = {
           id: string
           match_id: string
           mins: number
+          played: boolean
           player_id: string
           rating: number | null
           red: number
@@ -1526,6 +1542,7 @@ export type Database = {
           id?: string
           match_id: string
           mins?: number
+          played?: boolean
           player_id: string
           rating?: number | null
           red?: number
@@ -1542,6 +1559,7 @@ export type Database = {
           id?: string
           match_id?: string
           mins?: number
+          played?: boolean
           player_id?: string
           rating?: number | null
           red?: number
@@ -1571,6 +1589,70 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      goalkeeper_season_adjustments: {
+        Row: {
+          clean_sheets: number
+          club_id: string
+          goals_against: number
+          mins: number
+          player_id: string
+          red: number
+          saves: number
+          season_id: string
+          starts: number
+          updated_at: string
+          yellow: number
+        }
+        Insert: {
+          clean_sheets?: number
+          club_id: string
+          goals_against?: number
+          mins?: number
+          player_id: string
+          red?: number
+          saves?: number
+          season_id: string
+          starts?: number
+          updated_at?: string
+          yellow?: number
+        }
+        Update: {
+          clean_sheets?: number
+          club_id?: string
+          goals_against?: number
+          mins?: number
+          player_id?: string
+          red?: number
+          saves?: number
+          season_id?: string
+          starts?: number
+          updated_at?: string
+          yellow?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goalkeeper_season_adjustments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goalkeeper_season_adjustments_club_id_player_id_season_id_fkey"
+            columns: ["club_id", "player_id", "season_id"]
+            isOneToOne: true
+            referencedRelation: "goalkeeper_season_stats"
+            referencedColumns: ["club_id", "player_id", "season_id"]
+          },
+          {
+            foreignKeyName: "goalkeeper_season_adjustments_club_id_player_id_season_id_fkey"
+            columns: ["club_id", "player_id", "season_id"]
+            isOneToOne: true
+            referencedRelation: "goalkeeper_season_totals"
+            referencedColumns: ["club_id", "player_id", "season_id"]
           },
         ]
       }
@@ -1916,6 +1998,7 @@ export type Database = {
           losses: number
           played: number
           points: number
+          season_id: string
           sort_order: number
           team_abbreviation: string | null
           team_name: string
@@ -1934,6 +2017,7 @@ export type Database = {
           losses?: number
           played?: number
           points?: number
+          season_id: string
           sort_order?: number
           team_abbreviation?: string | null
           team_name: string
@@ -1952,6 +2036,7 @@ export type Database = {
           losses?: number
           played?: number
           points?: number
+          season_id?: string
           sort_order?: number
           team_abbreviation?: string | null
           team_name?: string
@@ -1971,6 +2056,13 @@ export type Database = {
             columns: ["club_id", "logo_asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "league_standings_season_fk"
+            columns: ["club_id", "season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
             referencedColumns: ["club_id", "id"]
           },
         ]
@@ -2018,6 +2110,7 @@ export type Database = {
           date: string
           home: boolean
           id: string
+          league_game: boolean
           league_logo_asset_id: string | null
           league_logo_url: string | null
           opponent: string
@@ -2049,6 +2142,7 @@ export type Database = {
           date: string
           home?: boolean
           id?: string
+          league_game?: boolean
           league_logo_asset_id?: string | null
           league_logo_url?: string | null
           opponent: string
@@ -2080,6 +2174,7 @@ export type Database = {
           date?: string
           home?: boolean
           id?: string
+          league_game?: boolean
           league_logo_asset_id?: string | null
           league_logo_url?: string | null
           opponent?: string
@@ -2263,6 +2358,7 @@ export type Database = {
           match_id: string
           mins: number
           offsides: number
+          played: boolean
           player_id: string
           rating: number | null
           red: number
@@ -2282,6 +2378,7 @@ export type Database = {
           match_id: string
           mins?: number
           offsides?: number
+          played?: boolean
           player_id: string
           rating?: number | null
           red?: number
@@ -2301,6 +2398,7 @@ export type Database = {
           match_id?: string
           mins?: number
           offsides?: number
+          played?: boolean
           player_id?: string
           rating?: number | null
           red?: number
@@ -2382,6 +2480,79 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      player_season_adjustments: {
+        Row: {
+          assists: number
+          club_id: string
+          fouls: number
+          fouls_suffered: number
+          goals: number
+          mins: number
+          offsides: number
+          player_id: string
+          red: number
+          season_id: string
+          starts: number
+          tackles: number
+          updated_at: string
+          yellow: number
+        }
+        Insert: {
+          assists?: number
+          club_id: string
+          fouls?: number
+          fouls_suffered?: number
+          goals?: number
+          mins?: number
+          offsides?: number
+          player_id: string
+          red?: number
+          season_id: string
+          starts?: number
+          tackles?: number
+          updated_at?: string
+          yellow?: number
+        }
+        Update: {
+          assists?: number
+          club_id?: string
+          fouls?: number
+          fouls_suffered?: number
+          goals?: number
+          mins?: number
+          offsides?: number
+          player_id?: string
+          red?: number
+          season_id?: string
+          starts?: number
+          tackles?: number
+          updated_at?: string
+          yellow?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_season_adjustments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_season_adjustments_club_id_player_id_season_id_fkey"
+            columns: ["club_id", "player_id", "season_id"]
+            isOneToOne: true
+            referencedRelation: "player_season_stats"
+            referencedColumns: ["club_id", "player_id", "season_id"]
+          },
+          {
+            foreignKeyName: "player_season_adjustments_club_id_player_id_season_id_fkey"
+            columns: ["club_id", "player_id", "season_id"]
+            isOneToOne: true
+            referencedRelation: "player_season_totals"
+            referencedColumns: ["club_id", "player_id", "season_id"]
           },
         ]
       }
@@ -2779,6 +2950,8 @@ export type Database = {
           registration_headline: string
           registration_pending_body: string
           registration_pending_label: string
+          sign_up_by_contact: boolean
+          sign_ups_closed: boolean
           slug: string
           sort_order: number
           status: string
@@ -2806,6 +2979,8 @@ export type Database = {
           registration_headline?: string
           registration_pending_body?: string
           registration_pending_label?: string
+          sign_up_by_contact?: boolean
+          sign_ups_closed?: boolean
           slug: string
           sort_order?: number
           status?: string
@@ -2833,6 +3008,8 @@ export type Database = {
           registration_headline?: string
           registration_pending_body?: string
           registration_pending_label?: string
+          sign_up_by_contact?: boolean
+          sign_ups_closed?: boolean
           slug?: string
           sort_order?: number
           status?: string
@@ -3207,6 +3384,7 @@ export type Database = {
           end_year: number
           id: string
           label: string
+          standings_from_scores: boolean
           start_year: number
           updated_at: string
         }
@@ -3217,6 +3395,7 @@ export type Database = {
           end_year: number
           id?: string
           label: string
+          standings_from_scores?: boolean
           start_year: number
           updated_at?: string
         }
@@ -3227,6 +3406,7 @@ export type Database = {
           end_year?: number
           id?: string
           label?: string
+          standings_from_scores?: boolean
           start_year?: number
           updated_at?: string
         }
@@ -3525,8 +3705,11 @@ export type Database = {
           logo_url: string
           media_asset_id: string | null
           name: string
-          placement: string
+          placement: string | null
+          show_in_footer: boolean
+          show_on_homepage: boolean
           sort_order: number
+          website_url: string | null
         }
         Insert: {
           club_id: string
@@ -3535,8 +3718,11 @@ export type Database = {
           logo_url: string
           media_asset_id?: string | null
           name: string
-          placement: string
+          placement?: string | null
+          show_in_footer?: boolean
+          show_on_homepage?: boolean
           sort_order?: number
+          website_url?: string | null
         }
         Update: {
           club_id?: string
@@ -3545,8 +3731,11 @@ export type Database = {
           logo_url?: string
           media_asset_id?: string | null
           name?: string
-          placement?: string
+          placement?: string | null
+          show_in_footer?: boolean
+          show_on_homepage?: boolean
           sort_order?: number
+          website_url?: string | null
         }
         Relationships: [
           {
@@ -3687,6 +3876,7 @@ export type Database = {
           eyebrow: string
           headline: string
           hero_media_asset_id: string | null
+          hidden: boolean
           id: string
           intro: string
           location: string
@@ -3694,8 +3884,10 @@ export type Database = {
           program_id: string | null
           registration_form_id: string | null
           registration_href: string
+          sign_up_by_contact: boolean
           sort_order: number
           status: string
+          stays_open_after_date: boolean
           updated_at: string
           what_to_expect_copy: string
         }
@@ -3710,6 +3902,7 @@ export type Database = {
           eyebrow?: string
           headline?: string
           hero_media_asset_id?: string | null
+          hidden?: boolean
           id?: string
           intro?: string
           location?: string
@@ -3717,8 +3910,10 @@ export type Database = {
           program_id?: string | null
           registration_form_id?: string | null
           registration_href?: string
+          sign_up_by_contact?: boolean
           sort_order?: number
           status?: string
+          stays_open_after_date?: boolean
           updated_at?: string
           what_to_expect_copy?: string
         }
@@ -3733,6 +3928,7 @@ export type Database = {
           eyebrow?: string
           headline?: string
           hero_media_asset_id?: string | null
+          hidden?: boolean
           id?: string
           intro?: string
           location?: string
@@ -3740,8 +3936,10 @@ export type Database = {
           program_id?: string | null
           registration_form_id?: string | null
           registration_href?: string
+          sign_up_by_contact?: boolean
           sort_order?: number
           status?: string
+          stays_open_after_date?: boolean
           updated_at?: string
           what_to_expect_copy?: string
         }
@@ -3807,7 +4005,85 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      goalkeeper_season_totals: {
+        Row: {
+          clean_sheets: number | null
+          club_id: string | null
+          games_played: number | null
+          goals_against: number | null
+          mins: number | null
+          player_id: string | null
+          red: number | null
+          saves: number | null
+          season_id: string | null
+          starts: number | null
+          yellow: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goalkeeper_season_stats_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goalkeeper_season_stats_club_id_player_id_fkey"
+            columns: ["club_id", "player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "goalkeeper_season_stats_club_id_season_id_fkey"
+            columns: ["club_id", "season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      player_season_totals: {
+        Row: {
+          assists: number | null
+          club_id: string | null
+          fouls: number | null
+          fouls_suffered: number | null
+          games_played: number | null
+          goals: number | null
+          mins: number | null
+          offsides: number | null
+          player_id: string | null
+          red: number | null
+          season_id: string | null
+          starts: number | null
+          tackles: number | null
+          yellow: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_season_stats_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_season_stats_club_id_player_id_fkey"
+            columns: ["club_id", "player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "player_season_stats_club_id_season_id_fkey"
+            columns: ["club_id", "season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
     }
     Functions: {
       apply_registration_checkout_event: {
@@ -3882,6 +4158,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      copy_program: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      copy_tryout: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
       create_pending_registration: {
         Args: {
           p_answers: Json
@@ -3895,6 +4179,10 @@ export type Database = {
           p_waiver_accepted_at: string
         }
         Returns: string
+      }
+      delete_tryout: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
       }
       expire_registration: {
         Args: { p_club_id: string; p_registration_id: string }
@@ -3981,6 +4269,15 @@ export type Database = {
         Args: { p_club_id: string; p_registration_id: string }
         Returns: undefined
       }
+      purge_archived_club: {
+        Args: {
+          p_actor_id: string
+          p_club_id: string
+          p_confirmation: string
+          p_export_id: string
+        }
+        Returns: Json
+      }
       record_stripe_rejection: {
         Args: {
           p_club_id: string
@@ -3992,6 +4289,10 @@ export type Database = {
           p_stripe_created_at: string
         }
         Returns: undefined
+      }
+      registration_form_accepting: {
+        Args: { p_club_id: string; p_form_id: string }
+        Returns: boolean
       }
       resolve_verified_tenant: {
         Args: { p_environment: string; p_hostname: string }
@@ -4066,6 +4367,10 @@ export type Database = {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }
+      save_program_sign_up: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
       save_robinson_editor: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
@@ -4083,6 +4388,10 @@ export type Database = {
         Returns: Json
       }
       save_tickets_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_tryout: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

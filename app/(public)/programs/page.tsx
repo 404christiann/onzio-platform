@@ -1,4 +1,4 @@
-import AcademyProgramsPage from "@/components/AcademyProgramsPage";
+import AcademyProgramsPage from "@/components/sites/diverse-city/AcademyProgramsPage";
 
 // Tenant requests are rewritten to /_clubs/[slug]/programs by middleware.
 // This canonical file keeps the route in the Next.js manifest and provides a

@@ -1,10 +1,11 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { programPageSaveRequestSchema } from "@/lib/program-page-editor/contract";
 
 const root = process.cwd();
-const source = (path: string) => readFileSync(resolve(root, path), "utf8");
+const source = (path: string) => path === "app/admin/(protected)/programs/page.tsx" ? readProgramsEditorSource() : readFileSync(resolve(root, path), "utf8");
 const id = "44444444-4444-4444-8444-444444444401";
 const asset = "55555555-5555-4555-8555-555555555501";
 const updatedAt = "2026-10-02T18:00:00+00:00";
@@ -45,13 +46,37 @@ describe("Programs public-page editor contract", () => {
     expect(frame).toContain("data-program-editor-section");
   });
 
+  it("keeps Academy program links inside the route table and isolates preview interactions", () => {
+    const list = source("components/sites/diverse-city/AcademyProgramsPage.tsx");
+    const detail = source("components/sites/diverse-city/AcademyProgramDetailPage.tsx");
+    const frame = source("components/admin/ProgramCanvasFrame.tsx");
+    expect(list).toContain('academyHref("programDetail", { programSlug: program.slug })');
+    expect(list).toContain('academyHref("contact")');
+    expect(detail).toContain('academyHref("programDetail", { programSlug: otherProgram.slug })');
+    expect(detail).toContain('academyHref("programs")');
+    expect(detail).toContain('academyHref("contact")');
+    expect(frame).toContain("control.inert = true");
+    expect(frame).toContain("event.preventDefault()");
+    expect(frame).toContain("onProgramLink?.(");
+  });
+
+  it("keeps an incompatible unsaved page draft when navigation is declined", () => {
+    const page = source("app/admin/(protected)/programs/page.tsx");
+    const selectStart = page.indexOf("function selectProgram(program: ProgramDraft)");
+    const nextFunction = page.indexOf("function showDirectory()", selectStart);
+    const selection = page.slice(selectStart, nextFunction);
+    expect(selection).toContain('window.confirm("Discard unsaved page changes?")');
+    expect(selection).toMatch(/if\s*\(\(dirty\s*\|\|\s*pageCopyDirty\s*\|\|\s*managementDirty\)\s*&&\s*!window\.confirm\([\s\S]*?\)\)\s*return;/);
+    expect(selection.indexOf("window.confirm")).toBeLessThan(selection.indexOf("setDraft("));
+  });
+
   it("shows the linked open registration form in the detail canvas", () => {
     const page = source("app/admin/(protected)/programs/page.tsx");
     const route = source("app/api/admin/programs-preview-forms/route.ts");
     expect(page).toContain('fetch("/api/admin/programs-preview-forms", { cache: "no-store" })');
     expect(page).toContain("nativeRegistration: linkedForm");
     expect(route).toContain("requireFreshClubSession");
-    expect(route).toContain('club.presentationTemplateKey !== "academy@1"');
+    expect(route).toContain('!club || codeSiteFor(club) !== "diverse-city"');
     expect(route).toContain('eq("club_id", club.id).eq("status", "open")');
     expect(route).toContain("loadLinkedOpenRegistrationForms");
   });
@@ -69,7 +94,6 @@ describe("Programs public-page editor contract", () => {
     const sql = source("supabase/migrations/20261002204000_program_page_atomic_save.sql");
     expect(route).toContain("requireFreshClubSession");
     expect(route).toContain("authorizeMutation");
-    expect(route).toContain('club.presentationTemplateKey !== "academy@1"');
     expect(route).toContain('request.headers.get("sec-fetch-site") !== "cross-site"');
     expect(route).toContain('onzio.rpc("save_program_page"');
     expect(sql).toContain("create function onzio.save_program_page");

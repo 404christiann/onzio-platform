@@ -1,0 +1,833 @@
+{
+  "schemaVersion": 3,
+  "sourceSha": "36674dc511da782bf910e8cd1a8461fcb74377c7",
+  "baseOrigin": "http://alpha.localhost:3123",
+  "scenario": {
+    "originHost": "alpha.localhost",
+    "expectedTitle": "Alpha FC",
+    "route": "/",
+    "warmups": 1,
+    "measuredSamples": 5,
+    "settleMs": 1800,
+    "browser": "143.0.7499.4",
+    "redirects": "guard-every-hop",
+    "webSockets": "blocked",
+    "viewports": [
+      {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  "samples": [
+    {
+      "viewport": "desktop",
+      "warmup": true,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 5,
+        "analytics": 1
+      },
+      "rest": {
+        "site_social_links": 1,
+        "programs": 2,
+        "contact_profile": 2,
+        "program_media": 2,
+        "shop_kit_photos": 1,
+        "shop_kit_section": 1,
+        "league_standings_settings": 2,
+        "league_standings": 2,
+        "homepage_hero_content": 2,
+        "homepage_slideshow_settings": 2,
+        "homepage_slideshow_photos": 2,
+        "site_sponsor_logos": 1,
+        "behind_the_rose_section": 2,
+        "homepage_story_section": 1,
+        "seasons": 1,
+        "programs_page_content": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 450.2000000476837,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 2,
+        "analytics": 1
+      },
+      "rest": {
+        "programs": 2,
+        "site_social_links": 1,
+        "contact_profile": 2,
+        "program_media": 2,
+        "shop_kit_section": 1,
+        "shop_kit_photos": 1,
+        "homepage_hero_content": 2,
+        "league_standings_settings": 2,
+        "seasons": 1,
+        "behind_the_rose_section": 2,
+        "homepage_slideshow_settings": 2,
+        "site_sponsor_logos": 1,
+        "league_standings": 2,
+        "homepage_slideshow_photos": 2,
+        "homepage_story_section": 1,
+        "programs_page_content": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 47.80000001192093,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 2,
+        "analytics": 1
+      },
+      "rest": {
+        "site_social_links": 1,
+        "programs": 2,
+        "contact_profile": 2,
+        "program_media": 2,
+        "shop_kit_section": 1,
+        "shop_kit_photos": 1,
+        "league_standings_settings": 2,
+        "homepage_slideshow_photos": 2,
+        "league_standings": 2,
+        "seasons": 1,
+        "site_sponsor_logos": 1,
+        "programs_page_content": 1,
+        "homepage_hero_content": 2,
+        "homepage_story_section": 1,
+        "behind_the_rose_section": 2,
+        "homepage_slideshow_settings": 2,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 29.900000035762787,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 2,
+        "analytics": 1
+      },
+      "rest": {
+        "site_social_links": 1,
+        "contact_profile": 2,
+        "programs": 2,
+        "program_media": 2,
+        "shop_kit_section": 1,
+        "shop_kit_photos": 1,
+        "league_standings": 2,
+        "league_standings_settings": 2,
+        "homepage_story_section": 1,
+        "homepage_slideshow_photos": 2,
+        "programs_page_content": 1,
+        "site_sponsor_logos": 1,
+        "seasons": 1,
+        "homepage_hero_content": 2,
+        "behind_the_rose_section": 2,
+        "homepage_slideshow_settings": 2,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 28,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 6,
+        "analytics": 1
+      },
+      "rest": {
+        "site_social_links": 1,
+        "programs": 2,
+        "contact_profile": 2,
+        "program_media": 2,
+        "shop_kit_section": 1,
+        "shop_kit_photos": 1,
+        "league_standings_settings": 2,
+        "league_standings": 2,
+        "homepage_slideshow_photos": 2,
+        "site_sponsor_logos": 1,
+        "homepage_slideshow_settings": 2,
+        "seasons": 1,
+        "homepage_hero_content": 2,
+        "behind_the_rose_section": 2,
+        "homepage_story_section": 1,
+        "programs_page_content": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 28.399999976158142,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "desktop",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 5,
+        "analytics": 1
+      },
+      "rest": {
+        "site_social_links": 1,
+        "programs": 2,
+        "contact_profile": 2,
+        "shop_kit_section": 1,
+        "program_media": 2,
+        "shop_kit_photos": 1,
+        "league_standings_settings": 2,
+        "homepage_slideshow_settings": 2,
+        "homepage_slideshow_photos": 2,
+        "league_standings": 2,
+        "behind_the_rose_section": 2,
+        "homepage_hero_content": 2,
+        "site_sponsor_logos": 1,
+        "homepage_story_section": 1,
+        "seasons": 1,
+        "programs_page_content": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 34.5,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "phone",
+      "warmup": true,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 6,
+        "analytics": 1
+      },
+      "rest": {
+        "contact_profile": 2,
+        "programs": 2,
+        "site_social_links": 1,
+        "program_media": 2,
+        "shop_kit_photos": 1,
+        "homepage_hero_content": 2,
+        "shop_kit_section": 1,
+        "homepage_slideshow_settings": 2,
+        "homepage_slideshow_photos": 2,
+        "behind_the_rose_section": 2,
+        "league_standings_settings": 2,
+        "league_standings": 2,
+        "homepage_story_section": 1,
+        "programs_page_content": 1,
+        "site_sponsor_logos": 1,
+        "seasons": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 28.30000001192093,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "phone",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 1,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 2,
+        "analytics": 1
+      },
+      "rest": {
+        "programs": 2,
+        "site_social_links": 1,
+        "contact_profile": 2,
+        "program_media": 2,
+        "shop_kit_section": 1,
+        "shop_kit_photos": 1,
+        "league_standings": 2,
+        "league_standings_settings": 2,
+        "homepage_hero_content": 2,
+        "programs_page_content": 1,
+        "homepage_slideshow_settings": 2,
+        "homepage_story_section": 1,
+        "behind_the_rose_section": 2,
+        "homepage_slideshow_photos": 2,
+        "site_sponsor_logos": 1,
+        "seasons": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 27.5,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "phone",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 2,
+        "analytics": 1
+      },
+      "rest": {
+        "site_social_links": 1,
+        "programs": 2,
+        "contact_profile": 2,
+        "program_media": 2,
+        "shop_kit_photos": 1,
+        "shop_kit_section": 1,
+        "league_standings_settings": 2,
+        "seasons": 1,
+        "league_standings": 2,
+        "site_sponsor_logos": 1,
+        "homepage_hero_content": 2,
+        "homepage_story_section": 1,
+        "homepage_slideshow_photos": 2,
+        "programs_page_content": 1,
+        "homepage_slideshow_settings": 2,
+        "behind_the_rose_section": 2,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 31.30000001192093,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "phone",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 12,
+        "analytics": 1
+      },
+      "rest": {
+        "site_social_links": 1,
+        "programs": 2,
+        "shop_kit_section": 1,
+        "contact_profile": 2,
+        "program_media": 2,
+        "shop_kit_photos": 1,
+        "league_standings_settings": 2,
+        "seasons": 1,
+        "site_sponsor_logos": 1,
+        "league_standings": 2,
+        "homepage_hero_content": 2,
+        "homepage_slideshow_photos": 2,
+        "homepage_story_section": 1,
+        "behind_the_rose_section": 2,
+        "homepage_slideshow_settings": 2,
+        "programs_page_content": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 40,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "phone",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 2,
+        "analytics": 1
+      },
+      "rest": {
+        "site_social_links": 1,
+        "programs": 2,
+        "contact_profile": 2,
+        "program_media": 2,
+        "shop_kit_section": 1,
+        "shop_kit_photos": 1,
+        "league_standings_settings": 2,
+        "league_standings": 2,
+        "seasons": 1,
+        "homepage_story_section": 1,
+        "homepage_hero_content": 2,
+        "behind_the_rose_section": 2,
+        "homepage_slideshow_settings": 2,
+        "homepage_slideshow_photos": 2,
+        "programs_page_content": 1,
+        "site_sponsor_logos": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 26.80000001192093,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    },
+    {
+      "viewport": "phone",
+      "warmup": false,
+      "status": 200,
+      "pageErrors": 0,
+      "httpErrors": 0,
+      "requestErrors": 0,
+      "prefetchCancellations": 0,
+      "redirectsBlocked": 0,
+      "redirectsFollowed": 1,
+      "webSocketsBlocked": 0,
+      "excluded": {
+        "external": 2,
+        "analytics": 1
+      },
+      "rest": {
+        "programs": 2,
+        "contact_profile": 2,
+        "site_social_links": 1,
+        "program_media": 2,
+        "shop_kit_photos": 1,
+        "shop_kit_section": 1,
+        "homepage_story_section": 1,
+        "programs_page_content": 1,
+        "homepage_hero_content": 2,
+        "league_standings_settings": 2,
+        "homepage_slideshow_photos": 2,
+        "behind_the_rose_section": 2,
+        "seasons": 1,
+        "league_standings": 2,
+        "homepage_slideshow_settings": 2,
+        "site_sponsor_logos": 1,
+        "matches": 1
+      },
+      "kits": {
+        "shop_kit_section": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        },
+        "shop_kit_photos": {
+          "home": 1,
+          "third": 0,
+          "away": 0,
+          "unspecified": 0
+        }
+      },
+      "metrics": {
+        "heading": "Alpha FC",
+        "fonts": 5,
+        "fontBodyBytes": 173316,
+        "fontTransferBytes": 174816,
+        "scriptBodyBytes": 929924,
+        "scriptTransferBytes": 938924,
+        "ttfbMs": 30.599999964237213,
+        "developmentResources": false,
+        "mainTextDigest": "5d645cb3ce8f033065e6941ef053c528eb1b75ec70dfcff9c5b95510912f8689"
+      }
+    }
+  ],
+  "summary": {
+    "desktop": {
+      "fonts": {
+        "min": 5,
+        "median": 5,
+        "max": 5
+      },
+      "fontBodyBytes": {
+        "min": 173316,
+        "median": 173316,
+        "max": 173316
+      },
+      "fontTransferBytes": {
+        "min": 174816,
+        "median": 174816,
+        "max": 174816
+      },
+      "scriptBodyBytes": {
+        "min": 929924,
+        "median": 929924,
+        "max": 929924
+      },
+      "scriptTransferBytes": {
+        "min": 938924,
+        "median": 938924,
+        "max": 938924
+      },
+      "restReads": {
+        "min": 26,
+        "median": 26,
+        "max": 26
+      },
+      "ttfbMs": {
+        "min": 28,
+        "median": 29.900000035762787,
+        "max": 47.80000001192093
+      }
+    },
+    "phone": {
+      "fonts": {
+        "min": 5,
+        "median": 5,
+        "max": 5
+      },
+      "fontBodyBytes": {
+        "min": 173316,
+        "median": 173316,
+        "max": 173316
+      },
+      "fontTransferBytes": {
+        "min": 174816,
+        "median": 174816,
+        "max": 174816
+      },
+      "scriptBodyBytes": {
+        "min": 929924,
+        "median": 929924,
+        "max": 929924
+      },
+      "scriptTransferBytes": {
+        "min": 938924,
+        "median": 938924,
+        "max": 938924
+      },
+      "restReads": {
+        "min": 26,
+        "median": 26,
+        "max": 26
+      },
+      "ttfbMs": {
+        "min": 26.80000001192093,
+        "median": 30.599999964237213,
+        "max": 40
+      }
+    }
+  },
+  "verdict": "PASS_RESOURCE_GATES",
+  "limits": [
+    "Loopback synthetic data; external resources and analytics blocked.",
+    "Fresh browser contexts, warm server, no network/CPU throttling.",
+    "TTFB is descriptive; separate captures do not establish a speedup or LCP.",
+    "sourceSha is supplied by the caller; confirm the served production build uses it."
+  ]
+}

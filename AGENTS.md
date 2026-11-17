@@ -18,15 +18,17 @@ Before changing the repository, read:
 
 Treat the architecture plan and contract tests as authoritative. If they conflict, stop and resolve the architectural decision before implementation.
 
-## Current Repository Posture
+## Test expectations
 
-- The project is contract-first and intentionally red.
-- The Rose City application baseline has been copied and verified.
-- The copied application is legacy compatibility source, not a completed
-  multi-tenant implementation.
-- Contract failures are requirements, not defects in the harness.
-- Passing legacy or harness-safety tests do not mean the platform is
-  implemented.
+- The repository contains the club website application, admin tools,
+  multi-tenant migrations, and regression suites.
+- Use `HANDOFF.md` for current work and recorded verification. Keep milestone
+  status and test counts out of these stable instructions.
+- Investigate failing tests against the current requirements and baseline.
+  Do not assume a failure is expected because early project documents describe
+  an intentionally red contract suite.
+- Passing a test suite establishes only the behavior it covers. Browser,
+  migration, and release acceptance require their own evidence.
 
 Never create placeholder application implementations solely to silence failures.
 

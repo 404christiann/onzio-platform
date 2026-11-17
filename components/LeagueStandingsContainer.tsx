@@ -2,25 +2,21 @@
 
 import { useEffect, useState } from "react";
 import LeagueStandingsTable from "@/components/LeagueStandingsTable";
-import AcademyLeagueStandingsTable from "@/components/AcademyLeagueStandingsTable";
+import AcademyStandingsSection from "@/components/sites/diverse-city/AcademyStandingsSection";
 import { fetchLeagueStandings } from "@/lib/queries";
 import {
   DEFAULT_STANDINGS_SETTINGS,
   type StandingsTableContent,
 } from "@/lib/standings-content";
-import { useClubContext, useClubId } from "@/components/ClubContextProvider";
-import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
-import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
+import { useClubId } from "@/components/ClubContextProvider";
 
-export default function LeagueStandingsContainer() {
-  const club = useClubContext();
+export default function LeagueStandingsContainer({ tableStyle }: { tableStyle?: "club-table" } = {}) {
   const clubId = useClubId();
   const [content, setContent] = useState<StandingsTableContent>({
     settings: DEFAULT_STANDINGS_SETTINGS,
     rows: [],
   });
   const [loading, setLoading] = useState(true);
-  const showLoading = useBoundedAcademyLoading(loading, clubId);
 
   useEffect(() => {
     fetchLeagueStandings(clubId)
@@ -31,9 +27,8 @@ export default function LeagueStandingsContainer() {
       .finally(() => setLoading(false));
   }, [clubId]);
 
-  if (club.presentationTemplateKey === "academy@1") {
-    if (showLoading) return <AcademySectionLoadingSkeleton />;
-    return <AcademyLeagueStandingsTable settings={content.settings} rows={content.rows} />;
+  if (tableStyle === "club-table") {
+    return <AcademyStandingsSection loading={loading} content={content} clubId={clubId} />;
   }
 
   return (

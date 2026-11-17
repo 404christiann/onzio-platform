@@ -1,0 +1,124 @@
+/* ADMIN-RE-19: the player's chart. The colors are the page's own custom
+   properties (--ana-pop and friends), which it inherits. */
+
+/* The shape: the corners' words sit around it, so it has room on every side */
+.radar {
+  --s: 176px;
+  --room: 80px;
+  position: relative;
+  grid-area: chart;
+  width: var(--s);
+  height: var(--s);
+  margin: 44px var(--room) 44px;
+  align-self: start;
+}
+
+@media (max-width: 639px) {
+  .radar {
+    --s: 120px;
+    --room: 72px;
+    margin: 52px auto 44px;
+  }
+}
+
+.radarSvg,
+.radarGlow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.radarGlow {
+  filter: blur(6px);
+  opacity: 0.5;
+}
+
+.radarRing {
+  fill: none;
+  stroke: hsl(var(--border));
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.radarShape {
+  stroke: none;
+}
+
+.radarLine {
+  fill: none;
+  stroke: var(--ana-pop);
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.radarDot {
+  fill: var(--ana-pop);
+  stroke: hsl(var(--card));
+  stroke-width: 0.8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .radarShape,
+  .radarLine,
+  .radarGlow path {
+    transition: d 0.5s cubic-bezier(0.3, 0.75, 0.1, 1);
+  }
+}
+
+.radarLabel {
+  position: absolute;
+  display: grid;
+  gap: 0;
+  white-space: nowrap;
+}
+
+.radarLabel[data-side="left"] {
+  padding-right: 10px;
+  text-align: right;
+  transform: translate(-100%, -50%);
+}
+
+.radarLabel[data-side="right"] {
+  padding-left: 10px;
+  text-align: left;
+  transform: translate(0, -50%);
+}
+
+.radarLabel[data-side="middle"] {
+  text-align: center;
+  transform: translate(-50%, 0);
+}
+
+.radarLabel[data-side="middle"][data-level="top"] {
+  padding-bottom: 8px;
+  transform: translate(-50%, -100%);
+}
+
+.radarLabel[data-side="middle"][data-level="bottom"] {
+  padding-top: 8px;
+}
+
+.radarName {
+  font-size: 13px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.radarValue {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 639px) {
+  .radarName {
+    font-size: 14px;
+  }
+  .radarValue {
+    font-size: 20px;
+  }
+}

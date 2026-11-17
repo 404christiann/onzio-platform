@@ -39,6 +39,7 @@ const FOREIGN_KEY_VIOLATION = "23503";
 const MISSING_TABLE = "PGRST205";
 
 const publishedAssetIds: string[] = [];
+const publishedStoragePaths: string[] = [];
 
 async function seedProgram(clubId: string, id: string, slug: string) {
   const { error } = await clients.service.from("programs").insert({
@@ -74,6 +75,9 @@ afterEach(async () => {
   for (const assetId of publishedAssetIds.splice(0)) {
     await clients.service.from("media_assets").delete().eq("id", assetId);
   }
+  // Deleting the media_assets row does not remove the stored file, so remove it too.
+  const stored = publishedStoragePaths.splice(0);
+  if (stored.length > 0) await clients.service.storage.from("onzio-media").remove(stored);
 });
 
 describe("onzio.program_media schema", () => {
@@ -394,6 +398,7 @@ describe("program gallery media pipeline", () => {
       "png",
     );
     publishedAssetIds.push(published.assetId);
+    publishedStoragePaths.push(published.storagePath);
 
     // Published under a UUID-versioned immutable path on the public media
     // bucket -- never a runtime transformation endpoint.

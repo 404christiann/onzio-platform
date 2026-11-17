@@ -3,6 +3,7 @@
 import Image from "@/components/ResilientImage";
 import type { DBSiteSponsorLogo } from "@/lib/db-types";
 import { imageDeliveryProps } from "@/lib/image-delivery";
+import SponsorLink from "@/components/SponsorLink";
 
 type SponsorCarouselProps = {
   sponsors: DBSiteSponsorLogo[];
@@ -37,7 +38,10 @@ export default function SponsorCarousel({ sponsors, compact = false }: SponsorCa
               aria-hidden={groupIndex === 1 ? "true" : undefined}
             >
               {sponsorGroup.map((sponsor, index) => (
-                <span
+                <SponsorLink
+                  href={sponsor.website_url}
+                  name={sponsor.name}
+                  hidden={groupIndex === 1 || index >= sponsors.length}
                   className="sponsor-carousel-logo relative w-[260px]"
                   key={`${groupIndex}-${sponsor.id}-${index}`}
                 >
@@ -50,7 +54,7 @@ export default function SponsorCarousel({ sponsors, compact = false }: SponsorCa
                     className="object-contain"
                     {...imageDeliveryProps("sponsor-logo")}
                   />
-                </span>
+                </SponsorLink>
               ))}
             </div>
           ))}

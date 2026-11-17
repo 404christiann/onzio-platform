@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import guided from "@/components/admin/AdminGuided.module.css";
+import frame from "./AdminPage.module.css";
 
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ type AdminPageHeaderProps = {
   title: ReactNode;
   description?: ReactNode;
   eyebrow?: ReactNode;
+  breadcrumb?: ReactNode;
   actions?: ReactNode;
   className?: string;
 };
@@ -27,38 +29,20 @@ export function AdminPageHeader({
   title,
   description,
   eyebrow,
+  breadcrumb,
   actions,
   className,
 }: AdminPageHeaderProps) {
   return (
-    <header
-      className={cn(
-        "flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between",
-        guided.pageHeader,
-        className,
-      )}
-    >
-      <div className="min-w-0">
-        {eyebrow && (
-          <p className="text-sm font-medium text-primary">
-            {eyebrow}
-          </p>
-        )}
-        <h1
-          className={cn(
-            "text-3xl font-semibold normal-case leading-tight tracking-tight text-foreground sm:text-[34px]",
-            eyebrow && "mt-2",
-          )}
-        >
-          {title}
-        </h1>
-        {description && (
-          <p className="mt-3 max-w-3xl text-[15px] leading-6 text-muted-foreground">
-            {description}
-          </p>
-        )}
+    <header className={cn(frame.header, guided.pageHeader, className)} data-admin-page-header="">
+      <div className={frame.heading}>
+        <div className={frame.breadcrumb} data-admin-page-breadcrumb="">
+          {breadcrumb ?? eyebrow ?? "Club admin"}
+        </div>
+        <h1 className={frame.title}>{title}</h1>
+        {description && <p className={frame.description}>{description}</p>}
       </div>
-      {actions && <div className="flex flex-none flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className={frame.actions} data-admin-page-actions="">{actions}</div>}
     </header>
   );
 }

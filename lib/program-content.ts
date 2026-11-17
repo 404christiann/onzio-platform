@@ -20,7 +20,7 @@ export type ProgramRegistrationContent = {
  * Template defaults for the program registration band.
  *
  * These are the approved academy@1 strings that used to be hardcoded inside
- * `components/AcademyProgramDetailPage.tsx`. They live here for the same reason
+ * `components/sites/diverse-city/AcademyProgramDetailPage.tsx`. They live here for the same reason
  * `DEFAULT_STANDINGS_SETTINGS` and `DEFAULT_HOMEPAGE_HERO_CONTENT` do: a club
  * that has never touched a field still renders sensible template chrome, and an
  * empty column stays a legitimate "unset" value instead of a blank page. Any
@@ -32,9 +32,11 @@ export const DEFAULT_PROGRAM_REGISTRATION_CONTENT: Omit<
 > = {
   eyebrow: "Program Registration",
   headline: "Ready to take the field?",
-  body: "Registration is completed through our external registration partner. Continue there to get started.",
+  // Neutral about where sign-up happens: the button may open an Onzio sign-up
+  // form or the club's own registration link (ADMIN-PLATFORM-FIXES-02).
+  body: "Use the button below to register for this program.",
   pendingBody:
-    "Registration is completed through our external registration partner. The registration link will be posted here as soon as it is available.",
+    "Registration isn't open yet. The sign-up link will be posted here as soon as it is available.",
   // DCFC-D102: the honest no-destination state. Deliberately not a link.
   pendingLabel: "Registration Link Coming Soon",
 };

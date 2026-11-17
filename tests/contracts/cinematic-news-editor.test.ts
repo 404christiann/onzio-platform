@@ -51,9 +51,9 @@ describe("RC2027-NEWS editor", () => {
   it("adds News to the admin sidebar for cinematic@2 sites only", () => {
     const news = ADMIN_ROUTE_MANIFEST.find(route => route.id === "news");
     expect(news).toMatchObject({ label: "News", href: "/admin/news", groupId: "website" });
-    expect(isAdminRouteVisible(news!, { role: "owner", presentationTemplateKey: "cinematic@2", isBillingAuthorized: true, canMutateContent: true })).toBe(true);
-    expect(isAdminRouteVisible(news!, { role: "admin", presentationTemplateKey: "cinematic@2", isBillingAuthorized: false, canMutateContent: true })).toBe(true);
-    expect(isAdminRouteVisible(news!, { role: "owner", presentationTemplateKey: "editorial@1", isBillingAuthorized: true, canMutateContent: true })).toBe(false);
+    expect(isAdminRouteVisible(news!, { role: "owner", presentationTemplateKey: "cinematic@2", isBillingAuthorized: true, canMutateContent: true, storeEnabled: true })).toBe(true);
+    expect(isAdminRouteVisible(news!, { role: "admin", presentationTemplateKey: "cinematic@2", isBillingAuthorized: false, canMutateContent: true, storeEnabled: true })).toBe(true);
+    expect(isAdminRouteVisible(news!, { role: "owner", presentationTemplateKey: "editorial@1", isBillingAuthorized: true, canMutateContent: true, storeEnabled: true })).toBe(false);
     expect(MEDIA_SURFACES).toContain("news");
   });
 

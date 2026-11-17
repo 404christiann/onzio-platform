@@ -88,8 +88,8 @@ describe("combined homepage save payload", () => {
   });
 
   it.each([
-    ["headline_line_one", 80], ["headline_line_two", 80], ["intro", 320],
-  ] as const)("preserves the database hero %s ceiling of %i", async (field, maximum) => {
+    ["eyebrow", 120], ["headline_line_one", 80], ["headline_line_two", 80], ["intro", 320],
+  ] as const)("preserves the hero %s ceiling of %i", async (field, maximum) => {
     const contract = await schema();
     const request = saveRequest();
     request.sections.hero[field] = "x".repeat(maximum);

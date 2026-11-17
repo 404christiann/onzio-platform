@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,7 +10,7 @@ import {
 } from "@/lib/homepage-story-content";
 
 const root = process.cwd();
-const source = (path: string) => readFileSync(resolve(root, path), "utf8");
+const source = (path: string) => path === "app/admin/(protected)/programs/page.tsx" ? readProgramsEditorSource() : readFileSync(resolve(root, path), "utf8");
 const CLUB_NAME = "Diverse City FC";
 
 const SHOP_ADMIN = "app/admin/(protected)/shop/page.tsx";
@@ -19,14 +20,16 @@ const SCHEDULE_ADMIN = "app/admin/(protected)/schedule/page.tsx";
 const DATA_ROUTE = "app/api/admin/data/route.ts";
 const AUTHORIZE_ROUTE = "app/api/admin/media/authorize/route.ts";
 const ACADEMY_NEXT_MATCH = "components/AcademyNextMatch.tsx";
+const ACADEMY_FIXTURE_ROW =
+  "components/sites/diverse-city/AcademyFixtureRow.tsx";
 const PUBLIC_SCHEDULE = "app/(public)/schedule/page.tsx";
 const ADMIN_CLIENT = "lib/admin-client.ts";
-const ACADEMY_SHOP_PAGE = "components/AcademyShopPage.tsx";
+const ACADEMY_SHOP_PAGE = "components/sites/diverse-city/AcademyShopPage.tsx";
 const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
 const PROGRAMS_ADMIN = "app/admin/(protected)/programs/page.tsx";
 const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
 const HOMEPAGE_ADMIN = "app/admin/(protected)/homepage/page.tsx";
-const BRANDING_ADMIN = "app/admin/(protected)/branding/page.tsx";
+const BRANDING_ADMIN = "components/admin/club-settings/LegacyBranding.tsx";
 
 /**
  * Christian reported four admin-portal failures against the live Diverse City
@@ -76,9 +79,9 @@ describe("Diverse City admin punch list", () => {
     // neither of which reads any sponsor column, so the editor collected data
     // that could never appear. Same shape as DCFC-D130.
     it("confirms the academy fixture components never render match sponsors", () => {
-      const academy =
-        source("components/AcademyNextMatch.tsx") +
-        source("components/AcademyFixtureRow.tsx");
+      const fixtureRow = source(ACADEMY_FIXTURE_ROW);
+      expect(fixtureRow).toContain("export default function AcademyFixtureRow");
+      const academy = source(ACADEMY_NEXT_MATCH) + fixtureRow;
       for (const field of [
         "sponsor_name",
         "sponsor_logo_url",
@@ -100,16 +103,12 @@ describe("Diverse City admin punch list", () => {
     });
 
     it("gates the sponsor inputs behind the academy@1 check", () => {
-      const schedule = source(SCHEDULE_ADMIN);
+      const schedule = source(SCHEDULE_ADMIN) + source("components/admin/schedule/ScheduleMatchForm.tsx") + source("components/admin/schedule/schedule-model.ts") + source("components/admin/schedule/ScheduleMatchList.tsx");
       expect(schedule).toContain(
-        'club.presentationTemplateKey === "academy@1"',
+        'codeSiteAdminFor(club)?.schedule',
       );
-      // The gate later widened to also cover editorial@1 (Lions) via
-      // hidesMatchSponsorFields = isAcademy || isEditorial — an OR extension,
-      // so academy@1 still hides exactly what it hid before. See
-      // editorial-admin-surface.test.ts for the editorial half.
       expect(schedule).toContain(
-        "const hidesMatchSponsorFields = isAcademy || isEditorial;",
+        "const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false;",
       );
       expect(schedule).toContain("{!hidesMatchSponsorFields && (");
       // The copy-forward must not seed a hidden field either.
@@ -124,7 +123,7 @@ describe("Diverse City admin punch list", () => {
     it("keeps the sponsor columns, upload, and cleanup logic intact", () => {
       // A pure admin-UI hide: nothing about persistence changes, so a template
       // switch would restore the fields with their data still present.
-      const schedule = source(SCHEDULE_ADMIN);
+      const schedule = source(SCHEDULE_ADMIN) + source("components/admin/schedule/ScheduleMatchForm.tsx") + source("components/admin/schedule/schedule-model.ts") + source("components/admin/schedule/ScheduleMatchList.tsx");
       expect(schedule).toContain("sponsor_name: editForm.sponsor_name");
       expect(schedule).toContain("sponsor_logo_url: editForm.sponsor_logo_url");
       expect(schedule).toContain("sponsor_link: editForm.sponsor_link");
@@ -298,7 +297,8 @@ describe("Diverse City admin punch list", () => {
 
     it("hides both Third and Away kit tabs for academy@1, keeping only Home", () => {
       const shop = source(SHOP_EDITOR);
-      expect(shop).toContain('const variants: ShopVariant[] = isAcademy ? ["home"]');
+      expect(shop).toContain('const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants]');
+      expect(source("components/sites/diverse-city/site-definition.ts")).toContain('shop: { variants: ["home"]');
       expect(source(SHOP_MIGRATION)).toContain("(page_surface='home' or template='academy@1') and (variants ? 'third' or variants ? 'away')");
     });
 
@@ -321,11 +321,11 @@ describe("Diverse City admin punch list", () => {
     // "Result: Rose City X - Y opponent" regardless of which club was actually
     // using the portal. Platform-wide, not academy@1-specific.
     it("uses the club's own name in the score label and result line", () => {
-      const schedule = source(SCHEDULE_ADMIN);
+      const schedule = source(SCHEDULE_ADMIN) + source("components/admin/schedule/ScheduleMatchForm.tsx") + source("components/admin/schedule/schedule-model.ts") + source("components/admin/schedule/ScheduleMatchList.tsx");
       expect(schedule).not.toContain("Rose City");
       expect(schedule).toContain("`${club.name} score`");
       expect(schedule).toContain('label={`${club.name} score`} optional');
-      expect(schedule).toContain("Result: {club.name}");
+      expect(schedule).toContain("Result: {clubName}");
     });
   });
 

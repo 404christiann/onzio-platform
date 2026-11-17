@@ -1,0 +1,10 @@
+* { box-sizing: border-box; }
+body { margin: 0; }
+.fixture { min-height: 100dvh; max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 14px/1.45 Arial, sans-serif; }
+h1 { margin: 0 0 8px; font-size: 25px; }
+output { display: block; margin-bottom: 20px; }
+.panel { margin-bottom: 18px; padding: 18px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+h2 { margin: 0 0 14px; font-size: 18px; }
+button, input { font: inherit; }
+@media (max-width: 390px) { .fixture { padding: 16px 12px 60px; } .panel { padding: 12px; } }
+

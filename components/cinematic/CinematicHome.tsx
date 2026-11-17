@@ -10,7 +10,7 @@ import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/prev
 import type { DBHomepageHeroContent, DBSiteSponsorLogo } from "@/lib/db-types";
 import type { Fixture } from "@/lib/data";
 import { fetchHomepageContent, fetchSchedule, fetchShopKitContent, fetchSiteSponsorLogos, type HomepageContent, type ShopKitContent } from "@/lib/queries";
-import { fetchClubIdentity } from "@/lib/editorial-identity";
+import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
 import { useCinematicContent } from "./CinematicContent";
 import CinematicHero from "./CinematicHero";

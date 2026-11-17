@@ -167,6 +167,237 @@ describe("archive, reactivate, and purge contract", () => {
   });
 });
 
+// The real path, against a fake operator client: the database purge is one
+// call to onzio.purge_archived_club (one transaction, see
+// tests/database/purge-archived-club.test.ts), and Storage is removed only
+// after it returns.
+describe("hard purge database and Storage order", () => {
+  type RpcReply = { data: unknown; error: { message: string; details?: string } | null };
+
+  function fakeClient(options: {
+    rpc: RpcReply;
+    storage?: Record<string, string[]>;
+    removeError?: string;
+    auditError?: string;
+  }) {
+    const calls: string[] = [];
+    const rpcArgs: unknown[] = [];
+    const removed: string[] = [];
+    const audits: Record<string, unknown>[] = [];
+    const storage = options.storage ?? {};
+    const client = {
+      schema(schema: string) {
+        return {
+          rpc: async (name: string, args: unknown) => {
+            calls.push(`rpc:${schema}.${name}`);
+            rpcArgs.push(args);
+            return options.rpc;
+          },
+          from: (table: string) => ({
+            insert: (row: Record<string, unknown>) => ({
+              select: () => ({
+                single: async () => {
+                  calls.push(`insert:${schema}.${table}`);
+                  if (options.auditError) {
+                    return { data: null, error: { message: options.auditError } };
+                  }
+                  audits.push(row);
+                  return { data: { id: 77 }, error: null };
+                },
+              }),
+            }),
+          }),
+        };
+      },
+      storage: {
+        from(bucket: string) {
+          return {
+            list: async (prefix: string) => {
+              calls.push(`list:${bucket}/${prefix}`);
+              const names = (storage[bucket] ?? [])
+                .filter((path) => path.startsWith(`${prefix}/`))
+                .map((path) => path.slice(prefix.length + 1));
+              const entries = new Map<string, { name: string; id: string | null }>();
+              for (const name of names) {
+                const [head, ...rest] = name.split("/");
+                entries.set(head, { name: head, id: rest.length ? null : `id-${head}` });
+              }
+              return { data: [...entries.values()], error: null };
+            },
+            remove: async (paths: string[]) => {
+              calls.push(`remove:${bucket}`);
+              if (options.removeError) {
+                return { data: null, error: { message: options.removeError } };
+              }
+              removed.push(...paths.map((path) => `${bucket}/${path}`));
+              return { data: [], error: null };
+            },
+          };
+        },
+      },
+    };
+    return { client, calls, rpcArgs, removed, audits };
+  }
+
+  async function purge(client: unknown) {
+    const purgeClub = await loadContract<PurgeClub>(
+      "@/lib/operator/purge-club",
+      "purgeClub",
+    );
+    return purgeClub({
+      clubId: clubs.alpha.id,
+      operatorAccessToken: OPERATOR_TOKEN,
+      exportId: "export_123",
+      confirmation: clubs.alpha.slug,
+      dependencies: { ...operatorDependencies, client },
+    });
+  }
+
+  const media = {
+    "onzio-media": [
+      `${clubs.alpha.id}/branding/logo.png`,
+      `${clubs.alpha.id}/roster/player.jpg`,
+    ],
+    "onzio-upload-staging": [`${clubs.alpha.id}/roster/staged.jpg`],
+  };
+
+  it("purges the rows in one database call, then removes Storage", async () => {
+    const fake = fakeClient({
+      rpc: {
+        data: {
+          status: "purged",
+          club_slug: clubs.alpha.slug,
+          audit_event_id: 42,
+          rows_deleted: { "onzio.players": 3, "onzio.clubs": 1 },
+        },
+        error: null,
+      },
+      storage: media,
+    });
+
+    await expect(purge(fake.client)).resolves.toMatchObject({
+      purged: true,
+      alreadyPurged: false,
+      auditEventId: 42,
+      rowsDeleted: { "onzio.players": 3, "onzio.clubs": 1 },
+      storageObjectsRemoved: 3,
+      storageAuditEventId: 77,
+      finalAuditOutsideTenant: true,
+    });
+    expect(fake.rpcArgs).toEqual([
+      {
+        p_club_id: clubs.alpha.id,
+        p_export_id: "export_123",
+        p_confirmation: clubs.alpha.slug,
+        p_actor_id: USER_IDS.ownerAal2,
+      },
+    ]);
+    expect(fake.calls[0]).toBe("rpc:onzio.purge_archived_club");
+    expect(fake.calls.filter((call) => call.startsWith("rpc:"))).toHaveLength(1);
+    expect(fake.removed.sort()).toEqual([
+      `onzio-media/${clubs.alpha.id}/branding/logo.png`,
+      `onzio-media/${clubs.alpha.id}/roster/player.jpg`,
+      `onzio-upload-staging/${clubs.alpha.id}/roster/staged.jpg`,
+    ]);
+    // The Storage outcome is its own audit event, written after the files go.
+    expect(fake.calls.at(-1)).toBe("insert:onzio.audit_events");
+    expect(fake.audits).toEqual([
+      {
+        club_id: null,
+        actor_user_id: USER_IDS.ownerAal2,
+        actor_type: "operator",
+        operation: "hard_purge_storage",
+        resource_type: "purged_club",
+        resource_id: clubs.alpha.id,
+        payload: { export_id: "export_123", objects_removed: 3, status: "removed" },
+      },
+    ]);
+  });
+
+  it.each([
+    "CLUB_NOT_FOUND",
+    "CONFIRMATION_MISMATCH",
+    "CLUB_NOT_ARCHIVED",
+    "EXPORT_REQUIRED",
+    "PURGE_BLOCKED",
+    "PURGE_UNKNOWN_CLUB_TABLE",
+    "PURGE_OTHER_CLUB_CHANGED",
+    "PURGE_INCOMPLETE",
+  ])("passes the database refusal %s through and leaves Storage alone", async (code) => {
+    const fake = fakeClient({
+      rpc: { data: null, error: { message: code, details: "detail" } },
+      storage: media,
+    });
+    await expectContractError(() => purge(fake.client), code);
+    expect(fake.calls).toEqual(["rpc:onzio.purge_archived_club"]);
+    expect(fake.audits).toEqual([]);
+  });
+
+  it("reports any other database error as PURGE_DATABASE_FAILED and leaves Storage alone", async () => {
+    const fake = fakeClient({
+      rpc: { data: null, error: { message: "canceling statement due to lock timeout" } },
+      storage: media,
+    });
+    await expectContractError(() => purge(fake.client), "PURGE_DATABASE_FAILED");
+    expect(fake.calls).toEqual(["rpc:onzio.purge_archived_club"]);
+  });
+
+  it("records a Storage failure after the rows are purged, then reports PURGE_STORAGE_FAILED", async () => {
+    const fake = fakeClient({
+      rpc: { data: { status: "purged", club_slug: clubs.alpha.slug }, error: null },
+      storage: media,
+      removeError: "storage unavailable",
+    });
+    await expectContractError(() => purge(fake.client), "PURGE_STORAGE_FAILED");
+    expect(fake.audits).toEqual([
+      expect.objectContaining({
+        club_id: null,
+        operation: "hard_purge_storage",
+        resource_id: clubs.alpha.id,
+        payload: {
+          export_id: "export_123",
+          objects_removed: 0,
+          status: "failed",
+          error: "onzio-upload-staging: storage unavailable",
+        },
+      }),
+    ]);
+  });
+
+  it("reports PURGE_STORAGE_UNRECORDED when the files are removed but the record can't be written", async () => {
+    const fake = fakeClient({
+      rpc: { data: { status: "purged", club_slug: clubs.alpha.slug }, error: null },
+      storage: media,
+      auditError: "audit insert failed",
+    });
+    await expectContractError(() => purge(fake.client), "PURGE_STORAGE_UNRECORDED");
+    expect(fake.removed).toHaveLength(3);
+  });
+
+  it("still reports PURGE_STORAGE_FAILED when the failure can't be recorded", async () => {
+    const fake = fakeClient({
+      rpc: { data: { status: "purged", club_slug: clubs.alpha.slug }, error: null },
+      storage: media,
+      removeError: "storage unavailable",
+      auditError: "audit insert failed",
+    });
+    await expectContractError(() => purge(fake.client), "PURGE_STORAGE_FAILED");
+  });
+
+  it("retries only the Storage removal when the club was already purged", async () => {
+    const fake = fakeClient({
+      rpc: { data: { status: "already_purged", club_slug: clubs.alpha.slug }, error: null },
+      storage: media,
+    });
+    await expect(purge(fake.client)).resolves.toMatchObject({
+      purged: true,
+      alreadyPurged: true,
+      auditEventId: null,
+      storageObjectsRemoved: 3,
+    });
+  });
+});
+
 describe("Rose City migration contract", () => {
   const source = {
     clubId: "33333333-3333-4333-8333-333333333333",

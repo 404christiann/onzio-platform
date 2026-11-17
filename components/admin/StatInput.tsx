@@ -19,7 +19,7 @@ function StatInput({ value, onChange, className, style, ...props }: StatInputPro
     <input
       type="number"
       min={0}
-      value={value}
+      value={String(value)}
       onChange={(e) => onChange(Math.max(0, Number(e.target.value)))}
       data-slot="stat-input"
       className={cn(

@@ -1,8 +1,18 @@
-/** Local browser-test login. Run with .env.test exported; never prints credentials. */
+/**
+ * Local browser-test login. Run with .env.test exported; never prints credentials.
+ * `node scripts/homepage-local-auth.mjs` signs in the synthetic Alpha owner
+ * (local-auth.json); `... admin` signs in the synthetic Alpha administrator
+ * (local-admin-auth.json) for ADMIN_GUIDED_ADMIN_STORAGE_STATE.
+ */
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { chmod, mkdir } from "node:fs/promises";
+
+const role = process.argv[2] === "admin" ? "admin" : "owner";
+const userId = role === "admin"
+  ? "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3"
+  : "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 
 if (new URL(process.env.SUPABASE_TEST_URL).hostname !== "127.0.0.1") {
   throw new Error("This login helper requires local Supabase.");
@@ -10,7 +20,7 @@ if (new URL(process.env.SUPABASE_TEST_URL).hostname !== "127.0.0.1") {
 const client = createClient(process.env.SUPABASE_TEST_URL, process.env.SUPABASE_TEST_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false }, realtime: { transport: WebSocket },
 });
-const { data, error } = await client.auth.admin.getUserById("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1");
+const { data, error } = await client.auth.admin.getUserById(userId);
 if (error) throw error;
 const directory = "/private/tmp/onzio-homepage-tests";
 await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -28,7 +38,7 @@ try {
   if (!code) throw new Error("Local sign-in code not found.");
   await page.getByLabel("Sign-in code", { exact: true }).fill(code);
   await page.waitForURL("http://alpha.localhost:3110/admin");
-  const path = `${directory}/local-auth.json`;
+  const path = `${directory}/${role === "admin" ? "local-admin-auth.json" : "local-auth.json"}`;
   await context.storageState({ path });
   await chmod(path, 0o600);
 } finally { await browser.close(); }

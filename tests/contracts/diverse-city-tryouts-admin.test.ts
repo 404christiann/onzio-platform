@@ -48,6 +48,9 @@ function tryout(overrides: Partial<DBTryout> = {}): DBTryout {
     cta_label: "Register externally",
     registration_href: "https://registration.example.test/tryouts",
     registration_form_id: null,
+    hidden: false,
+    sign_up_by_contact: false,
+    stays_open_after_date: false,
     closed_message: "Registration is closed for this opportunity.",
     sort_order: 0,
     created_at: "2026-08-01T00:00:00Z",
@@ -202,17 +205,19 @@ describe("Tryouts page intro copy", () => {
     ).toEqual(DEFAULT_TRYOUTS_PAGE_CONTENT);
   });
 
-  it("reproduces the previously hardcoded sentences byte for byte", () => {
-    // A club with no row must render exactly what AcademyTryoutsPage used to
-    // hardcode; anything else is a silent copy change at deploy time.
+  it("pins the template default sentences byte for byte", () => {
+    // A club with no row renders exactly these; anything else is a silent copy
+    // change at deploy time. ADMIN-PLATFORM-FIXES-02 deliberately replaced the
+    // with-tryouts sentence, which wrongly said sign-up always went through
+    // the club's "external provider" even when an Onzio form is linked.
     expect(DEFAULT_TRYOUTS_PAGE_CONTENT.introWithTryouts).toBe(
-      "Review current club evaluations below. Registration, waivers, and participant information stay with the club's external provider.",
+      "Review current club evaluations below. Each tryout shows how to register.",
     );
     expect(DEFAULT_TRYOUTS_PAGE_CONTENT.introNoTryouts).toBe(
       "Tryout dates and locations are still being finalized. Register your interest below to stay informed once details are announced.",
     );
     const component = readFileSync(
-      resolve(process.cwd(), "components/AcademyTryoutsPage.tsx"),
+      resolve(process.cwd(), "components/sites/diverse-city/AcademyTryoutsPage.tsx"),
       "utf8",
     );
     expect(component).not.toContain("Review current club evaluations below.");
@@ -235,7 +240,7 @@ describe("Tryouts page intro copy", () => {
 
   it("keeps the retired per-event prose off the public event card", () => {
     const component = readFileSync(
-      resolve(process.cwd(), "components/AcademyTryoutsPage.tsx"),
+      resolve(process.cwd(), "components/sites/diverse-city/AcademyTryoutsPage.tsx"),
       "utf8",
     );
     for (const retired of [
@@ -362,9 +367,9 @@ describe("Tryouts page intro copy", () => {
     );
     expect(route).toContain("fetchTryoutsPageContent");
     expect(route).toContain("content={content}");
-    // The route stays academy@1-only, exactly as before.
+    // The route remains available only for the mapped code site.
     expect(route).toContain(
-      'if (club.presentationTemplateKey !== "academy@1") notFound();',
+      'if (codeSiteFor(club) !== "diverse-city") notFound();',
     );
   });
 });
@@ -416,7 +421,9 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
   it("exposes the approved event, state, association, media, and complete UX fields", () => {
     for (const label of [
       "Program association",
-      "Status",
+      // ADMIN-RE-12b: the state follows the sign-up way and the date; the
+      // owner only chooses whether it is closed.
+      "Sign-ups",
       // The merged single name field, stored in the existing `headline`
       // column. It replaced the Eyebrow + Headline pair.
       'label="Name"',

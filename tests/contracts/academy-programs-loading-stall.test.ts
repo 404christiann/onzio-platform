@@ -49,7 +49,7 @@ describe("academy shell stalled reads", () => {
       "utf8",
     );
     expect(layout).toContain("await loadAcademyShellBranding(club.id)");
-    expect(layout).toContain("<Nav />");
+    expect(layout).toContain("<AcademyShell>{children}</AcademyShell>");
     expect(layout).not.toContain("fetchPrograms");
     expect(layout).not.toContain("initialPrograms=");
   });

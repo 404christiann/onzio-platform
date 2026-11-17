@@ -1,0 +1,56 @@
+* { box-sizing: border-box; }
+body { margin: 0; }
+.fixture {
+  min-height: 100dvh;
+  padding: 32px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.fixture > h1 { margin: 0; font-size: 28px; }
+.fixture > p { margin: 6px 0 24px; color: hsl(var(--muted-foreground)); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.toolbar button,
+.player-row button {
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  cursor: pointer;
+}
+.player-list { display: grid; gap: 8px; position: relative; max-width: 540px; }
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 68px;
+  padding: 10px 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--card));
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: hsl(var(--secondary));
+  font-weight: 700;
+}
+.row-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.row-copy strong,
+.row-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-copy small { color: hsl(var(--muted-foreground)); }
+.fixture output { display: block; margin-top: 8px; }
+@media (max-width: 700px) {
+  .fixture { padding: 16px; }
+  .fixture > h1 { font-size: 24px; }
+  .player-row { gap: 8px; padding: 8px; }
+  .player-row button { min-height: 44px; }
+}
+

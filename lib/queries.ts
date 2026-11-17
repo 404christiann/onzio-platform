@@ -62,7 +62,7 @@ import {
   normalizeKitStoreNote,
 } from "@/lib/shop-kit";
 import { normalizeShopPurchaseDetails } from "@/lib/shop-purchase-details";
-import { defaultSponsorLogosForPlacement } from "@/lib/sponsor-content";
+import { defaultSponsorLogosForPlacement, SPONSOR_PLACEMENT_SWITCH } from "@/lib/sponsor-content";
 import {
   DEFAULT_ABOUT_PAGE_CONTENT,
   EMPTY_ABOUT_PAGE_CONTENT,
@@ -86,6 +86,14 @@ import {
   resolveMediaStoragePath,
 } from "@/lib/media-assets";
 import { normalizePublicHref } from "@/lib/public-link";
+import { clubToday, DEFAULT_CLUB_TIME_ZONE } from "@/lib/club-time";
+import {
+  compareTryoutsByDate,
+  formPriceText,
+  programSignUp,
+  publicTryoutStatus,
+  tryoutSignUp,
+} from "@/lib/sign-up-state";
 import {
   normalizeProgramMedia,
   resolveProgramRegistration,
@@ -182,6 +190,9 @@ export type MatchLogRow = {
   goals:    number;
   assists:  number;
   rating:   number | null;
+  /** Keepers only (ADMIN-RE-19): saves and goals let in that game. */
+  saves?:        number;
+  goalsAgainst?: number;
 };
 
 export type PlayerMatchTrendPoint = {
@@ -231,6 +242,13 @@ export type ProgramContent = {
   externalCta: { label: string; href: string } | null;
   /** An open native form takes precedence over the external CTA when linked. */
   nativeRegistration: NativeRegistrationAction | null;
+  /**
+   * ADMIN-RE-12b: the owner closed sign-ups. The page stays up; its form and
+   * link don't show (and its form takes no sign-ups for it).
+   */
+  signUpsClosed: boolean;
+  /** "They contact you": a mailto to the club's public email, when there is no form or link. */
+  contactCta: { label: string; href: string } | null;
   /** Admin-editable registration band copy, resolved against template defaults. */
   registration: ProgramRegistrationContent;
   /** Ordered admin-managed gallery images for this program (onzio.program_media). */
@@ -267,6 +285,8 @@ export type TryoutContent = {
   id: string;
   programId: string | null;
   status: "upcoming" | "open" | "closed";
+  /** Closed because its date passed, not by the owner. */
+  closedByDate: boolean;
   eyebrow: string;
   headline: string;
   intro: string;
@@ -280,7 +300,7 @@ export type TryoutContent = {
   closedMessage: string;
   sortOrder: number;
   action: TryoutAction | null;
-  /** An open native form takes precedence over `action` for non-closed events. */
+  /** An open native form takes precedence over `action` for events that aren't closed. */
   nativeRegistration: NativeRegistrationAction | null;
 };
 
@@ -317,10 +337,20 @@ function stringArray(value: unknown): string[] {
 
 function mapProgram(
   row: HydratedProgram,
-  nativeForm?: PublicRegistrationForm,
+  nativeForm: PublicRegistrationForm | undefined,
+  email?: unknown,
 ): ProgramContent {
   const href = normalizePublicHref(row.external_cta_href);
   const label = row.external_cta_label.trim();
+  const contact = contactHref(email);
+  const signUp = programSignUp({
+    status: row.status,
+    signUpsClosed: row.sign_ups_closed === true,
+    hasOpenForm: Boolean(nativeForm),
+    hasLink: Boolean(href && label),
+    byContact: row.sign_up_by_contact === true,
+  });
+  const closed = signUp.state === "closed";
   return {
     id: row.id,
     slug: row.slug,
@@ -334,9 +364,13 @@ function mapProgram(
       row.layout_variant === "detail_focus" ? "detail_focus" : "statement_band",
     heroMediaUrl: row.hero_media_url ?? "",
     detailMediaUrl: row.detail_media_url ?? "",
-    externalCta: href && label ? { label, href } : null,
-    nativeRegistration: nativeForm
+    externalCta: !closed && href && label ? { label, href } : null,
+    nativeRegistration: !closed && nativeForm
       ? { form: nativeForm, label: label || "Register now" }
+      : null,
+    signUpsClosed: closed,
+    contactCta: !closed && signUp.way === "contact" && contact
+      ? { label: "Contact the club", href: contact }
       : null,
     registration: resolveProgramRegistration(row),
     media: normalizeProgramMedia(row.program_media),
@@ -493,20 +527,40 @@ function contactHref(email: unknown): string {
 
 /**
  * Exported so /admin/tryouts can render its live-style preview through exactly
- * the rules the public page uses — which action a status produces, when a
- * registration link is trusted, and where TBA appears — instead of a second
- * copy that can drift.
+ * the rules the public page uses — which action the sign-up state produces,
+ * when a registration link is trusted, and where TBA appears — instead of a
+ * second copy that can drift.
+ *
+ * ADMIN-RE-12b: the state comes from the sign-up way and the date
+ * (lib/sign-up-state.ts). A tryout closed by its owner or past its date (the
+ * day after, in club time; `today` is clubToday) shows no form or link, only
+ * the contact fallback, as Closed always has. With a sign-up form the Cost is
+ * the form's price; the typed cost note is for a link or contacting the club.
  */
 export function mapTryout(
   row: HydratedTryout,
   email: unknown,
-  nativeForm?: PublicRegistrationForm,
+  nativeForm: PublicRegistrationForm | undefined,
+  today: string,
 ): TryoutContent {
   const registrationHref = normalizePublicHref(row.registration_href);
   const registrationLabel = row.cta_label.trim();
   const fallbackHref = contactHref(email);
+  const signUp = tryoutSignUp(
+    {
+      hidden: row.hidden === true,
+      status: row.status,
+      eventDate: row.event_date,
+      staysOpenAfterDate: row.stays_open_after_date === true,
+      hasOpenForm: Boolean(nativeForm),
+      hasLink: Boolean(registrationHref && registrationLabel),
+      byContact: row.sign_up_by_contact === true,
+    },
+    today,
+  );
+  const open = signUp.state === "taking" || signUp.state === "not-yet";
   const action: TryoutAction | null =
-    row.status !== "closed" && registrationHref && registrationLabel
+    open && registrationHref && registrationLabel
       ? {
           kind: "registration",
           label: registrationLabel,
@@ -519,14 +573,15 @@ export function mapTryout(
             href: fallbackHref,
           }
         : null;
+  const formPrice = open && nativeForm
+    ? formPriceText(nativeForm.prices.map((price) => price.amountCents))
+    : null;
 
   return {
     id: row.id,
     programId: row.program_id,
-    status:
-      row.status === "open" || row.status === "closed"
-        ? row.status
-        : "upcoming",
+    status: publicTryoutStatus(signUp.state),
+    closedByDate: signUp.closedByDate,
     eyebrow: row.eyebrow,
     headline: row.headline,
     intro: row.intro,
@@ -536,12 +591,12 @@ export function mapTryout(
     preparationCopy: row.preparation_copy,
     eventDate: row.event_date,
     location: row.location,
-    costText: row.cost_text,
+    costText: formPrice ?? row.cost_text,
     closedMessage: row.closed_message,
     sortOrder: row.sort_order,
     action,
     nativeRegistration:
-      row.status !== "closed" && nativeForm
+      open && nativeForm
         ? { form: nativeForm, label: registrationLabel || "Register now" }
         : null,
   };
@@ -617,12 +672,24 @@ export async function fetchProgramBySlug(
   ]);
   const row = (rows as HydratedProgram[])[0];
   if (!row) return null;
-  const [withMedia] = await attachProgramMedia([row], tenantId, client);
+  const [[withMedia], contactResult] = await Promise.all([
+    attachProgramMedia([row], tenantId, client),
+    client
+      .from("contact_profile")
+      .select("public_email")
+      .eq("club_id", tenantId)
+      .limit(1),
+  ]);
+  if (contactResult.error) throw new Error(`fetchProgramBySlug: ${contactResult.error.message}`);
+  const email = (
+    (contactResult.data ?? []) as Pick<DBContactProfile, "public_email">[]
+  )[0]?.public_email;
   return mapProgram(
     withMedia,
     withMedia.registration_form_id
       ? nativeForms.get(withMedia.registration_form_id)
       : undefined,
+    email,
   );
 }
 
@@ -716,10 +783,16 @@ export async function fetchContactProfile(
     : null;
 }
 
-/** Fetches ordered Tryouts and derives a safe registration/contact action. */
+/**
+ * Fetches the Tryouts a visitor sees and derives a safe registration/contact
+ * action for each. Hidden tryouts are left out (ADMIN-RE-12b), and the rest
+ * read by date, soonest first (group 2 decision 13). `today` is the club's
+ * date (clubToday in its time zone), which closes past tryouts.
+ */
 export async function fetchTryouts(
   clubId: string,
   client: typeof supabase = supabase,
+  today: string = clubToday(DEFAULT_CLUB_TIME_ZONE),
 ): Promise<TryoutContent[]> {
   const tenantId = requireVerifiedClubId(clubId);
   const [tryoutsResult, contactResult] = await Promise.all([
@@ -727,6 +800,7 @@ export async function fetchTryouts(
       .from("tryouts")
       .select("*")
       .eq("club_id", tenantId)
+      .eq("hidden", false)
       .order("sort_order", { ascending: true }),
     client
       .from("contact_profile")
@@ -750,13 +824,16 @@ export async function fetchTryouts(
   const email = (
     (contactResult.data ?? []) as Pick<DBContactProfile, "public_email">[]
   )[0]?.public_email;
-  return (rows as HydratedTryout[]).map((row) => mapTryout(
-    row,
-    email,
-    row.registration_form_id
-      ? nativeForms.get(row.registration_form_id)
-      : undefined,
-  ));
+  return (rows as HydratedTryout[])
+    .map((row) => mapTryout(
+      row,
+      email,
+      row.registration_form_id
+        ? nativeForms.get(row.registration_form_id)
+        : undefined,
+      today,
+    ))
+    .sort(compareTryoutsByDate);
 }
 
 /** Returns all seasons ordered newest first. */
@@ -977,7 +1054,7 @@ export async function fetchShopCarouselPhotos(
  * app/%5Fclubs/[slug]/page.tsx) exactly like fetchAboutClubContent; client
  * components fall back to the shared browser client. Kept as its own export
  * so the tenant homepage can resolve the hero server-side and hand it to
- * components/Hero.tsx as an initial prop — the fix for the Diverse City
+ * the homepage hero as an initial prop — the fix for the Diverse City
  * first-paint flash of Rose City branding.
  */
 export async function fetchHomepageHeroContent(
@@ -1120,7 +1197,10 @@ export async function fetchAboutClubContent(
   };
 }
 
-/** Fetches ordered site sponsor logos for a public placement. */
+/**
+ * Fetches ordered site sponsor logos for a public placement: the sponsors
+ * whose Homepage (carousel) or Footer switch is on (ADMIN-RE-15).
+ */
 export async function fetchSiteSponsorLogos(
   placement: SponsorLogoPlacement,
   clubId?: string,
@@ -1130,8 +1210,9 @@ export async function fetchSiteSponsorLogos(
     .from("site_sponsor_logos")
     .select("*")
     .eq("club_id", tenantId)
-    .eq("placement", placement)
-    .order("sort_order", { ascending: true });
+    .eq(SPONSOR_PLACEMENT_SWITCH[placement], true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
   if (error) {
     console.error(`fetchSiteSponsorLogos(${placement}):`, error.message);
     return clubId ? [] : defaultSponsorLogosForPlacement(placement);
@@ -1144,24 +1225,63 @@ export async function fetchSiteSponsorLogos(
   return rows.length > 0 || clubId ? rows : defaultSponsorLogosForPlacement(placement);
 }
 
-/** Fetches the DB-backed league standings table for the homepage. */
+/**
+ * The club's whole sponsor list in its one order (ADMIN-RE-15), for the admin
+ * pages. Throws on a failed read so a page never saves over a list it could
+ * not load.
+ */
+export async function fetchSponsorList(clubId: string): Promise<DBSiteSponsorLogo[]> {
+  const tenantId = requireClubId(clubId);
+  const { data, error } = await supabase
+    .from("site_sponsor_logos")
+    .select("*")
+    .eq("club_id", tenantId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (await resolveMediaReferences(
+    (data ?? []) as Record<string, unknown>[],
+    tenantId,
+    [{ assetId: "media_asset_id", url: "logo_url" }],
+  )) as unknown as DBSiteSponsorLogo[];
+}
+
+/**
+ * Fetches the DB-backed league standings table for the homepage.
+ *
+ * Every season has its own table (ADMIN-RE-11b). Without `seasonId` this is the
+ * season the website shows; a club with no shown season has no table to show.
+ * The admin passes the season it is editing.
+ */
 export async function fetchLeagueStandings(
   clubId?: string,
-  options: { strict?: boolean } = {},
+  options: { strict?: boolean; seasonId?: string } = {},
 ): Promise<StandingsTableContent> {
   const tenantId = requireClubId(clubId);
   const tenantScoped = Boolean(clubId);
+  const seasonResult = options.seasonId
+    ? { data: [{ id: options.seasonId }], error: null }
+    : await supabase
+        .from("seasons")
+        .select("id")
+        .eq("club_id", tenantId)
+        .eq("active", true)
+        .limit(1);
+  const seasonId = ((seasonResult.data ?? []) as { id: string }[])[0]?.id ?? null;
   const [settingsResult, rowsResult] = await Promise.all([
     supabase
       .from("league_standings_settings")
       .select("*")
       .eq("club_id", tenantId)
       .limit(1),
-    supabase
-      .from("league_standings")
-      .select("*")
-      .eq("club_id", tenantId)
-      .order("sort_order", { ascending: true }),
+    seasonResult.error || !seasonId
+      ? Promise.resolve({ data: [] as unknown[], error: seasonResult.error })
+      : supabase
+          .from("league_standings")
+          .select("*")
+          .eq("club_id", tenantId)
+          .eq("season_id", seasonId)
+          .order("sort_order", { ascending: true }),
   ]);
 
   if (settingsResult.error || rowsResult.error) {
@@ -1265,8 +1385,9 @@ export async function fetchRoster(seasonId?: string, clubId?: string): Promise<{
 
   if (resolvedSeasonId) {
     const [fieldResult, goalkeeperResult] = await Promise.all([
-      supabase.from("player_season_stats").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
-      supabase.from("goalkeeper_season_stats").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
+      // ADMIN-RE-11c: totals are the season's player numbers added up, plus the hand-entered adjustment.
+      supabase.from("player_season_totals").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
+      supabase.from("goalkeeper_season_totals").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
     ]);
     const seasonStatsError = fieldResult.error ?? goalkeeperResult.error;
     if (seasonStatsError) throw new Error(`fetchRoster season stats: ${seasonStatsError.message}`);
@@ -1412,7 +1533,7 @@ export async function fetchPlayerMatchLog(
     : "match_id, goals, assists, mins, rating";
 
   const { data: statsData, error: statsError } = await supabase
-    .from(table).select(fields).eq("club_id", tenantId).eq("player_id", playerId).gt("mins", 0);
+    .from(table).select(fields).eq("club_id", tenantId).eq("player_id", playerId).eq("played", true);
   if (statsError) throw new Error(statsError.message);
 
   const { data: matchData, error: matchError } = await supabase
@@ -1433,6 +1554,7 @@ export async function fetchPlayerMatchLog(
         goals:    gk ? 0 : Number(r.goals),
         assists:  gk ? 0 : Number(r.assists),
         rating:   coerceRating(r.rating),
+        ...(gk ? { saves: Number(r.saves), goalsAgainst: Number(r.goals_against) } : {}),
       };
     })
     .filter((r): r is MatchLogRow => r !== null)
@@ -1441,7 +1563,7 @@ export async function fetchPlayerMatchLog(
 
 /**
  * Fetches per-match stats for a single player sorted chronologically.
- * Only matches where the player played (mins > 0) are included.
+ * Only games the player played in (`played`) are included.
  * When `seasonId` is provided, results are scoped to that season.
  */
 export async function fetchPlayerMatchTrend(
@@ -1457,7 +1579,7 @@ export async function fetchPlayerMatchTrend(
     : "match_id, goals, assists, mins, rating";
 
   const [{ data: statsData }, { data: matchData }] = await Promise.all([
-    supabase.from(table).select(fields).eq("club_id", tenantId).eq("player_id", playerId).gt("mins", 0),
+    supabase.from(table).select(fields).eq("club_id", tenantId).eq("player_id", playerId).eq("played", true),
     supabase.from("matches").select("id, date, opponent, season_id").eq("club_id", tenantId),
   ]);
 

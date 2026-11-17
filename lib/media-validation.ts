@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { failContract } from "@/lib/contract-error";
+import { GRAPHIC_UPLOAD_MIME_TYPES } from "@/lib/media-upload-types";
 
 export type MediaKind = "photo" | "graphic";
 export type DetectedMediaFormat = "jpeg" | "png" | "webp";
@@ -109,7 +110,7 @@ function normalizedExtension(fileName: string): string {
   return match?.[1]?.toLowerCase() ?? "";
 }
 
-function validateClaimedMetadata(metadata: MediaUploadMetadata): void {
+export function validateClaimedMetadata(metadata: MediaUploadMetadata): void {
   if (
     !metadata ||
     typeof metadata.fileName !== "string" ||
@@ -128,7 +129,7 @@ function validateClaimedMetadata(metadata: MediaUploadMetadata): void {
       : new Set(["jpg", "jpeg", "png", "webp"]);
   const allowedMimes =
     metadata.kind === "graphic"
-      ? new Set(["image/png", "image/webp"])
+      ? new Set<string>(GRAPHIC_UPLOAD_MIME_TYPES)
       : new Set(["image/jpeg", "image/png", "image/webp"]);
 
   if (!allowedExtensions.has(extension) || !allowedMimes.has(metadata.mimeType)) {

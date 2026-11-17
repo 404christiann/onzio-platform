@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cinematicPlaceholderLabelId, CINEMATIC_PLACEHOLDER_ROUTES } from "@/lib/cinematic-routes";
-import { templateRegistry, routeRegistry, fontPacks } from "@/packages/presentation";
+import { activeTemplateRegistration, fontPacks, isActiveTemplateKey, routeRegistry, sectionRegistry, templateRegistry } from "@/packages/presentation";
 
 describe("cinematic2 isolated destinations", () => {
   it("keeps every new destination registered and scoped to version2", () => {
@@ -12,11 +12,12 @@ describe("cinematic2 isolated destinations", () => {
     expect(cinematicPlaceholderLabelId("cinematic@2", "/unregistered")).toBeNull();
     expect(cinematicPlaceholderLabelId("cinematic@2", "/stadium/../../admin")).toBeNull();
   });
-  it("retains legacy cinematic registrations while version2 owns its font and content", () => {
-    expect(templateRegistry["cinematic@1"].defaultFontPack).toBe("bebas-inter");
-    expect(templateRegistry["cinematic@1"].supportedRoutes).not.toContain("tickets");
-    expect(templateRegistry["cinematic@2"].defaultFontPack).toBe("museomoderno-avenir");
+  it("retires legacy cinematic@1 while version2 owns its font, content and destinations", () => {
+    expect(isActiveTemplateKey("cinematic@1")).toBe(false);
+    expect(activeTemplateRegistration("cinematic@1")).toBeNull();
+    expect(templateRegistry["cinematic@2"].supportedRoutes).toContain("tickets");
     expect(fontPacks["museomoderno-avenir"].compatibleTemplates).toEqual(["cinematic@2"]);
-    expect(templateRegistry["cinematic@2"].defaultSections).toContain("cinematic.matchday");
+    expect(fontPacks["bebas-inter"].compatibleTemplates).not.toContain("cinematic@2");
+    expect(sectionRegistry["cinematic.matchday"].compatibleTemplates).toEqual(["cinematic@2"]);
   });
 });

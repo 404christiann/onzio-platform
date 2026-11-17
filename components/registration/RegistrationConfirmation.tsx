@@ -19,7 +19,7 @@ function copy(status: Status) {
   }
 }
 
-export default function RegistrationConfirmation({ token }: { token: string | null }) {
+export function useRegistrationConfirmation(token: string | null) {
   const [status, setStatus] = useState<Status>("pending");
 
   useEffect(() => {
@@ -54,7 +54,11 @@ export default function RegistrationConfirmation({ token }: { token: string | nu
     };
   }, [token]);
 
-  const content = copy(status);
+  return { status, content: copy(status) };
+}
+
+export default function RegistrationConfirmation({ token }: { token: string | null }) {
+  const { status, content } = useRegistrationConfirmation(token);
   return (
     <section className="mx-auto flex min-h-[58vh] max-w-2xl items-center px-5 py-16 sm:px-8">
       <div className="w-full border-l-4 border-[var(--color-red)] bg-white px-6 py-8 shadow-sm sm:px-9">

@@ -1,0 +1,66 @@
+.button {
+  min-inline-size: min(172px, 100%);
+  max-inline-size: 100%;
+}
+
+.button[aria-busy="true"] {
+  cursor: default;
+}
+
+.button[aria-busy="true"]:active {
+  filter: none;
+}
+
+.labels {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.label {
+  display: flex;
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 1;
+  transition: opacity var(--admin-motion-reduced-motion-fade) ease-out;
+}
+
+.label[aria-hidden="true"] {
+  opacity: 0;
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ring {
+  box-sizing: border-box;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button[aria-busy="true"] .ring {
+    animation: spin var(--admin-motion-pending-ring) linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    border-right-color: currentColor;
+    opacity: .6;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

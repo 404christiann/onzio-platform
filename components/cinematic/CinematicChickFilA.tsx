@@ -7,7 +7,7 @@ import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { fetchSchedule } from "@/lib/queries";
-import { fetchClubIdentity } from "@/lib/editorial-identity";
+import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { isTicketPurchaseUrl, type TicketsPageContent } from "@/lib/tickets-content";
 import type { ChickFilAArtwork, ChickFilAPageContent } from "@/lib/chick-fil-a-content";
 import { useCinematicContent } from "./CinematicContent";

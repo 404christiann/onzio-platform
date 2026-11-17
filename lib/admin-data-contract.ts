@@ -1,11 +1,16 @@
 import { z } from "zod";
 import { isAllowedPublicHref } from "@/lib/public-link";
+import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
 import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
 import { matchSummarySchema } from "@/lib/match-summary";
 import {
   isValidPublicEmail,
   isValidPublicPhone,
 } from "@/lib/contact-admin";
+import { FOOTER_TAGLINE_LIMIT } from "@/lib/club-branding";
+import { YOUR_CLUB_LIMITS } from "@/lib/your-club";
+import { SEASON_ADJUSTMENT_LIMIT } from "@/lib/season-totals";
+import { SPONSOR_NAME_LIMIT, SPONSOR_WEBSITE_LIMIT } from "@/lib/sponsor-content";
 
 export const ADMIN_TABLE_FEATURES = {
   about_page_content: "about",
@@ -14,7 +19,9 @@ export const ADMIN_TABLE_FEATURES = {
   contact_page_content: "contact",
   contact_profile: "contact",
   goalkeeper_match_stats: "roster",
+  goalkeeper_season_adjustments: "roster",
   goalkeeper_season_stats: "roster",
+  goalkeeper_season_totals: "roster",
   homepage_hero_content: "homepage",
   homepage_slideshow_photos: "homepage",
   homepage_slideshow_settings: "homepage",
@@ -24,7 +31,9 @@ export const ADMIN_TABLE_FEATURES = {
   matches: "schedule",
   player_match_stats: "roster",
   player_photos: "roster",
+  player_season_adjustments: "roster",
   player_season_stats: "roster",
+  player_season_totals: "roster",
   players: "roster",
   program_media: "programs",
   programs: "programs",
@@ -47,6 +56,13 @@ export const ADMIN_TABLE_FEATURES = {
 } as const;
 
 export type AdminTable = keyof typeof ADMIN_TABLE_FEATURES;
+
+// ADMIN-RE-11c: views the admin reads but never writes. Season totals are worked
+// out by the database (games added up plus adjustments).
+export const ADMIN_READ_ONLY_TABLES: ReadonlySet<AdminTable> = new Set([
+  "player_season_totals",
+  "goalkeeper_season_totals",
+]);
 
 const identifier = z.string().regex(/^[a-z][a-z0-9_]*$/).max(80);
 const scalar = z.union([
@@ -208,6 +224,46 @@ const contactProfileMutation = z
   })
   .strict();
 
+// ADMIN-RE-14. `href` had no limit in Zod or the database (the break-ui gap):
+// 2,048 now, on every write, Branding's included. The URL rule still comes from
+// the generic row check above. The id is the platform ("instagram"), kept as
+// text because the table's key is (club_id, id).
+const siteSocialLinkMutation = z
+  .object({
+    id: z
+      .string()
+      .min(1)
+      .max(40)
+      .regex(/^[a-z][a-z0-9_-]*$/)
+      .optional(),
+    label: optionalText(40),
+    href: z
+      .string()
+      .max(YOUR_CLUB_LIMITS.socialHref)
+      .refine(isAllowedPublicHref, {
+        message: "URL fields require http, https, mailto, or a local path",
+      })
+      .optional(),
+    icon: optionalText(200),
+    sort_order: z.number().int().min(0).max(100).optional(),
+    updated_at: z.string().max(40).optional(),
+  })
+  .strict();
+
+// ADMIN-RE-14. The footer line ceiling mirrors the CHECK on
+// onzio.site_branding.footer_tagline (160), so a rejection is a field message,
+// not a database error.
+const siteBrandingMutation = z
+  .object({
+    club_logo_path: z.string().max(2_048).optional(),
+    club_logo_asset_id: nullableUuid.optional(),
+    inverse_logo_path: z.string().max(2_048).optional(),
+    inverse_logo_asset_id: nullableUuid.optional(),
+    footer_tagline: optionalText(FOOTER_TAGLINE_LIMIT),
+    updated_at: z.string().max(40).optional(),
+  })
+  .strict();
+
 const contactPageMutation = z
   .object({
     eyebrow: optionalText(80),
@@ -282,13 +338,155 @@ const tryoutsPageMutation = z
   })
   .strict();
 
+// ADMIN-RE-07: every column of onzio.matches a club admin writes through
+// /api/admin/data: the reimagined Add a game page and the classic Games page
+// (app/admin/(protected)/schedule/page.tsx via lib/admin-client.ts), whose
+// edit form resends every field. Every write must have this shape and these
+// types: the text limits (lib/match-text-limits.ts) and whole scores from 0
+// to 99. Decision 7's read-only production check (2026-11-09) found no row
+// over them, so they hold on every write (ADMIN-RE-07c), and the database
+// enforces them too (20261109120000_matches_text_and_score_checks.sql).
+const plainDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const wallClockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/);
+const matchScore = z.number().int().min(0).max(99).nullable();
+const nullableString = z.string().nullable().optional();
+// Length is checked before trimming: the database CHECK measures what is stored.
+const limitedFilledText = (maximum: number) => z.string().max(maximum).trim().min(1);
+const limitedNullableText = (maximum: number) => z.string().max(maximum).nullable().optional();
+
+export const matchesMutation = z
+  .object({
+    id: uuid.optional(),
+    season_id: uuid.optional(),
+    date: plainDate.optional(),
+    time: wallClockTime.optional(),
+    opponent: limitedFilledText(MATCH_TEXT_LIMITS.opponent).optional(),
+    opponent_short_name: limitedNullableText(MATCH_TEXT_LIMITS.opponent_short_name),
+    opponent_logo_url: nullableString,
+    opponent_logo_asset_id: nullableUuid.optional(),
+    competition: limitedNullableText(MATCH_TEXT_LIMITS.competition),
+    // cinematic@2 (Rose City) Schedule fields; replay_video_url and summary are
+    // checked in adminDataRequestSchema's superRefine below.
+    league_logo_url: nullableString,
+    league_logo_asset_id: nullableUuid.optional(),
+    replay_video_url: nullableString,
+    summary: z.unknown().optional(),
+    sponsor_name: nullableString,
+    sponsor_logo_url: nullableString,
+    sponsor_logo_asset_id: nullableUuid.optional(),
+    sponsor_link: nullableString,
+    home: z.boolean().optional(),
+    venue: limitedFilledText(MATCH_TEXT_LIMITS.venue).optional(),
+    address: limitedNullableText(MATCH_TEXT_LIMITS.address),
+    city: limitedNullableText(MATCH_TEXT_LIMITS.city),
+    state: limitedNullableText(MATCH_TEXT_LIMITS.state),
+    rose_city_score: matchScore.optional(),
+    opponent_score: matchScore.optional(),
+    // ADMIN-RE-11b (decision 4): false for friendlies and cups, which never touch the league table.
+    league_game: z.boolean().optional(),
+    attendance: z.number().int().min(0).nullable().optional(),
+    scorers: z.array(jsonValue).max(200).optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
+  })
+  .strict();
+
+// ADMIN-RE-11b: a team name holds 60 characters (database CHECK
+// league_standings_team_name_length). Counted before trimming, as the CHECK
+// measures what is stored. The other columns keep the classic editor's own
+// checks, so only what this package changes is pinned here.
+export const LEAGUE_TEAM_NAME_LIMIT = 60;
+const leagueStandingsMutation = z
+  .object({
+    team_name: z.string().max(LEAGUE_TEAM_NAME_LIMIT).optional(),
+    season_id: uuid.optional(),
+  })
+  .passthrough();
+
+// ADMIN-RE-15 (decision 0007): one row per sponsor, with a Homepage and a
+// Footer switch and an optional website. Both admin portals write through
+// here: the one-list page and the classic Sponsors page. The ceilings mirror
+// the database CHECKs (20261110150000_sponsors_one_list.sql): a name of 1 to
+// 60 characters, counted as the database counts them, and a website that is
+// an http(s) address of at most 2,048. `placement` is the old shape, accepted
+// so a page loaded before the deploy can still save.
+const sponsorName = z
+  .string()
+  .refine((value) => Array.from(value).length <= SPONSOR_NAME_LIMIT, {
+    message: `Sponsor names stop at ${SPONSOR_NAME_LIMIT} characters`,
+  })
+  .refine((value) => value.trim() !== "", { message: "Give this sponsor a name" });
+const sponsorWebsite = z
+  .string()
+  .max(SPONSOR_WEBSITE_LIMIT)
+  .regex(/^https?:\/\/\S+$/i, { message: "Their website must be an http or https address" })
+  .nullable();
+const siteSponsorLogoMutation = z
+  .object({
+    id: uuid.optional(),
+    placement: z.enum(["carousel", "footer"]).nullable().optional(),
+    name: sponsorName.optional(),
+    logo_url: z.string().min(1).max(2_048).optional(),
+    media_asset_id: nullableUuid.optional(),
+    sort_order: z.number().int().min(0).max(10_000).optional(),
+    show_on_homepage: z.boolean().optional(),
+    show_in_footer: z.boolean().optional(),
+    website_url: sponsorWebsite.optional(),
+    created_at: z.string().max(40).optional(),
+  })
+  .strict();
+
+// ADMIN-RE-11c (decision 0001): a player's adjustment, the part of their season
+// totals added by hand. It may be negative (2026-11-10, "Keep today's numbers").
+// The ceilings mirror the database CHECKs (20261110220000_season_totals_add_up.sql);
+// the database also refuses an adjustment that takes a total below 0.
+const adjustmentNumber = z.number().int().min(-SEASON_ADJUSTMENT_LIMIT).max(SEASON_ADJUSTMENT_LIMIT);
+const playerSeasonAdjustmentMutation = z
+  .object({
+    player_id: uuid.optional(),
+    season_id: uuid.optional(),
+    goals: adjustmentNumber.optional(),
+    assists: adjustmentNumber.optional(),
+    tackles: adjustmentNumber.optional(),
+    starts: adjustmentNumber.optional(),
+    yellow: adjustmentNumber.optional(),
+    red: adjustmentNumber.optional(),
+    mins: adjustmentNumber.optional(),
+    offsides: adjustmentNumber.optional(),
+    fouls: adjustmentNumber.optional(),
+    fouls_suffered: adjustmentNumber.optional(),
+  })
+  .strict();
+const goalkeeperSeasonAdjustmentMutation = z
+  .object({
+    player_id: uuid.optional(),
+    season_id: uuid.optional(),
+    goals_against: adjustmentNumber.optional(),
+    saves: adjustmentNumber.optional(),
+    clean_sheets: adjustmentNumber.optional(),
+    starts: adjustmentNumber.optional(),
+    yellow: adjustmentNumber.optional(),
+    red: adjustmentNumber.optional(),
+    mins: adjustmentNumber.optional(),
+  })
+  .strict();
+
+const MATCH_INSERT_REQUIRED = ["season_id", "date", "time", "opponent", "venue"] as const;
+
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
+  matches: matchesMutation,
+  league_standings: leagueStandingsMutation,
+  player_season_adjustments: playerSeasonAdjustmentMutation,
+  goalkeeper_season_adjustments: goalkeeperSeasonAdjustmentMutation,
   programs: programMutation,
   program_media: programMediaMutation,
   programs_page_content: programsPageMutation,
   homepage_story_section: homepageStoryMutation,
   contact_profile: contactProfileMutation,
   contact_page_content: contactPageMutation,
+  site_branding: siteBrandingMutation,
+  site_social_links: siteSocialLinkMutation,
+  site_sponsor_logos: siteSponsorLogoMutation,
   tryouts: tryoutMutation,
   tryouts_page_content: tryoutsPageMutation,
 } as const;
@@ -334,6 +532,14 @@ export const adminDataRequestSchema = z
       .optional(),
   })
   .superRefine((request, context) => {
+    if (request.operation !== "select" && ADMIN_READ_ONLY_TABLES.has(request.table)) {
+      context.addIssue({
+        code: "custom",
+        path: ["operation"],
+        message: `${request.table} is read-only`,
+      });
+      return;
+    }
     // A match replay is stored only as the canonical YouTube embed link the
     // Schedule editor produces; the database CHECK mirrors this.
     if (request.table === "matches" && request.payload && ["insert", "update", "upsert"].includes(request.operation)) {
@@ -399,6 +605,36 @@ export const adminDataRequestSchema = z
               code: "custom",
               path: ["payload", field],
               message: `Program ${request.operation} requires ${field}`,
+            });
+          }
+        }
+      }
+
+      if (
+        request.table === "site_sponsor_logos" &&
+        (request.operation === "insert" || request.operation === "upsert")
+      ) {
+        for (const field of ["name", "logo_url"] as const) {
+          if (!(field in payload)) {
+            context.addIssue({
+              code: "custom",
+              path: ["payload", field],
+              message: `Sponsor ${request.operation} requires ${field}`,
+            });
+          }
+        }
+      }
+
+      if (
+        request.table === "matches" &&
+        (request.operation === "insert" || request.operation === "upsert")
+      ) {
+        for (const field of MATCH_INSERT_REQUIRED) {
+          if (!(field in payload)) {
+            context.addIssue({
+              code: "custom",
+              path: ["payload", field],
+              message: `Match ${request.operation} requires ${field}`,
             });
           }
         }

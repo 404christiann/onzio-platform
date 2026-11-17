@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -34,6 +35,8 @@ function program(overrides: Partial<DBProgram> = {}): DBProgram {
     external_cta_label: "Learn more",
     external_cta_href: "https://registration.example.test/program",
     registration_form_id: null,
+    sign_ups_closed: false,
+    sign_up_by_contact: false,
     registration_enabled: false,
     registration_eyebrow: "",
     registration_headline: "",
@@ -264,10 +267,7 @@ describe("Programs admin draft preview", () => {
 });
 
 describe("DCFC-301 protected Programs admin surface", () => {
-  const pageSource = readFileSync(
-    resolve(process.cwd(), "app/admin/(protected)/programs/page.tsx"),
-    "utf8",
-  );
+  const pageSource = readProgramsEditorSource();
   const shellSource = readFileSync(
     resolve(process.cwd(), "lib/admin-route-manifest.ts"),
     "utf8",
@@ -356,7 +356,7 @@ describe("DCFC-301 protected Programs admin surface", () => {
 
   it("keeps the academy@1 slug hide working inside the Content tab", () => {
     expect(pageSource).toContain(
-      'const hidesSlugField = club.presentationTemplateKey === "academy@1"',
+      'const hidesSlugField = programsPolicy ? !programsPolicy.showSlugField : false',
     );
     expect(pageSource).toContain("{hidesSlugField ? (");
     expect(pageSource).toContain("Page address");
@@ -391,7 +391,7 @@ describe("DCFC-301 protected Programs admin surface", () => {
 
   it("adds an opt-in native registration mechanism with the old CTA fallback", () => {
     const detailSource = readFileSync(
-      resolve(process.cwd(), "components/AcademyProgramDetailPage.tsx"),
+      resolve(process.cwd(), "components/sites/diverse-city/AcademyProgramDetailPage.tsx"),
       "utf8",
     );
     expect(detailSource).toContain("program.nativeRegistration !== null");

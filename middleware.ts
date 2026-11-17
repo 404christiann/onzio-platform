@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { normalizeHostname } from "@/lib/tenant";
+import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 import { CINEMATIC_PLACEHOLDER_ROUTES } from "@/lib/cinematic-routes";
 import { parsePresentationDocument, templateKey } from "@/packages/presentation";
 
@@ -27,7 +28,7 @@ const NEWS_ARTICLE_PATH = /^\/news\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REGISTRATION_PATH =
   /^\/register\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/confirmation)?$/;
 
-function isPublicTenantPath(pathname: string): boolean {
+export function isPublicTenantPath(pathname: string): boolean {
   if (PUBLIC_TENANT_PATHS.has(pathname)) return true;
   // The destination handler checks the trusted template and returns 404 for
   // every other template; the rewrite still resolves the verified tenant.
@@ -39,6 +40,14 @@ function isPublicTenantPath(pathname: string): boolean {
     PROGRAM_DETAIL_PATH.test(pathname) ||
     REGISTRATION_PATH.test(pathname)
   );
+}
+
+function isHeldPublicSiteRequest(pathname: string, method: string, slug: string): boolean {
+  const internalPath = pathname.replace(/^\/%5fclubs(?=\/|$)/i, "/_clubs");
+  return isPublicTenantPath(pathname) ||
+    internalPath === `/_clubs/${slug}` ||
+    internalPath.startsWith(`/_clubs/${slug}/`) ||
+    (pathname === "/api/register" && method === "POST");
 }
 
 /** Protected endpoints that must resolve their tenant on fallback deployment hosts. */
@@ -246,6 +255,13 @@ export async function middleware(request: NextRequest) {
     return applyTenantRobotsPolicy(
       NextResponse.redirect(target, 303),
     );
+  }
+
+  if (
+    PUBLIC_SITE_HOLD_SLUGS.has(tenant.slug) &&
+    isHeldPublicSiteRequest(request.nextUrl.pathname, request.method, tenant.slug)
+  ) {
+    return applyTenantRobotsPolicy(notFound());
   }
 
   const requestHeaders = new Headers(request.headers);

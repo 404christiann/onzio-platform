@@ -89,7 +89,11 @@ export async function loadOpenRegistrationForm(
     throw new ContractError("REGISTRATION_FORM_NOT_FOUND");
   }
 
-  const [fieldsResult, pricesResult, connectResult] = await Promise.all([
+  const [acceptingResult, fieldsResult, pricesResult, connectResult] = await Promise.all([
+    // ADMIN-RE-12b: a form whose programs and tryouts are all hidden, closed
+    // or past their date takes no sign-ups, so its page says closed up front.
+    // The database refuses the sign-up itself either way.
+    service.rpc("registration_form_accepting", { p_club_id: clubId, p_form_id: form.id }),
     service
       .from("registration_form_fields")
       .select("id,field_key,label,field_type,options,required,is_core,participant_scope,position")
@@ -111,6 +115,12 @@ export async function loadOpenRegistrationForm(
       .eq("club_id", clubId)
       .maybeSingle(),
   ]);
+  if (acceptingResult.error) {
+    databaseFailure("REGISTRATION_FORM_READ_FAILED", acceptingResult.error);
+  }
+  if (acceptingResult.data !== true) {
+    throw new ContractError("REGISTRATION_FORM_CLOSED");
+  }
   if (fieldsResult.error) {
     databaseFailure("REGISTRATION_FIELDS_READ_FAILED", fieldsResult.error);
   }

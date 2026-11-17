@@ -10,8 +10,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { SHOW_SHOP_HERO } from "@/lib/site-flags";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { fetchPrograms, type ProgramContent } from "@/lib/queries";
-import { useAcademyPageScrollLock } from "@/components/AcademyLoadingSkeleton";
+import { withoutShopLinks } from "@/lib/store-visibility";
 
 const MIGRATED_LOGO_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/branding`;
@@ -47,7 +46,7 @@ const affiliationLogos = [
   },
 ];
 
-const lionsLocalAffiliations = [
+const clubhouseAffiliations = [
   {
     src: "/images/logo/affiliations/us-soccer-color.png",
     alt: "US Soccer",
@@ -65,33 +64,6 @@ const lionsLocalAffiliations = [
     alt: "UPSL",
     className: "h-8 w-8",
     sizes: "32px",
-  },
-];
-
-// Standard US Soccer/FIFA/UPSL federation badges for the academy@1 template.
-// Scoped to the template key, not any single club's slug — see EPIC.md's
-// locked boundary against per-club tenant branches in presentation code.
-const academyAffiliations = [
-  {
-    colorSrc: "/images/logo/affiliations/us-soccer-color.png",
-    whiteSrc: "/images/logo/affiliations/us-soccer-white.png",
-    alt: "US Soccer",
-    className: "h-7 w-7 sm:h-10 sm:w-10",
-    sizes: "(max-width: 639px) 28px, 40px",
-  },
-  {
-    colorSrc: "/images/logo/affiliations/fifa-color.png",
-    whiteSrc: "/images/logo/affiliations/fifa-white.png",
-    alt: "FIFA",
-    className: "h-7 w-11 sm:h-10 sm:w-16",
-    sizes: "(max-width: 639px) 44px, 64px",
-  },
-  {
-    colorSrc: "/images/logo/affiliations/upsl-color.png",
-    whiteSrc: "/images/logo/affiliations/upsl-white.png",
-    alt: "UPSL",
-    className: "h-7 w-7 sm:h-10 sm:w-10",
-    sizes: "(max-width: 639px) 28px, 40px",
   },
 ];
 
@@ -117,36 +89,12 @@ const navLinks: NavLink[] = [
   { label: "Shop", href: "/shop" },
 ];
 
-const lionsNavLinks: NavLink[] = [
+const clubhouseNavLinks: NavLink[] = [
   { label: "Home", href: "/" },
   { label: "Roster", href: "/roster" },
   { label: "Schedule", href: "/schedule" },
   { label: "Shop", href: "/shop" },
 ];
-
-function academyNavLinks(programs: ProgramContent[]): NavLink[] {
-  return [
-    { label: "Home", href: "/" },
-    { label: "About", href: "/club/about" },
-    { label: "Roster", href: "/roster" },
-    {
-      label: "Schedule",
-      children: [
-        { label: "Fixtures", href: "/schedule" },
-        { label: "Tryouts", href: "/tryouts" },
-      ],
-    },
-    {
-      label: "Programs",
-      children: programs.map((program) => ({
-        label: program.navLabel || program.displayTitle,
-        href: `/programs/${program.slug}`,
-      })),
-    },
-    { label: "Store", href: "/shop" },
-    { label: "Contact", href: "/contact" },
-  ];
-}
 
 function isLinkActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -157,42 +105,12 @@ function isNavItemActive(pathname: string, link: NavLink) {
   return link.children?.some((child) => pathname === child.href) ?? false;
 }
 
-export const ACADEMY_PROGRAMS_FALLBACK_MS = 5_000;
-
-export function loadAcademyNavPrograms(
-  load: () => Promise<ProgramContent[]>,
-  onReady: (programs: ProgramContent[]) => void,
-  onUnavailable: () => void,
-): () => void {
-  let active = true;
-  const timeout = globalThis.setTimeout(() => {
-    if (active) onUnavailable();
-  }, ACADEMY_PROGRAMS_FALLBACK_MS);
-
-  void load().then((programs) => {
-    if (!active) return;
-    globalThis.clearTimeout(timeout);
-    onReady(programs);
-  }).catch((error) => {
-    if (!active) return;
-    globalThis.clearTimeout(timeout);
-    console.error("Academy navigation programs:", error);
-    onUnavailable();
-  });
-
-  return () => {
-    active = false;
-    globalThis.clearTimeout(timeout);
-  };
+export default function Nav() {
+  const club = useClubContext();
+  return club.presentationTemplateKey === "cinematic@2" ? <CinematicNav /> : <TemplateNav />;
 }
 
-function LegacyNav({
-  initialPrograms,
-  loadingAppearance = false,
-}: {
-  initialPrograms?: ProgramContent[] | null;
-  loadingAppearance?: boolean;
-}) {
+function TemplateNav() {
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
   const preview = useHomepagePreview();
@@ -201,29 +119,7 @@ function LegacyNav({
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);
-  const [academyPrograms, setAcademyPrograms] = useState<ProgramContent[]>(initialPrograms ?? []);
-  const [programsState, setProgramsState] = useState<"loading" | "ready" | "error">(
-    initialPrograms === undefined || initialPrograms === null ? "loading" : "ready",
-  );
   const navRef = useRef<HTMLElement>(null);
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-  const [pageLoading, setPageLoading] = useState(
-    isAcademy && !preview && (
-      pathname === "/" ||
-      pathname === "/club/logo" ||
-      pathname === "/shop" ||
-      /^\/programs\/[^/]+$/.test(pathname)
-    ),
-  );
-
-  useEffect(() => {
-    if (!isAcademy || preview) return;
-    const sync = () => setPageLoading(Boolean(document.querySelector("[data-academy-page-loading]")));
-    sync();
-    const observer = new MutationObserver(sync);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [isAcademy, preview]);
 
   useEffect(() => {
     const viewport = navRef.current?.ownerDocument.defaultView ?? window;
@@ -237,29 +133,6 @@ function LegacyNav({
     setMenuOpen(false);
     setExpandedMobileLink(null);
   }, [pathname]);
-
-  // The full-viewport mobile menu shares its scroll lock with the hero veil.
-  // Closing one must not unlock the page while the other still covers it.
-  useAcademyPageScrollLock(isAcademy && menuOpen);
-
-  useEffect(() => {
-    if (club.presentationTemplateKey !== "academy@1") {
-      setAcademyPrograms([]);
-      return;
-    }
-    if (initialPrograms !== undefined && initialPrograms !== null) return;
-    return loadAcademyNavPrograms(
-      () => fetchPrograms(club.id),
-      (programs) => {
-        setAcademyPrograms(programs);
-        setProgramsState("ready");
-      },
-      () => {
-        setAcademyPrograms([]);
-        setProgramsState("error");
-      },
-    );
-  }, [club.id, club.presentationTemplateKey, initialPrograms]);
 
   // Transparent nav only on desktop for shop (mobile shop hero is compact, not full-bleed)
   const [isMobile, setIsMobile] = useState(false);
@@ -275,28 +148,15 @@ function LegacyNav({
   // transparent/white-text state throughout, since it never needs to
   // contrast against a light background there.
   const isAlwaysTransparentPage = pathname === "/club/logo";
-  // academy@1 program detail pages open on a full-bleed photo hero, so the
-  // nav starts transparent over it exactly like the mockup (which lists the
-  // four /programs/<slug> routes in its usesTransparentNav set). The
-  // /programs index page's hero is a solid navy band and keeps a solid nav.
-  const isAcademyProgramDetail =
-    isAcademy && /^\/programs\/[^/]+$/.test(pathname);
   const isDarkHeroPage =
     pathname === "/" ||
-    isAcademyProgramDetail ||
     (pathname === "/shop" && SHOW_SHOP_HERO && !isMobile);
-  // Mockup parity: an open mobile menu forces the solid light header strip
-  // (mock: `transparent = usesTransparentNav && !scrolled && !open`).
-  const isHero =
-    !(isAcademy && (loadingAppearance || pageLoading)) &&
-    (isAlwaysTransparentPage ||
-    (isDarkHeroPage && !scrolled && !(isAcademy && menuOpen)));
+  const isHero = isAlwaysTransparentPage || (isDarkHeroPage && !scrolled);
   // The shared /club-logo route has a legacy Rose City fallback. Keep this
   // tenant's initials visible until its scoped branding read has a real URL.
   const displayedLogoUrl = clubLogoUrl;
-  const activeNavLinks = club.presentationTemplateKey === "academy@1"
-    ? academyNavLinks(academyPrograms)
-    : navLinks;
+  const clubhouseLinks = withoutShopLinks(clubhouseNavLinks, club.storeEnabled);
+  const templateLinks = withoutShopLinks(navLinks, club.storeEnabled);
 
   if (club.presentationTemplateKey === "clubhouse@1") {
     const isHomeTop = pathname === "/" && !scrolled;
@@ -329,7 +189,7 @@ function LegacyNav({
         <div className="clubhouse-affiliation-lockup" aria-label="Club affiliations">
           <span aria-hidden="true" />
           <div>
-            {lionsLocalAffiliations.map((logo) => (
+            {clubhouseAffiliations.map((logo) => (
               <div key={logo.alt} className={`relative flex-shrink-0 ${logo.className}`}>
                 <Image
                   src={logo.src}
@@ -344,7 +204,7 @@ function LegacyNav({
           </div>
         </div>
         <nav className="clubhouse-desktop-nav" aria-label="Primary navigation">
-          {lionsNavLinks.map((link) => (
+          {clubhouseLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href ?? "/"}
@@ -369,7 +229,7 @@ function LegacyNav({
         {menuOpen && (
           <div className="clubhouse-mobile-menu">
             <div>
-              {lionsNavLinks.map((link, index) => (
+              {clubhouseLinks.map((link, index) => (
                 <Link key={link.href} href={link.href ?? "/"}>
                   <small>{String(index + 1).padStart(2, "0")}</small>
                   {link.label}
@@ -413,14 +273,14 @@ function LegacyNav({
             )}
           </Link>
 
-          {(club.slug === "rose-city" || club.presentationTemplateKey === "academy@1") && <>
+          {club.slug === "rose-city" && <>
             <div
               className="flex-shrink-0"
               style={{ width: "1px", height: "28px", backgroundColor: isHero ? "rgba(255,255,255,0.3)" : "rgba(20,20,20,0.15)" }}
             />
 
             <div className="flex items-center gap-1 sm:gap-2">
-              {(club.slug === "rose-city" ? affiliationLogos : academyAffiliations).map((logo) => (
+              {affiliationLogos.map((logo) => (
                 <div key={logo.alt} className={`relative flex-shrink-0 ${logo.className}`}>
                   <Image
                     src={isHero ? logo.whiteSrc : logo.colorSrc}
@@ -455,7 +315,7 @@ function LegacyNav({
             they keep hugging the true page edge instead of stopping at the
             1280px box. Logo position is untouched either way. */}
         <ul className="hidden md:flex items-center gap-8 xl:absolute xl:right-[6.5rem] xl:top-1/2 xl:-translate-y-1/2">
-          {activeNavLinks.map((link) => {
+          {templateLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const triggerClassName =
               "font-nav text-sm font-semibold tracking-widest uppercase transition-colors duration-300 relative group/link inline-flex items-center gap-1.5";
@@ -527,16 +387,7 @@ function LegacyNav({
                           : "0 16px 32px rgba(20,20,20,0.12)",
                       }}
                     >
-                      {isAcademy && link.label === "Programs" && programsState === "loading" ? (
-                        <div className={`flex items-center gap-2 px-5 py-4 font-nav text-xs ${isHero ? "text-white/80" : "text-[#51667E]"}`} aria-label="Loading programs" role="status">
-                          <span className={`h-3.5 w-3.5 rounded-full border-2 motion-safe:animate-spin ${isHero ? "border-white/35 border-t-white" : "border-[#cad8e3] border-t-[#426c88]"}`} aria-hidden="true" />
-                          Loading programs…
-                        </div>
-                      ) : isAcademy && link.label === "Programs" && link.children.length === 0 ? (
-                        <p className={`px-5 py-3 font-nav text-xs ${isHero ? "text-white/80" : "text-[#51667E]"}`} role="status">
-                          {programsState === "error" ? "Programs unavailable" : "No programs available"}
-                        </p>
-                      ) : link.children.map((child) => {
+                      {link.children.map((child) => {
                         const isChildActive = pathname === child.href;
                         return (
                           <Link
@@ -580,31 +431,19 @@ function LegacyNav({
         </button>
       </nav>
 
-      {/* Mobile Menu Drawer — academy@1 gets the mockup's full-viewport
-          overlay panel (page cannot bleed through below the last link);
-          other templates keep the compact drawer. */}
+      {/* Mobile Menu Drawer */}
       <div
-        className={
-          isAcademy
-            ? `absolute inset-x-0 top-24 h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain bg-white transition-[opacity,visibility] duration-300 sm:top-28 sm:h-[calc(100dvh-7rem)] md:hidden ${
-                menuOpen ? "visible opacity-100" : "invisible opacity-0"
-              }`
-            : `md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ${
-                menuOpen ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
-              }`
-        }
+        className={`md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ${
+          menuOpen ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
+        }`}
       >
-        <ul className={isAcademy ? "flex min-h-full flex-col justify-center px-8 pb-16" : "flex flex-col px-8 py-6 gap-6"}>
-          {activeNavLinks.map((link) => {
+        <ul className="flex flex-col px-8 py-6 gap-6">
+          {templateLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const isExpanded = expandedMobileLink === link.label;
-            const labelClassName = isAcademy
-              ? `font-display text-3xl font-black uppercase italic block py-4 ${
-                  isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
-                }`
-              : `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
-                  isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
-                }`;
+            const labelClassName = `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
+              isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
+            }`;
             const chevron = (
               <svg
                 width="12"
@@ -624,11 +463,7 @@ function LegacyNav({
               </svg>
             );
             return (
-              <li
-                key={link.label}
-                className={isAcademy ? "border-b" : undefined}
-                style={isAcademy ? { borderColor: "rgba(30,54,83,0.1)" } : undefined}
-              >
+              <li key={link.label}>
                 {link.href ? (
                   <div className="flex items-center justify-between gap-3">
                     <Link href={link.href} className={labelClassName}>
@@ -667,16 +502,7 @@ function LegacyNav({
                       isExpanded ? "max-h-40 opacity-100 mt-3" : "max-h-0 opacity-0"
                     }`}
                   >
-                    {isAcademy && link.label === "Programs" && programsState === "loading" ? (
-                      <li className="flex items-center gap-2 px-4 py-2 font-body text-sm text-[#51667E]" role="status" aria-label="Loading programs">
-                        <span className="h-3.5 w-3.5 rounded-full border-2 border-[#cad8e3] border-t-[#426c88] motion-safe:animate-spin" aria-hidden="true" />
-                        Loading programs…
-                      </li>
-                    ) : isAcademy && link.label === "Programs" && link.children.length === 0 ? (
-                      <li className="px-4 py-2 font-body text-sm text-[#51667E]" role="status">
-                        {programsState === "error" ? "Programs unavailable" : "No programs available"}
-                      </li>
-                    ) : link.children.map((child) => {
+                    {link.children.map((child) => {
                       const isChildActive = pathname === child.href;
                       return (
                         <li key={child.href}>
@@ -702,9 +528,4 @@ function LegacyNav({
       </div>
     </header>
   );
-}
-
-export default function Nav(props: { initialPrograms?: ProgramContent[] | null; loadingAppearance?: boolean }) {
-  const club = useClubContext();
-  return club.presentationTemplateKey === "cinematic@2" ? <CinematicNav /> : <LegacyNav {...props} />;
 }

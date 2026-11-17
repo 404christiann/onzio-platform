@@ -3,33 +3,35 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const source = readFileSync(
-  resolve(process.cwd(), "app/admin/(protected)/analytics/page.tsx"),
+  resolve(process.cwd(), "components/admin/ClassicAnalyticsPage.tsx"),
   "utf8",
 );
 
 describe("protected admin analytics presentation", () => {
   it("preserves every existing visualization on Chart.js and accessible SVG", () => {
     expect(source).toContain("Chart.register(...registerables)");
-    expect(source).toContain('type: "bar"');
+    expect(source).toContain("<AdminBar");
     expect(source).toContain('type: "line"');
     expect(source).toContain("function RadarCard(");
     expect(source).toContain(
-      'aria-label="Radar chart showing player profile vs position average"',
+      'aria-label={`Radar chart showing player profile vs position average. ${summary}`}',
     );
     expect(source).not.toMatch(/from ["'](?:recharts|d3|@nivo|echarts|plotly)/);
   });
 
-  it("re-resolves protected CSS tokens for both charts on explicit theme changes", () => {
+  it("re-resolves protected CSS tokens for the persistent trend chart on explicit theme changes", () => {
     expect(source).toContain(
       'import { useAdminTheme } from "@/components/admin/AdminThemeProvider";',
     );
     expect(source.match(/const \{ theme \} = useAdminTheme\(\);/g)).toHaveLength(
-      2,
+      1,
     );
     expect(
       source.match(/resolveChartTheme\(canvasRef\.current, theme\)/g),
-    ).toHaveLength(2);
-    expect(source).toContain("}, [data, theme]);");
+    ).toHaveLength(1);
+    expect(source).toContain('chart.update("none")');
+    expect(source).toContain("animation: false");
+    expect(source).not.toContain("key={player.id");
     expect(source).toContain("}, [data, loading, metric, theme]);");
     for (const token of [
       "--primary",
@@ -45,12 +47,12 @@ describe("protected admin analytics presentation", () => {
   });
 
   it("destroys and releases each exact Chart.js instance", () => {
-    expect(source.match(/chart\.destroy\(\);/g)).toHaveLength(2);
+    expect(source.match(/chart\.destroy\(\);/g)).toHaveLength(1);
     expect(
       source.match(
         /if \(chartRef\.current === chart\) chartRef\.current = null;/g,
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
   });
 
   it("uses the shared restrained admin page system and keeps filters accessible", () => {

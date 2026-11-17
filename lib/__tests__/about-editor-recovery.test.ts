@@ -6,7 +6,7 @@ import { newAboutValue, newLogoFeature, newLogoColorCard, removeCollectionItem }
 import { hydrateAboutEditorMedia } from "../about-editor/media";
 import { EMPTY_ABOUT_PAGE_CONTENT, EMPTY_CLUB_LOGO_PAGE_CONTENT } from "../about-content";
 const request = () => aboutEditorSaveSchema.parse({ page: "about", operationId: "11111111-1111-4111-8111-111111111111", expectedRevision: "0", designRevision: "design",
-  content: aboutPageEditableContent(prepareAboutPageSave({ page: "about", about: EMPTY_ABOUT_PAGE_CONTENT, logo: EMPTY_CLUB_LOGO_PAGE_CONTENT, academy: true, now: "now" })) });
+  content: aboutPageEditableContent(prepareAboutPageSave({ page: "about", about: EMPTY_ABOUT_PAGE_CONTENT, logo: EMPTY_CLUB_LOGO_PAGE_CONTENT, fixedClosingCtaHref: "/schedule", now: "now" })) });
 const reply = (value:unknown,status=200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe("About exact operation recovery", () => {
@@ -41,9 +41,9 @@ describe("selected About/Logo payload and empty authoring",()=>{
     expect(aboutEditorSaveSchema.safeParse({...request(),content:{...request().content,updated_at:"now"}}).success).toBe(false);
   });
   it("creates and removes the first value, crest feature and color without fallback rows",()=>{
-    const prepared=prepareAboutPageSave({page:"about",about:{...EMPTY_ABOUT_PAGE_CONTENT,values:[newAboutValue()]},logo:EMPTY_CLUB_LOGO_PAGE_CONTENT,academy:true,now:"now"});
+    const prepared=prepareAboutPageSave({page:"about",about:{...EMPTY_ABOUT_PAGE_CONTENT,values:[newAboutValue()]},logo:EMPTY_CLUB_LOGO_PAGE_CONTENT,fixedClosingCtaHref:"/schedule",now:"now"});
     expect(prepared.content).toMatchObject({values:[{title:"New value",description:""}]});
-    const logo=prepareAboutPageSave({page:"logo",about:EMPTY_ABOUT_PAGE_CONTENT,logo:{...EMPTY_CLUB_LOGO_PAGE_CONTENT,features:[newLogoFeature()],color_cards:[newLogoColorCard()]},academy:false,now:"now"});
+    const logo=prepareAboutPageSave({page:"logo",about:EMPTY_ABOUT_PAGE_CONTENT,logo:{...EMPTY_CLUB_LOGO_PAGE_CONTENT,features:[newLogoFeature()],color_cards:[newLogoColorCard()]},fixedClosingCtaHref:null,now:"now"});
     expect(logo.content).toMatchObject({features:[newLogoFeature()],color_cards:[newLogoColorCard()]});
     expect(removeCollectionItem([newLogoFeature()],0)).toEqual([]);expect(removeCollectionItem([newLogoColorCard()],0)).toEqual([]);expect(removeCollectionItem([newAboutValue()],0)).toEqual([]);
     expect(aboutPageEditableContent(logo)).not.toHaveProperty("updated_at");expect(aboutPageEditableContent(logo)).not.toHaveProperty("id");

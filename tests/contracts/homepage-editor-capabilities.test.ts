@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { loadContract } from "../helpers/contract";
 
-type TemplateKey = "academy@1" | "editorial@1" | "clubhouse@1";
-type SlideshowVariant = "legacy" | "matchday" | "editorial" | "none";
+type TemplateKey = "academy@1" | "clubhouse@1";
+type SlideshowVariant = "legacy" | "matchday" | "none";
 type HomepageSection = "hero" | "photos" | "story" | "video";
 type HeroEditableField =
   | "eyebrow"
@@ -72,31 +72,6 @@ describe("homepage capability ownership contract", () => {
       },
     });
     expect(capabilities.editableSections).not.toContain("photos");
-    expect(capabilities.editableSections).not.toContain("video");
-  });
-
-  it("maps Editorial to rendered hero/photos and About-owned story text", async () => {
-    const capabilities = await resolveCapabilities("editorial@1", "editorial");
-
-    expect(capabilities).toMatchObject({
-      editableSections: ["hero", "photos"],
-      heroEditableFields: [
-        "headline_line_one",
-        "headline_line_two",
-        "intro",
-        "primary_cta_label",
-        "primary_cta_href",
-        "secondary_cta_label",
-        "secondary_cta_href",
-      ],
-      photoCaptionEditable: false,
-      videoSourceEditable: false,
-      sharedTargets: {
-        storyText: { owner: "about", editorHref: "/admin/about" },
-        shop: { owner: "shop", editorHref: "/admin/shop", surface: "shop" },
-      },
-    });
-    expect(capabilities.editableSections).not.toContain("story");
     expect(capabilities.editableSections).not.toContain("video");
   });
 

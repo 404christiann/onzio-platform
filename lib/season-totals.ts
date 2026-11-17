@@ -1,0 +1,126 @@
+// ADMIN-RE-11c (decision 0001): a player's season totals are their saved player
+// numbers added up over the season's games, plus an adjustment typed by hand for
+// games that were never entered game by game. The database works the totals out
+// (onzio.player_season_totals / onzio.goalkeeper_season_totals); this module holds
+// the pieces the admin needs to turn a typed total back into an adjustment.
+
+/** Mirrors the CHECKs in 20261110220000_season_totals_add_up.sql: every number, either way. */
+export const SEASON_ADJUSTMENT_LIMIT = 9_999;
+
+export const FIELD_TOTAL_KEYS = [
+  "goals",
+  "assists",
+  "tackles",
+  "starts",
+  "yellow",
+  "red",
+  "mins",
+  "offsides",
+  "fouls",
+  "fouls_suffered",
+] as const;
+
+export const KEEPER_TOTAL_KEYS = [
+  "goals_against",
+  "saves",
+  "clean_sheets",
+  "starts",
+  "yellow",
+  "red",
+  "mins",
+] as const;
+
+export type FieldTotalKey = (typeof FIELD_TOTAL_KEYS)[number];
+export type KeeperTotalKey = (typeof KEEPER_TOTAL_KEYS)[number];
+export type TotalKey = FieldTotalKey | KeeperTotalKey;
+export type Numbers<K extends string = TotalKey> = Record<K, number>;
+
+function zero<K extends string>(keys: readonly K[]): Numbers<K> {
+  return Object.fromEntries(keys.map((key) => [key, 0])) as Numbers<K>;
+}
+
+function count(value: unknown): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+/**
+ * Adds up saved player numbers per player, the way the totals views do: every
+ * number is summed, except `starts`, which is a yes/no per game and counts the
+ * games started.
+ */
+export function sumGames<K extends TotalKey>(
+  rows: readonly Record<string, unknown>[],
+  keys: readonly K[],
+): Map<string, Numbers<K>> {
+  const sums = new Map<string, Numbers<K>>();
+  for (const row of rows) {
+    const playerId = row.player_id;
+    if (typeof playerId !== "string") continue;
+    const sum = sums.get(playerId) ?? zero(keys);
+    for (const key of keys) {
+      sum[key] += key === "starts" ? (row.starts === true ? 1 : 0) : count(row[key]);
+    }
+    sums.set(playerId, sum);
+  }
+  return sums;
+}
+
+/**
+ * The adjustment that makes a player's totals what was typed: typed - games.
+ * Negative where the games already give more than was typed (Christian,
+ * 2026-11-10: "Keep today's numbers").
+ */
+export function adjustmentFor<K extends TotalKey>(
+  typed: Partial<Numbers<K>>,
+  games: Partial<Numbers<K>> | undefined,
+  keys: readonly K[],
+): Numbers<K> {
+  const adjustment = zero(keys);
+  for (const key of keys) adjustment[key] = count(typed[key]) - count(games?.[key]);
+  return adjustment;
+}
+
+/** Why an adjustment can't be saved, in the words the admin shows; null when it can. */
+export function adjustmentProblem<K extends TotalKey>(adjustment: Numbers<K>, keys: readonly K[]): string | null {
+  for (const key of keys) {
+    if (Math.abs(adjustment[key]) > SEASON_ADJUSTMENT_LIMIT) {
+      const limit = SEASON_ADJUSTMENT_LIMIT.toLocaleString("en-US");
+      return key === "mins" ? `Minutes added by hand stop at ${limit}.` : `Numbers added by hand stop at ${limit}.`;
+    }
+  }
+  return null;
+}
+
+/**
+ * What the Adjust panel starts from: each saved adjustment, raised where it now
+ * takes more off than the season's games give (after a game's numbers went
+ * down). The panel then shows the total visitors see (the views never go below
+ * 0), and saving it can never be refused for a number the owner didn't touch.
+ */
+export function clampAdjustment<K extends TotalKey>(
+  added: Numbers<K>,
+  fromGames: Numbers<K>,
+  keys: readonly K[],
+): Numbers<K> {
+  const clamped = { ...added };
+  // 0 - x, not -x: a 0 stays 0, never -0.
+  for (const key of keys) clamped[key] = Math.max(added[key], 0 - fromGames[key], 0 - SEASON_ADJUSTMENT_LIMIT);
+  return clamped;
+}
+
+/** The lowest an adjustment may go: take off no more than the games give. */
+export function adjustmentMin(fromGames: number): number {
+  return Math.max(0 - SEASON_ADJUSTMENT_LIMIT, 0 - Math.max(0, fromGames));
+}
+
+/** The words for a refused adjustment save, from the data route's error message. */
+export function adjustmentSaveProblem(message: string | null | undefined): string {
+  if (message && message.includes("SEASON_TOTAL_BELOW_ZERO")) {
+    return "A total can’t go below 0. Take off no more than the games give, then save again.";
+  }
+  if (message && /_check\b/.test(message)) {
+    return `Numbers added by hand stop at ${SEASON_ADJUSTMENT_LIMIT.toLocaleString("en-US")}.`;
+  }
+  return "The numbers weren’t saved. Check your connection and try again.";
+}

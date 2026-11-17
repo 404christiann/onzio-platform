@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { homepageDraft, SAVE_OPERATION } from "../fixtures/homepage-editor";
 import { defaultCinematicHomepageContent, cinematicHomepageSaveContent, cinematicHomepageSaveSchema, cinematicHomepageStorageRecord } from "@/lib/cinematic-homepage-content";
 import { cinematicHomepageSaveRequestSchema, homepageSaveRequestSchema } from "@/lib/homepage-editor/contract";
-import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
+import { resolveHomepageBindings, resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
 import { createHomepageEditorState, getDirtyHomepageSections, getHomepageSaveBlocker, reduceHomepageEditor } from "@/lib/homepage-editor/model";
 import { buildHomepageSaveRequest } from "@/lib/homepage-editor/adapter";
 import { hydrateHomepageSnapshot } from "@/lib/homepage-editor/server";
@@ -21,7 +21,7 @@ describe("cinematic@2 homepage editor", () => {
     expect(homepageSaveRequestSchema.safeParse(request).success).toBe(false);
     expect(resolveHomepageCapabilities(renderer).maxPhotos).toBe(7);
     expect(resolveHomepageCapabilities({ templateKey: "cinematic@1", slideshowVariant: "legacy" }).maxPhotos).toBe(6);
-    expect(resolveHomepageCapabilities({ templateKey: "editorial@1", slideshowVariant: "editorial" }).editableSections).not.toContain("revamp");
+    expect(resolveHomepageCapabilities({ templateKey: "editorial@1", slideshowVariant: "matchday" }).editableSections).not.toContain("revamp");
   });
   it("saves navigation and ticket visibility but never sends readonly presentation or preview URLs", () => {
     const content = defaultCinematicHomepageContent();
@@ -104,9 +104,12 @@ describe("cinematic@2 homepage editor", () => {
   });
   it("recovers the new optional content without invalidating old saved drafts", () => {
     const scope = { origin: "http://alpha.localhost:3000", userId: "owner", clubId: "alpha" };
+    // The editor passes the installed cinematic@2 design and its binding identity.
+    const bindings = resolveHomepageBindings({ capabilities: resolveHomepageCapabilities(renderer) });
+    const design = { ...renderer, binding: { key: bindings.key, revision: bindings.revision } };
     for (const content of [homepageDraft(), state().draft]) {
       const record = { schemaVersion: 1, scope, savedAt: "2026-10-13T00:00:00Z", baseRevision: "1", designRevision: "design", baseline: content, draft: content, submitted: null };
-      expect(resolveHomepageRecovery({ record, scope, serverRevision: "1", designRevision: "design", now: "2026-10-13T01:00:00Z" }).kind).toBe("restore");
+      expect(resolveHomepageRecovery({ record, scope, serverRevision: "1", designRevision: "design", design, now: "2026-10-13T01:00:00Z" }).kind).toBe("restore");
     }
   });
 });

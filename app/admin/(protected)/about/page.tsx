@@ -1,13 +1,18 @@
 "use client";
 
 import { ChevronRight as AdminLinkArrow, IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import { useEffect, useRef, useState } from "react";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { PreviewToggle } from "@/components/admin/ui/PreviewToggle";
+import { ClassicAboutActions, ClassicAboutTools, ClassicAboutValues, ClassicAboutToastBoundary } from "@/components/admin/about/ClassicAboutTools";
 import { AboutContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
@@ -24,8 +29,6 @@ import { aboutPageEditableContent, prepareAboutPageSave } from "@/lib/about-edit
 import {
   aboutStoragePathFromPublicUrl,
   EMPTY_ABOUT_PAGE_CONTENT, EMPTY_CLUB_LOGO_PAGE_CONTENT,
-  DEFAULT_ABOUT_PAGE_CONTENT,
-  DEFAULT_CLUB_LOGO_PAGE_CONTENT,
   normalizeClubLogoColorCards,
   normalizeAboutValues,
   normalizeClubLogoFeatures,
@@ -41,6 +44,8 @@ import PageEditorInspector from "@/components/admin/PageEditorInspector";
 import { usePageEditorScrollport } from "@/components/admin/usePageEditorScrollport";
 import { createClient } from "@/lib/admin-client";
 import "@/components/admin/about/about-editor.css";
+
+type PendingAboutSave = { request: AboutEditorSaveRequest; version: number };
 
 type SectionId = "hero" | "story" | "values" | "closing" | "images" | "features" | "colors";
 
@@ -64,15 +69,6 @@ type UploadTarget =
   | { kind: "logoColorCard"; index: number }
   | { kind: "logoFeaturePatch"; index: number }
   | { kind: "logoFeatureIcon"; index: number };
-
-/**
- * Where academy@1's About closing button points. Operator-owned per DCFC-D007,
- * so it lives in code rather than in an admin free-text field. This is the
- * destination the button already resolved to — `about_page_content
- * .closing_cta_href` is `/schedule` for Diverse City and `/schedule` is also
- * the shipped default in lib/about-content.ts — not a new destination.
- */
-const ACADEMY_ABOUT_CLOSING_CTA_HREF = "/schedule";
 
 function toAboutDraft(content: DBAboutPageContent): DBAboutPageContent {
   return {
@@ -109,33 +105,24 @@ async function uploadAboutImage(
 }
 
 export default function AdminAboutPage() {
+  const { portal } = useAdminPortal();
+  return portal === "classic"
+    ? <ClassicAboutToastBoundary><AboutEditor classic /></ClassicAboutToastBoundary>
+    : <AboutEditor />;
+}
+
+function AboutEditor({ classic = false }: { classic?: boolean }) {
   const clubId = useClubId();
   const club = useClubContext();
-  // DCFC-D007: club owners edit copy, Onzio operators own navigation
-  // destinations. The About closing button follows the precedent already set by
-  // DevelopingNextGeneration's "Our Story" button — the label stays editable,
-  // the destination is fixed in code. academy@1's button already resolves to
-  // /schedule (both the stored value and the shipped default), so pinning it
-  // changes nothing about where the button goes; it only removes a free-text
-  // href field that could save a broken path.
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  // editorial@1 genuinely has an About page -- components/editorial/
-  // EditorialHeader.tsx's nav and EditorialFooter.tsx both link /club/about,
-  // and app/%5Fclubs/[slug]/club/about/page.tsx renders EditorialAboutPage
-  // from this very editor's about_page_content row. (An earlier revision hid
-  // this whole page for editorial@1 after checking Nav.tsx's lionsNavLinks,
-  // which is dead code for this template -- Lions never mounts Nav.tsx.)
-  //
-  // The Club Logo tab is the part that stays hidden: templateRegistry's
-  // editorial@1 entry lists no "club-logo" in defaultRoutes/supportedRoutes,
-  // and nothing on the editorial site links /club/logo, so its content row is
-  // never read -- exactly the academy@1 situation this gate already covered.
-  const hasClubLogoPage = !isAcademy && !isEditorial;
+  // DCFC-D007: owners edit the label, while Onzio fixes this editor's
+  // destination. The public stored fixture is separate from this save choice.
+  const aboutPolicy = codeSiteAdminFor(club)?.about;
+  const hasClubLogoPage = aboutPolicy?.showLogoPage ?? true;
   const [pageChoice, setPageChoice] = useState<"about" | "logo">("about");
+  const editorOpener = useRef<HTMLElement | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<AboutCanvasTarget | null>(null);
   const [phonePreview, setPhonePreview] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (window.matchMedia("(max-width: 640px)").matches) setPhonePreview(true);
   }, []);
   const [selectedLogoImage, setSelectedLogoImage] = useState(0);
@@ -153,15 +140,17 @@ export default function AdminAboutPage() {
     });
   };
   const [selectedLogoFeature, setSelectedLogoFeature] = useState(0);
+  const valueKeys = useRef<string[]>([]);
+  const valueGeneration = useRef(0);
   const [aboutDraft, setAboutDraft] = useState<DBAboutPageContent>(
-    toAboutDraft(DEFAULT_ABOUT_PAGE_CONTENT),
+    toAboutDraft(EMPTY_ABOUT_PAGE_CONTENT),
   );
   const [logoDraft, setLogoDraft] = useState<DBClubLogoPageContent>(
-    toLogoDraft(DEFAULT_CLUB_LOGO_PAGE_CONTENT),
+    toLogoDraft(EMPTY_CLUB_LOGO_PAGE_CONTENT),
   );
   const [pendingDeleteUrls, setPendingDeleteUrls] = useState<{ about: string[]; logo: string[] }>({ about: [], logo: [] });
   const [snapshots, setSnapshots] = useState<Partial<Record<"about" | "logo", AboutEditorSnapshot>>>({});
-  const [pendingOperations, setPendingOperations] = useState<Partial<Record<"about" | "logo", AboutEditorSaveRequest>>>({});
+  const [pendingOperations, setPendingOperations] = useState<Partial<Record<"about" | "logo", PendingAboutSave>>>({});
   const [conflictedPages, setConflictedPages] = useState<Set<"about" | "logo">>(new Set());
   const [cleanupOperations, setCleanupOperations] = useState<Partial<Record<"about" | "logo", string>>>({});
   const draftLocked = Boolean(pendingOperations[pageChoice]) || conflictedPages.has(pageChoice);
@@ -171,8 +160,14 @@ export default function AdminAboutPage() {
   const [destinationError, setDestinationError] = useState<string | null>(null);
   const [destinationAttempt, setDestinationAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
-  const scrollport = usePageEditorScrollport(767, !loading);
+  const scrollport = usePageEditorScrollport(767, !loading && !classic);
   const [uploading, setUploading] = useState(false);
+  const [mediaPending, setMediaPending] = useState(false);
+  const mediaPendingRef = useRef(false);
+  const versions = useRef({ about: 0, logo: 0 });
+  const [invalidSection, setInvalidSection] = useState<SectionId | null>(null);
+  const [reloadConfirm, setReloadConfirm] = useState(false);
+  const latest = useRef({ aboutDraft, logoDraft, pendingDeleteUrls, snapshots, pendingOperations, conflictedPages, dirtyAbout: false, dirtyLogo: false, saving: false, uploading: false });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   // Section edits contribute to the dirty state of their public page.
@@ -183,7 +178,14 @@ export default function AdminAboutPage() {
   const dirtyAbout = ABOUT_SECTIONS.some((section) => dirtySections.has(section));
   const dirtyLogo = LOGO_SECTIONS.some((section) => dirtySections.has(section));
   const dirty = pageChoice === "about" ? dirtyAbout : dirtyLogo;
-  const destinationAvailable = isAcademy || availableDestinations.some((option) => option.href === aboutDraft.closing_cta_href);
+  const saveAction = useSaveState({ isDirty: dirty || Boolean(pendingOperations[pageChoice]), onSave: async () => {
+    if (!await handleSave()) throw new Error("The current draft has not been saved.");
+  } });
+  function saveSelected() {
+    if (classic) void saveAction.save().catch(() => {});
+    else void handleSave();
+  }
+  const destinationAvailable = aboutPolicy?.chooseClosingCtaDestination === false || availableDestinations.some((option) => option.href === aboutDraft.closing_cta_href);
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -203,6 +205,8 @@ export default function AdminAboutPage() {
         const nextAbout = toAboutDraft({ ...EMPTY_ABOUT_PAGE_CONTENT, ...about.content } as DBAboutPageContent);
         const nextLogo = toLogoDraft({ ...EMPTY_CLUB_LOGO_PAGE_CONTENT, ...logo?.content } as DBClubLogoPageContent);
         setSnapshots({ about, ...(logo ? { logo } : {}) });
+        valueGeneration.current++;
+        valueKeys.current = nextAbout.values.map(() => crypto.randomUUID());
         setAboutDraft(nextAbout);
         setLogoDraft(nextLogo);
         setSponsors(nextSponsors);
@@ -217,7 +221,7 @@ export default function AdminAboutPage() {
   }, [clubId, loadAttempt, hasClubLogoPage]);
 
   useEffect(() => {
-    if (isAcademy) {
+    if (aboutPolicy && !aboutPolicy.chooseClosingCtaDestination) {
       setAvailableDestinations([]);
       setDestinationsLoaded(true);
       setDestinationError(null);
@@ -244,9 +248,19 @@ export default function AdminAboutPage() {
       if (active) setDestinationError(caught instanceof Error ? caught.message : "Available pages could not be loaded");
     });
     return () => { active = false; };
-  }, [clubId, isAcademy, destinationAttempt]);
+  }, [clubId, aboutPolicy, destinationAttempt]);
+
+  latest.current = { aboutDraft, logoDraft, pendingDeleteUrls, snapshots, pendingOperations, conflictedPages, dirtyAbout, dirtyLogo, saving, uploading };
+
+  function onMediaPending(pending: boolean) {
+    mediaPendingRef.current = pending;
+    if (pending) { versions.current.about++; setSaved(false); }
+    setMediaPending(pending);
+  }
 
   function markDirty(section: SectionId) {
+    versions.current[ABOUT_SECTIONS.includes(section) ? "about" : "logo"]++;
+
     setDirtySections((current) => {
       if (current.has(section)) return current;
       const next = new Set(current);
@@ -255,6 +269,13 @@ export default function AdminAboutPage() {
     });
     setSaved(false);
   }
+
+  useEffect(() => {
+    const valid = invalidSection === "hero" ? aboutDraft.hero_title.trim() && aboutDraft.hero_title.length <= 140
+      : invalidSection === "values" ? aboutDraft.values.every(value => value.title.trim())
+      : invalidSection === "closing" ? destinationsLoaded && destinationAvailable : false;
+    if (valid) { setInvalidSection(null); setError(null); }
+  }, [aboutDraft, invalidSection, destinationsLoaded, destinationAvailable]);
 
   function queueReplacedUrl(url: string, page: "about" | "logo") {
     if (!aboutStoragePathFromPublicUrl(url)) return;
@@ -270,7 +291,7 @@ export default function AdminAboutPage() {
 
   async function handleImageUpload(file: File | null) {
     const target = uploadTargetRef.current;
-    if (!file || !target) return;
+    if (!file || !target) return false;
 
     setUploading(true);
     setError(null);
@@ -335,8 +356,10 @@ export default function AdminAboutPage() {
         dirtySection = "features";
       }
       markDirty(dirtySection);
+      return true;
     } catch (uploadError: unknown) {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      return false;
     } finally {
       setUploading(false);
       uploadTargetRef.current = null;
@@ -386,7 +409,8 @@ export default function AdminAboutPage() {
     setSaved(false);
   }
 
-  function selectCanvasTarget(target: AboutCanvasTarget, index: number) {
+  function selectCanvasTarget(target: AboutCanvasTarget, index: number, opener?: HTMLElement) {
+    editorOpener.current = opener ?? null;
     setSelectedTarget(target);
     if (target === "features") setSelectedLogoFeature(index);
     if (target === "colors") setSelectedLogoColor(index);
@@ -395,11 +419,11 @@ export default function AdminAboutPage() {
   }
 
   useEffect(() => {
-    if (!dirtyAbout && !dirtyLogo && Object.keys(pendingOperations).length === 0) return;
+    if (!dirtyAbout && !dirtyLogo && Object.keys(pendingOperations).length === 0 && !uploading && !mediaPending) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirtyAbout, dirtyLogo, pendingOperations]);
+  }, [dirtyAbout, dirtyLogo, pendingOperations, uploading, mediaPending]);
 
   function acceptSnapshot(snapshot: AboutEditorSnapshot) {
     const page = snapshot.page;
@@ -413,9 +437,9 @@ export default function AdminAboutPage() {
   }
 
   async function reloadLatestPage() {
-    if (!window.confirm("Replace this page's draft with the latest saved page? The other page's draft will stay here.")) return;
+    setReloadConfirm(false);
     setSaving(true);
-    try { acceptSnapshot(await loadAboutEditor(pageChoice)); setError(null); }
+    try { const snapshot = await loadAboutEditor(pageChoice); valueGeneration.current++; acceptSnapshot(snapshot); setError(null); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Latest page could not be loaded."); }
     finally { setSaving(false); }
   }
@@ -433,50 +457,92 @@ export default function AdminAboutPage() {
     finally { setSaving(false); }
   }
 
-  async function handleSave() {
-    if (saving || uploading || conflictedPages.has(pageChoice)) return;
-    const pending = pendingOperations[pageChoice];
-    if (!pending && pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable)) {
-      setError("Choose a page available to this club for the closing button before saving."); return;
+  async function handleSave(page: "about" | "logo" = pageChoice): Promise<boolean> {
+    const current = latest.current;
+    if (current.saving || current.uploading || mediaPendingRef.current || current.conflictedPages.has(page)) return false;
+    const pending = current.pendingOperations[page];
+    if (!pending && classic && page === "about") {
+      const heading = current.aboutDraft.hero_title;
+      const invalid = !heading.trim() || heading.length > 140 ? "hero"
+        : current.aboutDraft.values.some(value => !value.title.trim()) ? "values" : null;
+      if (invalid) {
+        setInvalidSection(invalid);
+        setError(invalid === "hero" ? !heading.trim() ? "Add a page heading before saving." : "Keep the page heading to 140 characters." : "Give every value a title, or remove the empty ones, before saving.");
+        return false;
+      }
     }
-    const snapshot = snapshots[pageChoice]; if (!snapshot) return;
+    if (!pending && page === "about" && (aboutPolicy?.chooseClosingCtaDestination ?? true) && (!destinationsLoaded || !destinationAvailable)) {
+      setInvalidSection("closing");
+      setError("Choose a page available to this club for the closing button before saving."); return false;
+    }
+    const snapshot = current.snapshots[page]; if (!snapshot) return false;
+    const version = pending?.version ?? versions.current[page];
     setSaving(true); setError(null); setSaved(false);
+    latest.current.saving = true;
     try {
-      const prepared = prepareAboutPageSave({ page: pageChoice, about: aboutDraft, logo: logoDraft, academy: isAcademy, now: new Date().toISOString() });
-      const request = pending ?? aboutEditorSaveSchema.parse({ page: prepared.page, content: aboutPageEditableContent(prepared),
+      const prepared = prepareAboutPageSave({ page, about: current.aboutDraft, logo: current.logoDraft, fixedClosingCtaHref: aboutPolicy?.closingCtaHref ?? null, now: new Date().toISOString() });
+      const request = pending?.request ?? aboutEditorSaveSchema.parse({ page: prepared.page, content: aboutPageEditableContent(prepared),
         operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision,
-        retiredMediaUrls: pendingDeleteUrls[pageChoice] });
+        retiredMediaUrls: current.pendingDeleteUrls[page] });
       const outcome = await saveAboutEditor(request);
       if (outcome.status === "committed") {
-        acceptSnapshot(outcome.snapshot); setSaved(true); setTimeout(() => setSaved(false), 3000);
+        const unchanged = version === versions.current[page] && !mediaPendingRef.current;
+        if (unchanged) acceptSnapshot(outcome.snapshot);
+        else {
+          setSnapshots(previous => ({ ...previous, [page]: outcome.snapshot }));
+          setPendingOperations(previous => { const next = { ...previous }; delete next[page]; return next; });
+          setPendingDeleteUrls(previous => ({ ...previous, [page]: previous[page].filter(url => !request.retiredMediaUrls?.includes(url)) }));
+        }
+        setSaved(unchanged); setTimeout(() => setSaved(false), 3000);
         if (outcome.snapshot.cleanupPending) {
-          setCleanupOperations(current => ({ ...current, [request.page]: request.operationId }));
+          setCleanupOperations(previous => ({ ...previous, [page]: request.operationId }));
           setError("Page saved. Old image cleanup is pending; retry cleanup when ready.");
         }
-      } else if (outcome.status === "uncertain") {
-        setPendingOperations(current => ({ ...current, [request.page]: outcome.request })); setError(outcome.message);
+        return unchanged;
+      }
+      if (outcome.status === "uncertain") {
+        setPendingOperations(previous => ({ ...previous, [page]: { request: outcome.request, version } })); setError(outcome.message);
       } else {
-        setPendingOperations(current => { const next = { ...current }; delete next[request.page]; return next; });
-        if (outcome.status === "conflict") setConflictedPages(current => new Set([...current, request.page]));
+        setPendingOperations(previous => { const next = { ...previous }; delete next[page]; return next; });
+        if (outcome.status === "conflict") setConflictedPages(previous => new Set([...previous, page]));
         setError(outcome.message);
       }
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Review the page fields and try again."); }
-    finally { setSaving(false); }
+      return false;
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Review the page fields and try again."); return false; }
+    finally { latest.current.saving = false; setSaving(false); }
   }
 
-  const saveDisabled = saving || uploading || loadFailed || conflictedPages.has(pageChoice) || (!dirty && !pendingOperations[pageChoice]) || (!pendingOperations[pageChoice] && pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable));
+  async function saveAll() {
+    const before = { ...versions.current };
+    if (mediaPendingRef.current || latest.current.uploading) return false;
+    for (const page of ["about", "logo"] as const) {
+      const current = latest.current;
+      if ((page === "about" ? current.dirtyAbout : current.dirtyLogo) || current.pendingOperations[page]) {
+        if (!await handleSave(page)) { setPageChoice(page); setSelectedTarget(null); selectSection(page === "about" ? "story" : "images"); return false; }
+      }
+    }
+    return before.about === versions.current.about && before.logo === versions.current.logo && !mediaPendingRef.current && !latest.current.uploading;
+  }
+
+  function discardAll() {
+    if (mediaPendingRef.current || latest.current.uploading || latest.current.saving) throw new Error("Wait for the current image or save to finish before discarding.");
+    valueGeneration.current++;
+    for (const snapshot of Object.values(latest.current.snapshots)) if (snapshot) acceptSnapshot(snapshot);
+    setError(null);
+  }
+
+  const saveDisabled = saving || (classic && saveAction.state === "saving") || uploading || mediaPending || loadFailed || conflictedPages.has(pageChoice) || (!dirty && !pendingOperations[pageChoice]) || (!pendingOperations[pageChoice] && pageChoice === "about" && (aboutPolicy?.chooseClosingCtaDestination ?? true) && (!destinationsLoaded || !destinationAvailable));
   const isLogoSection = pageChoice === "logo";
 
   return (
-    <div ref={scrollport.workspace} style={{ maxHeight: scrollport.maxHeight }} className="min-w-0 overflow-y-auto overscroll-y-contain md:overflow-visible">
-    <AdminPage className="aep-root overflow-x-clip [&>*]:shrink-0">
-      <AdminSaveFeedback saving={saving} saved={saved} />
+    <div ref={classic ? undefined : scrollport.workspace} style={classic ? undefined : { maxHeight: scrollport.maxHeight }} className={classic ? "min-w-0" : "min-w-0 overflow-y-auto overscroll-y-contain md:overflow-visible"}>
+    <AdminPage className={`aep-root overflow-x-clip [&>*]:shrink-0 ${classic ? `aep-classic ${isLogoSection ? "aep-classic-logo" : ""}` : ""}`}>
+      {!classic && <p className="sr-only" role="status">{saving ? "Saving changes…" : saved ? "Saved successfully" : ""}</p>}
       <AdminPageHeader
         title="About"
-        description="Tap a section of the public page to edit it. Save changes to one page at a time."
+        description={classic ? "Tap what you want to edit." : "Tap a section of the public page to edit it. Save changes to one page at a time."}
         actions={
-          !loading ? (
-            <>
+          (!loading || classic) ? (classic ? <ClassicAboutActions guardDirty={dirtyAbout || dirtyLogo || Object.keys(pendingOperations).length > 0 || mediaPending || uploading} busy={saving || uploading || mediaPending} blocked={loadFailed || loading || conflictedPages.has(pageChoice)} state={saveAction.state} onSave={saveSelected} onSaveAll={saveAll} onDiscard={discardAll} /> : <>
               {(dirtyAbout || dirtyLogo) && (
                 <div className="flex items-center gap-2 border-r border-border pr-3">
                   <span
@@ -494,7 +560,6 @@ export default function AdminAboutPage() {
                 disabled={saveDisabled}
                 className="min-h-11 rounded-lg bg-primary px-5 py-3 font-body text-sm font-semibold normal-case tracking-normal text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
                 {saving ? "Saving..." : uploading ? "Uploading..." : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}
               </button>
             </>
@@ -502,12 +567,17 @@ export default function AdminAboutPage() {
         }
       />
 
-      <nav className="aep-page-nav" aria-label="Public page">
+      {(!classic || isLogoSection) && <nav className="aep-page-nav" aria-label="Public page">
         <button type="button" aria-pressed={pageChoice === "about"} onClick={() => selectPage("about")}>About page{dirtyAbout ? " •" : ""}</button>
         {hasClubLogoPage && <button type="button" aria-pressed={pageChoice === "logo"} onClick={() => selectPage("logo")}>Club Logo page{dirtyLogo ? " •" : ""}</button>}
-      </nav>
+      </nav>}
 
-      {loading ? (
+      {classic && error && <div className="aep-error-bar" role="alert">{error}
+        {pendingOperations[pageChoice] && <button type="button" onClick={saveSelected} disabled={saving || uploading || mediaPending || saveAction.state === "saving"}>Retry exact save</button>}
+        {conflictedPages.has(pageChoice) && <button type="button" onClick={() => setReloadConfirm(true)} disabled={saving}>Reload latest page</button>}
+        {cleanupOperations[pageChoice] && <button type="button" onClick={() => void retryCleanup()} disabled={saving}>Retry image cleanup</button>}
+      </div>}
+      {loading && !classic ? (
         <AboutContentSkeleton hasClubLogoPage={hasClubLogoPage} />
       ) : loadFailed ? (
         <AdminPanel className="aep-load-error">
@@ -515,27 +585,35 @@ export default function AdminAboutPage() {
           <button type="button" onClick={() => setLoadAttempt((current) => current + 1)}>Retry loading</button>
         </AdminPanel>
       ) : (
-        <div className="aep-layout">
+        <div className="aep-layout" aria-busy={loading || undefined}>
           <section className="aep-canvas" aria-label={`${isLogoSection ? "Club Logo" : "About"} public page canvas`}>
-            <div className="aep-canvas-top"><span>{isLogoSection ? "/club/logo" : "/club/about"}</span><div className="aep-device-toggle" aria-label="Preview size"><button type="button" aria-pressed={!phonePreview} onClick={() => setPhonePreview(false)}>Desktop</button><button type="button" aria-pressed={phonePreview} onClick={() => setPhonePreview(true)}>Phone</button></div></div>
-            <AboutPageCanvas page={pageChoice} about={aboutDraft} logo={logoDraft} sponsors={sponsors} phone={phonePreview} selected={selectedTarget} onSelect={selectCanvasTarget} />
+            <div className="aep-canvas-top"><span>{classic ? "What visitors see" : isLogoSection ? "/club/logo" : "/club/about"}</span>{classic ? <PreviewToggle value={phonePreview ? "phone" : "desktop"} onChange={value => setPhonePreview(value === "phone")} /> : <div className="aep-device-toggle" aria-label="Preview size"><button type="button" aria-pressed={!phonePreview} onClick={() => setPhonePreview(false)}>Desktop</button><button type="button" aria-pressed={phonePreview} onClick={() => setPhonePreview(true)}>Phone</button></div>}</div>
+            <AboutPageCanvas classic={classic} loading={classic && loading} invalid={invalidSection} page={pageChoice} about={aboutDraft} logo={logoDraft} sponsors={sponsors} phone={phonePreview} selected={selectedTarget} onSelect={selectCanvasTarget} />
           </section>
+          {classic && !isLogoSection && hasClubLogoPage && <button type="button" className="aep-external" onClick={() => selectPage("logo")}>Edited elsewhere: Club Logo page <AdminLinkArrow size={14} /></button>}
 
-          <PageEditorInspector open={selectedTarget !== null} onClose={() => setSelectedTarget(null)} label="About section tools" breakpoint={767} className="aep-inspector" data-open={selectedTarget !== null}>
-            <div className="aep-inspector-head"><div><p className={ADMIN_LABEL_CLASS}>{isLogoSection ? "Club Logo page" : "About page"}</p><h2>{selectedTarget ? selectedTarget === "fixed-hero" ? club.presentationTemplateKey === "cinematic@2" ? "Crest page heading" : "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "Select a section"}</h2></div>{selectedTarget && <button type="button" onClick={() => setSelectedTarget(null)}>Done</button>}</div>
-            {selectedTarget === null ? <p className="aep-empty">Tap a section in the public page to open its tools.</p> : selectedTarget === "fixed-hero" ? <p className="aep-ownership">{club.presentationTemplateKey === "cinematic@2" ? "This heading is part of the Crest page template. Contact Onzio to change its wording." : "This heading is part of the Clubhouse template. Contact Onzio to change its wording."}</p> : selectedTarget === "sponsors" ? <div className="aep-ownership"><p>These partners are shared content, managed in Sponsors.</p><a href="/admin/sponsors">Open Sponsors <AdminLinkArrow size={12} className="inline-block align-middle" /></a></div> : <div className="aep-field-scrollport"><fieldset disabled={saving || uploading || draftLocked} className="aep-fields">
+          <AboutTools opener={editorOpener} classic={classic && !isLogoSection} open={selectedTarget !== null} onClose={() => setSelectedTarget(null)} label={classic ? selectedTarget === "fixed-hero" ? club.presentationTemplateKey === "cinematic@2" ? "Crest page heading" : "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "About section tools"} breakpoint={767} className="aep-inspector" data-open={selectedTarget !== null}>
+            {(!classic || isLogoSection) && <div className="aep-inspector-head"><div><p className={ADMIN_LABEL_CLASS}>{isLogoSection ? "Club Logo page" : "About page"}</p><h2>{selectedTarget ? selectedTarget === "fixed-hero" ? club.presentationTemplateKey === "cinematic@2" ? "Crest page heading" : "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "Select a section"}</h2></div>{selectedTarget && <button type="button" onClick={() => setSelectedTarget(null)}>Done</button>}</div>}
+            {selectedTarget === null ? <p className="aep-empty">Tap a section in the public page to open its tools.</p> : selectedTarget === "fixed-hero" ? <p className="aep-ownership">{club.presentationTemplateKey === "cinematic@2" ? "This heading is part of the Crest page template. Contact Onzio to change its wording." : "This heading is part of the Clubhouse template. Contact Onzio to change its wording."}</p> : selectedTarget === "sponsors" ? <div className="aep-ownership"><p>These partners are shared content, managed in Sponsors.</p><a href="/admin/sponsors">Open Sponsors <AdminLinkArrow size={12} className="inline-block align-middle" /></a></div> : <div className="aep-field-scrollport"><fieldset disabled={(!classic && saving) || uploading || draftLocked} className="aep-fields">
             <SlidingPanel activeKey={activeSection} direction={sectionDirection}>
               {activeSection === "hero" && (
-                <Field label="Page heading">
+                <Field label="Page heading" help={classic ? "Shown at the top of the About page." : undefined}>
+                  {classic && <span className="aep-counter" aria-hidden="true">{aboutDraft.hero_title.length}/140</span>}
                   <input
+                    aria-label={classic ? "Page heading" : undefined}
+                    maxLength={classic ? 140 : undefined}
+                    required={classic}
+                    aria-describedby={classic ? "aep-heading-help aep-heading-error" : undefined}
+                    aria-invalid={invalidSection === "hero" || undefined}
                     value={aboutDraft.hero_title}
                     onChange={(event) => setAboutField("hero_title", event.target.value, "hero")}
                     className={ADMIN_INPUT_CLASS}
                   />
+                  {classic && <><span id="aep-heading-help" className="sr-only">Shown at the top of the About page.</span><span id="aep-heading-error" className="aep-inline-error">{invalidSection === "hero" ? error : ""}</span></>}
                 </Field>
               )}
               {activeSection === "story" && (
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_210px]">
+                <div className={classic ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(0,1fr)_210px]"}>
                   <div className="space-y-3">
                     <Field label="Story Paragraphs" help="Each line becomes one paragraph.">
                       <Textarea
@@ -545,17 +623,22 @@ export default function AdminAboutPage() {
                       />
                     </Field>
                   </div>
-                  <ImageControl
+                  {classic ? <AdminImageField label="Feature image" previewUrl={aboutDraft.feature_image_url} size={96} shape="square" initials="Add a feature image"
+                    allowedTypes={["image/jpeg", "image/png", "image/webp"]} maxBytes={15 * 1024 * 1024}
+                    disabled={draftLocked} uploading={uploading} onPendingChange={onMediaPending}
+                    onUpload={files => { uploadTargetRef.current = { kind: "aboutFeature" }; return handleImageUpload(files[0]); }}
+                    onRemove={() => { queueReplacedUrl(aboutDraft.feature_image_url, "about"); setAboutField("feature_image_url", "", "story"); }}
+                  /> : <ImageControl
                     label="Feature Image"
                     url={aboutDraft.feature_image_url}
                     onReplace={() => openUploader({ kind: "aboutFeature" })}
                     disabled={uploading || saving}
                     compact
-                  />
+                  />}
                 </div>
               )}
 
-              {activeSection === "values" && (
+              {activeSection === "values" && (classic ? <ClassicAboutValues content={aboutDraft} invalid={invalidSection === "values"} ids={valueKeys} generation={valueGeneration} onChange={update => { setAboutDraft(current => update(current)); markDirty("values"); }} /> : (
                 <div className="space-y-3">
                   <Field label="Values Heading">
                     <input
@@ -587,10 +670,10 @@ export default function AdminAboutPage() {
                     ))}
                   </div>
                 </div>
-              )}
+              ))}
 
               {activeSection === "closing" && (
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className={classic ? "aep-closing-fields grid gap-3" : "grid gap-3 lg:grid-cols-2"}>
                   <Field label="Closing Text">
                     <Textarea
                       value={aboutDraft.closing_text}
@@ -606,10 +689,10 @@ export default function AdminAboutPage() {
                         className={ADMIN_INPUT_CLASS}
                       />
                     </Field>
-                    {isAcademy ? (
+                    {aboutPolicy?.closingCtaHref ? (
                       <Field label="Button Goes To" flush>
                         <p className="font-body text-sm text-muted-foreground">
-                          {ACADEMY_ABOUT_CLOSING_CTA_HREF} — the Schedule page.
+                          {aboutPolicy.closingCtaHref} — the Schedule page.
                           Contact Onzio to change where this button goes.
                         </p>
                       </Field>
@@ -792,17 +875,20 @@ export default function AdminAboutPage() {
             />
 
             {error && (
-              <p className="font-body mt-4 border-t border-border pt-4 text-sm text-destructive">
-                Error: {error}
+              <p role={classic ? "alert" : undefined} className="font-body mt-4 border-t border-border pt-4 text-sm text-destructive">
+                {classic ? error : `Error: ${error}`}
               </p>
             )}
-            {conflictedPages.has(pageChoice) && <button type="button" className="min-h-11 aep-recovery" onClick={() => void reloadLatestPage()} disabled={saving}>Reload latest page</button>}
-            {cleanupOperations[pageChoice] && <button type="button" className="min-h-11 aep-recovery" onClick={() => void retryCleanup()} disabled={saving}>Retry image cleanup</button>}
-            <div className="aep-inspector-save"><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>
-          </PageEditorInspector>
+            {!classic && conflictedPages.has(pageChoice) && <button type="button" className="min-h-11 aep-recovery" onClick={() => setReloadConfirm(true)} disabled={saving}>Reload latest page</button>}
+            {!classic && cleanupOperations[pageChoice] && <button type="button" className="min-h-11 aep-recovery" onClick={() => void retryCleanup()} disabled={saving}>Retry image cleanup</button>}
+            {(!classic || isLogoSection) && <div className="aep-inspector-save"><button type="button" onClick={saveSelected} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>}
+          </AboutTools>
         </div>
       )}
-      {!loading && <div ref={scrollport.saveBar} className="aep-mobile-save"><span>{dirty ? "Unsaved changes" : "All changes saved"}</span><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>}
+      {!classic && !loading && <div ref={scrollport.saveBar} className="aep-mobile-save"><span>{dirty ? "Unsaved changes" : ""}</span><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>}
+      <AdminConfirmDialog open={reloadConfirm} title="Another editor saved this page" confirmLabel="Reload latest page" onCancel={() => setReloadConfirm(false)} onConfirm={() => void reloadLatestPage()} busy={saving}>
+        Replace this page&apos;s draft with the latest saved page? The other page&apos;s draft will stay here.
+      </AdminConfirmDialog>
     </AdminPage>
     </div>
   );
@@ -889,4 +975,8 @@ function ImageControl({
       </div>
     </div>
   );
+}
+
+function AboutTools({ classic, children, opener, ...props }: { classic: boolean; children: ReactNode; opener: React.RefObject<HTMLElement | null> } & React.ComponentProps<typeof PageEditorInspector>) {
+  return classic ? <ClassicAboutTools opener={opener} open={props.open} onClose={props.onClose} title={props.label === "About section tools" ? undefined : props.label}>{children}</ClassicAboutTools> : <PageEditorInspector {...props}>{children}</PageEditorInspector>;
 }

@@ -6,9 +6,10 @@ import type {
 export const DEFAULT_STANDINGS_SETTINGS: DBLeagueStandingsSettings = {
   id: 1,
   eyebrow: "League standings",
-  title: "UPSL SoCal North",
-  intro:
-    "Follow Rose City FC through the current league table. Club staff can update every row from the admin portal.",
+  // No default league name or intro: a blank title stays blank rather than
+  // naming another club's league (it also feeds the academy Next Match card).
+  title: "",
+  intro: "",
   updated_at: "",
 };
 
@@ -148,7 +149,7 @@ export function normalizeStandingsSettings(
   return {
     ...row,
     eyebrow: row.eyebrow?.trim() || DEFAULT_STANDINGS_SETTINGS.eyebrow,
-    title: row.title?.trim() || DEFAULT_STANDINGS_SETTINGS.title,
+    title: row.title?.trim() ?? "",
     intro: typeof row.intro === "string" ? row.intro : DEFAULT_STANDINGS_SETTINGS.intro,
   };
 }
@@ -157,8 +158,7 @@ export function normalizeStandingsSettings(
  * `fallbackToSample` controls what happens when `rows` is empty:
  * - `true` (default): substitute `DEFAULT_STANDINGS_ROWS`, the illustrative
  *   Rose City sample table. Existing callers keep their current behavior.
- * - `false`: return an empty array. Used by previews for templates (academy@1,
- *   editorial@1) whose real standings surface never fabricates placeholder
+ * - `false`: return an empty array. Used by previews for sites such as Diverse City whose real standings surface never fabricates placeholder
  *   rows from this data — the sample table would otherwise show a hardcoded
  *   "Rose City FC" row regardless of which club is actually being edited.
  */

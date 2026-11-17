@@ -18,7 +18,7 @@ const messages: Record<string, string> = {
   INVALID_SHOP_PAYLOAD: "Check the Shop fields and try again.",
   INVALID_SHOP_PHOTO: "A Shop photo is no longer available. Your other changes are still here.",
   INVALID_SHOP_PRESENTATION: "Check the map and page section settings, then try again.",
-  SECTION_UNAVAILABLE: "This section is not shown by your website design.",
+  SECTION_UNAVAILABLE: "The homepage feature accepts its home kit only.",
   PAGE_UNAVAILABLE: "This page is not available for your website design.",
   NOT_AUTHORIZED: "You no longer have permission to edit this Shop page.",
 };
@@ -76,8 +76,6 @@ async function handle(request: Request, mutation: boolean) {
   try { club = await getClubContext({ hostname: request.headers.get("host") ?? "", userId }); }
   catch { return failure("UNKNOWN_TENANT", 404); }
   if (!club) return failure("UNKNOWN_TENANT", 404);
-  const pageUnavailable = club.presentationTemplateKey === "editorial@1" && !club.storeEnabled
-    || surface === "home" && ["clubhouse@1", "editorial@1"].includes(club.presentationTemplateKey ?? "");
   const memberships = club.role ? [{ userId, clubId: club.id, role: club.role, status: "active" }] : [];
   try {
     if (mutation) await authorizeMutation({ club, userId, memberships, aal: "aal1", feature: "shop", payload: payload! });
@@ -85,11 +83,6 @@ async function handle(request: Request, mutation: boolean) {
   } catch (error) {
     return failure(error instanceof ContractError ? error.code : "NOT_AUTHORIZED", 403);
   }
-
-  // Recovery intent only routes the request to the actor/hash-protected RPC.
-  // It does not authorize a fresh save to an unavailable page.
-  const recovering = request.headers.get("x-editor-recovery") === "1";
-  if (pageUnavailable && (mutation ? !recovering : !operationId)) return failure("PAGE_UNAVAILABLE", 404);
 
   try {
     const onzio = supabase.schema("onzio");

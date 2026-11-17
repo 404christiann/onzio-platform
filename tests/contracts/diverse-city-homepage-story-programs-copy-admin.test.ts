@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -45,6 +46,7 @@ const ROOT = resolve(__dirname, "../..");
 const CLUB_NAME = "Diverse City FC";
 
 function source(path: string): string {
+  if (path === "app/admin/(protected)/programs/page.tsx") return readProgramsEditorSource();
   return readFileSync(resolve(ROOT, path), "utf8");
 }
 
@@ -434,8 +436,8 @@ describe("new content tables in the admin data contract", () => {
 describe("academy@1 surfaces render stored content, not literals", () => {
   const story = source("components/DevelopingNextGeneration.tsx");
   const pathway = source("components/AcademyProgramsPathway.tsx");
-  const programsPage = source("components/AcademyProgramsPage.tsx");
-  const footer = source("components/Footer.tsx");
+  const programsPage = source("components/sites/diverse-city/AcademyProgramsPage.tsx");
+  const footer = source("components/sites/diverse-city/Footer.tsx");
 
   it("no longer hardcodes the homepage story copy", () => {
     for (const literal of [
@@ -504,7 +506,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
     // academy@1 club. This test is the record of that decision — if a later
     // session decides to make them editable, it should change this
     // deliberately rather than by accident.
-    const detail = source("components/AcademyProgramDetailPage.tsx");
+    const detail = source("components/sites/diverse-city/AcademyProgramDetailPage.tsx");
     for (const chrome of [
       "The Program",
       "Grow through the game.",
@@ -522,8 +524,9 @@ describe("academy@1 surfaces render stored content, not literals", () => {
     for (const path of [
       "components/DevelopingNextGeneration.tsx",
       "components/AcademyProgramsPathway.tsx",
-      "components/AcademyProgramsPage.tsx",
+      "components/sites/diverse-city/AcademyProgramsPage.tsx",
       "components/Footer.tsx",
+      "components/sites/diverse-city/Footer.tsx",
       "lib/homepage-story-content.ts",
       "lib/programs-page-content.ts",
       "lib/club-branding.ts",
@@ -560,13 +563,13 @@ describe("academy@1 surfaces render stored content, not literals", () => {
       heroVariant: "editable",
     }).editableSections).toEqual(["hero", "story"]);
     expect(resolveHomepageCapabilities({
-      templateKey: "editorial@1",
-      slideshowVariant: "editorial",
+      templateKey: "clubhouse@1",
+      slideshowVariant: "matchday",
       heroVariant: "editable",
     }).editableSections).toEqual(["hero", "photos"]);
     expect(resolveHomepageCapabilities({
-      templateKey: "editorial@1",
-      slideshowVariant: "editorial",
+      templateKey: "clubhouse@1",
+      slideshowVariant: "matchday",
       heroVariant: "editable",
     }).videoSourceEditable).toBe(false);
 
@@ -591,7 +594,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
       ).toContain(field);
     }
 
-    const brandingAdmin = source("app/admin/(protected)/branding/page.tsx");
+    const brandingAdmin = source("components/admin/club-settings/LegacyBranding.tsx");
     expect(brandingAdmin).toContain("footer_tagline");
     expect(brandingAdmin).toContain("footerTagline");
   });

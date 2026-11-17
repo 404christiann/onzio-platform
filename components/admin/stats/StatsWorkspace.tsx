@@ -134,7 +134,7 @@ function StatsFieldControl({ player, field, value, onChange, disabled }: { playe
     <div className={styles.fieldCopy}><label htmlFor={id}>{field.label}</label>{field.hint && <small>{field.hint}</small>}</div>
     {field.kind === "boolean" ? <label className={styles.switchControl}><input id={id} type="checkbox" aria-label={ariaLabel} checked={Boolean(value)} onChange={event => onChange(event.target.checked)} disabled={disabled} className={styles.switchInput} /><span className={styles.switchTrack} aria-hidden="true" /></label> : <div className={styles.stepper}>
       <button type="button" aria-label={`Decrease ${ariaLabel}`} disabled={disabled || Number(value) <= 0} onClick={() => onChange(boundedNumber(Number(value) - 1))}>−</button>
-      <input id={id} type="number" data-slot="stat-input" inputMode="numeric" min={0} max={field.max} step={1} aria-label={ariaLabel} value={Number(value)} disabled={disabled} onChange={event => onChange(boundedNumber(Number(event.target.value)))} />
+      <input id={id} type="number" data-slot="stat-input" inputMode="numeric" min={0} max={field.max} step={1} aria-label={ariaLabel} value={String(Number(value))} disabled={disabled} onChange={event => onChange(boundedNumber(Number(event.target.value)))} />
       <button type="button" aria-label={`Increase ${ariaLabel}`} disabled={disabled || Number(value) >= (field.max ?? Infinity)} onClick={() => onChange(boundedNumber(Number(value) + 1))}>+</button>
     </div>}
   </div>;

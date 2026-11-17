@@ -1,5 +1,12 @@
 # Phase 9 — Versioned Presentation System
 
+The [club site architecture decision](../site-architecture.md), accepted on
+2026-10-20, supersedes this plan's template families, semantic theme documents,
+and template-based content restrictions. This file preserves the original design
+and evidence. Existing runtime behavior stays in place until its migration
+package passes acceptance. Publication privacy, tenant isolation, immutable
+history, and separate design/content ownership remain requirements.
+
 ## Purpose
 
 Phase 9 converts the approved Rose City and Deportivo Olimpico mockup visuals

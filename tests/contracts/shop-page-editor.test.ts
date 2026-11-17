@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { shopSaveRequestSchema, type ShopSnapshot } from "@/lib/shop-editor/contract";
 import { draftFromShopSnapshot, toShopSaveRequest } from "@/lib/shop-editor/model";
@@ -33,13 +31,6 @@ function snapshot(surface: "home" | "shop"): ShopSnapshot {
 }
 
 describe("Shop page save scope", () => {
-  it("rejects the Editorial Shop API when the public Store is disabled", () => {
-    const route = readFileSync(resolve(process.cwd(), "app/api/admin/shop/route.ts"), "utf8");
-    const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/20261002203000_shop_page_atomic_save.sql"), "utf8");
-    expect(route).toContain('club.presentationTemplateKey === "editorial@1" && !club.storeEnabled');
-    expect(migration.match(/homepage_design\(p_club_id\)->>'templateKey'='editorial@1'/g)).toHaveLength(2);
-    expect(migration.match(/raise exception 'PAGE_UNAVAILABLE' using errcode='22023'/g)?.length).toBeGreaterThanOrEqual(3);
-  });
   it("sends only changed variants on the selected public page", () => {
     const current = snapshot("shop");
     const draft = draftFromShopSnapshot(current);

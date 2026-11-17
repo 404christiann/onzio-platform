@@ -7,6 +7,8 @@ import { defaultHomepageStoryContent } from "@/lib/homepage-story-content";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { siteRouteOptionsWithFallback } from "@/lib/site-routes";
+import { useClubContext } from "@/components/ClubContextProvider";
+import { HOMEPAGE_HERO_EYEBROW_MAX } from "@/lib/homepage-editor/contract";
 import type { HomepageDraft, PieceId } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PIECE_LABELS } from "@/lib/homepage-editor/preview-context";
 
@@ -20,6 +22,7 @@ export type HomepageFieldsProps = {
   change: (field: string, value: string | boolean) => void;
   programs: Program[];
   more: boolean;
+  classic?: boolean;
 };
 
 const inputClass = "hp-field input";
@@ -28,12 +31,12 @@ const selectClass = "hp-field select";
 
 function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
-    <label className="block space-y-1.5" htmlFor={id}>
-      <span className="font-body text-sm text-foreground">
+    <div className="block space-y-1.5">
+      <label className="font-body text-sm text-foreground" htmlFor={id}>
         {label}
-      </span>
+      </label>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -75,10 +78,11 @@ function RouteField({ label, id, value, disabled, programs, onChange }: {
   programs: Program[];
   onChange: (value: string) => void;
 }) {
+  const { storeEnabled } = useClubContext();
   return (
     <Field label={label} id={id}>
       <NativeSelect chevronIcon={AdminSelectChevron} id={id} className={selectClass} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-        {siteRouteOptionsWithFallback(programs, value).map((option) => (
+        {siteRouteOptionsWithFallback(programs, value, { storeEnabled }).map((option) => (
           <NativeSelectOption key={`${id}-${option.href}`} value={option.href}>{option.label}</NativeSelectOption>
         ))}
       </NativeSelect>
@@ -86,7 +90,7 @@ function RouteField({ label, id, value, disabled, programs, onChange }: {
   );
 }
 
-export default function HomepageFields({ piece, clubName, draft, disabled, change: commit, programs, more }: HomepageFieldsProps) {
+export default function HomepageFields({ piece, clubName, draft, disabled, change: commit, programs, more, classic = false }: HomepageFieldsProps) {
   // Resolved defaults are a display convenience, never a mutation of the raw
   // baseline. Once a field is edited, keep a deliberate blank visible too.
   const [editedFields, setEditedFields] = useState<ReadonlySet<string>>(() => new Set());
@@ -98,13 +102,13 @@ export default function HomepageFields({ piece, clubName, draft, disabled, chang
     commit(field, value);
   }
   if (piece === "hero.eyebrow") {
-    return <TextField label={HOMEPAGE_PIECE_LABELS[piece]} id="hero-eyebrow" value={draft.hero.eyebrow} disabled={disabled} maxLength={20_000} onChange={(value) => change("hero.eyebrow", value)} />;
+    return <TextField label={HOMEPAGE_PIECE_LABELS[piece]} id="hero-eyebrow" value={draft.hero.eyebrow} disabled={disabled} maxLength={HOMEPAGE_HERO_EYEBROW_MAX} onChange={(value) => change("hero.eyebrow", value)} />;
   }
   if (piece === "hero.heading") {
     return <fieldset className="space-y-3"><legend className="font-body text-sm text-foreground">Main heading</legend><TextField label="Line one" id="hero-headline-line-one" value={draft.hero.headline_line_one} disabled={disabled} maxLength={80} onChange={(value) => change("hero.headline_line_one", value)} /><TextField label="Line two" id="hero-headline-line-two" value={draft.hero.headline_line_two} disabled={disabled} maxLength={80} onChange={(value) => change("hero.headline_line_two", value)} /></fieldset>;
   }
   if (piece === "hero.intro") {
-    return <AreaField label={HOMEPAGE_PIECE_LABELS[piece]} id="hero-intro" value={draft.hero.intro} disabled={disabled} maxLength={320} onChange={(value) => change("hero.intro", value)} />;
+    return <><AreaField label={HOMEPAGE_PIECE_LABELS[piece]} id="hero-intro" value={draft.hero.intro} disabled={disabled} maxLength={320} onChange={(value) => change("hero.intro", value)} />{classic && <p className="hp-help hp-character-count">{draft.hero.intro.length}/320 characters</p>}</>;
   }
   if (piece === "hero.cta") {
     return <fieldset className="space-y-4"><legend className="font-body text-sm text-foreground">Top buttons</legend><fieldset className="space-y-3"><legend className="font-body text-sm text-foreground">First button</legend><TextField label="Button text" id="hero-primary-label" value={draft.hero.primary_cta_label} disabled={disabled} maxLength={20_000} onChange={(value) => change("hero.primary_cta_label", value)} />{more && <RouteField label="Where the button goes" id="hero-primary-href" value={draft.hero.primary_cta_href} disabled={disabled} programs={programs} onChange={(value) => change("hero.primary_cta_href", value)} />}</fieldset><fieldset className="space-y-3"><legend className="font-body text-sm text-foreground">Second button</legend><TextField label="Button text" id="hero-secondary-label" value={draft.hero.secondary_cta_label} disabled={disabled} maxLength={20_000} onChange={(value) => change("hero.secondary_cta_label", value)} />{more && <RouteField label="Where the button goes" id="hero-secondary-href" value={draft.hero.secondary_cta_href} disabled={disabled} programs={programs} onChange={(value) => change("hero.secondary_cta_href", value)} />}</fieldset></fieldset>;
@@ -120,7 +124,7 @@ export default function HomepageFields({ piece, clubName, draft, disabled, chang
   }
   if (piece === "photos") {
     if (!more) return null;
-    return <TextField label="Slideshow label" id="photos-season-label" value={draft.photos.seasonLabel} disabled={disabled} maxLength={20_000} onChange={(value) => change("photos.seasonLabel", value)} />;
+    return <TextField label="Slideshow label" id="photos-season-label" value={draft.photos.seasonLabel} disabled={disabled} maxLength={classic ? Math.max(40, draft.photos.seasonLabel.length) : 20_000} onChange={(value) => change("photos.seasonLabel", value)} />;
   }
   return <p className="font-body text-sm text-muted-foreground">{HOMEPAGE_PIECE_LABELS[piece]} is managed in its existing editor.</p>;
 }

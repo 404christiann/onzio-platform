@@ -1,11 +1,12 @@
+import { saveHomepage, expectHomepageSaved, navigateHomepageOwner } from "./helpers/homepage-editor-controls";
 import { createHash, randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test } from "@playwright/test";
 import {
   parsePresentationDocument,
-  switchPresentationTemplate,
   type PresentationDocument,
 } from "@/packages/presentation";
+import { presentationDocumentForTemplate } from "@/tests/helpers/presentation-fixture";
 
 // Clubhouse is used (rather than the default academy fixture) because its
 // shared "shared.story" shortcut renders unconditionally; academy's shared
@@ -60,9 +61,8 @@ async function readOriginalState(db: Client): Promise<OriginalState & { configur
 }
 
 async function publishClubhouse(db: Client, source: PresentationDocument, createdBy: string) {
-  const switched = switchPresentationTemplate(source, { id: "clubhouse", version: 1 });
   const id = randomUUID();
-  const configuration = parsePresentationDocument(switched.document, { surface: "production" });
+  const configuration = parsePresentationDocument(presentationDocumentForTemplate(source, "clubhouse"), { surface: "production" });
   const digest = createHash("sha256").update(JSON.stringify(configuration)).digest("hex");
   const versionResult = await db.query(
     "select coalesce(max(version), 0) + 1 as version from onzio.presentation_documents where club_id = $1",
@@ -110,9 +110,8 @@ test.describe("homepage editor local draft recovery", () => {
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       const heading = frame.locator('[data-homepage-piece="hero.heading"]');
       await heading.click();
-      await heading.click();
       await page.getByLabel("Line one", { exact: true }).fill("Recovered after reload");
-      await expect(page.getByRole("status").filter({ hasText: "Not saved yet" })).toBeVisible();
+      await expect(page.locator("[data-admin-save-status]")).toContainText("Unsaved changes");
 
       // Recovery is written on a 500ms debounce; give it time to land before reloading.
       await page.waitForTimeout(900);
@@ -124,8 +123,8 @@ test.describe("homepage editor local draft recovery", () => {
 
       // Shared content left the editing canvas; the editor's explicit shortcut
       // is now what raises the unsaved-changes guard.
-      await page.getByRole("button", { name: "Edit in About" }).filter({ visible: true }).click();
-      await page.getByRole("button", { name: "Leave without saving" }).click();
+      await navigateHomepageOwner(page, "About");
+      await page.getByRole("button", { name: "Discard changes" }).click();
       await expect(page).toHaveURL(/\/admin\/about$/);
 
       await page.goto("/admin/homepage");
@@ -136,8 +135,6 @@ test.describe("homepage editor local draft recovery", () => {
     } finally {
       const current = await (await page.request.get("/api/admin/homepage")).json();
       if (current.content.hero.headline_line_one === "Recovered after reload") {
-        // Clubhouse does not expose "eyebrow" as an editable hero field;
-        // resubmitting it here is rejected with FIELD_UNAVAILABLE.
         const { eyebrow: _eyebrow, ...restorableHero } = current.content.hero;
         const restore = await page.request.post("/api/admin/homepage", { data: { operationId: crypto.randomUUID(), expectedRevision: current.revision, designRevision: current.designRevision, sections: { hero: { ...restorableHero, headline_line_one: "" } } } });
         if (!restore.ok()) throw new Error(`Failed to restore Alpha's hero content: ${await restore.text()}`);
@@ -163,12 +160,11 @@ test.describe("homepage editor local draft recovery", () => {
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       const heading = frame.locator('[data-homepage-piece="hero.heading"]');
       await heading.click();
-      await heading.click();
       await page.getByLabel("Line one", { exact: true }).fill(marker);
       await page.waitForTimeout(900);
       await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
-      await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
-      await expect(page.getByText("Saved. Your homepage is updated.", { exact: true })).toBeVisible();
+      await saveHomepage(page);
+      await expectHomepageSaved(page);
 
       await page.reload();
       await expect(page.getByText("Restored an unsaved draft from before.", { exact: false })).toHaveCount(0);

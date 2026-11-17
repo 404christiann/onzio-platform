@@ -16,7 +16,7 @@ import { createClient } from "@/lib/admin-client";
 import { NEWS_CATEGORIES, NEWS_LIMITS, newsInstantToLocal, newsLocalToInstant, newsSlug, splitNewsParagraphs, type NewsArticleSave, type NewsEditorArticle } from "@/lib/cinematic-news";
 import { emptyNewsDraft, loadNewsEditor, newsDraftFromArticle, newsSaveRequest, saveNewsArticle, type NewsDraft, type NewsDraftProblems } from "@/lib/cinematic-news-editor";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
-import { fetchClubIdentity } from "@/lib/editorial-identity";
+import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import "@/components/admin/homepage/homepage-editor.css";
 
 type Editing = { article: NewsEditorArticle | null; draft: NewsDraft; original: string };

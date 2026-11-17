@@ -1,6 +1,6 @@
 "use client";
 
-import AcademyProgramDetailPage from "@/components/AcademyProgramDetailPage";
+import AcademyProgramDetailPage from "@/components/sites/diverse-city/AcademyProgramDetailPage";
 import ScaledPagePreview from "@/components/admin/ScaledPagePreview";
 import type { ProgramContent } from "@/lib/queries";
 

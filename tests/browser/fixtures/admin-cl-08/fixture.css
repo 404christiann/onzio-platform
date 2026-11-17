@@ -1,0 +1,29 @@
+* { box-sizing: border-box; }
+body { margin: 0; }
+.fixture {
+  min-height: 100dvh;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: 14px/1.45 Arial, sans-serif;
+}
+h1 { margin: 0 0 20px; font-size: 26px; }
+h2 { margin: 0 0 16px; font-size: 18px; }
+button { font: inherit; }
+.toolbar { margin-bottom: 16px; }
+.toolbar button, .accordion-content button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+.panel { margin-bottom: 16px; padding: 16px; border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--card)); }
+.bars { display: grid; gap: 12px; }
+.bar-row { display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: center; gap: 12px; }
+.accordion-content { padding: 12px; }
+[role="tabpanel"] { padding: 16px 0 0; }
+@media (max-width: 390px) { .fixture { padding: 16px 12px 60px; } .bar-row { grid-template-columns: 82px minmax(0, 1fr); gap: 8px; } }

@@ -278,7 +278,7 @@ describe('fetchShopKitContent', () => {
     await expect(fetchShopKitContent()).resolves.toEqual({ section: null, photos: [] })
   })
 
-  it('uses the current bullet points and store note for a legacy row', async () => {
+  it('shows no bullet points or store note for a row without them', async () => {
     const { bullet_points: _bullets, store_note: _storeNote, ...legacySection } = section
     mockFrom
       .mockReturnValueOnce(chain({ data: [legacySection], error: null }))
@@ -286,17 +286,8 @@ describe('fetchShopKitContent', () => {
 
     const result = await fetchShopKitContent()
 
-    expect(result.section?.bullet_points).toEqual([
-      'Authentic match jersey',
-      'Any name & number',
-      'League patch',
-      'Team sponsor badges',
-      'Raffle ticket included',
-      'Custom name + $10',
-    ])
-    expect(result.section?.store_note).toBe(
-      "Sold exclusively at Niky's Sports\n33 E Colorado Blvd, Pasadena, CA",
-    )
+    expect(result.section?.bullet_points).toEqual([])
+    expect(result.section?.store_note).toBe('')
   })
 
   it('throws with context when the section query fails', async () => {
@@ -441,7 +432,7 @@ describe('fetchSiteSocialLinks', () => {
     expect(result[1].id).toBe('facebook')
   })
 
-  it('falls back to default social links when the query fails', async () => {
+  it('falls back to blank platform links when the query fails', async () => {
     mockFrom.mockReturnValueOnce(chain({
       data: null,
       error: { message: 'social links unavailable' },
@@ -451,7 +442,7 @@ describe('fetchSiteSocialLinks', () => {
 
     expect(result).toHaveLength(5)
     expect(result[0].id).toBe('instagram')
-    expect(result[0].href).toContain('instagram.com')
+    expect(result[0].href).toBe('')
   })
 })
 
@@ -684,7 +675,7 @@ describe('fetchPlayerMatchLog', () => {
     expect(q.eq).toHaveBeenCalledWith('player_id', PLAYER_ID)
   })
 
-  it('passes gt mins=0 filter to the stats query to exclude non-appearances', async () => {
+  it('keeps only games the player played in (ADMIN-RE-11c: played, not minutes above 0)', async () => {
     const q = chain({ data: [], error: null })
     mockFrom
       .mockReturnValueOnce(q)
@@ -692,7 +683,8 @@ describe('fetchPlayerMatchLog', () => {
 
     await fetchPlayerMatchLog(PLAYER_ID, false, SEASON_ID)
 
-    expect(q.gt).toHaveBeenCalledWith('mins', 0)
+    expect(q.eq).toHaveBeenCalledWith('played', true)
+    expect(q.gt).not.toHaveBeenCalled()
   })
 })
 
@@ -728,8 +720,8 @@ describe('fetchRoster (season-aware)', () => {
     // historical season: only inactivePlayer has stats
     mockFrom
       .mockReturnValueOnce(chain({ data: [activeSeason, historicalSeason], error: null })) // seasons
-      .mockReturnValueOnce(chain({ data: historicalStats, error: null }))  // player_season_stats
-      .mockReturnValueOnce(chain({ data: [], error: null }))               // goalkeeper_season_stats
+      .mockReturnValueOnce(chain({ data: historicalStats, error: null }))  // player_season_totals
+      .mockReturnValueOnce(chain({ data: [], error: null }))               // goalkeeper_season_totals
       .mockReturnValueOnce(chain({ data: [inactivePlayer], error: null })) // players (by id, no active filter)
       .mockReturnValueOnce(chain({ data: [], error: null }))               // player_photos
 
@@ -820,8 +812,8 @@ describe('fetchRoster (season-aware)', () => {
     expect(result.midfielders).toEqual([])
     expect(result.forwards).toEqual([])
     // Must never send season_id=eq.<empty string> against these uuid columns.
-    expect(calledTables).not.toContain('player_season_stats')
-    expect(calledTables).not.toContain('goalkeeper_season_stats')
+    expect(calledTables).not.toContain('player_season_totals')
+    expect(calledTables).not.toContain('goalkeeper_season_totals')
   })
 
   it('excludes a deactivated player from the active season even when their season stats remain', async () => {

@@ -5,7 +5,7 @@ import { createHomepageEditorState, reduceHomepageEditor } from "@/lib/homepage-
 import type { HomepageRenderer } from "@/lib/homepage-editor/capabilities";
 
 type Build = (state: ReturnType<typeof createHomepageEditorState>, renderer: HomepageRenderer, operationId: string) => { operationId: string; expectedRevision: string; designRevision: string; sections: Record<string, any> };
-const renderer: HomepageRenderer = { templateKey: "editorial@1", slideshowVariant: "editorial", heroVariant: "editable" };
+const renderer: HomepageRenderer = { templateKey: "clubhouse@1", slideshowVariant: "matchday", heroVariant: "editable" };
 const state = () => createHomepageEditorState({ content: homepageDraft(), revision: "1", designRevision: "design", editableSections: ["hero", "photos"] });
 describe("homepage preview save adapter", () => {
   it("sends only dirty available sections and strips unrendered hero fields", async () => {

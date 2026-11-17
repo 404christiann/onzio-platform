@@ -1,5 +1,7 @@
 "use client";
 
+import { codeSiteFor } from "@/lib/code-site";
+
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
@@ -10,10 +12,9 @@ import StaffCard from "@/components/StaffCard";
 import { fetchRoster, fetchStaff } from "@/lib/queries";
 import { Player, Staff } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import AcademyRosterPage from "@/components/sites/diverse-city/AcademyRosterPage";
 import ClubhouseRosterPage from "@/components/ClubhouseRosterPage";
-import EditorialRoster from "@/components/editorial/EditorialRoster";
 import CinematicRosterPage from "@/components/cinematic/CinematicRosterPage";
-import { AcademyRosterLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -26,8 +27,6 @@ type RosterData = {
 };
 
 function RosterGroup({ label, players, seasonLabel }: { label: string; players: Player[]; seasonLabel: string }) {
-  const club = useClubContext();
-  const isAcademy = club.presentationTemplateKey === "academy@1";
   const groupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,14 +52,8 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
         >
           {label}
         </h2>
-        <div
-          className="flex-1 h-px"
-          style={{ backgroundColor: isAcademy ? "#B9E3F6" : "#e5e5e5" }}
-        />
-        <span
-          className={`font-display text-sm font-semibold uppercase ${isAcademy ? "" : "tracking-widest"}`}
-          style={{ color: isAcademy ? "#51667E" : "var(--color-gray-mid)" }}
-        >
+        <div className="h-px flex-1 bg-[#e5e5e5]" />
+        <span className="font-display text-sm font-semibold uppercase tracking-widest text-[var(--color-gray-mid)]">
           {players.length}
         </span>
       </div>
@@ -77,14 +70,12 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
 export default function RosterPage() {
   const club = useClubContext();
   if (club.presentationTemplateKey === "cinematic@2") return <CinematicRosterPage />;
-  if (club.presentationTemplateKey === "editorial@1") return <EditorialRoster />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseRosterPage />;
+  if (codeSiteFor(club) === "diverse-city") return <AcademyRosterPage />;
   return <LegacyRosterPage />;
 }
 
 function LegacyRosterPage() {
-  const club = useClubContext();
-  const isAcademy = club.presentationTemplateKey === "academy@1";
   const clubId = useClubId();
   const heroRef  = useRef<HTMLDivElement>(null);
   const staffRef = useRef<HTMLDivElement>(null);
@@ -140,9 +131,7 @@ function LegacyRosterPage() {
   return (
     <div style={{ backgroundColor: "var(--color-white)" }}>
 
-      {/* Loading state */}
-      {loading && isAcademy && <AcademyRosterLoadingSkeleton />}
-      {loading && !isAcademy && (
+      {loading && (
         <div className="flex items-center justify-center" style={{ minHeight: "100vh" }}>
           <p
             className="font-display font-black uppercase tracking-widest"
@@ -153,7 +142,6 @@ function LegacyRosterPage() {
         </div>
       )}
 
-      {/* Error state */}
       {error && !loading && (
         <div className="flex items-center justify-center" style={{ minHeight: "100vh" }}>
           <p
@@ -165,17 +153,15 @@ function LegacyRosterPage() {
         </div>
       )}
 
-      {/* Content */}
       {!loading && !error && roster && (
         <>
-          {/* Page hero */}
           <div
             ref={heroRef}
             className="pt-36 pb-14 px-6 lg:px-10 max-w-7xl mx-auto"
             style={{ opacity: 0 }}
           >
             <p
-              className={`font-display font-bold uppercase mb-3 ${isAcademy ? "" : "tracking-widest"}`}
+              className="mb-3 font-display font-bold uppercase tracking-widest"
               style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
             >
               {seasonLabel} Season
@@ -189,7 +175,6 @@ function LegacyRosterPage() {
             <div className="w-16 h-1 mt-6" style={{ backgroundColor: "var(--color-red)" }} />
           </div>
 
-          {/* Player groups */}
           <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-10">
             {!hasRosterContent ? (
               <div className="border-y border-black/10 py-14 text-center">
@@ -205,7 +190,6 @@ function LegacyRosterPage() {
             ))}
           </div>
 
-          {/* Technical Staff */}
           {hasRosterContent && <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-24">
             <div ref={staffRef} style={{ opacity: 0 }}>
               <div className="flex items-center gap-4 mb-8">
@@ -215,10 +199,10 @@ function LegacyRosterPage() {
                 >
                   Technical Staff
                 </h2>
-                <div className="flex-1 h-px" style={{ backgroundColor: isAcademy ? "#B9E3F6" : "#e5e5e5" }} />
+                <div className="flex-1 h-px" style={{ backgroundColor: "#e5e5e5" }} />
                 <span
-                  className={`font-display text-sm font-semibold uppercase ${isAcademy ? "" : "tracking-widest"}`}
-                  style={{ color: isAcademy ? "#51667E" : "var(--color-gray-mid)" }}
+                  className="font-display text-sm font-semibold uppercase tracking-widest"
+                  style={{ color: "var(--color-gray-mid)" }}
                 >
                   {staffList.length}
                 </span>

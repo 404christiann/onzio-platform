@@ -2,9 +2,10 @@ import { cache } from "react";
 import { failContract } from "@/lib/contract-error";
 import { normalizeHostname } from "@/lib/tenant";
 import {
+  isActiveTemplateKey,
   parsePresentationDocument,
   templateKey,
-  type TemplateKey,
+  type ActiveTemplateKey,
 } from "@/packages/presentation";
 
 export type ClubContext = {
@@ -20,12 +21,8 @@ export type ClubContext = {
   role: "owner" | "admin" | null;
   primaryColor: string | null;
   secondaryColor: string | null;
-  // Derived from the presentation package rather than restated, so registering
-  // a new template cannot leave this union silently stale.
-  presentationTemplateKey: TemplateKey | null;
-  // Operator-only public-store toggle (onzio.clubs.store_enabled, added in
-  // Lions E1). Added here in E3 so editorial@1's nav can gate its "Store"
-  // item off real tenant data instead of guessing -- see EditorialHeader.
+  presentationTemplateKey: ActiveTemplateKey | null;
+  // Operator-only public-store toggle (onzio.clubs.store_enabled).
   storeEnabled: boolean;
 };
 
@@ -110,9 +107,6 @@ const resolveDatabaseContext = cache(
       store_enabled: boolean;
     };
 
-    // These three depend only on club.id/userId, not on each other, so they
-    // run concurrently. Supabase queries resolve to { data, error } objects
-    // rather than throwing, so no leg can reject the Promise.all.
     const [{ data: primary }, membership, presentationTemplateKey] =
       await Promise.all([
         onzio
@@ -165,32 +159,46 @@ async function resolvePublishedPresentationTemplateKey(
   onzio: ReturnType<Awaited<ReturnType<typeof import("@/lib/supabase-server").createClient>>["schema"]>,
   clubId: string,
 ): Promise<ClubContext["presentationTemplateKey"]> {
-  const { data: state } = await onzio
+  const { data: state, error: stateError } = await onzio
     .from("presentation_state")
     .select("published_document_id")
     .eq("club_id", clubId)
     .maybeSingle();
-  let query = onzio
+  if (stateError && stateError.code !== "42501") failContract("UNKNOWN_TENANT");
+  if (state && !state.published_document_id) return null;
+
+  const publishedId = state?.published_document_id;
+  if (publishedId) {
+    const { data, error } = await onzio
+      .from("presentation_documents")
+      .select("configuration")
+      .eq("club_id", clubId)
+      .eq("id", publishedId)
+      .maybeSingle();
+    if (error || !data) failContract("UNKNOWN_TENANT");
+    return resolveActivePresentationTemplateKey(data.configuration);
+  }
+
+  const { createPublicClient } = await import("@/lib/supabase-server");
+  const { data, error } = await createPublicClient().schema("onzio")
     .from("presentation_documents")
     .select("configuration")
-    .eq("club_id", clubId);
-  if (state?.published_document_id) {
-    query = query.eq("id", state.published_document_id);
-  } else {
-    query = query.order("version", { ascending: false }).limit(1);
-  }
-  const { data } = await query.maybeSingle();
-  if (!data?.configuration) {
-    return null;
-  }
+    .eq("club_id", clubId)
+    .maybeSingle();
+  if (error) failContract("UNKNOWN_TENANT");
+  if (!data) return null;
+  return resolveActivePresentationTemplateKey(data.configuration);
+}
+
+export function resolveActivePresentationTemplateKey(configuration: unknown): ActiveTemplateKey {
   try {
-    const document = parsePresentationDocument(data.configuration, {
-      surface: "production",
-    });
-    return templateKey(document.template);
+    const document = parsePresentationDocument(configuration, { surface: "production" });
+    const key = templateKey(document.template);
+    if (isActiveTemplateKey(key)) return key;
   } catch {
-    return null;
+    // A present but invalid or retired assignment cannot become a generic site.
   }
+  failContract("UNKNOWN_TENANT");
 }
 
 const resolveClubContextBySlug = cache(
@@ -208,9 +216,6 @@ const resolveClubContextBySlug = cache(
       .maybeSingle();
     if (error || !club) failContract("UNKNOWN_TENANT");
 
-    // These three depend only on club.id/userId, not on each other, so they
-    // run concurrently. Supabase queries resolve to { data, error } objects
-    // rather than throwing, so no leg can reject the Promise.all.
     const [{ data: primary }, membership, presentationTemplateKey] =
       await Promise.all([
         onzio

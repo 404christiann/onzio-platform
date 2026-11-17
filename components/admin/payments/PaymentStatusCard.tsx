@@ -1,19 +1,18 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { AlertTriangle, Lock } from "@/components/admin/icons";
-import { animate, motion, useReducedMotion } from "motion/react";
+import { FormEvent, useState, type ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
+import { AdminBar } from "@/components/admin/ui/AdminBar";
+import { AdminPendingButton } from "@/components/admin/ui/AdminPendingButton";
+import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { GRACE_MS, type PaymentsUiState } from "@/lib/stripe-subscription-state";
 import { cn } from "@/lib/utils";
+
+import styles from "./PaymentStatusCard.module.css";
 
 const SUPPORT_EMAIL = "onziofutbol@gmail.com";
 const DAY_MS = 86_400_000;
 const GRACE_DAYS = Math.round(GRACE_MS / DAY_MS);
-
-const CARD_SHELL =
-  "rounded-2xl border bg-card p-6 text-card-foreground shadow-sm sm:p-8";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -38,8 +37,6 @@ type ParsedPrice = {
   decimals: number;
 };
 
-/** Splits a label like "$75.00/mo" into prefix "$", numeric 75.00, suffix
- *  "/mo" so only the number animates. Null when no parseable number exists. */
 function parsePriceLabel(label: string): ParsedPrice | null {
   const match = label.match(/\d[\d,]*(?:\.\d+)?/);
   if (!match || match.index === undefined) return null;
@@ -62,77 +59,22 @@ function formatAmount(value: number, decimals: number) {
   });
 }
 
-function AnimatedAmount({ value, decimals }: { value: number; decimals: number }) {
-  const reduceMotion = useReducedMotion();
-  const [display, setDisplay] = useState(() => (reduceMotion ? value : 0));
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setDisplay(value);
-      return;
-    }
-    const controls = animate(0, value, {
-      duration: 0.7,
-      ease: [0.22, 1, 0.36, 1],
-      onUpdate: (latest) => setDisplay(latest),
-    });
-    return () => controls.stop();
-  }, [value, reduceMotion]);
-
-  return <>{formatAmount(display, decimals)}</>;
-}
-
-function PriceDisplay({ label, animated }: { label: string; animated: boolean }) {
+function PriceDisplay({ label }: { label: string }) {
   const parsed = parsePriceLabel(label);
   return (
-    <p className="font-body text-4xl font-semibold leading-tight tracking-tight sm:text-5xl text-foreground">
+    <p className={styles.price} data-payments-price="">
       {parsed ? (
         <>
-          {parsed.prefix}
-          {animated ? (
-            <AnimatedAmount value={parsed.value} decimals={parsed.decimals} />
-          ) : (
-            formatAmount(parsed.value, parsed.decimals)
-          )}
-          <span className="ml-1 font-body text-xl font-medium text-muted-foreground">
-            {parsed.suffix}
-          </span>
+          {parsed.prefix}{formatAmount(parsed.value, parsed.decimals)}
+          <span className={styles.priceUnit}>{parsed.suffix}</span>
         </>
-      ) : (
-        label
-      )}
+      ) : label}
     </p>
   );
 }
 
-function Badge({
-  className,
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-body text-xs font-medium",
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
 function SupportEmailLink() {
-  return (
-    <a
-      href={`mailto:${SUPPORT_EMAIL}`}
-      className="text-foreground underline underline-offset-2"
-    >
-      {SUPPORT_EMAIL}
-    </a>
-  );
+  return <a href={`mailto:${SUPPORT_EMAIL}`} className={styles.supportLink}>{SUPPORT_EMAIL}</a>;
 }
 
 // Every contract code the billing routes can return, mapped to a message an
@@ -214,15 +156,21 @@ function billingErrorMessage(code: unknown, fallback: string) {
 
 /** Calls a billing route with fetch and navigates to the returned Stripe URL,
  *  so a failure shows a friendly message here instead of the browser landing
- *  on the route's raw JSON error body. */
-function BillingActionForm({
+ *  on the route's raw JSON error body. The reimagined Payments page (ADMIN-RE-20)
+ *  reuses this form as is: `className` and `messageClassName` only restyle it, and
+ *  `children` may be a function that learns whether the request is in flight. */
+export function BillingActionForm({
   endpoint,
   fallbackMessage,
   children,
+  className = "mt-6",
+  messageClassName = "mt-3 font-body text-sm text-destructive",
 }: {
   endpoint: "/api/stripe/portal" | "/api/stripe/checkout";
   fallbackMessage: string;
-  children: React.ReactNode;
+  children: React.ReactNode | ((state: { pending: boolean }) => React.ReactNode);
+  className?: string;
+  messageClassName?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -251,12 +199,12 @@ function BillingActionForm({
   }
 
   return (
-    <form onSubmit={submit} className="mt-6">
+    <form onSubmit={submit} className={className}>
       <fieldset disabled={pending} className="contents">
-        {children}
+        {typeof children === "function" ? children({ pending }) : children}
       </fieldset>
       {message && (
-        <p role="alert" className="mt-3 font-body text-sm text-destructive">
+        <p role="alert" className={messageClassName}>
           {message}
         </p>
       )}
@@ -264,16 +212,11 @@ function BillingActionForm({
   );
 }
 
-function PortalForm({ children }: { children: React.ReactNode }) {
-  return (
-    <BillingActionForm
-      endpoint="/api/stripe/portal"
-      fallbackMessage={`We couldn't open the billing portal. Try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`}
-    >
-      {children}
-    </BillingActionForm>
-  );
-}
+/** Same owner-facing fallback sentences the classic card uses, shared so the
+ *  two pages can never disagree about what went wrong. */
+export const PORTAL_FALLBACK_MESSAGE = `We couldn't open the billing portal. Try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`;
+export const CHECKOUT_FALLBACK_MESSAGE = `We couldn't start checkout. Nothing was charged — try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`;
+export { SUPPORT_EMAIL };
 
 type PaymentStatusCardProps = {
   uiState: PaymentsUiState;
@@ -282,227 +225,224 @@ type PaymentStatusCardProps = {
   clubKind: "customer" | "demo" | "test";
 };
 
-export function PaymentStatusCard({
-  uiState,
-  priceLabel,
-  clubName,
-  clubKind,
-}: PaymentStatusCardProps) {
-  const reduceMotion = useReducedMotion();
+type TimelineStep = {
+  phase: "done" | "now" | "next";
+  title: string;
+  detail?: string;
+};
 
+type ClassicPaymentsPresentation = {
+  label: string;
+  tone: "quiet" | "ok" | "warn" | "danger";
+  message: ReactNode;
+  action: { kind: "checkout" | "portal"; label: string; primary?: boolean } | null;
+  steps: TimelineStep[];
+};
+
+function presentation({ uiState, priceLabel, clubName, clubKind }: PaymentStatusCardProps): ClassicPaymentsPresentation {
   switch (uiState.state) {
     case "no_subscription":
-      return (
-        <section className={cn(CARD_SHELL, "border-border")}>
-          <Badge className="bg-muted text-muted-foreground">
-            Private preview
-          </Badge>
-          {clubKind !== "customer" ? (
-            <p className="mt-5 rounded-xl border border-border bg-background/40 px-4 py-3 font-body text-sm text-muted-foreground">
-              This {clubKind} club does not require a paid subscription.
-            </p>
-          ) : (
-            <>
-              <p className="mt-5 max-w-prose font-body text-sm leading-relaxed text-muted-foreground">
-                {clubName} hasn&apos;t started a paid Onzio subscription yet.
-                Start one to activate billing and keep the club&apos;s site
-                live once it launches.
-              </p>
-              <BillingActionForm
-                endpoint="/api/stripe/checkout"
-                fallbackMessage={`We couldn't start checkout. Nothing was charged — try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`}
-              >
-                <Button type="submit" size="lg" className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto">
-                  Start subscription
-                </Button>
-              </BillingActionForm>
-            </>
-          )}
-        </section>
-      );
-
+      if (clubKind !== "customer") {
+        return {
+          label: "Private preview", tone: "quiet", action: null, steps: [],
+          message: <>This {clubKind} club does not require a paid subscription.</>,
+        };
+      }
+      return {
+        label: "Private preview", tone: "quiet",
+        message: <>{clubName} hasn&apos;t started a paid Onzio subscription yet. Start one to activate billing and keep the club&apos;s site live once it launches.</>,
+        action: { kind: "checkout", label: "Start subscription", primary: true },
+        steps: [
+          { phase: "now", title: "Today", detail: "No paid subscription yet." },
+          { phase: "next", title: "After you subscribe", detail: "Billing starts and the club's site stays live once it launches." },
+        ],
+      };
     case "active": {
       const renewsIn = daysUntil(uiState.periodEndsAt);
-      return (
-        <motion.section
-          className={cn(CARD_SHELL, "border-border")}
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-body text-xs font-semibold text-muted-foreground">
-              Current period
-            </p>
-            {renewsIn !== null && (
-              <Badge className="bg-success/15 text-success">
-                Renews in {renewsIn} {renewsIn === 1 ? "day" : "days"}
-              </Badge>
-            )}
-          </div>
-          {priceLabel !== null && (
-            <div className="mt-6">
-              <PriceDisplay label={priceLabel} animated />
-            </div>
-          )}
-          <p
-            className={cn(
-              "font-body text-sm text-muted-foreground",
-              priceLabel !== null ? "mt-3" : "mt-6",
-            )}
-          >
-            {`${clubName}'s Onzio subscription`}
-          </p>
-          <PortalForm>
-            <Button
-              type="submit"
-              variant="outline"
-              size="lg"
-              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
-            >
-              Manage billing
-            </Button>
-          </PortalForm>
-        </motion.section>
-      );
+      return {
+        label: "Active", tone: "ok", message: null,
+        action: { kind: "portal", label: "Manage billing" },
+        steps: [
+          { phase: "done", title: "Subscription active", detail: "Billing is up to date." },
+          { phase: "now", title: "Today", detail: renewsIn === null ? "Current period." : `Current period, renews in ${renewsIn} ${renewsIn === 1 ? "day" : "days"}.` },
+          { phase: "next", title: renewsIn === null ? "Next renewal" : formatDate(uiState.periodEndsAt), detail: `Renews automatically${priceLabel ? ` for ${priceLabel}` : ""}.` },
+        ],
+      };
     }
-
     case "active_canceling":
-      return (
-        <section className={cn(CARD_SHELL, "border-border")}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-body text-xs font-semibold text-muted-foreground">
-              Current period
-            </p>
-            <Badge className="bg-muted text-muted-foreground">
-              Ends {formatDate(uiState.periodEndsAt)}
-            </Badge>
+      return {
+        label: "Ending", tone: "warn",
+        message: <>Your subscription is scheduled to end on {formatDate(uiState.periodEndsAt)}. Self-serve cancellation changes are disabled — contact Onzio if this should be changed.</>,
+        action: { kind: "portal", label: "Manage billing" },
+        steps: [
+          { phase: "done", title: "Subscription active", detail: "Cancellation is scheduled." },
+          { phase: "now", title: "Today", detail: "You still have full access." },
+          { phase: "next", title: formatDate(uiState.periodEndsAt), detail: "Subscription ends and content administration goes on hold." },
+        ],
+      };
+    case "payment_failed":
+      return {
+        label: "Payment failed", tone: "danger",
+        message: <>Your latest subscription payment failed. Update your payment method and pay the outstanding invoice in the billing portal, or contact <SupportEmailLink />.</>,
+        action: { kind: "portal", label: "Resolve payment", primary: true },
+        steps: [
+          { phase: "done", title: "Subscription active" },
+          { phase: "now", title: "Latest payment failed", detail: "The invoice is outstanding." },
+          { phase: "next", title: "Resolve it in the billing portal", detail: "Update your payment method and pay the invoice." },
+        ],
+      };
+    case "grace":
+      return {
+        label: "Payment overdue", tone: "warn",
+        message: <>The subscription payment is overdue. Content editing remains available, and your public site stays live until the grace period ends on {formatDate(uiState.graceEndsAt)}. Update your payment method and pay the outstanding invoice in the billing portal before then — otherwise the public site goes down — or contact <SupportEmailLink />.</>,
+        action: { kind: "portal", label: "Update payment method", primary: true },
+        steps: [
+          { phase: "done", title: "Subscription active" },
+          { phase: "done", title: "Payment overdue", detail: "Content editing remains available." },
+          { phase: "now", title: "Today", detail: `${uiState.daysRemaining} of ${GRACE_DAYS} days left. The public site stays live.` },
+          { phase: "next", title: formatDate(uiState.graceEndsAt), detail: "Grace period ends. The public site goes down if the invoice is unpaid." },
+        ],
+      };
+    case "terminal":
+      return {
+        label: "Ended", tone: "quiet",
+        message: <>Content administration is on hold. Use the Customer Portal to restore billing, or contact <SupportEmailLink />.</>,
+        action: { kind: "portal", label: "Manage billing", primary: true },
+        steps: [
+          { phase: "done", title: "Subscription ended" },
+          { phase: "now", title: "Today", detail: "Content administration is on hold." },
+          { phase: "next", title: "Restore billing", detail: "Use the Customer Portal to start again." },
+        ],
+      };
+  }
+}
+
+function PaymentPanels({
+  summary, timeline, tone = "quiet", skeleton = false,
+}: {
+  summary: ReactNode;
+  timeline: ReactNode;
+  tone?: ClassicPaymentsPresentation["tone"];
+  skeleton?: boolean;
+}) {
+  return (
+    <div className={cn(styles.layout, !timeline && styles.exempt)} data-classic-payments="" data-tone={tone} data-payments-skeleton={skeleton || undefined} aria-hidden={skeleton || undefined}>
+      <section className={cn(styles.panel, styles.summary)} aria-label="Onzio subscription" data-payments-summary="">
+        {summary}
+      </section>
+      {timeline && (
+        <section className={styles.panel} aria-label="What happens next" data-payments-timeline="">
+          <h2 className={styles.eyebrow}>What happens next</h2>
+          {timeline}
+        </section>
+      )}
+    </div>
+  );
+}
+
+export function PaymentStatusCard(props: PaymentStatusCardProps) {
+  const { uiState, priceLabel, clubName } = props;
+  const view = presentation(props);
+  const action = view.action;
+  const exempt = uiState.state === "no_subscription" && props.clubKind !== "customer";
+  const clubCaption = uiState.state === "active" || uiState.state === "active_canceling"
+    ? `${clubName}'s Onzio subscription`
+    : clubName;
+
+  return (
+    <PaymentPanels
+      tone={view.tone}
+      summary={
+        <>
+          <div className={styles.summaryHeading}>
+            <h2 className={styles.eyebrow}>Onzio subscription</h2>
+            <span className={styles.pill}>{view.label}</span>
           </div>
-          {priceLabel !== null && (
-            <div className="mt-6">
-              <PriceDisplay label={priceLabel} animated={false} />
+          {!exempt && priceLabel !== null && <PriceDisplay label={priceLabel} />}
+          <p className={styles.club}>{clubCaption}</p>
+          {uiState.state === "grace" && (
+            <div className={styles.grace}>
+              <div className={styles.graceLabel}>
+                <span>Grace period</span>
+                <span>{uiState.daysRemaining} of {GRACE_DAYS} days left</span>
+              </div>
+              <AdminBar className={styles.graceBar} fraction={uiState.daysRemaining / GRACE_DAYS} label={`${uiState.daysRemaining} of ${GRACE_DAYS} grace days left`} />
             </div>
           )}
-          <p
-            className={cn(
-              "font-body text-sm text-muted-foreground",
-              priceLabel !== null ? "mt-3" : "mt-6",
-            )}
-          >
-            {`${clubName}'s Onzio subscription`}
-          </p>
-          <p className="mt-4 rounded-xl border border-border bg-background/40 px-4 py-3 font-body text-sm leading-relaxed text-muted-foreground">
-            Your subscription is scheduled to end on{" "}
-            {formatDate(uiState.periodEndsAt)}. Self-serve cancellation changes
-            are disabled — contact Onzio if this should be changed.
-          </p>
-          <PortalForm>
-            <Button
-              type="submit"
-              variant="outline"
-              size="lg"
-              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
+          {exempt && view.message && <p className={styles.message}>{view.message}</p>}
+          {action && (
+            <BillingActionForm
+              endpoint={action.kind === "checkout" ? "/api/stripe/checkout" : "/api/stripe/portal"}
+              fallbackMessage={action.kind === "checkout" ? CHECKOUT_FALLBACK_MESSAGE : PORTAL_FALLBACK_MESSAGE}
+              className={styles.actionForm}
+              messageClassName={styles.problem}
             >
-              Manage billing
-            </Button>
-          </PortalForm>
-        </section>
-      );
+              {({ pending }) => (
+                <AdminPendingButton
+                  type="submit"
+                  variant={action.primary ? "default" : "outline"}
+                  className={styles.actionButton}
+                  label={action.label}
+                  pendingLabel={action.kind === "checkout" ? "Opening checkout…" : "Opening billing…"}
+                  pending={pending}
+                />
+              )}
+            </BillingActionForm>
+          )}
+        </>
+      }
+      timeline={view.steps.length ? (
+        <>
+        <ol className={styles.timeline}>
+          {view.steps.map((step, index) => (
+            <li key={`${index}-${step.title}`} className={styles.step} data-step={step.phase} aria-current={step.phase === "now" ? "step" : undefined}>
+              <span className={styles.dot} aria-hidden="true" />
+              <div>
+                <span className="sr-only">{step.phase === "done" ? "Completed: " : step.phase === "now" ? "Current: " : "Next: "}</span>
+                <h3 className={styles.stepTitle}>{step.title}</h3>
+                {step.detail && <p className={styles.stepDetail}>{step.detail}</p>}
+              </div>
+            </li>
+          ))}
+        </ol>
+        {view.message && <p className={styles.message}>{view.message}</p>}
+        </>
+      ) : null}
+    />
+  );
+}
 
-    case "payment_failed":
-      return (
-        <section className={cn(CARD_SHELL, "border-2 border-billing-warning")}>
-          <p className="inline-flex items-center gap-2 font-body text-xs font-semibold text-foreground">
-            <AlertTriangle className="size-4" aria-hidden="true" />
-            Payment failed
-          </p>
-          <p className="mt-5 max-w-prose font-body text-sm leading-relaxed text-muted-foreground">
-            Your latest subscription payment failed. Update your payment method
-            and pay the outstanding invoice in the billing portal, or contact{" "}
-            <SupportEmailLink />.
-          </p>
-          <PortalForm>
-            <Button type="submit" variant="outline" size="lg" className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full border-billing-warning bg-billing-warning-soft text-billing-warning-foreground hover:bg-billing-warning hover:text-billing-warning-foreground sm:px-6 sm:w-auto">
-              Resolve payment
-            </Button>
-          </PortalForm>
-        </section>
-      );
-
-    case "grace": {
-      const percentLeft = Math.min(
-        100,
-        Math.max(0, (uiState.daysRemaining / GRACE_DAYS) * 100),
-      );
-      return (
-        <section className={cn(CARD_SHELL, "border-2 border-billing-warning")}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="inline-flex items-center gap-2 font-body text-xs font-semibold text-foreground">
-              <AlertTriangle className="size-4" aria-hidden="true" />
-              Payment overdue
-            </p>
-            <p className="font-body text-xs text-muted-foreground">
-              Site stays live
-            </p>
-          </div>
-          <div className="mt-6">
-            <div className="flex items-center justify-between gap-3 font-body text-sm">
-              <span className="text-foreground">Grace period</span>
-              <span className="text-muted-foreground">
-                {uiState.daysRemaining} of {GRACE_DAYS} days left
-              </span>
+export function PaymentStatusSkeleton() {
+  return (
+    <div role="status" aria-label="Loading subscription details">
+      <PaymentPanels
+        skeleton
+        summary={
+          <>
+            <div className={styles.summaryHeading}>
+              <Shimmer className={styles.skeletonEyebrow}>Onzio subscription</Shimmer>
+              <Shimmer className={styles.skeletonPill} />
             </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-billing-warning"
-                style={{ width: `${percentLeft}%` }}
-              />
-            </div>
-          </div>
-          <p className="mt-5 max-w-prose font-body text-sm leading-relaxed text-muted-foreground">
-            The subscription payment is overdue. Content editing remains available, and
-            your public site stays live until the grace period ends on{" "}
-            {formatDate(uiState.graceEndsAt)}. Update your payment method and pay
-            the outstanding invoice in the billing portal before then — otherwise
-            the public site goes down — or
-            contact <SupportEmailLink />.
-          </p>
-          <PortalForm>
-            <Button
-              type="submit"
-              variant="outline"
-              size="lg"
-              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 border-billing-warning bg-billing-warning-soft text-billing-warning-foreground hover:bg-billing-warning hover:text-billing-warning-foreground sm:w-auto"
-            >
-              Update payment method
-            </Button>
-          </PortalForm>
-        </section>
-      );
-    }
-
-    case "terminal":
-      return (
-        <section className={cn(CARD_SHELL, "border-2 border-destructive")}>
-          <Badge className="bg-destructive/15 text-destructive">
-            <Lock className="size-3.5" aria-hidden="true" />
-            Subscription ended
-          </Badge>
-          <p className="mt-5 max-w-prose font-body text-sm leading-relaxed text-muted-foreground">
-            Content administration is on hold. Use the Customer Portal to
-            restore billing, or contact <SupportEmailLink />.
-          </p>
-          <PortalForm>
-            <Button
-              type="submit"
-              variant="outline"
-              size="lg"
-              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
-            >
-              Manage billing
-            </Button>
-          </PortalForm>
-        </section>
-      );
-  }
+            <Shimmer className={styles.skeletonPrice} />
+            <Shimmer className={styles.skeletonClub} />
+            <Shimmer className={styles.skeletonMessage} />
+            <div className={styles.actionForm}><Shimmer className={styles.skeletonAction} /></div>
+          </>
+        }
+        timeline={
+          <ol className={styles.timeline}>
+            {[0, 1, 2, 3].map((step) => (
+              <li className={styles.step} key={step}>
+                <Shimmer className={styles.dot} />
+                <div className={styles.skeletonStep}>
+                  <Shimmer className={styles.skeletonStepTitle} />
+                  <Shimmer className={styles.skeletonStepDetail} />
+                </div>
+              </li>
+            ))}
+          </ol>
+        }
+      />
+    </div>
+  );
 }

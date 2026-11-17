@@ -6,7 +6,7 @@ vi.mock("@/components/ClubBrandingProvider", () => ({ useClubBranding: () => ({ 
 vi.mock("@/components/cinematic/CinematicContent", () => ({ useCinematicContent: () => ({ content: { match: { heading: "Upcoming home match", emptyMessage: "Club announcement", buttonLabel: "Reserve your tickets" } } }) }));
 vi.mock("@/components/ResilientNativeImage", () => ({ default: (props: Record<string, unknown>) => createElement("img", props) }));
 vi.mock("@/lib/queries", () => ({ fetchSchedule: vi.fn() }));
-vi.mock("@/lib/editorial-identity", () => ({ fetchClubIdentity: vi.fn() }));
+vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: vi.fn() }));
 import CinematicChickFilA from "@/components/cinematic/CinematicChickFilA";
 import { emptyChickFilAContent, hydrateChickFilAContent } from "@/lib/chick-fil-a-content";
 

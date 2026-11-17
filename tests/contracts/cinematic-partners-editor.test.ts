@@ -112,6 +112,7 @@ describe("Partners editor draft", () => {
     const shortcuts = readFileSync(resolve(process.cwd(), "lib/cinematic-editor-shortcuts.ts"), "utf8");
     expect(shortcuts).toContain('{ label: "Edit in Partners", short: "Partners", href: "/admin/partners" }');
     const sponsors = readFileSync(resolve(process.cwd(), "app/admin/(protected)/sponsors/page.tsx"), "utf8");
-    expect(sponsors).toMatch(/presentationTemplateKey === "cinematic@2"[^]*href="\/admin\/partners"/);
+    // Every other design returns the plain Sponsors page before the Partners link.
+    expect(sponsors).toMatch(/if \(club\.presentationTemplateKey !== "cinematic@2"\) return page;[^]*href="\/admin\/partners"/);
   });
 });

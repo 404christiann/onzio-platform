@@ -1,12 +1,13 @@
+import { openHomepagePlayback } from "./helpers/homepage-editor-controls";
 import { createHash, randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test } from "@playwright/test";
 import {
   parsePresentationDocument,
-  switchPresentationTemplate,
   type PresentationDocument,
-  type TemplateId,
 } from "@/packages/presentation";
+import { presentationDocumentForTemplate } from "@/tests/helpers/presentation-fixture";
+import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 
 const ALPHA_CLUB_ID = "11111111-1111-4111-8111-111111111111";
 /** seed.sql publishes exactly this Academy document for Alpha. Every spec here
@@ -26,13 +27,9 @@ function assertSeededPresentation(publishedDocumentId: string | null) {
   }
 }
 
-const TEMPLATE_IDS: TemplateId[] = [
-  "academy",
-  "editorial",
-  "clubhouse",
-  "cinematic",
-  "heritage",
-];
+type ActiveTemplateId = "academy" | "clubhouse";
+
+const TEMPLATE_IDS: ActiveTemplateId[] = ["academy", "clubhouse"];
 
 type OriginalState = {
   draft_document_id: string | null;
@@ -51,12 +48,11 @@ const localDb = () => new Client({
 async function publishFixture(
   db: Client,
   source: PresentationDocument,
-  templateId: TemplateId,
+  templateId: ActiveTemplateId,
   createdBy: string,
 ) {
-  const switched = switchPresentationTemplate(source, { id: templateId, version: 1 });
   const id = randomUUID();
-  const configuration = parsePresentationDocument(switched.document, { surface: "production" });
+  const configuration = parsePresentationDocument(presentationDocumentForTemplate(source, templateId), { surface: "production" });
   const digest = createHash("sha256")
     .update(JSON.stringify(configuration))
     .digest("hex");
@@ -81,15 +77,12 @@ async function publishFixture(
   return { id, document: configuration };
 }
 
-const expectedPieces: Record<TemplateId, string[]> = {
+const expectedPieces: Record<ActiveTemplateId, string[]> = {
   academy: [
     "hero.eyebrow", "hero.heading", "hero.intro", "hero.cta",
     "story.text", "story.cta",
   ],
-  editorial: ["hero.heading", "hero.intro", "hero.cta", "photos"],
   clubhouse: ["hero.heading", "hero.intro", "hero.cta", "photos"],
-  cinematic: ["hero.eyebrow", "hero.heading", "hero.intro", "hero.cta", "photos", "video"],
-  heritage: ["hero.eyebrow", "hero.heading", "hero.intro", "hero.cta", "photos", "video"],
 };
 
 test("homepage editor mirrors each published template and keeps public pages unannotated", async ({ page }, info) => {
@@ -120,8 +113,8 @@ test("homepage editor mirrors each published template and keeps public pages una
       await publishFixture(db, source, templateId, original.updated_by);
 
       await page.goto("/admin/homepage");
-      await expect(page.getByText("Preview · Changes appear on your website after you save.")).toBeVisible();
-      const preview = page.frameLocator('iframe[title="Homepage preview"]');
+      await expect(page.getByText("Changes appear on your website after you save.")).toBeVisible();
+      const preview = page.frameLocator(".hc-canvas iframe");
       await expect(preview.locator("h1").first()).toBeVisible();
       await preview.locator("html").evaluate(async () => { await document.fonts.ready; });
       const frameWidth = await preview.locator("html").evaluate((element) => element.clientWidth);
@@ -140,14 +133,9 @@ test("homepage editor mirrors each published template and keeps public pages una
         await expect(preview.locator('[data-homepage-piece="photos"]')).toHaveCount(0);
         await expect(preview.locator('[data-homepage-piece="video"]')).toHaveCount(0);
       }
-      if (templateId === "editorial" || templateId === "clubhouse") {
+      if (templateId === "clubhouse") {
         await expect(preview.locator('[data-homepage-piece="hero.eyebrow"]')).toHaveCount(0);
       }
-      if (templateId === "cinematic" || templateId === "heritage") {
-        await expect(preview.locator('[data-homepage-piece="hero.eyebrow"]')).toHaveCount(1);
-        await expect(preview.locator('[data-homepage-piece="video"]')).toHaveCount(1);
-      }
-
       await page.setViewportSize({ width: frameWidth, height: 900 });
       await page.goto("/");
       await expect(page.locator("h1").first()).toBeVisible();
@@ -198,18 +186,35 @@ test("clean preview matches full public content and typography, including the le
   try {
     for (const template of [...TEMPLATE_IDS, "legacy" as const]) {
       await db.query("update onzio.clubs set slug=$1 where id=$2", [template === "legacy" ? "rose-city" : "alpha", ALPHA_CLUB_ID]);
-      await publishFixture(db, original.configuration, template === "legacy" ? "cinematic" : template, original.updated_by);
+      if (template === "legacy") {
+        await db.query(
+          "update onzio.presentation_state set published_document_id = null, draft_document_id = $1 where club_id = $2",
+          [original.published_document_id, ALPHA_CLUB_ID],
+        );
+      } else {
+        await publishFixture(db, original.configuration, template, original.updated_by);
+      }
       const origin = template === "legacy" ? "http://rose-city.localhost:3110" : "http://alpha.localhost:3110";
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(`${origin}/admin/homepage`);
-        const preview = page.frameLocator('iframe[title="Homepage preview"]');
+        let preview = page.frameLocator(".hc-canvas iframe");
         await expect(preview.locator(template === "legacy" ? "main section" : "h1").first()).toBeVisible();
-        await page.getByRole("button", { name: "Playback preview", exact: true }).click();
+        preview = await openHomepagePlayback(page);
         await expect(preview.locator("[data-homepage-piece]")).toHaveCount(0);
         const size = await preview.locator("html").evaluate(() => ({ width: innerWidth, height: innerHeight }));
         expect(await preview.locator("html").evaluate(() => document.compatMode)).toBe("CSS1Compat");
         await publicPage.setViewportSize(size);
+        // The legacy branch is Rose City's design, chosen by slug. While Rose
+        // City's public site is held (PR #85) its public homepage is a 404 by
+        // design, so assert the hold and keep the editor-preview checks above;
+        // the full comparison resumes on its own once the hold is lifted.
+        if (template === "legacy" && PUBLIC_SITE_HOLD_SLUGS.has("rose-city")) {
+          const held = await publicPage.goto(`${origin}/`);
+          expect(held?.status()).toBe(404);
+          expect(held?.headers()["x-robots-tag"]).toContain("noindex");
+          continue;
+        }
         await publicPage.goto(`${origin}/`);
         await expect(publicPage.locator(template === "legacy" ? "main section" : "h1").first()).toBeVisible();
         await preview.locator("html").evaluate(async () => { await document.fonts.ready; });

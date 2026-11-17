@@ -15,8 +15,8 @@ vi.mock("next/navigation", () => ({
   redirect: (url: string) => { throw new Error(`redirect:${url}`); },
 }));
 vi.mock("@/components/cinematic/CinematicDestination", () => ({ default: ({ labelId }: { labelId: string }) => createElement("div", null, labelId) }));
-vi.mock("@/components/AcademyTryoutsPage", () => ({ default: () => createElement("div", null, "academy tryouts") }));
-vi.mock("@/components/editorial/EditorialTryouts", () => ({ default: () => createElement("div", null, "editorial tryouts") }));
+vi.mock("@/components/sites/diverse-city/AcademyTryoutsPage", () => ({ default: () => createElement("div", null, "academy tryouts") }));
+vi.mock("@/lib/public-club-time-zone", () => ({ readPublicClubTimeZone: async () => "America/Los_Angeles" }));
 
 import TryoutsPage from "@/app/%5Fclubs/[slug]/tryouts/page";
 import MediaCredentialsPage from "@/app/%5Fclubs/[slug]/stadium/media-credentials/page";
@@ -60,9 +60,15 @@ it("does not expose the media or anthem routes to other templates", async () => 
   expect(mocks.homepage).not.toHaveBeenCalled();
 });
 
-it.each([["academy@1", "academy tryouts"], ["editorial@1", "editorial tryouts"]])("preserves the %s Tryouts page", async (template, expected) => {
-  mocks.club.mockResolvedValue({ id: "other-id", presentationTemplateKey: template });
+it("preserves the academy@1 Tryouts page", async () => {
+  mocks.club.mockResolvedValue({ id: "other-id", presentationTemplateKey: "academy@1" });
   const html = renderToStaticMarkup(await TryoutsPage({ params: Promise.resolve({ slug: "other" }) }));
-  expect(html).toContain(expected);
+  expect(html).toContain("academy tryouts");
+  expect(mocks.homepage).not.toHaveBeenCalled();
+});
+
+it("gives the retired editorial@1 design no Tryouts page and never reads the cinematic destinations", async () => {
+  mocks.club.mockResolvedValue({ id: "other-id", presentationTemplateKey: "editorial@1" });
+  await expect(TryoutsPage({ params: Promise.resolve({ slug: "other" }) })).rejects.toThrow("not found");
   expect(mocks.homepage).not.toHaveBeenCalled();
 });

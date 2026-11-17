@@ -6,7 +6,7 @@ import NativeImage from "@/components/ResilientNativeImage";
 import type { Fixture } from "@/lib/data";
 import type { TicketPageView } from "@/lib/cinematic-ticket-pages-content";
 import { fetchSchedule, fetchSiteSocialLinks } from "@/lib/queries";
-import { fetchClubIdentity } from "@/lib/editorial-identity";
+import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { useCinematicContent } from "./CinematicContent";
 import { nextHomeFixture } from "./next-home-fixture";
 import { cinematicDisplaySocialLinks, cinematicSocialPlatform } from "./social-platform";

@@ -1,0 +1,62 @@
+{
+  "verdict": "PARTIAL",
+  "scope": "7 exact pre/post screenshot pairs; 9 planned pairs unverified",
+  "source": {
+    "before": "fee1c5ba10b2935e3a9c7cefb0ede2bb01c77f49",
+    "after": "c236ae768f467e3189d26de274539e7ba042ed10"
+  },
+  "builds": {
+    "before": {
+      "receiptSha256": "a9801caa551b650f2653f00ae2c6da2c21a8538fe1b66d57cca1cee75797c2f9",
+      "buildId": "EoqNrRAqJiMEfLJTUj69M"
+    },
+    "after": {
+      "receiptSha256": "94c0acb1def51b766a6ebef3ac22dfee8fe528be7897e19a8ee9309e9b85501f",
+      "buildId": "q6B28bnQcfb5jt4rXyfWS"
+    }
+  },
+  "pairs": [
+    {
+      "surface": "1440-public.home",
+      "before": "partial-pairs/before-1440-public.home.png",
+      "after": "partial-pairs/after-1440-public.home.png",
+      "sha256": "c7b80a987cf01146ade4a6df6cb1916700dfab28378dc3ad846549c5c36db690"
+    },
+    {
+      "surface": "1440-public.programDetail",
+      "before": "partial-pairs/before-1440-public.programDetail.png",
+      "after": "partial-pairs/after-1440-public.programDetail.png",
+      "sha256": "e2092b3fe3d0eee6c43d23d51a61d774d95004e88755a2a2729372d9fcf6e8d9"
+    },
+    {
+      "surface": "1440-public.roster",
+      "before": "partial-pairs/before-1440-public.roster.png",
+      "after": "partial-pairs/after-1440-public.roster.png",
+      "sha256": "134f8cd94d513559a26fb503b03be8c7a30ab5c3e5cdd7f5c6ad4f043afc32c1"
+    },
+    {
+      "surface": "1440-public.schedule",
+      "before": "partial-pairs/before-1440-public.schedule.png",
+      "after": "partial-pairs/after-1440-public.schedule.png",
+      "sha256": "3b3a6cb53e9938104881df8b21bfab2374e6345e0717a96874bdcf8b06345c0f"
+    },
+    {
+      "surface": "1440-public.shop",
+      "before": "partial-pairs/before-1440-public.shop.png",
+      "after": "partial-pairs/after-1440-public.shop.png",
+      "sha256": "b40dfa22150e6ffe6543c3a4c7d68baca8b5b0f79bd2af0d55e6338b36a40f36"
+    },
+    {
+      "surface": "1440-preview.about",
+      "before": "partial-pairs/before-1440-preview.about.png",
+      "after": "partial-pairs/after-1440-preview.about.png",
+      "sha256": "53fa5e09a4045ec45028958d1b6ab85c20400066248e35798aaba0bccc8fa13b"
+    },
+    {
+      "surface": "390-preview.about",
+      "before": "partial-pairs/before-390-preview.about.png",
+      "after": "partial-pairs/after-390-preview.about.png",
+      "sha256": "cd3aa424385cbfe6cfe89e66a09f0c3340c7da3f9d4c1bbc7df2ebc995fa3a95"
+    }
+  ]
+}

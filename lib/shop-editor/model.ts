@@ -1,5 +1,5 @@
 import type { DBShopCarouselPhoto, DBShopKitPhoto, DBShopKitSection, DBShopPurchaseDetails, ShopKitVariant } from "@/lib/db-types";
-import { DEFAULT_KIT_BULLET_POINTS, DEFAULT_KIT_STORE_NOTE } from "@/lib/shop-kit";
+import { normalizeKitBuyLink } from "./contract";
 import { EMPTY_CINEMATIC_SHOP_CONTENT, shopContentOnly, withShopDefaults, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import type { ShopPhoto, ShopSaveRequest, ShopSection, ShopSnapshot, ShopVariant } from "./contract";
 
@@ -22,8 +22,8 @@ export function emptyShopSection(): ShopSection {
     eyebrow: "",
     title: "",
     description: "",
-    bullet_points: [...DEFAULT_KIT_BULLET_POINTS],
-    store_note: DEFAULT_KIT_STORE_NOTE,
+    bullet_points: [],
+    store_note: "",
     cta_label: "",
     cta_link: "",
   };
@@ -42,7 +42,7 @@ export function draftFromShopSnapshot(snapshot: ShopSnapshot): ShopPageDraft {
         store_note: stored.store_note,
         cta_label: stored.cta_label,
         cta_link: stored.cta_link,
-      } : snapshot.templateKey === "cinematic@2" ? { ...emptyShopSection(), bullet_points: [], store_note: "" } : emptyShopSection(),
+      } : emptyShopSection(),
       photos: snapshot.photos.filter((photo) => photo.kit_variant === variant).map((photo) => ({
         rowId: photo.rowId,
         assetId: photo.assetId,
@@ -81,7 +81,11 @@ export function toShopSaveRequest(snapshot: ShopSnapshot, draft: ShopPageDraft, 
   for (const variant of draft.changedVariants) {
     const kit = draft.variants[variant];
     variants[variant] = {
-      section: { ...kit.section, bullet_points: kit.section.bullet_points.map((point) => point.trim()).filter(Boolean) },
+      section: {
+        ...kit.section,
+        bullet_points: kit.section.bullet_points.map((point) => point.trim()).filter(Boolean),
+        cta_link: normalizeKitBuyLink(kit.section.cta_link),
+      },
       photos: kit.photos.map((photo, order) => ({ rowId: photo.rowId, assetId: photo.assetId, order })),
     };
   }

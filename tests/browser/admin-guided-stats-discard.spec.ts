@@ -23,8 +23,11 @@ for (const width of [390, 1440]) for (const initialView of ["match", "season"] a
     const reads: Record<string, unknown[]> = {
       matches: [{ id: matchId, season_id: seasonId, opponent: "Discard regression match", date: "2026-06-10", time: "18:00", home: true }],
       players: [{ id: playerId, name, number: 9, position: "Forward", active: true }],
-      player_season_stats: [{ ...fields, goals: 17, player_id: playerId, season_id: seasonId }],
+      // Match stats reads who is in the season from the totals rows; Season stats reads the totals (ADMIN-RE-11c).
+      player_season_stats: [{ player_id: playerId }],
       goalkeeper_season_stats: [],
+      player_season_totals: [{ ...fields, goals: 17, player_id: playerId, season_id: seasonId }],
+      goalkeeper_season_totals: [],
       player_match_stats: [{ ...fields, starts: true, player_id: playerId, match_id: matchId }],
       goalkeeper_match_stats: [],
     };
@@ -59,7 +62,7 @@ for (const width of [390, 1440]) for (const initialView of ["match", "season"] a
       const baseline = initialView === "match" ? "3" : "17";
       await expect(goals).toHaveValue(baseline);
       await goals.fill("8");
-      await expect(page.getByText("1 player with unsaved changes", { exact: true })).toBeVisible();
+      await expect(page.locator("[data-admin-save-button]")).toHaveAttribute("data-state", "dirty");
       await expect.poll(() => unloadWarns(page)).toBe(true);
       await page.route(url => url.pathname === "/admin/stats" && url.searchParams.get("view") === nextView && url.searchParams.has("_rsc"), async route => {
         held = true; await navigation; await route.continue();
@@ -68,7 +71,10 @@ for (const width of [390, 1440]) for (const initialView of ["match", "season"] a
       await page.getByRole("button", { name: "Discard changes", exact: true }).click();
       await expect.poll(() => held).toBe(true);
       await expect(goals).toHaveValue(baseline);
-      await expect(page.getByText("All changes saved", { exact: true })).toBeVisible();
+      // Scope to the visible tab panel: while the initial server stream is
+      // still finishing, React can briefly keep a hidden copy of the page in
+      // <div id="S:..." hidden>, which an unscoped text match also counts.
+      await expect(page.locator("[data-admin-save-button]")).toHaveAttribute("aria-disabled", "true");
       await expect.poll(() => unloadWarns(page)).toBe(false);
       await expect(page.getByRole("tab", { name: initialView === "match" ? "Match stats" : "Season stats", exact: true })).toHaveAttribute("aria-selected", "true");
       release();

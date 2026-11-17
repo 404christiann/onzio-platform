@@ -3,20 +3,20 @@
 import {
   X as AdminRemoveIcon,
   ChevronUp as AdminOrderUp,
-  ChevronDown as AdminOrderDown
+  ChevronDown as AdminOrderDown,
+  IconShop,
 } from "@/components/admin/icons";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import AcademyHomeShopFeature from "@/components/AcademyHomeShopFeature";
-import AcademyShopPage from "@/components/AcademyShopPage";
+import AcademyShopPage from "@/components/sites/diverse-city/AcademyShopPage";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
-import EditorialShopPage from "@/components/editorial/EditorialShopPage";
-import EditorialShell from "@/components/editorial/EditorialShell";
 import TemplateFontScope from "@/components/TemplateFontScope";
 import ShopKitSectionContainer from "@/components/ShopKitSectionContainer";
 import ShopPhotoStrip from "@/components/ShopPhotoStrip";
 import ShopPurchaseDetailsSection from "@/components/ShopPurchaseDetailsSection";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
 import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
@@ -32,9 +32,10 @@ import { createClient } from "@/lib/admin-client";
 import type { ShopKitContent } from "@/lib/queries";
 import { hasShopPurchaseDetails } from "@/lib/shop-purchase-details";
 import { MAX_KIT_BULLET_POINTS } from "@/lib/shop-kit";
+import { SHOP_OFF_BANNER } from "@/lib/store-visibility";
 import { shopSaveRequestSchema, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
-import "@/styles/editorial.css";
 
 const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };
 const CARD_ICON_LABELS: Record<ShopCardIcon, string> = { "": "No icon", video: "Video camera", jersey: "Jersey", "shipping-box": "Shipping box", "no-access": "No returns" };
@@ -60,21 +61,36 @@ function orderPhotos(photos: ShopPhoto[]): ShopPhoto[] {
   return photos.map((photo, order) => ({ ...photo, order }));
 }
 
-export default function ShopPageEditor() {
+export function useShopPresentation() {
   const club = useClubContext();
   const template = club.presentationTemplateKey;
-  const isAcademy = template === "academy@1";
+  const shopPolicy = codeSiteAdminFor(club)?.shop;
   const isClubhouse = template === "clubhouse@1";
-  const isEditorial = template === "editorial@1";
   const isCinematic = template === "cinematic@2";
-  const storeUnavailable = isEditorial && !club.storeEnabled;
-  const sharedWithHomepage = isClubhouse || isEditorial;
-  const generic = !isAcademy && !isClubhouse && !isEditorial;
-  const hasHomeFeature = !sharedWithHomepage;
+  const sharedWithHomepage = isClubhouse;
+  const generic = !shopPolicy && !isClubhouse;
+  const hasHomeFeature = shopPolicy?.showHomeFeature ?? !sharedWithHomepage;
   // Cinematic jersey options map to Home / Away / Third, so its Shop page edits all three kits.
-  const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : isCinematic ? [...SHOP_EDITION_VARIANTS] : ["home", "away"];
+  const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants] : sharedWithHomepage ? SHOP_VARIANTS : isCinematic ? [...SHOP_EDITION_VARIANTS] : ["home", "away"];
+  return {
+    club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly: isClubhouse, isCinematic,
+    renderPreview(content: Record<ShopVariant, ShopKitContent>, surface: ShopSurface, onSelectKit: (variant: ShopVariant) => void, genericContent: ReactNode, emptyPhoto?: ReactNode) {
+      return <TemplateFontScope templateKey={template}>
+        {shopPolicy?.preview === "club-page" ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
+        {isClubhouse && <ClubhouseShopPage editorContent={content} onEditorSelectKit={onSelectKit} />}
+        {generic && genericContent}
+        {emptyPhoto}
+      </TemplateFontScope>;
+    },
+  };
+}
 
-  const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>("shop");
+export default function ShopPageEditor() {
+  const presentation = useShopPresentation();
+  const { club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly, isCinematic } = presentation;
+  const storeOff = !club.storeEnabled;
+
+  const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>(shopPolicy?.initialSurface ?? "shop");
   const surface: ShopSurface = hasHomeFeature ? surfaceChoice : "shop";
   const [snapshots, setSnapshots] = useState<Partial<Record<ShopSurface, ShopSnapshot>>>({});
   const [drafts, setDrafts] = useState<Partial<Record<ShopSurface, ShopPageDraft>>>({});
@@ -86,6 +102,7 @@ export default function ShopPageEditor() {
   const [selectedVariant, setSelectedVariant] = useState<ShopVariant>("home");
   const [target, setTarget] = useState<Target | null>(null);
   const [phone, setPhone] = useState(false);
+  const [replaceLatest, setReplaceLatest] = useState(false);
   const uploadClub = useRef(club.id);
   uploadClub.current = club.id;
   const saveInFlight = useRef(false);
@@ -119,7 +136,6 @@ export default function ShopPageEditor() {
   }, [club.id]);
 
   useEffect(() => {
-    if (storeUnavailable) return;
     if (snapshots[surface]) return;
     const controller = new AbortController();
     setLoadError(null);
@@ -135,7 +151,7 @@ export default function ShopPageEditor() {
         if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : "Could not load this Shop page.");
       });
     return () => controller.abort();
-  }, [surface, snapshots, storeUnavailable]);
+  }, [surface, snapshots]);
 
   function editDraft(update: (draft: ShopPageDraft) => ShopPageDraft) {
     if (saveInFlight.current || pendingSaves[surface]) return;
@@ -306,7 +322,8 @@ export default function ShopPageEditor() {
 
   function resolveConflict(keepDraft: boolean) {
     if (!conflict) return;
-    if (!keepDraft && !window.confirm("Discard your Shop draft and use the latest saved page?")) return;
+    if (!keepDraft && !replaceLatest) { setReplaceLatest(true); return; }
+    setReplaceLatest(false);
     setSnapshots((current) => ({ ...current, [surface]: conflict }));
     setDrafts((current) => ({ ...current, [surface]: keepDraft && current[surface] ? rebaseShopDraft(current[surface], conflict) : draftFromShopSnapshot(conflict) }));
     setConflicts((current) => ({ ...current, [surface]: undefined }));
@@ -316,19 +333,16 @@ export default function ShopPageEditor() {
   const content = useMemo(() => draft ? allKitContent(draft, surface) : null, [draft, surface]);
   const showExtras = generic && surface === "shop";
 
-  if (storeUnavailable) {
-    return <AdminPage className="min-w-0">
-      <AdminPageHeader eyebrow="Public website" title="Shop" description="This Shop page is not currently visible on your website." />
-      <AdminPanel className="mt-5 p-6 text-sm text-muted-foreground">
-        Onzio manages store availability for this website design. Once the store is enabled, its public page can be edited here.
-      </AdminPanel>
-    </AdminPage>;
-  }
-
   return (
     <AdminPage className="min-w-0">
       <AdminPageHeader eyebrow="Public website" title="Shop" description="Choose a public page, then tap what you want to edit." />
       <div className="mt-5 space-y-4">
+        {storeOff && (
+          <p className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-foreground">
+            <IconShop size={18} className="flex-none text-warning" />
+            {SHOP_OFF_BANNER}
+          </p>
+        )}
         <AdminPanel className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" aria-label="Public page">
             <button type="button" aria-current={surface === "shop" ? "page" : undefined} disabled={saving} onClick={() => { setSurfaceChoice("shop"); setTarget(null); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${surface === "shop" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>Shop page {shopDraftDirty(drafts.shop) ? "•" : ""}</button>
@@ -364,22 +378,13 @@ export default function ShopPageEditor() {
                 {isCinematic && surface === "shop" && <><ToolButton label="Edit jersey options" onClick={() => setTarget("editions")} /><ToolButton label="Edit jersey details" onClick={() => setTarget("details")} /><ToolButton label="Edit care line" onClick={() => setTarget("attributes")} /><ToolButton label="Edit size chart" onClick={() => setTarget("sizeChart")} /><ToolButton label="Edit map" onClick={() => setTarget("map")} /><ToolButton label="Edit sponsors" onClick={() => setTarget("sponsors")} /><ToolButton label="Edit page labels" onClick={() => setTarget("page")} /></>}
               </div>
               <ShopPreviewFrame host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} onSelect={(selection) => setTarget(selection as Target)}>
-                {isEditorial ? <EditorialShell editing>
-                  <EditorialShopPage editorContent={content} selectedEditorVariant={currentVariant} onEditorSelectKit={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
-                  {!content[currentVariant].photos.length && <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button>}
-                </EditorialShell> : <TemplateFontScope templateKey={template}>
-                  {isAcademy ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
-                  {isClubhouse && <ClubhouseShopPage editorContent={content} onEditorSelectKit={setSelectedVariant} />}
-                  {isCinematic && surface === "shop" && <CinematicShopCanvas kits={content} draft={draft} variant={currentVariant} onVariantChange={variant => { setSelectedVariant(variant); setTarget(current => current === "editions" ? current : "copy"); }} />}
-                  {generic && !(isCinematic && surface === "shop") && <>
+                {presentation.renderPreview(content, surface, setSelectedVariant, isCinematic && surface === "shop" ? <CinematicShopCanvas kits={content} draft={draft} variant={currentVariant} onVariantChange={variant => { setSelectedVariant(variant); setTarget(current => current === "editions" ? current : "copy"); }} /> : <>
                     <div className={surface === "shop" ? "pt-24 sm:pt-28" : ""} style={{ backgroundColor: "var(--color-white)" }}>
                       <ShopKitSectionContainer surface={surface} headingTag={surface === "shop" ? "h1" : "h2"} fadeImageToWhite editorContent={content} selectedVariant={currentVariant} onVariantChange={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
                       {showExtras && draft.photoRows[currentVariant].length > 0 && <ShopPhotoStrip photos={publicPhotoRow(draft.photoRows[currentVariant], currentVariant)} />}
                       {showExtras && hasShopPurchaseDetails(publicPurchase(draft.purchase)) && <ShopPurchaseDetailsSection details={publicPurchase(draft.purchase)} animate={false} />}
                     </div>
-                  </>}
-                  {!content[currentVariant].photos.length && !(isCinematic && surface === "shop") && <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button>}
-                </TemplateFontScope>}
+                  </>, !content[currentVariant].photos.length && !(isCinematic && surface === "shop") ? <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button> : null)}
               </ShopPreviewFrame>
             </div>
             <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`shop-page-inspector min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
@@ -388,22 +393,23 @@ export default function ShopPageEditor() {
                 <fieldset disabled={locked} className="min-w-0">
                 {target === "fixed" ? <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">This copy belongs to the website design and is managed by Onzio.</p> : null}
                 {(target === "copy" || target === "kit" || target === "cta") && currentKit && <>
-                  {isClubhouse ? <p className="mb-3 text-xs text-muted-foreground">The Shop and homepage use this kit name and its first photo. Campaign copy, price, sizes, and checkout are managed by Onzio.</p> : isEditorial ? <p className="mb-3 text-xs text-muted-foreground">The Shop and homepage use this kit. The page introduction and button text are managed by Onzio.</p> : null}
+                  {nameOnly ? <p className="mb-3 text-xs text-muted-foreground">The Shop and homepage use this kit name and its first photo. Campaign copy, price, sizes, and checkout are managed by Onzio.</p> : null}
                   {target !== "cta" && <div className="space-y-3">
-                    {!isClubhouse && !isEditorial && <TextField label="Small heading" value={currentKit.section.eyebrow} onChange={(value) => setSectionField("eyebrow", value)} />}
+                    {!nameOnly && <TextField label="Small heading" value={currentKit.section.eyebrow} onChange={(value) => setSectionField("eyebrow", value)} />}
                     <TextField label="Kit title" value={currentKit.section.title} onChange={(value) => setSectionField("title", value)} />
-                    {!isClubhouse && <TextAreaField label="Description" value={currentKit.section.description} onChange={(value) => setSectionField("description", value)} />}
-                    {!isClubhouse && !isEditorial && <>
+                    {!nameOnly && <TextAreaField label="Description" value={currentKit.section.description} onChange={(value) => setSectionField("description", value)} />}
+                    {!nameOnly && <>
                       <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, MAX_KIT_BULLET_POINTS))} />
+                      {surface === "shop" && shopPolicy?.shopPageShows ? <p className="text-xs text-muted-foreground">Your Shop page shows the first {shopPolicy.shopPageShows.bullets} bullet points, each split at its first colon into a label and a value (for example “Sizes: Youth and adult”). Any more are saved but not shown.</p> : null}
                       <TextAreaField label="Store information" value={currentKit.section.store_note} onChange={(value) => setSectionField("store_note", value)} />
                     </>}
                   </div>}
-                  {!isClubhouse && <div className="mt-4 space-y-3 border-t border-border pt-4">
-                    {!isEditorial && <TextField label="Button text" value={currentKit.section.cta_label} onChange={(value) => setSectionField("cta_label", value)} />}
-                    {surface === "home" ? <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">The homepage button opens this club’s Shop page.</p> : <TextField label="Purchase website" type="url" value={currentKit.section.cta_link} onChange={(value) => setSectionField("cta_link", value)} help="Use the full https:// address from your store or merchandise partner." />}
+                  {!nameOnly && <div className="mt-4 space-y-3 border-t border-border pt-4">
+                    <TextField label="Button text" value={currentKit.section.cta_label} onChange={(value) => setSectionField("cta_label", value)} />
+                    {surface === "home" ? <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">The homepage button opens this club’s Shop page.</p> : <TextField label="Buy link" value={currentKit.section.cta_link} onChange={(value) => setSectionField("cta_link", value)} help="The full https:// address of your store or merchandise partner, or an email address if supporters order by email." />}
                   </div>}
                 </>}
-                {target === "photos" && currentKit && <PhotoEditor photos={currentKit.photos} label="kit" uploading={uploading} onUpload={(files) => void uploadPhotos(files, false)} onRemove={(photo) => void removePhoto(photo, false)} onChange={setKitPhotos} />}
+                {target === "photos" && currentKit && <PhotoEditor photos={currentKit.photos} label="kit" uploading={uploading} onUpload={(files) => void uploadPhotos(files, false)} onRemove={(photo) => void removePhoto(photo, false)} onChange={setKitPhotos} shownCount={surface === "shop" ? shopPolicy?.shopPageShows?.photos : shopPolicy?.homeFeatureShows?.photos} shownWhere={surface === "shop" ? "Your Shop page" : "The homepage shop feature"} />}
                 {target === "photoRows" && showExtras && <PhotoEditor photos={draft.photoRows[currentVariant]} label="photo row" uploading={uploading} onUpload={(files) => void uploadPhotos(files, true)} onRemove={(photo) => void removePhoto(photo, true)} onChange={setRowPhotos} />}
                 {isCinematic && surface === "shop" && (["map", "sponsors", "page", "editions", "details", "attributes", "sizeChart"] as const).some(item => item === target) && <CinematicShopFields target={target as CinematicShopTarget} value={draft.presentation} onChange={updatePresentation} uploading={uploading} onUploadMap={files => void uploadMap(files)} onRemoveMap={() => void removeMap()} onUploadDetail={(index, files) => void uploadDetailPhoto(index, files)} onRemoveDetail={index => void removeDetailPhoto(index)} />}
                 {target === "purchase" && showExtras && <div className="space-y-3">
@@ -423,6 +429,7 @@ export default function ShopPageEditor() {
           </div>
         )}
       </div>
+    <AdminConfirmDialog open={replaceLatest} title="Use the latest saved page?" confirmLabel="Use latest saved page" onCancel={() => setReplaceLatest(false)} onConfirm={() => resolveConflict(false)}>Discard your Shop draft and use the latest saved page?</AdminConfirmDialog>
     </AdminPage>
   );
 }
@@ -439,12 +446,15 @@ function TextAreaField({ label, value, onChange }: { label: string; value: strin
   return <label className="block"><span className={ADMIN_LABEL_CLASS}>{label}</span><textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className={`${ADMIN_INPUT_CLASS} mt-1 min-h-24 w-full text-base`} /></label>;
 }
 
-function PhotoEditor({ photos, label, uploading, onUpload, onRemove, onChange }: {
+function PhotoEditor({ photos, label, uploading, onUpload, onRemove, onChange, shownCount, shownWhere }: {
   photos: ShopPhoto[]; label: string; uploading: boolean;
   onUpload: (files: FileList | null) => void; onRemove: (photo: ShopPhoto) => void; onChange: (photos: ShopPhoto[]) => void;
+  /** How many photos the public surface actually shows, when it shows fewer than it saves. */
+  shownCount?: number; shownWhere?: string;
 }) {
   return <div className="space-y-3">
     <p className="text-xs text-muted-foreground">{photos.length}/6 photos. Use the arrows to set the order shown to visitors.</p>
+    {shownCount ? <p className="text-xs text-muted-foreground">{shownWhere} shows the first {shownCount} photos (front, then back). Any more are saved but not shown.</p> : null}
     {photos.map((photo, index) => <div key={photo.rowId ?? photo.assetId ?? index} className="flex items-center gap-2 rounded-lg border border-border p-2">
       <ResilientImage src={photo.url} alt={`${label} ${index + 1}`} width={56} height={56} className="h-14 w-14 rounded-md object-cover" />
       <span className="flex-1 text-xs">Photo {index + 1}</span>

@@ -72,10 +72,18 @@ describe("Schedule Directions and Watch on YouTube links", () => {
   });
 
   it("lets the owner enter each match's directions address in the Schedule editor", () => {
-    const editor = readFileSync(resolve(process.cwd(), "app/admin/(protected)/schedule/page.tsx"), "utf8");
-    expect(editor).toContain('label="Address for directions"');
+    // The Schedule form's fields live in ScheduleMatchForm.tsx. cinematic@2 (Rose City) gets the
+    // directions address; every other design keeps the plain "Street address" field.
+    const editor = readFileSync(resolve(process.cwd(), "components/admin/schedule/ScheduleMatchForm.tsx"), "utf8");
+    const rose = editor.indexOf('club.presentationTemplateKey === "cinematic@2" ? (');
+    const directions = editor.indexOf('label="Address for directions"');
+    const street = editor.indexOf('label="Street address"');
+    expect(rose).toBeGreaterThanOrEqual(0);
+    expect(directions).toBeGreaterThan(rose);
     expect(editor).toContain("Visitors tap Directions on the Schedule to get Google Maps directions to this address.");
-    expect(editor).not.toContain('label="Street address"');
+    expect(street).toBeGreaterThan(directions);
+    expect(editor.slice(directions, street)).toContain(") : (");
+    expect(editor.split('label="Address for directions"')).toHaveLength(2);
   });
 
   it("puts the NEXT tag on the same line as the date", () => {

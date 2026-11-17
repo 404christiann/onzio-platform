@@ -1,0 +1,233 @@
+import { createHash } from "node:crypto";
+import { execFileSync, spawnSync } from "node:child_process";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { academySourceRoots, homepageSourceRootsV2 } from "../../scripts/pilot-academy-source-roots";
+import { packPilotSource } from "../../scripts/pilot-source-package";
+
+const project = resolve(import.meta.dirname, "../..");
+const directory = mkdtempSync(join(tmpdir(), "onzio-pilot-environment-test-"));
+const source = join(directory, "source");
+const artifact = join(directory, "retained");
+const loader = createRequire(import.meta.url).resolve("tsx");
+const localUrl = "http://127.0.0.1:54321";
+let packageDigest: string;
+let sequence = 0;
+function put(root: string, path: string, value: string) {
+  mkdirSync(dirname(join(root, path)), { recursive: true });
+  writeFileSync(join(root, path), value);
+}
+function prepare(options: { file?: Record<string, string>; shell?: Record<string, string>; production?: Record<string, string>; compatibility?: "changed-lock" | "v1" | "malformed-v2" } = {}) {
+  const root = join(directory, `case-${sequence++}`);
+  cpSync(source, root, { recursive: true });
+  const serialize = (values: Record<string, string>) => Object.entries(values).map(([name, value]) => `${name}=${value}`).join("\n");
+  put(root, ".env.local", serialize({ NEXT_PUBLIC_SUPABASE_URL: localUrl, ...options.file }));
+  if (options.production) put(root, ".env.production.local", serialize(options.production));
+  let retained = artifact;
+  let accepted = packageDigest;
+  if (options.compatibility === "changed-lock") {
+    const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
+    lock.packages["node_modules/next/node_modules/transitive-fixture"].integrity = "sha512-changed-fixture";
+    put(root, "package-lock.json", JSON.stringify(lock));
+    execFileSync("git", ["add", "package-lock.json"], { cwd: root });
+    execFileSync("git", ["-c", "user.name=Local test", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Changed synthetic lock"], { cwd: root });
+  } else if (options.compatibility) {
+    retained = join(directory, `retained-${sequence}`);
+    cpSync(artifact, retained, { recursive: true });
+    const current = JSON.parse(readFileSync(join(retained, "manifest.json"), "utf8"));
+    if (options.compatibility === "v1") {
+      const omitted = academySourceRoots.filter(path => !homepageSourceRootsV2.some(homepage => homepage === path)).map(path => `source/${path}`);
+      for (const path of omitted) rmSync(join(retained, path));
+      current.files = current.files.filter((item: {path: string}) => !omitted.includes(item.path));
+    }
+    const manifest = options.compatibility === "v1"
+      ? { format: "onzio-pilot-source@1", sourceCommit: current.sourceCommit, files: current.files, platform: current.platform, packages: current.packages }
+      : { ...current, format: "onzio-pilot-source@2", packageLockSha256: "malformed" };
+    put(retained, "manifest.json", JSON.stringify(manifest));
+    accepted = createHash("sha256").update(JSON.stringify(manifest)).digest("hex");
+  }
+  const output = join(root, "output");
+  mkdirSync(output);
+  const result = spawnSync(process.execPath, ["--import", loader, join(project, "scripts/prepare-pilot-reconstruction.ts"), "--package", retained, "--digest", accepted], {
+    cwd: root,
+    encoding: "utf8",
+    timeout: 10_000,
+    env: { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: output, NODE_ENV: "production", ...options.shell },
+  });
+  return { ...result, output };
+}
+function expectRejected(options: Parameters<typeof prepare>[0], reason: string, marker: string) {
+  const result = prepare(options);
+  expect(result.error).toBeUndefined();
+  expect(`${result.stdout}${result.stderr}`).not.toContain(marker);
+  expect(result.status).not.toBe(0);
+  expect(result.stderr).toContain(reason);
+  expect(readdirSync(result.output).filter(name => name.startsWith("onzio-pilot-reconstruction-"))).toEqual([]);
+}
+
+beforeAll(() => {
+  const roots = academySourceRoots;
+  for (const path of roots) put(source, path, path.endsWith(".css") ? "body { color: navy; }" : "export {};");
+  put(source, roots[0], 'import Hero from "./Hero"; export default function Page() { return <Hero initialContent={{}} />; }');
+  put(source, "components/sites/diverse-city/Hero.tsx", 'export default function Hero() { return null; }');
+  put(source, "app/layout.tsx", "import {\n  Montserrat,\n} from \"next/font/google\";\nconst academyHeading = Montserrat({});");
+  put(source, "app/api/admin/homepage/route.ts", 'export const reply = { headers: { "Cache-Control": "no-store" }, };');
+  put(source, "lib/homepage-editor/capabilities.ts", 'export const binding = "legacy@1";');
+  put(source, "public/images/shop/rosecityshirt1.webp", "retained kit image");
+  put(source, "public/images/shop/rosecityshirt2.jpeg", "changed kit image");
+  put(source, "public/images/shop/rosecityshirt5.webp", "replacement kit image");
+  put(source, ".gitignore", ".env*\nnode_modules\noutput\n");
+  put(source, "package-lock.json", JSON.stringify({ packages: Object.fromEntries(["next", "react", "react-dom", "typescript", "tailwindcss", "tailwindcss-animate", "postcss", "autoprefixer"].map(name => [`node_modules/${name}`, { version: "1.0.0" }])) }));
+  const lock = JSON.parse(readFileSync(join(source, "package-lock.json"), "utf8"));
+  lock.packages["node_modules/next/node_modules/transitive-fixture"] = { version: "1.0.0", integrity: "sha512-accepted-fixture" };
+  put(source, "package-lock.json", JSON.stringify(lock));
+  execFileSync("git", ["init", "--quiet"], { cwd: source });
+  execFileSync("git", ["add", "."], { cwd: source });
+  execFileSync("git", ["-c", "user.name=Local test", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Synthetic reconstruction input"], { cwd: source });
+  symlinkSync(join(project, "node_modules"), join(source, "node_modules"));
+  const build = join(directory, "build");
+  cpSync(source, build, { recursive: true });
+  put(build, ".next/BUILD_ID", "synthetic-build-format");
+  put(build, ".next/static/css/layout.css", 'body { src: url(/_next/static/media/font.woff2); }');
+  put(build, ".next/static/media/font.woff2", "synthetic font bytes");
+  packageDigest = packPilotSource({ root: source, buildRoot: build, output: artifact }).digest;
+});
+afterAll(() => rmSync(directory, { recursive: true, force: true }));
+
+describe("pilot preparation environment boundary", () => {
+  it.each([
+    ["changed-lock", "Dependency lock differs"], ["v1", "Regenerate and review"], ["malformed-v2", "packageLockSha256"],
+  ] as const)("rejects %s before creating setup controls", (compatibility, reason) => {
+    const result = prepare({ compatibility });
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(reason);
+    expect(readdirSync(result.output).filter(name => name.startsWith("onzio-pilot-reconstruction-"))).toEqual([]);
+  });
+  it("prepares local synthetic controls with safe environment values", () => {
+    const result = prepare({ file: { STRIPE_SECRET_KEY: "sk_test_inert_reconstruction_fixture" } });
+    expect(result.error).toBeUndefined();
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(readdirSync(result.output).filter(name => name.startsWith("onzio-pilot-reconstruction-"))).toHaveLength(1);
+    expect(result.stdout).toContain('"restored":');
+  });
+  it("accepts a local URL expanded from the shell", () => {
+    const result = prepare({ file: { NEXT_PUBLIC_SUPABASE_URL: "$LOCAL_API" }, shell: { LOCAL_API: localUrl } });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+  });
+  it.each(["sk_live_", "rk_live_"])("rejects inert %s credentials from the local file", prefix => {
+    const marker = "inert_file_credential_marker";
+    expectRejected({ file: { STRIPE_SECRET_KEY: `${prefix}${marker}` } }, "Live provider credentials are forbidden", marker);
+  });
+  it.each(["sk_live_", "rk_live_"])("rejects inert %s credentials exported by the shell", prefix => {
+    const marker = "inert_shell_credential_marker";
+    expectRejected({ shell: { STRIPE_SECRET_KEY: `${prefix}${marker}` } }, "Live provider credentials are forbidden", marker);
+  });
+  it("rejects an unsafe file credential even when a safe shell value masks it", () => {
+    const marker = "inert_masked_file_credential_marker";
+    expectRejected({ file: { STRIPE_SECRET_KEY: `rk_live_${marker}` }, shell: { STRIPE_SECRET_KEY: "sk_test_inert_safe_override" } }, "Live provider credentials are forbidden", marker);
+  });
+  it.each(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL", "SUPABASE_TEST_URL", "SUPABASE_DB_URL", "SUPABASE_TEST_DATABASE_URL", "DATABASE_URL"])("rejects nonlocal shell target %s without exposing its value", name => {
+    const marker = "inert_hosted_target_marker";
+    const value = name.includes("DATABASE") || name.includes("_DB_") ? `postgresql://test:${marker}@database.example.invalid:5432/postgres` : `https://${marker}.example.invalid`;
+    expectRejected({ shell: { [name]: value } }, "Only local synthetic Supabase is supported", marker);
+  });
+  it("rejects a production dotenv target overriding the local file", () => {
+    const marker = "inert_production_dotenv_marker";
+    expectRejected({ production: { NEXT_PUBLIC_SUPABASE_URL: `https://${marker}.example.invalid` } }, "Only local synthetic Supabase is supported", marker);
+  });
+  it("rejects a nonlocal target after dotenv variable expansion", () => {
+    const marker = "inert_expansion_target_marker";
+    expectRejected({ file: { NEXT_PUBLIC_SUPABASE_URL: "$PILOT_TARGET" }, shell: { PILOT_TARGET: `https://${marker}.example.invalid` } }, "Only local synthetic Supabase is supported", marker);
+  });
+  it("rejects a malformed target without printing its credential marker", () => {
+    const marker = "inert_malformed_target_marker";
+    expectRejected({ file: { NEXT_PUBLIC_SUPABASE_URL: `malformed-${marker}` } }, "Only local synthetic Supabase is supported", marker);
+  });
+});
+
+function installNextStub(root: string) {
+  put(root, "node_modules/next/constants.js", 'exports.PHASE_PRODUCTION_BUILD = "phase-production-build"; exports.PHASE_PRODUCTION_SERVER = "phase-production-server";');
+  put(root, "node_modules/next/dist/server/config.js", `exports.default = async (phase) => {
+    if (process.env.PILOT_CONFIG_REPORT) require("node:fs").writeFileSync(process.env.PILOT_CONFIG_REPORT, JSON.stringify({phase, target: process.env.NEXT_PUBLIC_SUPABASE_URL, mode: process.env.NODE_ENV}));
+    return {distDir: ".next"};
+  };`);
+  put(root, "package.json", '{"private":true}');
+  put(root, "node_modules/next/package.json", '{"name":"next","version":"0.0.0-test"}');
+  put(root, "node_modules/next/dist/bin/next", `const fs = require("node:fs");
+if (process.argv[2] === "build") {
+  fs.mkdirSync(".next/server", {recursive:true});
+  fs.mkdirSync(".next/static", {recursive:true});
+  fs.writeFileSync(".next/BUILD_ID", "synthetic-build");
+  fs.writeFileSync(".next/server/page.js", "server");
+  fs.writeFileSync(".next/static/page.js", "client");
+}
+fs.writeFileSync(process.env.PILOT_CHILD_REPORT, JSON.stringify({
+  args: process.argv.slice(2), target: process.env.NEXT_PUBLIC_SUPABASE_URL, mode: process.env.NODE_ENV
+}));`);
+}
+function launch(root: string, action: string, shell: Record<string, string> = {}) {
+  const report = join(directory, `child-${sequence++}.json`);
+  const result = spawnSync(process.execPath, ["--import", loader, join(project, "scripts/run-pilot-reconstruction.ts"), action, ...(action === "start" ? ["--port", "3127"] : [])], {
+    cwd: root, encoding: "utf8", timeout: 10_000,
+    env: { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "test", PILOT_CHILD_REPORT: report, ...shell },
+  });
+  return { ...result, report };
+}
+function launchRoot() {
+  const root = join(directory, `launch-${sequence++}`);
+  put(root, ".env.local", `NEXT_PUBLIC_SUPABASE_URL=${localUrl}`);
+  installNextStub(root);
+  return root;
+}
+
+describe("documented pilot build and start boundary", () => {
+  it.each(["build", "start"])("passes the checked production environment to %s", action => {
+    const root = launchRoot();
+    put(root, ".env.production.local", "NEXT_PUBLIC_SUPABASE_URL=$LOCAL_API");
+    const configReport = join(directory, `config-${sequence++}.json`);
+    const shell = { PILOT_CONFIG_REPORT: configReport, LOCAL_API: "http://localhost:54321", STRIPE_SECRET_KEY: "sk_test_inert_fixture" };
+    if (action === "start") expect(launch(root, "build", shell).status).toBe(0);
+    const result = launch(root, action, shell);
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(configReport, "utf8"))).toEqual({
+      phase: "phase-production-server",
+      target: "http://localhost:54321", mode: "production",
+    });
+    expect(JSON.parse(readFileSync(result.report, "utf8"))).toEqual({
+      args: action === "start" ? ["start", "--hostname", "127.0.0.1", "--port", "3127"] : ["build"],
+      target: "http://localhost:54321", mode: "production",
+    });
+  });
+  it.each(["build", "start"].flatMap(action => ["sk_live_", "rk_live_"].flatMap(prefix => ["file", "shell"].map(origin => ({ action, prefix, origin })))))("rejects inert $prefix from $origin before $action starts", ({ action, prefix, origin }) => {
+    const root = launchRoot();
+    const marker = "inert_launch_credential_marker";
+    if (origin === "file") put(root, ".env.local", `NEXT_PUBLIC_SUPABASE_URL=${localUrl}\nSTRIPE_SECRET_KEY=${prefix}${marker}`);
+    const result = launch(root, action, origin === "shell" ? { STRIPE_SECRET_KEY: `${prefix}${marker}` } : {});
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).not.toContain(marker);
+    expect(result.stderr).toContain("Live provider credentials are forbidden");
+    expect(() => readFileSync(result.report)).toThrow();
+  });
+  it.each(["build", "start"])("rejects a changed shell target after preparation before %s", action => {
+    const prepared = prepare();
+    expect(prepared.status).toBe(0);
+    const root = JSON.parse(prepared.stdout).restored;
+    rmSync(join(root, "node_modules"));
+    installNextStub(root);
+    const marker = "inert_changed_after_setup_marker";
+    const result = launch(root, action, { NEXT_PUBLIC_SUPABASE_URL: `https://${marker}.example.invalid` });
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).not.toContain(marker);
+    expect(result.stderr).toContain("Only local synthetic Supabase is supported");
+    expect(() => readFileSync(result.report)).toThrow();
+  });
+});

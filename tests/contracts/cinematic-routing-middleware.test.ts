@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { parsePresentationDocument } from '@/packages/presentation';
+import { parseHistoricalPresentationDocument, parsePresentationDocument } from '@/packages/presentation';
 const state = vi.hoisted(() => ({ published: null as unknown, calls: [] as number[], runtime: 'live', authorized: true, filters: [] as [string, string, unknown][] }));
 vi.mock('@supabase/ssr', () => ({ createServerClient: (_url: string, _key: string, options: { cookies: { getAll: () => unknown[] } }) => {
   state.calls.push(options.cookies.getAll().length);
@@ -9,7 +9,9 @@ vi.mock('@supabase/ssr', () => ({ createServerClient: (_url: string, _key: strin
 } }));
 import { middleware } from '@/middleware';
 function document(version: 1 | 2) {
-  return parsePresentationDocument({ schemaVersion: 1, template: { id: 'cinematic', version }, fontPack: version === 2 ? 'museomoderno-avenir' : 'bebas-inter', theme: {
+  // cinematic@1 is retired: a stored version-1 document parses only through the historical reader.
+  const parse = version === 2 ? parsePresentationDocument : parseHistoricalPresentationDocument;
+  return parse({ schemaVersion: 1, template: { id: 'cinematic', version }, fontPack: version === 2 ? 'museomoderno-avenir' : 'bebas-inter', theme: {
     surface: { canvas: '#FFFFFF', elevated: '#FFFFFF', subtle: '#FFFFFF', inverse: '#141414' }, text: { primary: '#141414', secondary: '#141414', muted: '#141414', inverse: '#FFFFFF' }, action: { primary: '#E73C2E', primaryHover: '#E73C2E', primaryText: '#FFFFFF', secondary: '#141414' }, border: { subtle: '#141414', strong: '#141414' }, status: { success: '#94C946', warning: '#94C946', danger: '#E73C2E' },
   }, modules: {}, homepage: { sections: [{ id: 'hero', type: 'cinematic.hero', enabled: true, emptyBehavior: 'hide', config: {} }] }, navigation: { groups: [{ id: 'main', label: null, routes: ['home'] }] }, metadata: { recommendationId: null, createdBy: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', createdAt: '2026-10-13T00:00:00.000Z', sourceArtifact: null } }, { surface: 'production' });
 }

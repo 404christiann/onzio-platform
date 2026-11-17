@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { fetchFixtureById } from "@/lib/queries";
-import { fetchClubIdentity } from "@/lib/editorial-identity";
+import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import type { Fixture } from "@/lib/data";
 import CinematicMatchSummary from "./CinematicMatchSummary";
 

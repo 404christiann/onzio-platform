@@ -26,6 +26,16 @@ export type RegistrationParticipantMode = z.infer<
   typeof registrationParticipantModeSchema
 >;
 
+/**
+ * Who a newly created sign-up form accepts until the owner changes it.
+ * "Minor or adult" turns nobody away: a parent can register a child and an
+ * adult can register themselves (a youth academy that also runs adult and
+ * Special Olympics programs needs both). The owner narrows it per form. The
+ * previous "Adult only" default silently dropped the guardian fields on a
+ * youth club's first form (ADMIN-PLATFORM-FIXES-02).
+ */
+export const NEW_REGISTRATION_FORM_PARTICIPANT_MODE: RegistrationParticipantMode = "both";
+
 export const registrationParticipantTypeSchema = z.enum(["minor", "adult"]);
 
 export type RegistrationParticipantType = z.infer<

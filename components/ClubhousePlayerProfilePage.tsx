@@ -131,7 +131,7 @@ export default function ClubhousePlayerProfilePage({
                 <h2>About {name.first}</h2>
                 <p>
                   {player.bio ||
-                    `${player.name} represents ${club.name} in the ${player.position.toLowerCase()} group, carrying the Capital City standard into every matchday.`}
+                    `${player.name} represents ${club.name} in the ${player.position.toLowerCase()} group, carrying the club's standard into every matchday.`}
                 </p>
               </article>
 

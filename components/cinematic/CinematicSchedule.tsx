@@ -6,7 +6,7 @@ import type { Fixture } from "@/lib/data";
 import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
 import { nextScheduleFixture, orderedSchedule, scheduleDate, scheduleKickoff, SCHEDULE_PAGE_SIZE } from "@/lib/cinematic-schedule";
-import { outcomeForFixture } from "@/lib/editorial-fixtures";
+import { outcomeForFixture } from "@/lib/cinematic-fixtures";
 import { youtubeWatchUrl } from "@/lib/youtube-embed";
 import { googleMapsDirectionsUrl } from "@/lib/google-maps-directions";
 import "./schedule.css";

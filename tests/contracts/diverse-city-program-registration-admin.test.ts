@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -29,6 +30,7 @@ const MEDIA_ID = "44444444-4444-4444-8444-444444444402";
 const ASSET_ID = "55555555-5555-4555-8555-555555555501";
 
 function source(path: string): string {
+  if (path === "app/admin/(protected)/programs/page.tsx") return readProgramsEditorSource();
   return readFileSync(resolve(ROOT, path), "utf8");
 }
 
@@ -49,6 +51,8 @@ function program(overrides: Partial<DBProgram> = {}): DBProgram {
     external_cta_label: "",
     external_cta_href: "",
     registration_form_id: null,
+    sign_ups_closed: false,
+    sign_up_by_contact: false,
     registration_enabled: false,
     registration_eyebrow: "",
     registration_headline: "",
@@ -325,7 +329,7 @@ describe("program_media admin data contract", () => {
 });
 
 describe("academy@1 program surfaces render stored content, not literals", () => {
-  const detailPage = source("components/AcademyProgramDetailPage.tsx");
+  const detailPage = source("components/sites/diverse-city/AcademyProgramDetailPage.tsx");
 
   it("no longer hardcodes the registration band copy", () => {
     for (const literal of [
@@ -360,23 +364,25 @@ describe("academy@1 program surfaces render stored content, not literals", () =>
     const nextMatch = source("components/AcademyNextMatch.tsx");
     expect(
       nextMatch.includes("UPSL Midwest Central"),
-      "the competition name belongs to the standings settings a club edits",
+      "the competition name belongs to the game, not to component source",
     ).toBe(false);
     expect(
       nextMatch.includes("Schaumburg, Illinois"),
       "the fallback location belongs to the club's contact service area",
     ).toBe(false);
-    expect(nextMatch).toContain("fetchLeagueStandings");
+    // ADMIN-RE-22: the competition is the game's own, so Next Match no longer
+    // reads the Standings title.
+    expect(nextMatch).not.toContain("fetchLeagueStandings");
     expect(nextMatch).toContain("fetchContactProfile");
   });
 
   it("keeps no club's name written into a shared academy@1 template", () => {
     for (const path of [
-      "components/AcademySponsorsPage.tsx",
-      "components/AcademyProgramDetailPage.tsx",
-      "components/AcademyProgramsPage.tsx",
-      "components/AcademyContactPage.tsx",
-      "components/AcademyTryoutsPage.tsx",
+      "components/sites/diverse-city/AcademySponsorsPage.tsx",
+      "components/sites/diverse-city/AcademyProgramDetailPage.tsx",
+      "components/sites/diverse-city/AcademyProgramsPage.tsx",
+      "components/sites/diverse-city/AcademyContactPage.tsx",
+      "components/sites/diverse-city/AcademyTryoutsPage.tsx",
     ]) {
       expect(
         source(path).includes("Diverse City"),

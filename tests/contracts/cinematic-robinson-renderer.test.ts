@@ -11,7 +11,7 @@ vi.mock("@/components/ClubBrandingProvider", () => ({ useClubBranding: () => ({ 
 vi.mock("@/components/cinematic/CinematicContent", () => ({ useCinematicContent: () => ({ content: { match: { heading: "Shared next match", buttonLabel: "Shared ticket button", emptyMessage: "Shared announcement" } } }) }));
 vi.mock("@/components/ResilientNativeImage", () => ({ default: (props: Record<string, unknown>) => createElement("img", props) }));
 vi.mock("@/lib/queries", () => ({ fetchSchedule: vi.fn() }));
-vi.mock("@/lib/editorial-identity", () => ({ fetchClubIdentity: vi.fn() }));
+vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: vi.fn() }));
 import CinematicRobinson from "@/components/cinematic/CinematicRobinson";
 import { fetchRobinsonContent } from "@/lib/cinematic-robinson-query";
 

@@ -1,5 +1,5 @@
-import { AcademyPageLoadingSkeleton } from "@/components/AcademyRouteLoadingSkeleton";
+import TenantPageLoading from "@/components/TenantPageLoading";
 
-export default function TenantPageLoading() {
-  return <AcademyPageLoadingSkeleton />;
+export default function TenantLoading() {
+  return <TenantPageLoading />;
 }

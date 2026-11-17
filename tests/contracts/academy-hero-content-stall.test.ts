@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACADEMY_HERO_CONTENT_FALLBACK_MS, loadAcademyHeroContent } from "@/components/academy-hero-content-load";
+import { ACADEMY_HERO_CONTENT_FALLBACK_MS, loadAcademyHeroContent } from "@/components/sites/diverse-city/hero-content-load";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -9,10 +9,12 @@ afterEach(() => {
 
 describe("academy hero retry after a failed server read", () => {
   it("uses a dedicated tenant hero read and bounds only the academy veil", () => {
-    const hero = readFileSync(resolve(process.cwd(), "components/Hero.tsx"), "utf8");
-    expect(hero).toContain('if (isAcademy) {\n      return loadAcademyHeroContent({');
-    expect(hero).toContain("read: () => fetchHomepageHeroContent(club.id)");
-    expect(hero).toContain("fetchHomepageContent(club.id)");
+    const academyHero = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/Hero.tsx"), "utf8");
+    const legacyHero = readFileSync(resolve(process.cwd(), "components/Hero.tsx"), "utf8");
+    expect(academyHero).toContain("return loadAcademyHeroContent({");
+    expect(academyHero).toContain("read: () => fetchHomepageHeroContent(club.id)");
+    expect(legacyHero).toContain("fetchHomepageContent(club.id)");
+    expect(legacyHero).not.toContain("loadAcademyHeroContent");
   });
 
   it("reveals the neutral hero after one second when the retry never settles", async () => {

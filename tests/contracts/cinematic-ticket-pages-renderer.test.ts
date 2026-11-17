@@ -12,7 +12,7 @@ vi.mock("@/components/ClubBrandingProvider", () => ({ useClubBranding: () => ({ 
 vi.mock("@/components/cinematic/CinematicContent", () => ({ useCinematicContent: () => ({ content: { match: { emptyMessage: "Shared announcement" } } }) }));
 vi.mock("@/components/ResilientNativeImage", () => ({ default: (props: Record<string, unknown>) => createElement("img", props) }));
 vi.mock("@/lib/queries", () => ({ fetchSchedule: vi.fn(), fetchSiteSocialLinks: vi.fn() }));
-vi.mock("@/lib/editorial-identity", () => ({ fetchClubIdentity: vi.fn() }));
+vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: vi.fn() }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NEXT_NOT_FOUND"); } }));
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: async () => ({ id: "tenant", presentationTemplateKey: route.template }) }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: async () => ({ schema: () => ({}) }) }));

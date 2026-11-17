@@ -5,7 +5,7 @@ import { getDirtyHomepageSections, type HomepageEditorState } from "./model";
 import type { HomepageSnapshot } from "./server";
 
 export type HomepageEditorSnapshot = HomepageSnapshot & {
-  design: HomepageRenderer;
+  design: HomepageRenderer & { binding?: unknown };
   videoSource: string;
   operationId?: string;
 };

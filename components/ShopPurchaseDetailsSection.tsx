@@ -103,25 +103,28 @@ export default function ShopPurchaseDetailsSection({
             </p>
             <p className="font-body text-sm text-white">{content.cta_text}</p>
           </div>
-          <a
-            href={content.cta_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-display flex items-center justify-center px-8 py-3.5 font-bold uppercase tracking-widest transition-all duration-200 sm:inline-flex"
-            style={{
-              backgroundColor: "var(--color-red)",
-              color: "#fff",
-              fontSize: "0.85rem",
-            }}
-            onMouseEnter={(event) => {
-              event.currentTarget.style.backgroundColor = "var(--color-red-dark)";
-            }}
-            onMouseLeave={(event) => {
-              event.currentTarget.style.backgroundColor = "var(--color-red)";
-            }}
-          >
-            {content.cta_label}
-          </a>
+          {/* No saved store link means no buy button, never a dead or borrowed one. */}
+          {content.cta_link.trim() && content.cta_label.trim() ? (
+            <a
+              href={content.cta_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-display flex items-center justify-center px-8 py-3.5 font-bold uppercase tracking-widest transition-all duration-200 sm:inline-flex"
+              style={{
+                backgroundColor: "var(--color-red)",
+                color: "#fff",
+                fontSize: "0.85rem",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.backgroundColor = "var(--color-red-dark)";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.backgroundColor = "var(--color-red)";
+              }}
+            >
+              {content.cta_label}
+            </a>
+          ) : null}
         </div>
       </div>
     </div>

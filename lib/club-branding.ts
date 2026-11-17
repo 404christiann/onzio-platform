@@ -29,6 +29,16 @@ export function validateFooterTagline(value: string): string | null {
     : null;
 }
 
+/**
+ * The stored logo path a club's `/club-logo` (browser tab icon and link
+ * preview image) should redirect to, or null when the club has none. A club
+ * without a logo gets no icon rather than another club's crest.
+ */
+export function clubLogoRedirectPath(stored: string | null | undefined): string | null {
+  const path = typeof stored === "string" ? stored.trim() : "";
+  return path || null;
+}
+
 export function clubLogoUrl(
   path: string = DEFAULT_CLUB_LOGO_PATH,
 ): string {

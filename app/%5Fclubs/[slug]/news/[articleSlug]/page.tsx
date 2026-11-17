@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { createClient } from "@/lib/supabase-server";
-import { fetchClubIdentity } from "@/lib/editorial-identity";
+import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { isNewsSlug } from "@/lib/cinematic-news";
 import { fetchNewsArticle } from "@/lib/cinematic-news-query";
 import { CinematicNewsArticle } from "@/components/cinematic/CinematicNews";

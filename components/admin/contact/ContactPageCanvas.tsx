@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import AcademyContactPage from "@/components/AcademyContactPage";
+import AcademyContactPage from "@/components/sites/diverse-city/AcademyContactPage";
 import { useClubContext } from "@/components/ClubContextProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
-import EditorialContactPage from "@/components/editorial/EditorialContactPage";
-import { fetchClubThemeColors, type ClubThemeColors } from "@/lib/editorial-identity";
 import type { ContactContent } from "@/lib/queries";
-import "@/styles/editorial.css";
+import { EditableRegion } from "@/components/admin/ui/EditableRegion";
 
 export type ContactCanvasTarget = "hero" | "details" | "social";
 
@@ -18,22 +16,24 @@ const labels: Record<ContactCanvasTarget, string> = {
   social: "Social links",
 };
 
-function Frame({ children, phone, selected, onSelect, host }: {
+function Frame({ children, phone, selected, onSelect, host, classic = false }: {
   children: ReactNode;
   phone: boolean;
   selected: ContactCanvasTarget | null;
   onSelect: (target: ContactCanvasTarget) => void;
   host: string;
+  classic?: boolean;
 }) {
   const iframe = useRef<HTMLIFrameElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const [availableWidth, setAvailableWidth] = useState(0);
+  const [contentHeight, setContentHeight] = useState(850);
   const previewWidth = phone ? 390 : 1440;
-  const previewHeight = phone ? 780 : 850;
+  const previewHeight = classic ? contentHeight : phone ? 780 : 850;
   const scale = availableWidth ? Math.min(1, availableWidth / previewWidth) : 1;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = viewport.current;
     if (!element) return;
     const measure = () => setAvailableWidth(element.clientWidth);
@@ -42,6 +42,17 @@ function Frame({ children, phone, selected, onSelect, host }: {
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!classic || !body) return;
+    const element = body.querySelector<HTMLElement>("[data-contact-preview]");
+    if (!element) return;
+    const measure = () => setContentHeight(Math.ceil(element.getBoundingClientRect().height));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [body, classic]);
 
   useEffect(() => {
     const frame = iframe.current;
@@ -85,7 +96,7 @@ function Frame({ children, phone, selected, onSelect, host }: {
   }, []);
 
   useEffect(() => {
-    if (!body) return;
+    if (!body || classic) return;
     const originals = new Map<HTMLElement, boolean>();
     const decorate = () => {
       body.querySelectorAll<HTMLElement>("[data-contact-editor-section]").forEach((target) => {
@@ -107,16 +118,16 @@ function Frame({ children, phone, selected, onSelect, host }: {
       observer.disconnect();
       originals.forEach((inert, control) => { control.inert = inert; });
     };
-  }, [body, selected]);
+  }, [body, selected, classic]);
 
   useEffect(() => {
-    if (!body || !selected) return;
+    if (!body || !selected || classic) return;
     const target = body.querySelector<HTMLElement>(`[data-contact-editor-section="${selected}"]`);
     const frame = iframe.current;
     if (!target || !frame?.contentWindow) return;
     const top = target.getBoundingClientRect().top + frame.contentWindow.scrollY - 120;
     frame.contentWindow.scrollTo({ top: Math.max(0, top), behavior: "auto" });
-  }, [body, selected]);
+  }, [body, selected, classic]);
 
   function selectFrom(target: EventTarget) {
     const element = (target as HTMLElement).closest<HTMLElement>("[data-contact-editor-section]");
@@ -125,19 +136,22 @@ function Frame({ children, phone, selected, onSelect, host }: {
     return true;
   }
 
-  return <div className="cep-browser">
-    <div className="cep-browser-bar"><span aria-hidden="true">● ● ●</span><span>{host}/contact · Public page preview</span></div>
+  return <div className={classic ? "cc-browser" : "cep-browser"}>
+    {!classic && <div className="cep-browser-bar"><span aria-hidden="true">● ● ●</span><span>{host}/contact · Public page preview</span></div>}
     <div ref={viewport} className="cep-frame-viewport" style={{ height: previewHeight * scale }}>
       <iframe ref={iframe} title="Public Contact page preview" className="cep-frame"
         srcDoc="<!doctype html><html lang='en'><head></head><body></body></html>"
+        scrolling={classic ? "no" : undefined}
         style={{ width: previewWidth, height: previewHeight,
           left: Math.max(0, (availableWidth - previewWidth * scale) / 2),
           transform: `scale(${scale})`, transformOrigin: "top left" }} />
     </div>
     {body && createPortal(<div data-contact-preview="true" onClickCapture={(event) => {
+      if (classic) return;
       event.preventDefault();
       if (selectFrom(event.target)) event.stopPropagation();
     }} onKeyDownCapture={(event) => {
+      if (classic) return;
       if ((event.key === "Enter" || event.key === " ") && selectFrom(event.target)) {
         event.preventDefault(); event.stopPropagation();
       }
@@ -145,9 +159,13 @@ function Frame({ children, phone, selected, onSelect, host }: {
       <style>{`
         html { scroll-behavior:auto !important; }
         body { margin:0; }
-        [data-contact-editor-section] { cursor:pointer; outline:1px solid #938bd8; outline-offset:-2px; }
+        ${!classic ? `[data-contact-editor-section] { cursor:pointer; outline:1px solid #938bd8; outline-offset:-2px; }
         [data-contact-editor-section]:hover,[data-contact-editor-section][aria-pressed="true"] { outline:3px solid #6158dc; outline-offset:-3px; }
-        [data-contact-editor-section]:focus-visible { outline:3px dashed #6158dc; outline-offset:-3px; }
+        [data-contact-editor-section]:focus-visible { outline:3px dashed #6158dc; outline-offset:-3px; }` : `body { overflow:hidden; }
+        [data-contact-preview] { display:flow-root; }
+        .cc-empty-region { margin:0; min-height:120px; display:flex; align-items:center; justify-content:center; padding:24px; color:#51667E; }
+        [data-admin-editable-region] { display:flow-root; }
+        `}
         [data-contact-preview] * { animation:none !important; transition:none !important; }
       `}</style>
       {children}
@@ -155,35 +173,17 @@ function Frame({ children, phone, selected, onSelect, host }: {
   </div>;
 }
 
-export default function ContactPageCanvas({ content, phone, selected, onSelect }: {
+export default function ContactPageCanvas({ content, phone, selected, onSelect, classic = false, invalid }: {
   content: ContactContent;
   phone: boolean;
   selected: ContactCanvasTarget | null;
   onSelect: (target: ContactCanvasTarget) => void;
+  classic?: boolean;
+  invalid?: Partial<Record<ContactCanvasTarget, boolean>>;
 }) {
   const club = useClubContext();
-  const [theme, setTheme] = useState<ClubThemeColors>({
-    primary: club.primaryColor ?? "#1B2958",
-    secondary: club.secondaryColor ?? "#AD3234",
-    accent: club.secondaryColor ?? "#AD3234",
-  });
-  useEffect(() => {
-    if (club.presentationTemplateKey !== "editorial@1") return;
-    let active = true;
-    fetchClubThemeColors(club.id, {
-      primary: club.primaryColor ?? "#1B2958",
-      secondary: club.secondaryColor ?? "#AD3234",
-    }).then((value) => { if (active) setTheme(value); }).catch(() => undefined);
-    return () => { active = false; };
-  }, [club.id, club.primaryColor, club.secondaryColor, club.presentationTemplateKey]);
-
-  const page = club.presentationTemplateKey === "editorial@1"
-    ? <div data-site-template="editorial" style={{
-        "--club-primary": theme.primary, "--club-secondary": theme.secondary,
-        "--club-accent": theme.accent,
-      } as CSSProperties}><EditorialContactPage content={content} /></div>
-    : <AcademyContactPage content={content} clubName={club.name} />;
-  return <Frame phone={phone} selected={selected} onSelect={onSelect} host={club.primaryDomain}>
+  const page = <AcademyContactPage content={content} clubName={club.name} renderEditorRegion={classic ? (section, children) => <EditableRegion key={section} ariaLabel={`Edit ${labels[section].toLowerCase()}`} editLabel={labels[section].toLowerCase()} onEdit={() => onSelect(section)} invalid={invalid?.[section]}>{children ?? <p className="cc-empty-region">{section === "details" ? "Add contact details to show this section." : "No social links yet."}</p>}</EditableRegion> : undefined} />;
+  return <Frame phone={phone} selected={selected} onSelect={onSelect} host={club.primaryDomain} classic={classic}>
     <TemplateFontScope templateKey={club.presentationTemplateKey}>{page}</TemplateFontScope>
   </Frame>;
 }

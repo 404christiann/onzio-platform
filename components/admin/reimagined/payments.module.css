@@ -1,0 +1,446 @@
+/* ADMIN-RE-20: "Payments and plan" (design: cd-payments, cd-payments-desktop).
+   Colors come from the admin theme tokens. The status card carries the one
+   thing an owner needs: is billing OK, and if not, the one button. Long club
+   names and addresses wrap anywhere instead of pushing the page wide (MAP, break-ui). */
+
+.page {
+  --pay-ok-bg: #e6f6ec;
+  --pay-ok-ink: #14532d;
+  --pay-ok-icon: #1f9d55;
+  --pay-warn-bg: #fff3e2;
+  --pay-warn-ink: #8a3a0c;
+  --pay-warn-icon: #d0590f;
+  --pay-danger-bg: #fde8e8;
+  --pay-danger-ink: #8a1c1c;
+  --pay-danger-icon: #c93a3a;
+  --pay-notice-bg: #eaeefc;
+  --pay-notice-ink: #2b3a8a;
+  --pay-notice-icon: #3b52d4;
+  margin: 0 auto;
+  max-width: 960px;
+  min-width: 0;
+}
+
+:global([data-admin-theme="dark"]) .page {
+  --pay-ok-bg: #123a24;
+  --pay-ok-ink: #bdf0d0;
+  --pay-ok-icon: #4fd18a;
+  --pay-warn-bg: #3a2412;
+  --pay-warn-ink: #ffd2a8;
+  --pay-warn-icon: #ff9a52;
+  --pay-danger-bg: #3d1818;
+  --pay-danger-ink: #ffc9c9;
+  --pay-danger-icon: #ff7a7a;
+  --pay-notice-bg: #1b2250;
+  --pay-notice-ink: #cdd6ff;
+  --pay-notice-icon: #8fa3ff;
+}
+
+.head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.headIcon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border-radius: 14px;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.h1 {
+  margin: 0;
+  min-width: 0;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  margin: 10px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+.stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.status {
+  --tone-bg: hsl(var(--muted));
+  --tone-ink: hsl(var(--foreground));
+  --tone-icon: hsl(var(--muted-foreground));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 14px;
+  align-items: start;
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--tone-bg);
+  color: var(--tone-ink);
+}
+
+.status[data-tone="ok"] {
+  --tone-bg: var(--pay-ok-bg);
+  --tone-ink: var(--pay-ok-ink);
+  --tone-icon: var(--pay-ok-icon);
+}
+
+.status[data-tone="warn"] {
+  --tone-bg: var(--pay-warn-bg);
+  --tone-ink: var(--pay-warn-ink);
+  --tone-icon: var(--pay-warn-icon);
+}
+
+.status[data-tone="danger"] {
+  --tone-bg: var(--pay-danger-bg);
+  --tone-ink: var(--pay-danger-ink);
+  --tone-icon: var(--pay-danger-icon);
+}
+
+.status[data-tone="notice"] {
+  --tone-bg: var(--pay-notice-bg);
+  --tone-ink: var(--pay-notice-ink);
+  --tone-icon: var(--pay-notice-icon);
+}
+
+.statusIcon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: var(--tone-icon);
+}
+
+.statusWords {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.statusTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.statusLine {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.statusLine a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.fact {
+  display: flex;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--tone-ink) 16%, transparent);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.factValue {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.meter {
+  margin-top: 4px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone-ink) 14%, transparent);
+}
+
+.meterFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--tone-icon);
+}
+
+.button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--tone-ink);
+  color: var(--tone-bg);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.button[data-tone="quiet"] {
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+}
+
+.button:hover {
+  opacity: 0.9;
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.actionForm {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+}
+
+.problem {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.col {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 12px;
+}
+
+.card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.cardTop {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.price {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cardLine {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  color: hsl(var(--muted-foreground));
+}
+
+.cardLine a {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.badge[data-tone="ok"] {
+  background: var(--pay-ok-bg);
+  color: var(--pay-ok-ink);
+}
+
+.badge[data-tone="warn"] {
+  background: var(--pay-warn-bg);
+  color: var(--pay-warn-ink);
+}
+
+.badge[data-tone="danger"] {
+  background: var(--pay-danger-bg);
+  color: var(--pay-danger-ink);
+}
+
+.rowLink {
+  display: flex;
+  min-width: 0;
+  min-height: 56px;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 18px;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.rowLink:hover {
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.35), 0 8px 20px -12px rgb(15 20 40 / 0.25);
+}
+
+.rowLink:active {
+  transform: scale(0.99);
+}
+
+.rowLink:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.rowLink:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.rowAside {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+  text-align: right;
+}
+
+.rowForm {
+  margin: 0;
+}
+
+.foot {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  color: hsl(var(--muted-foreground));
+}
+
+.foot a {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (min-width: 720px) {
+  .status {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 22px 24px;
+  }
+
+  .fact,
+  .meter {
+    max-width: 420px;
+  }
+
+  .actionForm {
+    grid-column: 3;
+    margin: 0;
+  }
+
+  .button {
+    width: auto;
+    min-width: 168px;
+  }
+
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .col {
+    gap: 16px;
+  }
+
+  .stack {
+    gap: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .rowLink {
+    transition: none;
+  }
+}

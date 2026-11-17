@@ -1,0 +1,257 @@
+/* ADMIN-RE-24c: search (design: admin-plain-search-two-clubs.html, the
+   "palette" rules in prototypes/plain-search/src/admin.css). It opens with no
+   animation: it is mostly opened from the keyboard. A full screen on a phone, a
+   centered panel from 760px. Admin theme tokens only. */
+
+.press {
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 150ms ease;
+  touch-action: manipulation;
+}
+
+.press:active {
+  transform: scale(0.97);
+}
+
+.press:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.box {
+  display: flex;
+  width: 100%;
+  height: 40px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  padding: 0 10px;
+  background: hsl(var(--background));
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-size: 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.box svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.box kbd {
+  margin-left: auto;
+  border-radius: 6px;
+  padding: 1px 6px;
+  background: hsl(var(--accent));
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.iconButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  color: hsl(var(--muted-foreground));
+}
+
+.iconButton svg {
+  width: 22px;
+  height: 22px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgb(10 12 18 / 0.42);
+}
+
+.palette {
+  position: fixed;
+  inset: 0;
+  z-index: 81;
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  outline: none;
+  padding-top: var(--admin-safe-area-top, env(safe-area-inset-top, 0px));
+}
+
+.palette > [cmdk-root] {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.inputRow > svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: hsl(var(--muted-foreground));
+}
+
+.input {
+  height: 40px;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+}
+
+.input::placeholder {
+  color: hsl(var(--muted-foreground) / 0.8);
+}
+
+.cancel {
+  display: inline-flex;
+  min-height: 36px;
+  flex: none;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 12px;
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.laptopOnly {
+  display: none;
+}
+
+.list {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  padding-bottom: calc(6px + var(--admin-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+.group [cmdk-group-heading] {
+  padding: 10px 10px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+
+.item {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  padding: 0 10px;
+  font-size: 15px;
+  cursor: default;
+}
+
+.item[data-selected="true"] {
+  background: hsl(var(--accent));
+}
+
+.item svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: hsl(var(--muted-foreground));
+}
+
+.label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  max-width: 45%;
+  flex: none;
+  overflow: hidden;
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 24px;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .box:hover,
+  .iconButton:hover,
+  .cancel:hover {
+    background: hsl(var(--accent));
+  }
+}
+
+@media (min-width: 760px) {
+  .palette {
+    inset: 96px auto auto 50%;
+    width: min(620px, calc(100vw - 48px));
+    max-height: min(520px, calc(100dvh - 140px));
+    overflow: hidden;
+    border-radius: 18px;
+    padding-top: 0;
+    box-shadow: 0 12px 32px -12px rgb(15 20 40 / 0.28), 0 0 0 1px hsl(var(--border));
+    transform: translateX(-50%);
+  }
+
+  .cancel {
+    min-height: 0;
+    padding: 2px 6px;
+    border-radius: 6px;
+    box-shadow: none;
+    background: hsl(var(--accent));
+    font-size: 12px;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .phoneOnly {
+    display: none;
+  }
+
+  .laptopOnly {
+    display: inline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press:active {
+    transform: none;
+  }
+}

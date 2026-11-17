@@ -1,0 +1,739 @@
+/* ADMIN-RE-11a: "This season" (design: cd-season-final, dc-club-home). One
+   page, one main button at a time. Colors come from the admin theme tokens, so
+   dark mode follows. Names wrap or end in "…" with the full name on hover
+   (MAP break-ui); fixed heights are min-heights so a long name only grows a row. */
+
+/* The dialogs render in a portal, outside .page, so they carry the colors too. */
+.page,
+.dialog {
+  --season-ok: #187a43;
+  --season-ok-tint: #d6f1df;
+  --season-note-tint: #eef1fd;
+  --season-note-line: #d3dbf8;
+}
+
+.page {
+  margin: 0 auto;
+  max-width: 1120px;
+}
+
+:global([data-admin-theme="dark"]) .page,
+:global([data-admin-theme="dark"]) .dialog {
+  --season-ok: #7ddca1;
+  --season-ok-tint: #123a24;
+  --season-note-tint: #222b5c;
+  --season-note-line: #36418a;
+}
+
+/* The "ready · Show it" note */
+
+.banner {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 14px;
+  background: var(--season-note-tint);
+  box-shadow: inset 0 0 0 1px var(--season-note-line);
+}
+
+.bannerIcon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  background: hsl(var(--primary) / 0.14);
+  color: hsl(var(--primary));
+}
+
+.bannerText {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+.bannerText b {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.bannerName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bannerReady {
+  flex: none;
+  white-space: pre;
+}
+
+.bannerLine {
+  display: none;
+  flex: none;
+  white-space: pre;
+}
+
+.bannerButton {
+  display: inline-flex;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 0 18px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Title row */
+
+.head {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titles {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 14rem;
+  gap: 2px;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+}
+
+.sub {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* The season pill: quiet, and a menu only when there is a choice */
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  border-radius: 12px;
+  background: hsl(var(--card));
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+  color: hsl(var(--foreground));
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.switch:focus-within {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.switchText {
+  overflow: hidden;
+  max-width: 16rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 16px;
+}
+
+.switchSelect {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  appearance: none;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 40px 0 16px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+.switchSelect:focus {
+  outline: none;
+}
+
+.switchCaret {
+  position: absolute;
+  right: 14px;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  color: hsl(var(--muted-foreground));
+}
+
+.status,
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.status {
+  background: var(--season-ok-tint);
+  color: var(--season-ok);
+}
+
+.alert {
+  border: 1px solid hsl(var(--destructive) / 0.3);
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+}
+
+.status svg,
+.alert svg {
+  flex: none;
+}
+
+/* The three cards */
+
+.cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.cardHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.cardIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.cardLabel {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.cardText {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+
+.cardMain {
+  overflow-wrap: anywhere;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardNote {
+  min-height: 20px;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Buttons */
+
+.tonal,
+.ghost,
+.primary,
+.danger {
+  display: inline-flex;
+  min-height: 44px;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.tonal {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.tonal:hover:not(:disabled),
+.ghost:hover:not(:disabled) {
+  background: hsl(var(--accent));
+}
+
+.ghost {
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+  color: hsl(var(--foreground));
+  background: transparent;
+}
+
+.primary {
+  min-height: 48px;
+  padding: 0 22px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 15px;
+}
+
+.primary:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.9);
+}
+
+.danger {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+}
+
+.danger:hover:not(:disabled) {
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+  box-shadow: inset 0 0 0 1px hsl(var(--destructive) / 0.4);
+}
+
+.tonal:active:not(:disabled),
+.ghost:active:not(:disabled),
+.primary:active:not(:disabled),
+.bannerButton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.tonal:focus-visible,
+.ghost:focus-visible,
+.primary:focus-visible,
+.danger:focus-visible,
+.bannerButton:focus-visible,
+.cancel:focus-visible,
+.go:focus-visible,
+.goDanger:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.tonal:disabled,
+.ghost:disabled,
+.primary:disabled,
+.danger:disabled,
+.bannerButton:disabled,
+.cancel:disabled,
+.go:disabled,
+.goDanger:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Foot: the way to the next season, and the quiet rows under it */
+
+.foot,
+.switchRow,
+.deleteRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-top: 20px;
+  padding: 16px 0 0;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.switchRow {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.deleteRow {
+  margin-top: 8px;
+}
+
+.footText {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 16rem;
+  gap: 2px;
+}
+
+.footTitle {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.footLine {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+.started {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 0 16px;
+  background: var(--season-ok-tint);
+  color: var(--season-ok);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.quietNote {
+  margin: 20px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* First season: nothing yet */
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 32px 20px;
+  border-radius: 18px;
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  text-align: center;
+}
+
+.emptyIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.emptyTitle {
+  margin: 6px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.emptyText {
+  margin: 0 0 8px;
+  max-width: 38ch;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Dialogs: a sheet from the foot on a phone, a card in the middle on a laptop */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgb(20 25 45 / 0.4);
+}
+
+.dialog {
+  position: fixed;
+  z-index: 201;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  max-height: calc(100dvh - 24px);
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 -12px 40px -16px rgb(15 20 40 / 0.45), 0 0 0 1px hsl(var(--border));
+}
+
+.dialogTitle {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -0.015em;
+}
+
+.dialogSub {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+.nameBlock {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.nameLabel {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.nameInput {
+  min-height: 48px;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 14px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 17px;
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+}
+
+.nameInput:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px hsl(var(--primary)), 0 0 0 3px hsl(var(--primary) / 0.18);
+}
+
+.nameBlock[data-error] .nameInput {
+  box-shadow: inset 0 0 0 1px hsl(var(--destructive)), 0 0 0 3px hsl(var(--destructive) / 0.14);
+}
+
+.nameMeta {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hint,
+.hintError {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+.hintError {
+  color: hsl(var(--destructive));
+}
+
+.hint svg,
+.hintError svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.hint span,
+.hintError span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.counter {
+  flex: none;
+  font-size: 13px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--muted-foreground));
+}
+
+.counter[data-over] {
+  color: hsl(var(--destructive));
+  font-weight: 600;
+}
+
+.ticks {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.tickText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tick {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--season-ok-tint);
+  color: var(--season-ok);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel,
+.go,
+.goDanger {
+  display: inline-flex;
+  min-height: 48px;
+  min-width: 120px;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cancel {
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.go {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.goDanger {
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground, 0 0% 100%));
+}
+
+@media (min-width: 640px) {
+  .bannerLine {
+    display: block;
+  }
+
+  .dialog {
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    width: min(480px, calc(100vw - 32px));
+    max-height: calc(100dvh - 48px);
+    transform: translate(-50%, -50%);
+    border-radius: 20px;
+    padding: 28px;
+  }
+
+  .cancel,
+  .go,
+  .goDanger {
+    flex: 0 0 auto;
+  }
+}
+
+@media (min-width: 900px) {
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tonal,
+  .ghost,
+  .primary,
+  .danger {
+    transition: none;
+  }
+
+  .tonal:active:not(:disabled),
+  .ghost:active:not(:disabled),
+  .primary:active:not(:disabled),
+  .bannerButton:active:not(:disabled) {
+    transform: none;
+  }
+}

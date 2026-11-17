@@ -19,7 +19,7 @@ const client = createClient(url, process.env.SUPABASE_TEST_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false, autoRefreshToken: false },
   realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
 }).schema("onzio");
-const tables = ["seasons", "players", "matches", "player_match_stats", "goalkeeper_match_stats", "player_season_stats", "goalkeeper_season_stats", "league_standings", "registration_forms", "registration_form_fields", "registration_price_options", "registrations"];
+const tables = ["seasons", "players", "matches", "player_match_stats", "goalkeeper_match_stats", "player_season_stats", "goalkeeper_season_stats", "player_season_adjustments", "goalkeeper_season_adjustments", "league_standings", "registration_forms", "registration_form_fields", "registration_price_options", "registrations"];
 
 async function checkResult(result: { error: { message: string } | null }) {
   if (result.error) throw new Error(result.error.message);
@@ -86,11 +86,17 @@ async function fixtures() {
     await checkResult(await client.from("seasons").insert({ id: seasonId, club_id: clubId, label: seasonLabel, start_year: 2025, end_year: 2026, active: false }));
     await checkResult(await client.from("players").insert({ id: playerId, club_id: clubId, name: rowName, number: 77, age: 22, position: "Forward", active: true }));
     await checkResult(await client.from("player_season_stats").insert([
-      { club_id: clubId, player_id: playerId, season_id: activeSeason.id, goals: 3, assists: 2, starts: 2, mins: 150 },
-      { club_id: clubId, player_id: playerId, season_id: seasonId, goals: 1, assists: 1, starts: 1, mins: 80 },
+      { club_id: clubId, player_id: playerId, season_id: activeSeason.id },
+      { club_id: clubId, player_id: playerId, season_id: seasonId },
     ]));
     await checkResult(await client.from("matches").insert(matchIds.map((id, index) => ({ id, club_id: clubId, season_id: index === 2 ? seasonId : activeSeason.id, date: `2026-06-${index + 10}`, time: "18:00", opponent: `Guided QA Opponent ${index}`, home: true }))));
     await checkResult(await client.from("player_match_stats").insert(matchIds.map((matchId, index) => ({ club_id: clubId, player_id: playerId, match_id: matchId, goals: index + 1, assists: index, mins: 75, starts: true }))));
+    // ADMIN-RE-11c: season totals are the season's match stats plus an adjustment. These make
+    // the totals goals 3 / 1, assists 2 / 1, starts 2 / 1, minutes 150 / 80, as before.
+    await checkResult(await client.from("player_season_adjustments").insert([
+      { club_id: clubId, player_id: playerId, season_id: activeSeason.id, goals: 0, assists: 1, mins: 0 },
+      { club_id: clubId, player_id: playerId, season_id: seasonId, goals: -2, assists: -1, mins: 5 },
+    ]));
     await checkResult(await client.from("league_standings").insert({ id: standingId, club_id: clubId, team_name: `Guided QA team ${suffix}`, team_abbreviation: "QA", played: 3, wins: 2, draws: 1, losses: 0, goal_difference: 4, points: 7, sort_order: 77 }));
     await checkResult(await client.from("registration_forms").insert({ id: formId, club_id: clubId, slug: `guided-qa-${suffix}`, title: formTitle, status: "closed", participant_mode: "adult_only", waiver_text: "Synthetic browser consent fixture." }));
     await checkResult(await client.from("registration_price_options").insert({ id: priceId, club_id: clubId, form_id: formId, label: "QA fee", amount_cents: 1250, position: 0, active: true }));
@@ -119,6 +125,41 @@ async function setTheme(page: Page, theme: "light" | "dark") {
   await expect(page.locator(".admin-theme")).toHaveAttribute("data-admin-theme", theme);
 }
 
+// CL12-27 moved form editing into a dialog: "Edit form" opens it, "Price options" is one of its section buttons,
+// and Cancel closes it. Check the price fields there, then leave and wait for the dialog to close so no
+// background query runs behind an open modal.
+async function expectRegistrationPriceInDialog(page: Page, amount?: string) {
+  await page.getByRole("button", { name: "Edit form", exact: true }).first().click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("navigation", { name: "Form editor sections", exact: true }).getByRole("button", { name: "Price options", exact: true }).click();
+  await expect(dialog.getByLabel("Price name", { exact: true })).toHaveValue("QA fee");
+  if (amount !== undefined) await expect(dialog.getByRole("textbox", { name: "QA fee amount in dollars", exact: true })).toHaveValue(amount);
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toBeHidden();
+}
+
+// CL20 replaced the two canvases with DOM comparison bars (AdminBar progressbars) beside a trend canvas.
+// Values come from the fixture above: the Forward row has season totals goals 3, assists 2, starts 2,
+// and three match rows (goals 1, 2, then 8 after the save; assists 0, 1, 2; 75 minutes each).
+async function expectAnalyticsCharts(page: Page) {
+  const panel = page.locator('[data-analytics-part="charts"]').filter({ has: page.getByRole("heading", { name: "Stats vs position average", exact: true }) });
+  await expect(panel.getByRole("progressbar", { name: "Goals: player 3", exact: true })).toBeVisible();
+  await expect(panel.getByRole("progressbar", { name: "Assists: player 2", exact: true })).toBeVisible();
+  await expect(panel.getByRole("progressbar", { name: /^Tackles: player \d+$/ })).toBeVisible();
+  await expect(panel.getByRole("progressbar", { name: "Starts: player 2", exact: true })).toBeVisible();
+  for (const label of ["Goals", "Assists", "Tackles", "Starts"]) {
+    await expect(panel.getByRole("progressbar", { name: new RegExp(`^${label}: position average \\d+(\\.\\d+)?$`) })).toBeVisible();
+  }
+  await expect(panel).toContainText(/Goals\s*3 · avg \d+(\.\d+)?/);
+  await expect(panel).toContainText(/Assists\s*2 · avg \d+(\.\d+)?/);
+  await expect(panel).toContainText(/Starts\s*2 · avg \d+(\.\d+)?/);
+  const trend = page.locator('canvas[aria-label^="Goal contributions per match:"]');
+  await expect(trend).toBeVisible();
+  await expect(trend).toHaveAttribute("aria-label", "Goal contributions per match: Guided QA Opponent 0 1, 75 minutes; Guided QA Opponent 1 3, 75 minutes; Guided QA Opponent 2 10, 75 minutes");
+  return { panel, trend };
+}
+
 test.describe.configure({ mode: "serial" });
 for (const width of [390, 1440]) {
   test(`${width}px management: persisted stats, chart theme redraw, registration copy/CSV/disclosure and all route layouts`, async ({ page, context }) => {
@@ -139,9 +180,9 @@ for (const width of [390, 1440]) {
       await expect(seasonGoals).toHaveValue("1");
       expect((await seasonGoals.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await seasonGoals.fill("9");
-      await page.getByRole("button", { name: "Save season totals", exact: true }).click();
-      await expect(page.getByRole("status")).toHaveText("Saved successfully");
-      await expect(page.getByRole("button", { name: "Save season totals", exact: true })).toBeDisabled();
+      await page.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(page.getByRole("status")).toHaveText("Saved");
+      await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
       await page.reload();
       await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
       await selectStatsPlayer(page, fixture.rowName);
@@ -166,9 +207,9 @@ for (const width of [390, 1440]) {
       const matchGoals = page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true });
       await expect(matchGoals).toHaveValue("3");
       await matchGoals.fill("8");
-      await page.getByRole("button", { name: "Save match stats", exact: true }).click();
-      await expect(page.getByRole("status")).toHaveText("Saved successfully");
-      await expect(page.getByRole("button", { name: "Save match stats", exact: true })).toBeDisabled();
+      await page.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(page.getByRole("status")).toHaveText("Saved");
+      await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
       await page.reload();
       await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
       await expect(page.getByRole("combobox", { name: "Match", exact: true })).toBeEnabled();
@@ -179,26 +220,32 @@ for (const width of [390, 1440]) {
       await page.goto("/admin/analytics");
       await page.getByRole("group", { name: "Filter players by position" }).getByRole("button", { name: "Forward", exact: true }).click();
       await page.getByRole("button", { name: new RegExp(fixture.rowName) }).click();
-      const bar = page.locator('canvas[aria-label="Bar chart comparing player stats vs position average"]');
-      const line = page.locator('canvas[aria-label="Line chart showing G+A trend over matches"]');
-      await expect(bar).toBeVisible();
-      await expect(line).toBeVisible();
+      const { panel, trend } = await expectAnalyticsCharts(page);
+      const playerBar = panel.getByRole("progressbar", { name: "Goals: player 3", exact: true });
+      const averageBar = panel.getByRole("progressbar", { name: /^Goals: position average / });
+      const barColours = () => Promise.all([
+        playerBar.locator("[data-admin-bar-fill]").evaluate(node => getComputedStyle(node).backgroundColor),
+        averageBar.evaluate(node => getComputedStyle(node).backgroundColor),
+        averageBar.locator("[data-admin-bar-fill]").evaluate(node => getComputedStyle(node).backgroundColor),
+      ]);
       await setTheme(page, "light");
       await page.waitForTimeout(250);
-      const before = await Promise.all([bar.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL()), line.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL())]);
+      const beforeColours = await barColours();
+      const before = await trend.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL());
       await setTheme(page, "dark");
-      await expect.poll(async () => await bar.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL())).not.toBe(before[0]);
-      await expect.poll(async () => await line.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL())).not.toBe(before[1]);
+      await expect.poll(async () => (await barColours())[0]).not.toBe(beforeColours[0]);
+      await expect.poll(async () => (await barColours())[1]).not.toBe(beforeColours[1]);
+      await expect.poll(async () => (await barColours())[2]).not.toBe(beforeColours[2]);
+      await expect.poll(async () => await trend.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL())).not.toBe(before);
 
       await page.goto("/admin/registrations");
       await page.getByRole("button", { name: new RegExp(fixture.formTitle) }).click();
       await page.getByRole("button", { name: "Copy link", exact: true }).first().click();
-      await expect(page.getByRole("status")).toHaveText("Public registration link copied.");
+      await expect(page.getByRole("status").filter({ hasText: "Public registration link copied." })).toHaveText("Public registration link copied.");
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       expect(copied).toContain(`/register/guided-qa-${fixture.suffix}`);
       expect(new URL(copied).hostname).toBe(new URL(page.url()).hostname);
-      await expect(page.getByLabel("Price name", { exact: true })).toHaveValue("QA fee");
-      await expect(page.getByRole("textbox", { name: "QA fee amount in dollars", exact: true })).toHaveValue("12.50");
+      await expectRegistrationPriceInDialog(page, "12.50");
       await page.getByRole("tab", { name: /Registrants/ }).click();
       await page.getByRole("button", { name: "Paid 1", exact: true }).click();
       if (width === 390) {
@@ -240,18 +287,25 @@ for (const width of [390, 1440]) {
           if (route === "season-stats") {
             await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
             await selectStatsPlayer(page, fixture.rowName);
-            await expect(page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true })).toHaveValue("9");
+            // ADMIN-RE-11c: 9 saved by hand, then the match went from 3 to 8 goals: 9 + 5.
+            await expect(page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true })).toHaveValue("14");
           }
-          if (route === "standings") await expect(page.getByRole("textbox", { name: "Team name", exact: true })).toHaveValue(`Guided QA team ${fixture.suffix}`);
+          if (route === "standings") {
+            await page.getByRole("button", { name: `Edit Guided QA team ${fixture.suffix}`, exact: true }).click();
+            const teamDialog = page.getByRole("dialog");
+            await expect(teamDialog).toBeVisible();
+            await expect(teamDialog.getByRole("textbox", { name: "Team name", exact: true })).toHaveValue(`Guided QA team ${fixture.suffix}`);
+            await teamDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+            await expect(teamDialog).toBeHidden();
+          }
           if (route === "analytics") {
             await page.getByRole("group", { name: "Filter players by position" }).getByRole("button", { name: "Forward", exact: true }).click();
             await page.getByRole("button", { name: new RegExp(fixture.rowName) }).click();
-            await expect(page.locator('canvas[aria-label="Bar chart comparing player stats vs position average"]')).toBeVisible();
-            await expect(page.locator('canvas[aria-label="Line chart showing G+A trend over matches"]')).toBeVisible();
+            await expectAnalyticsCharts(page);
           }
           if (route === "registrations") {
             await page.getByRole("button", { name: new RegExp(fixture.formTitle) }).click();
-            await expect(page.getByLabel("Price name", { exact: true })).toHaveValue("QA fee");
+            await expectRegistrationPriceInDialog(page);
           }
           if (route === "members") {
             await expect(page.getByText("You · owner", { exact: true })).toBeVisible();
@@ -266,7 +320,7 @@ for (const width of [390, 1440]) {
                 await expect(payments.getByText(`This ${fixture.clubKind} club does not require a paid subscription.`, { exact: true })).toBeVisible();
               }
             } else {
-              await expect(payments.getByText("Current period", { exact: true })).toBeVisible();
+              await expect(payments.getByText(/^Current period(\.|, renews in \d+ days?\.)$/)).toBeVisible();
               await expect(payments.getByRole("button", { name: "Manage billing", exact: true })).toBeVisible();
             }
           }

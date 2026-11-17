@@ -11,7 +11,7 @@ export function AdminAccountMenu({
 }: {
   email: string | null;
   role: "owner" | "admin" | null;
-  onSignOut: () => Promise<void>;
+  onSignOut: (opener: HTMLButtonElement) => void;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,7 +74,7 @@ export function AdminAccountMenu({
           <button
             type="button"
             role="menuitem"
-            onClick={() => void onSignOut()}
+            onClick={(event) => onSignOut(event.currentTarget)}
             className="mt-1 flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-foreground transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <LogOut className="size-4 text-muted-foreground" aria-hidden="true" />

@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
+import { codeSiteFor } from "@/lib/code-site";
 import CinematicDestination from "@/components/cinematic/CinematicDestination";
 import { fetchCinematicHomepageContent, isSafeCinematicDestination } from "@/lib/cinematic-homepage-content";
-import AcademyTryoutsPage from "@/components/AcademyTryoutsPage";
-import EditorialTryouts from "@/components/editorial/EditorialTryouts";
+import AcademyTryoutsPage from "@/components/sites/diverse-city/AcademyTryoutsPage";
 import { getClubContextBySlug } from "@/lib/club-context";
+import { clubToday } from "@/lib/club-time";
+import { readPublicClubTimeZone } from "@/lib/public-club-time-zone";
 import {
   fetchContactProfile,
   fetchTryouts,
@@ -25,26 +27,12 @@ export default async function TenantTryoutsPage({
     return <CinematicDestination clubId={club.id} labelId="tryouts" />;
   }
 
-  if (club.presentationTemplateKey === "editorial@1") {
-    const onzio = (await createClient()).schema("onzio");
-    const [tryouts, contactProfile, content] = await Promise.all([
-      fetchTryouts(club.id, onzio),
-      fetchContactProfile(club.id, onzio),
-      fetchTryoutsPageContent(club.id, onzio),
-    ]);
-    return (
-      <EditorialTryouts
-        tryouts={tryouts}
-        contactEmail={contactProfile?.publicEmail ?? ""}
-        content={content}
-      />
-    );
-  }
-
-  if (club.presentationTemplateKey !== "academy@1") notFound();
+  if (codeSiteFor(club) !== "diverse-city") notFound();
   const onzio = (await createClient()).schema("onzio");
+  // A tryout closes the day after its date in the club's own time zone.
+  const today = clubToday(await readPublicClubTimeZone(club.id));
   const [tryouts, contactProfile, content] = await Promise.all([
-    fetchTryouts(club.id, onzio),
+    fetchTryouts(club.id, onzio, today),
     fetchContactProfile(club.id, onzio),
     fetchTryoutsPageContent(club.id, onzio),
   ]);

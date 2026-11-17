@@ -13,6 +13,8 @@
 .hp-notification p { margin:2px 0 0; overflow-wrap:anywhere; }
 .hp-notification-icon { display:grid; place-items:center; width:22px; height:22px; border-radius:50%; color:white; font-weight:700; }
 .hp-notification-actions { display:flex; align-items:center; gap:4px; }
+.hp-notification-modal { grid-template-columns:24px minmax(0,1fr); }
+.hp-notification-modal .hp-notification-actions { grid-column:2; }
 .hp-notification-action,.hp-notification-dismiss { min-width:44px; min-height:44px; border:0; background:transparent; color:inherit; font:600 12px/1.2 inherit; cursor:pointer; padding:4px; }
 .hp-notification-action { text-decoration:underline; }
 .hp-notification-saving { background:#eef6ff; border-color:#b9d9ff; color:#174a82; }
@@ -147,6 +149,7 @@ textarea.hp-field { min-height:108px; resize:vertical; }
 .hp-recovery-comparison dt { font-size:12px; color:hsl(var(--muted-foreground)); }
 .hp-recovery-comparison dd { font-size:14px; white-space:pre-wrap; overflow-wrap:anywhere; }
 .hp-recovery-actions { display:flex; flex-wrap:wrap; gap:12px; position:sticky; bottom:-24px; background:hsl(var(--card)); padding-block:12px; }
+.hp-recovery-actions [role="alert"] { flex-basis:100%; }
 @media(max-width:767px) and (max-height:500px) { .hp-panel { height:calc(var(--hp-viewport) - 16px); } }
 
 .hp-panel-fields label,.hp-panel-fields legend { font-weight:500; }

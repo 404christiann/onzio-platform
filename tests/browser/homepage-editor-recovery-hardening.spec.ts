@@ -1,3 +1,4 @@
+import { saveHomepage, expectHomepageSaved, expectHomepageClean, navigateHomepageOwner } from "./helpers/homepage-editor-controls";
 import { expect, test, type Page } from "@playwright/test";
 
 async function openHeroEditor(page: Page) {
@@ -5,7 +6,6 @@ async function openHeroEditor(page: Page) {
   const frame = page.frameLocator('iframe[title="Homepage preview"]');
   const heading = frame.locator('[data-homepage-piece="hero.heading"]');
   await expect(heading).toBeVisible();
-  await heading.click();
   await heading.click();
   await expect(page.getByLabel("Line one", { exact: true })).toBeVisible();
   return { frame, heading };
@@ -29,18 +29,19 @@ test.describe("homepage editor recovery hardening", () => {
       await openHeroEditor(page);
       await page.getByLabel("Line one", { exact: true }).fill(`Pending save ${crypto.randomUUID().slice(0, 8)}`);
       await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
-      await page.getByRole("button", { name: "Edit in Shop" }).filter({ visible: true }).click();
-      const dialog = page.getByRole("dialog", { name: "Save your homepage changes?" });
-      await dialog.getByRole("button", { name: "Save and continue" }).click();
+      await navigateHomepageOwner(page, "Shop");
+      const dialog = page.getByRole("dialog", { name: "Save your changes first?" });
+      await dialog.getByRole("button", { name: "Save and leave" }).click();
       await saveReachedServer;
-      await expect(dialog.getByRole("button", { name: "Leave without saving" })).toBeDisabled();
+      await expect(dialog.getByRole("button", { name: "Discard changes" })).toBeDisabled();
       await expect(page).toHaveURL(/\/admin\/homepage$/);
 
       releaseSave?.();
-      await expect(dialog.getByRole("button", { name: "Leave without saving" })).toBeEnabled();
-      await expect(dialog.getByRole("alert").filter({ hasText: "Save failed for this test." })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Discard changes" })).toBeEnabled();
+      await expect(dialog.getByRole("alert")).toContainText("Your changes could not be saved");
+      await expect(page.locator(".hp-error")).toContainText("Save failed for this test.");
       expect((await (await page.request.get("/api/admin/homepage")).json()).content.hero).toEqual(baseline.content.hero);
-      await dialog.getByRole("button", { name: "Leave without saving" }).click();
+      await dialog.getByRole("button", { name: "Discard changes" }).click();
       await expect(page).toHaveURL(/\/admin\/shop$/);
     } finally {
       releaseSave?.();
@@ -76,11 +77,18 @@ test.describe("homepage editor recovery hardening", () => {
       });
     });
 
-    const { heading } = await openHeroEditor(page);
+    await page.goto("/admin/homepage");
+    const frame = page.frameLocator('iframe[title="Homepage preview"]');
+    const heading = frame.locator('[data-homepage-piece="hero.heading"]');
+    await expect(heading).toBeVisible();
     await expect(page.getByRole("alert").filter({ hasText: /recovery|storage|survive/i })).toBeVisible();
+    await heading.click();
+    await expect(page.getByLabel("Line one", { exact: true })).toBeVisible();
     await page.getByLabel("Line one", { exact: true }).fill("Storage unavailable still edits");
     await expect(heading).toContainText("Storage unavailable still edits");
-    await expect(page.getByRole("status").filter({ hasText: "Not saved yet" })).toBeVisible();
+    await expect(page.locator("[data-admin-save-status]")).toContainText("Unsaved changes");
+    await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: /recovery|storage|survive/i })).toBeVisible();
   });
 
   test("reconciles a response lost after a real commit without a duplicate POST", async ({ page }) => {
@@ -105,12 +113,12 @@ test.describe("homepage editor recovery hardening", () => {
       const { frame } = await openHeroEditor(page);
       await page.getByLabel("Line one", { exact: true }).fill(committedText);
       await page.waitForTimeout(900);
-      await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+      await saveHomepage(page);
       await expect(page.getByRole("alert").filter({ hasText: /confirm|still here|response/i })).toBeVisible();
 
       await page.reload();
       await expect(frame.locator('[data-homepage-piece="hero.heading"]')).toContainText(committedText);
-      await expect(page.getByText("Nothing to save yet.", { exact: true })).toBeVisible();
+      await expectHomepageClean(page);
       await expect(page.getByText(/Restored an unsaved draft|Checked on your last save attempt/i)).toHaveCount(0);
       expect(postCount).toBe(1);
       expect(receiptChecks).toBe(1);
@@ -145,8 +153,8 @@ test.describe("homepage editor recovery hardening", () => {
       await second.getByLabel("Line one", { exact: true }).fill(secondTabText);
       await second.waitForTimeout(900);
 
-      await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
-      await expect(page.getByText("Saved. Your homepage is updated.", { exact: true })).toBeVisible();
+      await saveHomepage(page);
+      await expectHomepageSaved(page);
 
       const afterFirstSave = await (await page.request.get("/api/admin/homepage")).json();
       const newer = await page.request.post("/api/admin/homepage", { data: {

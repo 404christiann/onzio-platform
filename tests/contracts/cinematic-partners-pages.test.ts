@@ -11,7 +11,7 @@ vi.mock("@/lib/cinematic-partners-query", () => ({ fetchCinematicPartners: mocks
 vi.mock("@/lib/queries", () => ({ fetchSiteSponsorLogos: mocks.sponsors }));
 vi.mock("@/components/cinematic/CinematicDestination", () => ({ default: ({ labelId }: { labelId: string }) => createElement("p", null, `Destination ${labelId}`) }));
 vi.mock("@/app/(public)/sponsors/page", () => ({ default: () => createElement("p", null, "Existing sponsors page") }));
-vi.mock("@/components/AcademySponsorsPage", () => ({ default: () => createElement("p", null, "Academy sponsors page") }));
+vi.mock("@/components/sites/diverse-city/AcademySponsorsPage", () => ({ default: () => createElement("p", null, "Academy sponsors page") }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("not found"); } }));
 import SponsorsRoute from "@/app/%5Fclubs/[slug]/sponsors/page";
 import PartnershipRoute from "@/app/%5Fclubs/[slug]/community/partnership/page";

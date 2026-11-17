@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { EMPTY_MATCH_SUMMARY, matchSummaryColumns } from "@/lib/match-summary";
 
 const editor = () => readFileSync(resolve(process.cwd(), "app/admin/(protected)/schedule/page.tsx"), "utf8");
+// The Schedule form's fields live in ScheduleMatchForm.tsx.
+const form = () => readFileSync(resolve(process.cwd(), "components/admin/schedule/ScheduleMatchForm.tsx"), "utf8");
 const goal = (side: "club" | "opponent", player: string, minute: string) => ({ minute, side, kind: "goal" as const, player, detail: "" });
 
 describe("Schedule editor Match Summary save", () => {
@@ -29,8 +31,10 @@ describe("Schedule editor Match Summary save", () => {
     expect(source).toMatch(/\.select\("[^"]*\battendance\b[^"]*"\)/);
     expect(source.match(/summaryColumnsFor\(/g)?.length).toBeGreaterThanOrEqual(3);
     expect(source).toContain('const isCinematic = club.presentationTemplateKey === "cinematic@2"');
-    expect(source).toContain('title="Match summary"');
-    expect(source).toContain('label="Stream or replay video (YouTube link)"');
-    expect(source).toContain('label="Attendance"');
+    const fields = form();
+    expect(fields).toContain('{club.presentationTemplateKey === "cinematic@2" && (');
+    expect(fields).toContain('title="Match summary"');
+    expect(fields).toContain('label="Stream or replay video (YouTube link)"');
+    expect(fields).toContain('label="Attendance"');
   });
 });

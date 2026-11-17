@@ -1,7 +1,6 @@
-import AboutClubPageClient from "@/components/AboutClubPageClient";
+import AcademyAboutPage from "@/components/sites/diverse-city/AcademyAboutPage";
 import CinematicAbout from "@/components/cinematic/CinematicAbout";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
-import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
 import { EMPTY_ABOUT_PAGE_CONTENT } from "@/lib/about-content";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchAboutClubContent, fetchSiteSponsorLogos } from "@/lib/queries";
@@ -21,12 +20,9 @@ export default async function TenantAboutPage({
   if (club.presentationTemplateKey === "cinematic@2") {
     return <CinematicAbout content={content.about} />;
   }
-  if (club.presentationTemplateKey === "editorial@1") {
-    return <EditorialAboutPage content={content.about} />;
-  }
   if (club.presentationTemplateKey === "clubhouse@1") {
     const sponsors = await fetchSiteSponsorLogos("carousel", club.id);
     return <ClubhouseAboutPage content={content.about} sponsors={sponsors} />;
   }
-  return <AboutClubPageClient content={content.about} />;
+  return <AcademyAboutPage content={content.about} />;
 }

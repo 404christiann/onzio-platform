@@ -11,11 +11,24 @@ import {
 /* eslint-disable @next/next/no-img-element */
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import {
+  RosterBoard,
+  RosterHeading,
+  RosterSwitch,
+} from "@/components/admin/reimagined/RosterBoard";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import { useCallback, useEffect, useMemo, useState, useRef, useId } from "react";
+import { emptyPlayer, type Player, type PlayerForm, type Position } from "@/components/admin/roster/roster-model";
+import { ClassicRosterStatsSave } from "@/components/admin/roster/ClassicRosterStatsSave";
+import { Shimmer, ShimmerRegion } from "@/components/admin/ui/Shimmer";
+import rosterStyles from "@/components/admin/roster/classic-roster.module.css";
+import { ClassicStaffDialog } from "@/components/admin/roster/ClassicStaffDialog";
+import { AdminToastProvider } from "@/components/admin/ui/AdminToast";
+import ClassicRosterPage from "@/components/admin/roster/ClassicRosterPage";
+import { AdminImageField } from "@/components/admin/ui/AdminImageField";
 import guided from "@/components/admin/AdminGuided.module.css";
-import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import {
   AdminPage,
   AdminPageHeader,
@@ -36,6 +49,8 @@ import { getRosterImageSrc, isRosterPlaceholderLogo, rosterImageForStorage } fro
 import { cn } from "@/lib/utils";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { NATIONALITIES } from "@/lib/nationalities";
+import { saveSeasonTotals } from "@/lib/season-totals-save";
+import { PLAYER_MAX_AGE, PLAYER_MIN_AGE, playerAgeError } from "@/lib/roster-player-age";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import {
   SlidingPanel,
@@ -44,7 +59,6 @@ import {
 
 // ── Types ─────────────────────────────────────
 
-type Position = "Goalkeeper" | "Defender" | "Midfielder" | "Forward";
 
 type Season = {
   id: string;
@@ -54,25 +68,7 @@ type Season = {
   active: boolean;
 };
 
-type Player = {
-  id: string;
-  number: number;
-  name: string;
-  caption: string | null;
-  nationality: string;
-  position: Position;
-  height: string;
-  weight: string;
-  hometown: string;
-  age: number;
-  school: string | null;
-  previous_club: string | null;
-  photo_url: string;
-  active: boolean;
-  bio: string | null;
-  pronunciation: string | null;
-  foot: string | null;
-};
+
 
 type Staff = {
   id: string;
@@ -86,17 +82,10 @@ type Staff = {
   active: boolean;
 };
 
-type PlayerForm = Omit<Player, "id" | "active">;
+
 type StaffForm  = Omit<Staff,  "id" | "active"> & { nationality: string; bio: string };
 
-function emptyPlayer(): PlayerForm {
-  return {
-    number: 0, name: "", caption: "", nationality: "", position: "Midfielder",
-    height: "", weight: "", hometown: "", age: 0,
-    school: "", previous_club: "", photo_url: "",
-    bio: "", pronunciation: "", foot: "",
-  };
-}
+
 function emptyStaff(): StaffForm {
   return { initials: "", name: "", role: "", hometown: "", nationality: "", bio: "", photo_url: "" };
 }
@@ -125,9 +114,19 @@ async function uploadPhoto(file: File, bucket: string, folder: string): Promise<
 
 type RosterTab = "players" | "staff";
 
+/** What the reimagined page hands each tab: the Players/Staff switch and Add. */
+type RosterChrome = { switcher: React.ReactNode; onAdd: () => void };
+
 const ROSTER_TAB_ORDER: RosterTab[] = ["players", "staff"];
 
 export default function RosterPage() {
+  const reimagined = useAdminPortal().portal === "reimagined";
+  return reimagined ? <LegacyRosterPage /> : (
+    <AdminToastProvider><ClassicRosterPage StaffComponent={StaffTab} PlayerFields={PlayerFormFields} /></AdminToastProvider>
+  );
+}
+
+function LegacyRosterPage() {
   const [tab, setTab] = useState<RosterTab>("players");
   const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
   const [addRequests, setAddRequests] = useState<Record<RosterTab, number>>({
@@ -151,6 +150,32 @@ export default function RosterPage() {
       [tab]: current[tab] + 1,
     }));
   };
+
+  // ADMIN-RE-17: a club on the reimagined admin sees the players as cards under
+  // position headings with a jump rail; the loading, saving and editing below
+  // are the same for both admins. A club still on the classic admin keeps the
+  // page it has always had.
+  const reimagined = useAdminPortal().portal === "reimagined";
+  if (reimagined) {
+    const chrome: RosterChrome = {
+      switcher: <RosterSwitch tab={tab} onSelect={selectTab} />,
+      onAdd: requestAdd,
+    };
+    return (
+      <div
+        id={`roster-${tab}-panel`}
+        role="tabpanel"
+        aria-labelledby={`roster-${tab}-tab`}
+        className="mx-auto max-w-[1120px]"
+      >
+        {tab === "players" ? (
+          <PlayersTab addRequest={addRequests.players} chrome={chrome} />
+        ) : (
+          <StaffTab addRequest={addRequests.staff} chrome={chrome} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <AdminPage className="max-w-4xl">
@@ -235,7 +260,7 @@ export default function RosterPage() {
 type StatusFilter = "all" | "active" | "inactive";
 type PositionFilter = "All" | Position;
 
-function PlayersTab({ addRequest }: { addRequest: number }) {
+function PlayersTab({ addRequest, chrome }: { addRequest: number; chrome?: RosterChrome }) {
   const clubId = useClubId();
   const [players, setPlayers]     = useState<Player[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -290,7 +315,8 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
     if (!f.height.trim())      return "Height is required.";
     if (!f.weight.trim())      return "Weight is required.";
     if (f.number <= 0)         return "Jersey number must be greater than 0.";
-    if (f.age <= 0)            return "Age must be greater than 0.";
+    const ageError = playerAgeError(f.age);
+    if (ageError)              return ageError;
     return null;
   }
 
@@ -364,11 +390,12 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
     return sorted.findIndex((p) => p.id === key);
   }
 
-  const openAddPanel = useCallback(() => {
+  // `position` is only passed from an empty position on the reimagined board.
+  const openAddPanel = useCallback((position?: Position) => {
     setPanelDirection(1);
     setEditingId(null);
     setConfirmingDeactivation(false);
-    setAddForm(emptyPlayer());
+    setAddForm(position ? { ...emptyPlayer(), position } : emptyPlayer());
     setAddPhoto(null);
     setError(null);
     setAddOpen(true);
@@ -521,7 +548,21 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
 
   return (
     <div>
-      <AdminSaveFeedback saving={saving} saved={saved} />
+      <p className="sr-only" role="status">{saving ? "Saving changes…" : saved ? "Saved successfully" : ""}</p>
+      {chrome ? (
+        <RosterBoard
+          players={players}
+          loading={loading}
+          error={panelOpen ? null : error}
+          editingId={editingId}
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          onAdd={(position) => (position ? openAddPanel(position) : chrome.onAdd())}
+          onOpen={openEditPanel}
+          switcher={chrome.switcher}
+        />
+      ) : (
+      <>
       {/* Toolbar */}
       <AdminPageToolbar className="mb-6 flex-col items-stretch gap-4 sm:flex-col sm:items-stretch sm:justify-start">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -623,6 +664,8 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
           })}
         </div>
       )}
+      </>
+      )}
 
       <AdminSidePanel
         open={panelOpen}
@@ -653,7 +696,6 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
                 disabled={saving}
                 className="min-h-11 flex-1 rounded-lg bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:ml-auto sm:flex-none"
               >
-                {saving && <AdminLoadingDots className="mr-2" />}
                 {saving ? "Saving…" : editingId ? "Save changes" : "Save player"}
               </button>
             </div>
@@ -836,7 +878,7 @@ function PlayerPositionGroup({
 
 // ── Staff tab ─────────────────────────────────
 
-function StaffTab({ addRequest }: { addRequest: number }) {
+function StaffTab({ addRequest, chrome, classic = false }: { addRequest: number; chrome?: RosterChrome; classic?: boolean }) {
   const { clubLogoUrl } = useClubBranding();
   const [staff, setStaff]         = useState<Staff[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -850,6 +892,9 @@ function StaffTab({ addRequest }: { addRequest: number }) {
   const [error, setError]         = useState<string | null>(null);
   const [saved, setSaved]         = useState(false);
   const handledAddRequest = useRef(addRequest);
+  const classicCreatedId = useRef<string | null>(null);
+  const classicEditorFocus = useRef<{ opener: HTMLElement | null; staffId: string | null }>({ opener: null, staffId: null });
+  const classicSearch = useRef<HTMLInputElement>(null);
 
   const [panelDirection, setPanelDirection] = useState<SlidingPanelDirection>(1);
   const [searchQuery, setSearchQuery]       = useState("");
@@ -881,21 +926,37 @@ function StaffTab({ addRequest }: { addRequest: number }) {
 
   async function handleAdd() {
     const ve = validateStaff(addForm);
-    if (ve) { setError(ve); return; }
+    if (ve) { setError(ve); return false; }
     setSaving(true); setError(null);
     try {
       const supabase = createClient();
       let photoUrl = rosterImageForStorage(addForm.photo_url);
       if (addPhoto) photoUrl = await uploadPhoto(addPhoto, "staff-images", "staff");
 
-      const { error: e } = await supabase.from("staff").insert([{ ...addForm, photo_url: photoUrl, active: true }]);
-      if (e) { setError(e.message); setSaving(false); return; }
-      setAddForm(emptyStaff()); setAddPhoto(null); setAddOpen(false);
+      const previousPhoto = classic && classicCreatedId.current ? staff.find(person => person.id === classicCreatedId.current)?.photo_url : null;
+      const payload = { ...addForm, photo_url: photoUrl, active: true };
+      const result = classic && classicCreatedId.current
+        ? await supabase.from("staff").update(payload).eq("id", classicCreatedId.current)
+        : classic
+          ? await supabase.from("staff").insert([payload]).select("id").single()
+          : await supabase.from("staff").insert([payload]);
+      if (result.error) { setError(result.error.message); setSaving(false); return false; }
+      if (classic) {
+        if (previousPhoto && previousPhoto !== photoUrl) await deleteStorageUrls("staff-images", [previousPhoto], ["staff/"]);
+        if (!classicCreatedId.current) classicCreatedId.current = result.data.id as string;
+        setAddForm(current => ({ ...current, photo_url: photoUrl }));
+        setAddPhoto(current => current === addPhoto ? null : current);
+      } else {
+        setAddForm(emptyStaff()); setAddPhoto(null); setAddOpen(false);
+      }
       await load(); flash();
+      setSaving(false);
+      return true;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Upload failed");
     }
     setSaving(false);
+    return false;
   }
 
   function startEdit(s: Staff) {
@@ -910,6 +971,8 @@ function StaffTab({ addRequest }: { addRequest: number }) {
   }
 
   const openAddPanel = useCallback(() => {
+    classicEditorFocus.current = { opener: document.activeElement instanceof HTMLElement ? document.activeElement : null, staffId: null };
+    classicCreatedId.current = null;
     setPanelDirection(1);
     setEditingId(null);
     setAddForm(emptyStaff());
@@ -924,7 +987,8 @@ function StaffTab({ addRequest }: { addRequest: number }) {
     openAddPanel();
   }, [addRequest, openAddPanel]);
 
-  function openEditPanel(s: Staff) {
+  function openEditPanel(s: Staff, opener: HTMLElement) {
+    classicEditorFocus.current = { opener, staffId: s.id };
     const fromIndex = addOpen ? -1 : panelIndex(editingId);
     const toIndex = panelIndex(s.id);
     setPanelDirection(fromIndex === -1 ? 1 : toIndex >= fromIndex ? 1 : -1);
@@ -939,10 +1003,18 @@ function StaffTab({ addRequest }: { addRequest: number }) {
     setError(null);
   }
 
+  function restoreClassicFocus() {
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && focused.tabIndex >= 0 && !focused.closest('[data-slot="admin-dialog"], [inert]')) return false;
+    const { opener, staffId } = classicEditorFocus.current;
+    return opener?.isConnected ? opener
+      : (staffId ? document.querySelector<HTMLElement>('[data-staff-id="' + staffId + '"]') : null) ?? classicSearch.current;
+  }
+
   async function handleSaveEdit() {
-    if (!editingId) return;
+    if (!editingId) return false;
     const ve = validateStaff(editForm);
-    if (ve) { setError(ve); return; }
+    if (ve) { setError(ve); return false; }
     setSaving(true); setError(null);
     try {
       const supabase = createClient();
@@ -951,16 +1023,24 @@ function StaffTab({ addRequest }: { addRequest: number }) {
       if (editPhoto) photoUrl = await uploadPhoto(editPhoto, "staff-images", "staff");
 
       const { error: e } = await supabase.from("staff").update({ ...editForm, photo_url: photoUrl }).eq("id", editingId);
-      if (e) { setError(e.message); setSaving(false); return; }
+      if (e) { setError(e.message); setSaving(false); return false; }
       if (originalStaff?.photo_url !== photoUrl) {
         await deleteStorageUrls("staff-images", [originalStaff?.photo_url], ["staff/"]);
       }
-      setEditingId(null); setEditPhoto(null);
+      if (classic) {
+        setEditForm(current => ({ ...current, photo_url: photoUrl }));
+        setEditPhoto(current => current === editPhoto ? null : current);
+      } else {
+        setEditingId(null); setEditPhoto(null);
+      }
       await load(); flash();
+      setSaving(false);
+      return true;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Upload failed");
     }
     setSaving(false);
+    return false;
   }
 
   // Returns whether the toggle succeeded — mirrors PlayersTab's toggleActive
@@ -1017,7 +1097,27 @@ function StaffTab({ addRequest }: { addRequest: number }) {
 
   return (
     <div>
-      <AdminSaveFeedback saving={saving} saved={saved} />
+      {!classic && <p className="sr-only" role="status">{saving ? "Saving changes…" : saved ? "Saved successfully" : ""}</p>}
+      {chrome ? (
+        // ADMIN-RE-17: the design shows players only, so Staff keeps its own
+        // list and panel under the new title row.
+        <div className="mb-6">
+          <RosterHeading
+            title="Your staff"
+            count={staff.filter((s) => s.active).length}
+            summary={
+              staff.length === 0
+                ? "No staff yet"
+                : staff.some((s) => !s.active)
+                  ? `${staff.filter((s) => !s.active).length} hidden from your website`
+                  : "Everyone is on your website"
+            }
+            addLabel="Add staff"
+            onAdd={chrome.onAdd}
+          />
+          <div className="mt-4">{chrome.switcher}</div>
+        </div>
+      ) : null}
       {/* Toolbar */}
       <AdminPageToolbar className="mb-6 flex-col items-stretch gap-4 sm:flex-col sm:items-stretch sm:justify-start">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1028,6 +1128,7 @@ function StaffTab({ addRequest }: { addRequest: number }) {
             />
             <input
               type="search"
+              ref={classicSearch}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search name or role"
@@ -1081,11 +1182,12 @@ function StaffTab({ addRequest }: { addRequest: number }) {
             return (
               <div
                 key={s.id}
+                data-staff-id={classic ? s.id : undefined}
                 role="button"
                 tabIndex={0}
-                onClick={() => openEditPanel(s)}
+                onClick={(event) => openEditPanel(s, event.currentTarget)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEditPanel(s); }
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEditPanel(s, e.currentTarget); }
                 }}
                 className={cn(
                   "flex min-h-[72px] cursor-pointer items-center gap-3 px-4 py-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
@@ -1132,6 +1234,19 @@ function StaffTab({ addRequest }: { addRequest: number }) {
         </div>
       )}
 
+      {classic && panelOpen ? (
+        <ClassicStaffDialog key={panelKey}
+          title={editingId ? 'Edit ' + (editForm.name || 'staff member') : classicCreatedId.current ? 'Edit ' + (addForm.name || 'staff member') : 'Add staff member'}
+          snapshot={JSON.stringify(panelForm)} photo={panelPhoto} saving={saving} error={error}
+          onSave={async () => Boolean(await (editingId ? handleSaveEdit() : handleAdd()))} onClose={closePanel} finalFocus={restoreClassicFocus}
+          visibilityAction={editingStaff ? (
+            <button type="button" className="admin-press min-h-11 rounded-lg border border-border px-4 text-sm" disabled={saving} onClick={handlePanelToggleActive}>
+              {editingStaff.active ? "Deactivate" : "Activate"}
+            </button>
+          ) : undefined}>
+          <StaffFormFields form={panelForm} onChange={panelOnChange} photoFile={panelPhoto} onPhotoChange={panelOnPhotoChange} classic />
+        </ClassicStaffDialog>
+      ) : !classic ? (
       <AdminSidePanel
         open={panelOpen}
         onClose={closePanel}
@@ -1170,19 +1285,19 @@ function StaffTab({ addRequest }: { addRequest: number }) {
             </button>
             <button onClick={editingId ? handleSaveEdit : handleAdd} disabled={saving}
               className="min-h-11 rounded-xl bg-primary px-4 py-2.5 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60">
-              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : editingId ? "Save" : "Save staff member"}
             </button>
           </div>
         </div>
       </AdminSidePanel>
+      ) : null}
     </div>
   );
 }
 
 // ── Season Stats Panel ────────────────────────
 
-function SeasonStatsPanel({ playerId, position }: { playerId: string; position: Position }) {
+function SeasonStatsPanel({ playerId, position, classic = false }: { playerId: string; position: Position; classic?: boolean }) {
   const isGK = position === "Goalkeeper";
 
   const [seasons, setSeasons]         = useState<Season[]>([]);
@@ -1192,6 +1307,9 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
   const [error, setError]             = useState<string | null>(null);
+  const [statsDirty, setStatsDirty] = useState(false);
+  const statsVersion = useRef(0);
+  const [inSeason, setInSeason]       = useState(false);
 
   const defaultStats: Record<string, number> = isGK
     ? { goals_against: 0, saves: 0, clean_sheets: 0, starts: 0, yellow: 0, red: 0, mins: 0 }
@@ -1212,21 +1330,27 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
     setLoading(false);
   }
 
+  // ADMIN-RE-11c: the totals as visitors see them (match stats added up plus what
+  // was added by hand). Saving keeps what is typed as the part added by hand.
   async function loadStats(seasonId: string) {
+    statsVersion.current += 1;
     const supabase = createClient();
-    const table = isGK ? "goalkeeper_season_stats" : "player_season_stats";
+    const table = isGK ? "goalkeeper_season_totals" : "player_season_totals";
     const { data, error: statsError } = await supabase
       .from(table)
-      .select("*")
+      .select(Object.keys(defaultStats).join(","))
       .eq("player_id", playerId)
       .eq("season_id", seasonId)
       .maybeSingle();
     if (statsError) {
       setError(statsError.message);
       setStats({ ...defaultStats });
+      setInSeason(false);
       return;
     }
-    setStats(data ? { ...data } : { ...defaultStats });
+    setStats(data ? { ...defaultStats, ...(data as Record<string, number>) } : { ...defaultStats });
+    setInSeason(Boolean(data));
+    setStatsDirty(false);
   }
 
   useEffect(() => { loadSeasons(); }, [playerId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1239,53 +1363,30 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
   }
 
   function setStat(key: string, value: number) {
+    statsVersion.current += 1;
     setStats((s) => ({ ...s, [key]: value }));
+    setStatsDirty(true);
   }
 
   async function handleSave() {
     setSaving(true); setError(null);
-    const supabase = createClient();
-    const table = isGK ? "goalkeeper_season_stats" : "player_season_stats";
-    const payload = { ...stats, player_id: playerId, season_id: selectedId };
-    const { error: e } = await supabase.from(table).upsert([payload], { onConflict: "player_id,season_id" });
-    if (e) { setError(e.message); } else { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    let ok = false;
+    const submittedVersion = statsVersion.current;
+    try {
+      const problem = await saveSeasonTotals(createClient(), selectedId, [
+        { playerId, name: "This player", keeper: isGK, typed: stats, inSeason },
+      ]);
+      if (problem) { setError(problem); } else { if (!classic || statsVersion.current === submittedVersion) { setInSeason(true); setStatsDirty(false); } ok = true; setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Season stats were not saved.");
+    }
     setSaving(false);
+    return ok;
   }
 
-  return (
-    <div>
-      <AdminSaveFeedback
-        saving={saving}
-        saved={saved}
-        savingLabel="Saving season stats…"
-        successLabel="Season stats saved"
-      />
-      <div className="mb-3 h-px bg-border" />
-      <div className="flex items-center justify-between mb-3">
-        <label className="font-body text-sm font-medium text-muted-foreground">
-          Season Stats
-        </label>
-        {/* Season picker */}
-        <NativeSelect chevronIcon={AdminSelectChevron}
-          value={selectedId}
-          onChange={(e) => handleSeasonChange(e.target.value)}
-          className="min-h-11 px-3 py-2 pr-8 text-base"
-        >
-          {seasons.map((s) => (
-            <NativeSelectOption key={s.id} value={s.id}>
-              {s.label}{s.active ? " (Active)" : ""}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </div>
-
-      {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
-
-      {loading ? (
-        <AdminLoading className="font-display text-xs tracking-widest uppercase" />
-      ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+  const statsContent = (
+<>
+          <div className={classic ? cn("grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2", rosterStyles.statsGrid) : "grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3"}>
             {isGK ? (
               <>
                 <StatField label="Goals Against" field="goals_against" stats={stats} onChange={setStat} />
@@ -1312,17 +1413,55 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
             )}
           </div>
           <div className="flex items-center gap-3">
-            <button
+            {classic ? <ClassicRosterStatsSave key={selectedId} dirty={statsDirty} onSave={handleSave} /> : <button
               onClick={handleSave}
               disabled={saving}
               className="min-h-11 rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
             >
-              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save stats"}
-            </button>
+            </button>}
           </div>
         </>
-      )}
+  );
+
+  return (
+    <div>
+      {!classic && <p className="sr-only" role="status">{saving ? "Saving season stats…" : saved ? "Season stats saved" : ""}</p>}
+      <div className="mb-3 h-px bg-border" />
+      <div className="flex items-center justify-between mb-3">
+        <label className="font-body text-sm font-medium text-muted-foreground">
+          Season Stats
+        </label>
+        {/* Season picker */}
+        <NativeSelect chevronIcon={AdminSelectChevron}
+          value={selectedId}
+          onChange={(e) => handleSeasonChange(e.target.value)}
+          aria-label={classic ? "Player season stats season" : undefined}
+          className={cn("min-h-11 px-3 py-2 pr-8 text-base", classic && "min-w-[160px]")}
+        >
+          {seasons.map((s) => (
+            <NativeSelectOption key={s.id} value={s.id}>
+              {s.label}{s.active ? " (Active)" : ""}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </div>
+
+      {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
+
+      {classic ? (
+        <div className={rosterStyles.statsSlot} data-field-count={isGK ? 7 : 10}>
+          <ShimmerRegion loading={loading} minHeight="var(--classic-roster-stats-height)" loadingLabel="Loading season stats"
+            skeleton={<div inert aria-hidden="true" className={rosterStyles.statsSkeleton}>
+              <div className={cn("grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2", rosterStyles.statsGrid)}>
+                {Object.keys(defaultStats).map(field => <Shimmer key={field}><StatField label="Season statistic" field={"skeleton-" + field} stats={defaultStats} onChange={() => {}} /></Shimmer>)}
+              </div>
+              <Shimmer className="h-11 w-[150px] sm:h-[38px]" />
+            </div>}>
+            {statsContent}
+          </ShimmerRegion>
+        </div>
+      ) : loading ? <RosterListSkeleton label="Loading stats" rows={2} /> : statsContent}
     </div>
   );
 }
@@ -1344,7 +1483,7 @@ function StatField({
         id={`roster-stat-${field}`}
         type="number"
         min={0}
-        value={stats[field] ?? 0}
+        value={String(stats[field] ?? 0)}
         onChange={(e) => onChange(field, Number(e.target.value))}
         className={ADMIN_INPUT_CLASS}
       />
@@ -1458,13 +1597,17 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
 // ── Player form fields ────────────────────────
 
 function PlayerFormFields({
-  form, onChange, photoFile, onPhotoChange, playerId,
+  form, onChange, photoFile, onPhotoChange, playerId, classic = false, uploading = false, validation = "", onPhotoPendingChange,
 }: {
   form: PlayerForm;
   onChange: (f: PlayerForm) => void;
   photoFile: File | null;
   onPhotoChange: (f: File | null) => void;
   playerId?: string;
+  classic?: boolean;
+  uploading?: boolean;
+  validation?: string;
+  onPhotoPendingChange?: (pending: boolean) => void;
   position?: Position;
 }) {
   const { clubLogoUrl } = useClubBranding();
@@ -1475,11 +1618,8 @@ function PlayerFormFields({
   // point for this template; every other template keeps the inline panel.
   // Nothing else depends on it: the panel only renders for an already-saved
   // player and never seeds rows as a side effect of creating one.
-  // editorial@1 has the same dedicated season-stats entry point, so the inline
-  // redundancy is hidden there too.
   const hidesInlineSeasonStats =
-    club.presentationTemplateKey === "academy@1" ||
-    club.presentationTemplateKey === "editorial@1";
+    codeSiteAdminFor(club)?.roster.showInlineSeasonStats === false;
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1501,13 +1641,28 @@ function PlayerFormFields({
 
   return (
     <div className="space-y-8">
-      <section className={cn("space-y-4", guided.formSection)} aria-labelledby="basic-information-heading">
+      <section data-slot={classic ? "admin-dialog-section" : undefined} className={cn("space-y-4", guided.formSection)} aria-labelledby="basic-information-heading">
         <div>
-          <FormSectionHeading id="basic-information-heading" title="Basic information" />
+          <FormSectionHeading id="basic-information-heading" title={classic ? "Photo and basics" : "Basic information"} />
           <p className="mt-1.5 font-body text-xs text-muted-foreground">Required fields are marked with *.</p>
         </div>
 
         {/* Photo picker — deferred: the File is stored locally and uploaded at save time. */}
+        {classic ? (
+          <AdminImageField
+            label="Player photo"
+            previewUrl={previewIsClubLogo ? null : preview}
+            initials={form.name.trim().split(/\s+/).map(part => part[0]).slice(0, 2).join("").toUpperCase() || "?"}
+            size={72}
+            shape="circle"
+            allowedTypes={["image/png", "image/jpeg", "image/webp"]}
+            maxBytes={15 * 1024 * 1024}
+            uploading={uploading}
+            onPendingChange={onPhotoPendingChange}
+            onUpload={async files => { onPhotoChange(files[0]); return true; }}
+            onRemove={() => { onPhotoChange(null); onChange({ ...form, photo_url: "" }); }}
+          />
+        ) : (
         <FileUpload
           label="Upload player photo"
           previewLabel="Player photo"
@@ -1520,22 +1675,38 @@ function PlayerFormFields({
             onChange({ ...form, photo_url: "" });
           }}
         />
+        )}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
+        <div className={classic ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : "grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]"}>
           <PlayerField id="player-name" label="Name" required>
-            <input id="player-name" type="text" required placeholder="e.g. Christian Alcala" value={form.name}
+            <input id="player-name" type="text" required aria-invalid={classic && validation === "Enter the player's name." || undefined} aria-describedby={classic && validation === "Enter the player's name." ? "player-name-error" : undefined} placeholder="e.g. Christian Alcala" value={form.name}
               onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
+            {classic && validation === "Enter the player's name." && <p id="player-name-error" className="mt-1 text-sm text-destructive">{validation}</p>}
           </PlayerField>
           <PlayerField id="player-number" label="Jersey number" required>
-            <input id="player-number" type="number" required min={1} value={form.number || ""}
-              onChange={(e) => set("number", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
+            <input id="player-number" type="number" required aria-invalid={classic && validation === "Use 0 to 99." || undefined} aria-describedby={classic && validation === "Use 0 to 99." ? "player-number-error" : undefined} min={classic ? 0 : 1} max={classic ? 99 : undefined} value={String(classic ? Number.isNaN(form.number) ? "" : form.number : form.number || "")}
+              onFocus={classic ? (event) => event.currentTarget.select() : undefined}
+              onChange={(e) => set("number", classic && e.target.value === "" ? NaN : Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
+            {classic && validation === "Use 0 to 99." && <p id="player-number-error" className="mt-1 text-sm text-destructive">{validation}</p>}
           </PlayerField>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <PlayerField id="player-position" label="Position" required>
-            <NativeSelect chevronIcon={AdminSelectChevron} id="player-position" required value={form.position} onChange={(e) => set("position", e.target.value)}>
-              {POSITIONS.map(p => <NativeSelectOption key={p} value={p}>{p}</NativeSelectOption>)}
-            </NativeSelect>
+            {classic ? (
+              <div id="player-position" role="group" aria-label="Player position" className="flex flex-wrap gap-1 rounded-lg bg-secondary p-1">
+                {POSITIONS.map(position => (
+                  <button key={position} type="button" aria-pressed={form.position === position}
+                    onClick={() => set("position", position)}
+                    className={cn("admin-press min-h-11 flex-1 rounded-md px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", form.position === position ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>
+                    {POSITION_ABBR[position]}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <NativeSelect chevronIcon={AdminSelectChevron} id="player-position" required value={form.position} onChange={(e) => set("position", e.target.value)}>
+                {POSITIONS.map(p => <NativeSelectOption key={p} value={p}>{p}</NativeSelectOption>)}
+              </NativeSelect>
+            )}
           </PlayerField>
           <PlayerField id="player-nationality" label="Nationality" required>
             <NationalitySelect
@@ -1551,9 +1722,9 @@ function PlayerFormFields({
         </PlayerField>
       </section>
 
-      <section className={cn("space-y-4", guided.formSection)} aria-labelledby="player-details-heading">
+      <section data-slot={classic ? "admin-dialog-section" : undefined} className={cn("space-y-4", guided.formSection)} aria-labelledby="player-details-heading">
         <FormSectionHeading id="player-details-heading" title="Player details" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className={classic ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : "grid grid-cols-1 gap-4 sm:grid-cols-3"}>
           <PlayerField id="player-height" label="Height" required>
             <input id="player-height" type="text" required placeholder={"e.g. 5'10\""} value={form.height}
               onChange={(e) => set("height", e.target.value)} className={ADMIN_INPUT_CLASS} />
@@ -1563,8 +1734,12 @@ function PlayerFormFields({
               onChange={(e) => set("weight", e.target.value)} className={ADMIN_INPUT_CLASS} />
           </PlayerField>
           <PlayerField id="player-age" label="Age" required>
-            <input id="player-age" type="number" required min={1} value={form.age || ""}
+            <input id="player-age" type="number" required min={PLAYER_MIN_AGE} max={PLAYER_MAX_AGE} value={String(form.age || "")}
+              aria-describedby="player-age-help"
               onChange={(e) => set("age", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
+            <p id="player-age-help" className="mt-1 text-xs text-muted-foreground">
+              {PLAYER_MIN_AGE} to {PLAYER_MAX_AGE}. Players under {PLAYER_MIN_AGE} aren&rsquo;t supported yet.
+            </p>
           </PlayerField>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1610,7 +1785,7 @@ function PlayerFormFields({
         </button>
       </section>
 
-      <section className={cn("space-y-4", guided.formSection)} aria-labelledby="player-background-heading">
+      <section data-slot={classic ? "admin-dialog-section" : undefined} className={cn("space-y-4", guided.formSection)} aria-labelledby="player-background-heading">
         <FormSectionHeading id="player-background-heading" title="Background" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <PlayerField id="player-school" label="School">
@@ -1636,7 +1811,7 @@ function PlayerFormFields({
       {/* Season stats — only shown when editing an existing player, and only
           for templates that do not route this to the Season Stats tab */}
       {playerId && !hidesInlineSeasonStats && (
-        <SeasonStatsPanel playerId={playerId} position={form.position} />
+        <SeasonStatsPanel playerId={playerId} position={form.position} classic={classic} />
       )}
 
       {/* Action photos — only shown when editing an existing player */}
@@ -1648,12 +1823,13 @@ function PlayerFormFields({
 // ── Staff form fields ─────────────────────────
 
 function StaffFormFields({
-  form, onChange, photoFile, onPhotoChange,
+  form, onChange, photoFile, onPhotoChange, classic = false,
 }: {
   form: StaffForm;
   onChange: (f: StaffForm) => void;
   photoFile: File | null;
   onPhotoChange: (f: File | null) => void;
+  classic?: boolean;
 }) {
   const { clubLogoUrl } = useClubBranding();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -1693,7 +1869,7 @@ function StaffFormFields({
       />
 
       {/* Fields */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[104px_minmax(0,1fr)]">
+      <div className={classic ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "grid grid-cols-1 gap-3 sm:grid-cols-[104px_minmax(0,1fr)]"}>
         <Field id="staff-initials" label="Initials" required>
           <input id="staff-initials" type="text" placeholder="e.g. JS" maxLength={3} value={form.initials}
             onChange={(e) => set("initials", e.target.value.toUpperCase())} className={ADMIN_INPUT_CLASS} />

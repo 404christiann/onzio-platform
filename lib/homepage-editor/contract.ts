@@ -3,8 +3,14 @@ import { cinematicHomepageSaveSchema } from "@/lib/cinematic-homepage-content";
 
 const text = z.string().max(20_000);
 const href = text.regex(/^(?:|\/[-A-Za-z0-9_/?#=&%.]*)$/);
+/**
+ * The hero's small heading (the date line in the design demos). The
+ * save function (20261022183955_homepage_content_policy.sql) still accepts up
+ * to 20 000 characters; this tighter limit is enforced here first (decision 7).
+ */
+export const HOMEPAGE_HERO_EYEBROW_MAX = 120;
 export const homepageHeroSchema = z.object({
-  eyebrow: text,
+  eyebrow: z.string().max(HOMEPAGE_HERO_EYEBROW_MAX),
   headline_line_one: z.string().max(80),
   headline_line_two: z.string().max(80),
   intro: z.string().max(320),

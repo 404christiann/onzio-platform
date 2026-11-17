@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   eq: vi.fn(),
   select: vi.fn(),
   from: vi.fn(),
+  rpc: vi.fn(),
   schema: vi.fn(),
 }));
 
@@ -28,7 +29,7 @@ const closedForm = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.schema.mockReturnValue({ from: mocks.from });
+  mocks.schema.mockReturnValue({ from: mocks.from, rpc: mocks.rpc });
   mocks.from.mockReturnValue({ select: mocks.select });
   mocks.select.mockReturnValue({ eq: mocks.eq });
   mocks.eq.mockReturnValue({ eq: mocks.eq, maybeSingle: mocks.maybeSingle });
@@ -50,5 +51,46 @@ describe("loadOpenRegistrationForm", () => {
 
     await expect(loadOpenRegistrationForm(clubId, "academy"))
       .rejects.toMatchObject({ code: "REGISTRATION_FORM_NOT_FOUND" });
+  });
+
+  // ADMIN-RE-12b: hiding or closing every program and tryout that uses a form
+  // stops its sign-ups, so its page says closed before anyone fills it in.
+  describe("an open form whose programs and tryouts take no sign-ups", () => {
+    function openFormReads() {
+      const openForm = { ...closedForm, status: "open" };
+      const result = { data: [], error: null };
+      const chain: Record<string, unknown> = {};
+      for (const name of ["select", "eq", "order"]) chain[name] = vi.fn(() => chain);
+      chain.maybeSingle = vi.fn(async () => ({ data: openForm, error: null }));
+      chain.then = (resolve: (value: typeof result) => unknown) => resolve(result);
+      mocks.from.mockReturnValue(chain);
+    }
+
+    it("is reported closed", async () => {
+      openFormReads();
+      mocks.rpc.mockResolvedValue({ data: false, error: null });
+      await expect(loadOpenRegistrationForm(clubId, "academy"))
+        .rejects.toMatchObject({ code: "REGISTRATION_FORM_CLOSED" });
+      expect(mocks.rpc).toHaveBeenCalledWith("registration_form_accepting", {
+        p_club_id: clubId,
+        p_form_id: closedForm.id,
+      });
+    });
+
+    it("fails closed when the check can't be read", async () => {
+      openFormReads();
+      mocks.rpc.mockResolvedValue({ data: null, error: { message: "down" } });
+      await expect(loadOpenRegistrationForm(clubId, "academy")).rejects.toMatchObject({
+        code: "REGISTRATION_FORM_READ_FAILED",
+      });
+    });
+
+    it("loads when one of them is taking sign-ups", async () => {
+      openFormReads();
+      mocks.rpc.mockResolvedValue({ data: true, error: null });
+      await expect(loadOpenRegistrationForm(clubId, "academy")).resolves.toMatchObject({
+        form: { status: "open" },
+      });
+    });
   });
 });

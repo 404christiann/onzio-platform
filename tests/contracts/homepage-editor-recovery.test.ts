@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadContract } from "../helpers/contract";
+import { resolveHomepageBindings, resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
 import {
   homepageDraft,
   RECOVERY_SCOPE,
@@ -19,12 +20,16 @@ type ResolveRecovery = (input: {
   serverRevision: string;
   designRevision: string;
   now: string;
+  design: Parameters<typeof import("@/lib/homepage-editor/recovery").resolveHomepageRecovery>[0]["design"];
 }) => RecoveryResult;
+
+const installed = resolveHomepageBindings({ capabilities: resolveHomepageCapabilities({ templateKey: null, slideshowVariant: "matchday" }) });
 
 async function resolveRecord(record: unknown, overrides: Partial<Parameters<ResolveRecovery>[0]> = {}) {
   const resolveRecovery = await loadContract<ResolveRecovery>("@/lib/homepage-editor/recovery", "resolveHomepageRecovery");
   return resolveRecovery({
     record, scope: { ...RECOVERY_SCOPE }, serverRevision: "revision-1",
+    design: { templateKey: null, slideshowVariant: "matchday", binding: { key: installed.key, revision: installed.revision } },
     designRevision: "design-1", now: "2026-09-15T13:00:00Z", ...overrides,
   });
 }
