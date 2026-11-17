@@ -240,12 +240,16 @@ test("phone scope changes: keep editing/discard/save, failed save retains contex
       await scope.selectOption(original);
       await page.getByRole("button", { name: "Save and switch", exact: true }).click();
       await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Your changes could not be saved. Try again or keep editing.");
+      // The open modal hides the page behind it from role queries, so close it
+      // before asserting the retained context and drafts.
+      await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+      await expect(page.getByRole("dialog")).toBeHidden();
       await expect(scope).toHaveValue(target);
       await expect(goals).toHaveValue("74");
       await page.unroute("**/api/admin/data");
-      // Whether the failed confirmation stays open or closes, its retry must
-      // await a real saved result before changing context.
-      if (!await page.getByRole("dialog").isVisible()) await scope.selectOption(original);
+      // Reopen the confirmation; its retry must await a real saved result
+      // before changing context.
+      await scope.selectOption(original);
       await page.getByRole("button", { name: "Save and switch", exact: true }).click();
       await expect(scope).toHaveValue(original);
       await checkRow(match ? "player_match_stats" : "player_season_totals", fixture.playerIds[0], match ? "match_id" : "season_id", target, { goals: 74 });
@@ -297,9 +301,14 @@ for (const width of [320, 1440]) {
       await matchTab.click();
       await page.getByRole("button", { name: "Save and switch", exact: true }).click();
       await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Your changes could not be saved. Try again or keep editing.");
+      // The open modal hides the page behind it from role queries, so close it
+      // before asserting the retained tab and draft.
+      await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+      await expect(page.getByRole("dialog")).toBeHidden();
       await expect(seasonTab).toHaveAttribute("aria-selected", "true");
       await expect(goals).toHaveValue("17");
       await page.unroute("**/api/admin/data");
+      await matchTab.click();
       await page.getByRole("button", { name: "Save and switch", exact: true }).click();
       await expect(matchTab).toHaveAttribute("aria-selected", "true");
       await expect(page.getByRole("combobox", { name: "Season", exact: true })).toHaveValue(fixture.seasonIds[0]);
