@@ -296,6 +296,7 @@ export default function ClassicAnalyticsPage() {
               type="button"
               onClick={() => setPosFilter(position)}
               aria-pressed={posFilter === position}
+              aria-label={position}
               className={`admin-press min-h-11 flex-none rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none ${
                 posFilter === position
                   ? "bg-card text-primary shadow-sm"

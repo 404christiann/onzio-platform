@@ -110,7 +110,7 @@ for (const width of [390, 1280]) {
             await expect(page.locator('[data-admin-bar-fill][data-first-reveal="true"]')).toHaveCount(0);
             expect(await page.locator("[data-admin-bar-fill]").evaluateAll((nodes) => nodes.every((node) => (node as HTMLElement).style.transitionDelay === "0ms"))).toBe(true);
           };
-          await page.getByRole("button", { name: "FW", exact: true }).click();
+          await page.getByRole("button", { name: "Forward", exact: true }).click();
           await values(page, [1, 2, 3]);
           await assertSameBarSlots();
           expect((await chart(page))!.id).toBe(initial.id);
@@ -132,16 +132,16 @@ for (const width of [390, 1280]) {
           await expect(page.locator(".admin-theme")).toHaveAttribute("data-admin-theme", theme === "light" ? "dark" : "light");
           await expect.poll(async () => (await chart(page))!.color).not.toBe(beforeTheme.color);
           expect((await chart(page))!.id).toBe(initial.id);
-          await page.getByRole("button", { name: "GK", exact: true }).click();
+          await page.getByRole("button", { name: "Goalkeeper", exact: true }).click();
           await values(page, [3, 4, 5]);
           await assertSameBarSlots();
           expect((await chart(page))!.id).toBe(initial.id);
           await page.getByRole("button", { name: "All", exact: true }).click();
           await assertSameBarSlots();
-          await page.getByRole("button", { name: "FW", exact: true }).click();
+          await page.getByRole("button", { name: "Forward", exact: true }).click();
           await values(page, [1, 2, 3]);
           await assertSameBarSlots();
-          await page.getByRole("button", { name: "GK", exact: true }).click();
+          await page.getByRole("button", { name: "Goalkeeper", exact: true }).click();
           await values(page, [3, 4, 5]);
           await assertSameBarSlots();
           expect((await chart(page))!.id).toBe(initial.id);
@@ -176,7 +176,7 @@ for (const width of [390, 1280]) {
             else if (params.trend === "one") await expect(page.getByText("Two matches are needed to show a trend.", { exact: true })).toBeVisible();
             else await values(page, [3, 4, 5]);
             if (params.mode === "long") {
-              await page.getByRole("button", { name: "FW", exact: true }).click();
+              await page.getByRole("button", { name: "Forward", exact: true }).click();
               await expect(page.getByRole("heading", { name: /Alexandre Montgomery/ })).toBeVisible();
             }
             if (params.mode === "many") await expect(page.getByRole("complementary", { name: "Players" }).getByRole("button")).toHaveCount(52);
@@ -220,13 +220,13 @@ test("slow A, fast B, revisit A preserves active player results after late respo
   const errors = await open(page, "light", { race: "1" });
   await settled(page);
   await expect.poll(() => page.evaluate(() => window.__cl20Requests.length)).toBe(1);
-  const first = page.getByRole("button", { name: "FW", exact: true });
+  const first = page.getByRole("button", { name: "Forward", exact: true });
   await first.click();
   await expect.poll(() => page.evaluate(() => window.__cl20Requests.includes("maya"))).toBe(true);
   await page.evaluate(() => window.__cl20ReleaseTrend?.("maya-1"));
   await values(page, [1, 2, 3]);
   const initial = (await chart(page))!;
-  await page.getByRole("button", { name: "GK", exact: true }).click();
+  await page.getByRole("button", { name: "Goalkeeper", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__cl20Requests.filter((id) => id === "keeper").length)).toBe(2);
   await page.evaluate(() => window.__cl20ReleaseTrend?.("keeper-2"));
   await values(page, [20, 21, 22]);
@@ -242,7 +242,7 @@ test("320px and medium widths keep complete identities and the 1100px rail bound
     await page.setViewportSize({ width, height: 900 });
     const errors = await open(page, "light", { mode: "long" });
     await settled(page);
-    await page.getByRole("button", { name: "FW", exact: true }).click();
+    await page.getByRole("button", { name: "Forward", exact: true }).click();
     await values(page, [1, 2, 3]);
     const rail = page.getByRole("complementary", { name: "Players" });
     const actual = await rail.evaluate((node) => ({
