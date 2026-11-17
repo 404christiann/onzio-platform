@@ -68,5 +68,24 @@
     "website": "navigation/globe",
     "insights": "commerce/chart",
     "club": "interface/settings"
+  },
+  "customSwaps": {
+    "approvedAt": "2026-11-17",
+    "note": "Chosen in design-previews/admin-icon-inventory.html; drawings in assets/custom/. Previous drawings stay exported as <Role>Previous.",
+    "roles": {
+      "group-website": "custom/soccer-ball",
+      "globe": "custom/soccer-ball",
+      "globe-solid": "custom/soccer-ball",
+      "homepage": "custom/house",
+      "house-solid": "custom/house-solid",
+      "settings-solid": "custom/settings-solid",
+      "settings": "custom/settings",
+      "warning": "custom/alert-triangle",
+      "contact": "custom/contact-book",
+      "match-stats": "custom/bar-chart",
+      "registrations": "custom/file-text",
+      "roster": "custom/team",
+      "season-stats": "custom/presentation-chart"
+    }
   }
 }

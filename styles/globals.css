@@ -162,6 +162,22 @@ main.dark {
   --destructive-foreground: 220 20% 10%;
 }
 
+/* Sidebar icons use an opaque grey: the old 45% tone mixed onto the sidebar
+   background, so overlapping strokes and fills don't double up into darker
+   patches. Computed on the icon itself, so it follows the theme tokens it inherits. */
+.text-admin-sidebar-icon {
+  color: color-mix(in srgb, hsl(var(--sidebar-foreground)) 45%, hsl(var(--sidebar)));
+  transition: color 150ms ease;
+}
+
+/* Desktop only: hovering a sidebar row turns its icon the active blue. Touch
+   screens skip it so a tapped row doesn't keep a stuck hover colour. */
+@media (hover: hover) and (pointer: fine) {
+  :hover > .text-admin-sidebar-icon {
+    color: hsl(var(--primary));
+  }
+}
+
 .admin-theme {
   --billing-warning: 48 96% 53%;
   --billing-warning-soft: 48 96% 93%;
@@ -4689,4 +4705,20 @@ body:has([data-font-pack="academy"]) {
       text-align: center;
     }
   }
+}
+
+/* Allo for the protected admin. `body:has()` also reaches dialogs and
+   popovers that portal into <body>. */
+body:has(.admin-theme) {
+  --font-geist-sans: var(--font-allo);
+  --font-display: var(--font-allo), Arial, sans-serif;
+  --font-body: var(--font-allo), Arial, sans-serif;
+  --font-nav: var(--font-allo), Arial, sans-serif;
+  font-family: var(--font-body);
+}
+
+/* Some admin modules hard-code a system stack; Allo overrides them.
+   Monospace text keeps Geist Mono. Preview iframes are separate documents. */
+body:has(.admin-theme) :where(*:not(code, pre, kbd, samp, .font-mono)) {
+  font-family: var(--font-allo), Arial, sans-serif !important;
 }

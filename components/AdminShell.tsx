@@ -228,7 +228,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           className="h-11 gap-3 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground [&>svg]:size-6"
         >
           <Icon
-            className={active ? "text-primary" : "text-sidebar-foreground/45"}
+            className={active ? "text-primary" : "text-admin-sidebar-icon"}
             aria-hidden="true"
           />
           <span>{route.label}</span>
@@ -314,7 +314,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     }
                     className="h-11 w-full gap-3 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring [&>svg:first-child]:size-6"
                   >
-                    <GroupIcon className="text-sidebar-foreground/45" aria-hidden="true" />
+                    <GroupIcon className="text-admin-sidebar-icon" aria-hidden="true" />
                     <span className="whitespace-nowrap text-left">{entry.label}</span>
                     <ChevronDown
                       className={`ml-auto size-4 transition-transform ${isOpen ? "rotate-180" : ""}`}

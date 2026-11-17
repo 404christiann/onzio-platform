@@ -545,26 +545,120 @@ function DrawingTab7({ size = 24, ...props }: AdminIconProps) {
   );
 }
 
+
+// 2026-11-17: Christian's picks from the admin icon inventory (assets/custom/).
+function DrawingCustomSoccerBall({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M3.05 8.52L3.05 8.52L3.09 8.51L3.17 8.52L3.29 8.54L3.45 8.58L3.65 8.64L3.96 8.12L4.31 7.6L4.71 7.1L5.14 6.62L5.59 6.17L6.07 5.76L6.15 5.37L6.27 5L6.41 4.67L6.58 4.36L6.77 4.1L6.98 3.88L6.61 4.07L6.25 4.31L6.25 4.31L5.9 4.59L5.56 4.88L5.24 5.19L4.93 5.51L4.63 5.84L4.36 6.19L4.09 6.55L3.85 6.93L3.62 7.31L3.41 7.71L3.22 8.11ZM16.64 3.72L16.59 3.61L16.52 3.54L16.5 3.52L16.06 3.3L15.61 3.1L15.15 2.93L14.68 2.78L14.21 2.66L13.73 2.56L13.24 2.48L12.75 2.43L12.26 2.4L11.77 2.4L11.28 2.43L10.79 2.48L10.57 2.52L11 2.5L11.45 2.52L11.91 2.59L12.36 2.7L12.81 2.85L13.25 3.04L13.84 3.05L14.42 3.1L15.01 3.2L15.57 3.34L16.12 3.51ZM9.01 9.68L9.61 9.78L10.23 9.89L10.86 10.01L11.5 10.14L12.14 10.28L12.76 10.42L13.12 9.91L13.48 9.4L13.83 8.89L14.17 8.4L14.51 7.93L14.82 7.48L14.44 7L14.03 6.53L13.61 6.08L13.19 5.66L12.76 5.27L12.34 4.92L11.74 5.07L11.13 5.25L10.52 5.46L9.91 5.71L9.32 5.98L8.75 6.28L8.76 6.79L8.78 7.33L8.82 7.89L8.87 8.48L8.93 9.08ZM14.09 14.05L13.71 14.56L13.31 15.07L12.9 15.57L12.49 16.05L12.08 16.5L11.67 16.93L11.99 17.41L12.31 17.86L12.63 18.3L12.95 18.7L13.26 19.07L13.56 19.4L14.19 19.25L14.81 19.07L15.43 18.86L16.03 18.61L16.61 18.34L17.15 18.04L17.27 17.55L17.36 17.03L17.43 16.48L17.47 15.91L17.49 15.32L17.48 14.73L16.97 14.65L16.43 14.55L15.87 14.44L15.28 14.32L14.69 14.19ZM7.92 16.19L7.65 15.63L7.39 15.04L7.15 14.43L6.94 13.8L6.75 13.18L6.59 12.56L6.07 12.48L5.58 12.4L5.11 12.31L4.67 12.22L4.27 12.13L3.91 12.04L3.76 12.6L3.65 13.17L3.57 13.73L3.53 14.29L3.54 14.83L3.58 15.35L3.9 15.82L4.26 16.28L4.67 16.73L5.11 17.15L5.57 17.55L6.06 17.91L6.3 17.69L6.58 17.44L6.88 17.16L7.21 16.85L7.56 16.53ZM21.01 8.75L20.79 8.3L20.53 7.85L20.23 7.42L19.89 7.02L19.52 6.64L19.12 6.29L19.05 6.54L18.94 6.82L18.8 7.12L18.63 7.46L18.43 7.8L18.21 8.16L18.51 8.73L18.78 9.32L19.02 9.94L19.23 10.56L19.4 11.18L19.54 11.79L19.92 11.85L20.27 11.91L20.58 11.97L20.85 12.03L21.08 12.09L21.27 12.15L21.33 11.58L21.35 11L21.33 10.42L21.27 9.85L21.16 9.29ZM20.95 15.48L20.94 15.46L20.7 15.99L20.41 16.52L20.08 17.03L19.71 17.52L19.31 17.98L18.88 18.4L18.65 18.77L18.38 19.1L18.08 19.41L17.75 19.69L18.1 19.41L18.44 19.12L18.76 18.81L19.07 18.49L19.37 18.16L19.64 17.81L19.91 17.45L20.15 17.07L20.38 16.69L20.59 16.29L20.78 15.89ZM13.21 21.52L13.16 21.53L12.87 21.53L12.58 21.5L12.28 21.41L11.99 21.29L11.7 21.12L11.07 21.1L10.42 21.04L9.78 20.93L9.15 20.78L8.54 20.6L7.95 20.38L7.8 20.46L7.67 20.5L7.56 20.5L7.5 20.48L7.94 20.7L8.39 20.9L8.85 21.07L9.32 21.22L9.79 21.34L10.27 21.44L10.76 21.52L11.25 21.57L11.74 21.6L12.23 21.6L12.72 21.57Z" fill="currentColor" />
+      <path d="M14.09 14.05L13.71 14.56L13.31 15.07L12.9 15.57L12.49 16.05L12.08 16.5L11.67 16.93M14.09 14.05L13.89 13.46L13.68 12.86L13.46 12.24L13.23 11.63L13 11.02L12.76 10.42M14.09 14.05L14.69 14.19L15.28 14.32L15.87 14.44L16.43 14.55L16.97 14.65L17.48 14.73M3.65 8.64L3.59 9.17L3.58 9.73L3.6 10.31L3.67 10.89L3.77 11.47L3.91 12.04M3.65 8.64L3.96 8.12L4.31 7.6L4.71 7.1L5.14 6.62L5.59 6.17L6.07 5.76M3.65 8.64L3.45 8.58L3.29 8.54L3.17 8.52L3.09 8.51L3.05 8.52M21.27 12.15L21.32 12.71L21.33 13.28L21.3 13.84L21.22 14.4L21.1 14.94L20.94 15.46M21.27 12.15L21.33 11.58L21.35 11L21.33 10.42L21.27 9.85L21.16 9.29L21.01 8.75M21.27 12.15L21.08 12.09L20.85 12.03L20.58 11.97L20.27 11.91L19.92 11.85L19.54 11.79M13.56 19.4L13.27 19.77L12.96 20.12L12.65 20.43L12.33 20.7L12.01 20.93L11.7 21.12M13.56 19.4L13.26 19.07L12.95 18.7L12.63 18.3L12.31 17.86L11.99 17.41L11.67 16.93M13.56 19.4L14.19 19.25L14.81 19.07L15.43 18.86L16.03 18.61L16.61 18.34L17.15 18.04M11.7 21.12L11.99 21.29L12.28 21.41L12.58 21.5L12.87 21.53L13.16 21.53M11.7 21.12L11.07 21.1L10.42 21.04L9.78 20.93L9.15 20.78L8.54 20.6L7.95 20.38M12.34 4.92L12.5 4.52L12.66 4.15L12.81 3.81L12.97 3.51L13.11 3.25L13.25 3.04M12.34 4.92L11.74 5.07L11.13 5.25L10.52 5.46L9.91 5.71L9.32 5.98L8.75 6.28M12.34 4.92L12.76 5.27L13.19 5.66L13.61 6.08L14.03 6.53L14.44 7L14.82 7.48M3.91 12.04L4.27 12.13L4.67 12.22L5.11 12.31L5.58 12.4L6.07 12.48L6.59 12.56M3.91 12.04L3.76 12.6L3.65 13.17L3.57 13.73L3.53 14.29L3.54 14.83L3.58 15.35M6.98 3.88L6.77 4.1L6.58 4.36L6.41 4.67L6.27 5L6.15 5.37L6.07 5.76M16.64 3.72L16.12 3.51L15.57 3.34L15.01 3.2L14.42 3.1L13.84 3.05L13.25 3.04M16.64 3.72L17.11 4.06L17.57 4.44L18 4.86L18.41 5.31L18.78 5.79L19.12 6.29M13.25 3.04L12.81 2.85L12.36 2.7L11.91 2.59L11.45 2.52L11 2.5L10.57 2.52M6.59 12.56L6.75 13.18L6.94 13.8L7.15 14.43L7.39 15.04L7.65 15.63L7.92 16.19M6.59 12.56L6.94 12.08L7.31 11.59L7.71 11.1L8.13 10.62L8.57 10.14L9.01 9.68M3.02 15.34L3.1 15.37L3.22 15.38L3.38 15.37L3.58 15.35M11.67 16.93L11.03 16.86L10.39 16.77L9.75 16.66L9.12 16.52L8.5 16.36L7.92 16.19M8.75 6.28L8.26 6.12L7.78 5.99L7.31 5.89L6.87 5.82L6.45 5.77L6.07 5.76M8.75 6.28L8.76 6.79L8.78 7.33L8.82 7.89L8.87 8.48L8.93 9.08L9.01 9.68M12.76 10.42L13.12 9.91L13.48 9.4L13.83 8.89L14.17 8.4L14.51 7.93L14.82 7.48M12.76 10.42L12.14 10.28L11.5 10.14L10.86 10.01L10.23 9.89L9.61 9.78L9.01 9.68M19.12 6.29L19.05 6.54L18.94 6.82L18.8 7.12L18.63 7.46L18.43 7.8L18.21 8.16M19.12 6.29L19.52 6.64L19.89 7.02L20.23 7.42L20.53 7.85L20.79 8.3L21.01 8.75M18.21 8.16L17.71 8.01L17.17 7.86L16.61 7.74L16.02 7.63L15.42 7.54L14.82 7.48M18.21 8.16L18.51 8.73L18.78 9.32L19.02 9.94L19.23 10.56L19.4 11.18L19.54 11.79M7.92 16.19L7.56 16.53L7.21 16.85L6.88 17.16L6.58 17.44L6.3 17.69L6.06 17.91M17.15 18.04L17.5 18.17L17.84 18.27L18.14 18.35L18.42 18.4L18.67 18.41L18.88 18.4M17.15 18.04L17.27 17.55L17.36 17.03L17.43 16.48L17.47 15.91L17.49 15.32L17.48 14.73M3.58 15.35L3.9 15.82L4.26 16.28L4.67 16.73L5.11 17.15L5.57 17.55L6.06 17.91M6.06 17.91L6.31 18.39L6.59 18.86L6.9 19.29L7.23 19.69L7.58 20.06L7.95 20.38M19.54 11.79L19.28 12.29L18.98 12.79L18.65 13.29L18.28 13.79L17.89 14.27L17.48 14.73" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="9.6" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function DrawingCustomHouse({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M21.5 9.30119L12.9314 3.16679C12.5963 2.92691 12.4288 2.80697 12.246 2.76058C12.0845 2.71961 11.9154 2.71961 11.754 2.76058C11.5712 2.80697 11.4037 2.92691 11.0686 3.16679L2.5 9.30119" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19.25 7.69037V17.05C19.25 18.1701 19.25 18.7301 19.032 19.158C18.8403 19.5343 18.5343 19.8403 18.158 20.032C17.7302 20.25 17.1701 20.25 16.05 20.25H7.95C6.82989 20.25 6.26984 20.25 5.84202 20.032C5.46569 19.8403 5.15973 19.5343 4.96799 19.158C4.75 18.7301 4.75 18.1701 4.75 17.05V7.69039" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14.25 20V16C14.25 15.7678 14.25 15.6517 14.2404 15.554C14.1468 14.6044 13.3956 13.8532 12.446 13.7596C12.3483 13.75 12.2322 13.75 12 13.75C11.7678 13.75 11.6517 13.75 11.554 13.7596C10.6044 13.8532 9.85315 14.6044 9.75963 15.554C9.75 15.6517 9.75 15.7678 9.75 16V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DrawingCustomHouseSolid({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M11.5696 1.78363C11.8521 1.71194 12.148 1.71194 12.4305 1.78363C12.7558 1.86618 13.0369 2.06863 13.3008 2.25865L13.368 2.30697L21.9366 8.44137C22.2734 8.68249 22.351 9.15099 22.1099 9.48779C21.8687 9.82459 21.4002 9.90215 21.0634 9.66103L20 8.89971V17.0805C20 17.6146 20 18.0604 19.9703 18.4247C19.9393 18.8046 19.8721 19.1612 19.7003 19.4985C19.4366 20.0159 19.0159 20.4366 18.4985 20.7003C18.1612 20.8721 17.8046 20.9392 17.4247 20.9703C17.0605 21 16.6146 21 16.0805 21H7.91958C7.38543 21 6.93959 21 6.57536 20.9703C6.19548 20.9392 5.83882 20.8721 5.50156 20.7003C4.98411 20.4366 4.56341 20.0159 4.29976 19.4985C4.12792 19.1612 4.06081 18.8046 4.02977 18.4247C4.00001 18.0604 4.00002 17.6146 4.00003 17.0805V17.0804L4.00003 8.89973L2.93664 9.66103C2.59984 9.90215 2.13135 9.82459 1.89023 9.48779C1.64911 9.15099 1.72667 8.68249 2.06347 8.44137L10.6321 2.30697L10.6993 2.25865C10.9632 2.06862 11.2443 1.86618 11.5696 1.78363Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function DrawingCustomSettingsSolid({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M12.5362 2C13.7705 2 14.8541 2.82279 15.1856 4.01172L15.3224 4.50098C15.5054 5.15725 16.1804 5.54676 16.8399 5.37598L17.3214 5.25098C18.5179 4.9411 19.7746 5.46768 20.3927 6.53809L20.9259 7.46191C21.5441 8.53297 21.3717 9.88541 20.504 10.7666L20.1563 11.1191C19.6782 11.6048 19.6774 12.3843 20.1544 12.8711L20.5108 13.2354C21.3748 14.117 21.546 15.4662 20.9288 16.5352L20.3917 17.4648C19.7744 18.5335 18.5206 19.0604 17.3253 18.7529L16.8321 18.626C16.172 18.4563 15.497 18.8469 15.3155 19.5039L15.1837 19.9824C14.8543 21.1745 13.769 22 12.5323 22H11.4659C10.2297 21.9999 9.14529 21.1748 8.81552 19.9834L8.6827 19.5029C8.50082 18.8462 7.82607 18.4561 7.1661 18.626L6.67587 18.752C5.48032 19.0596 4.22578 18.533 3.60849 17.4639L3.07138 16.5342C2.45464 15.4656 2.62518 14.1169 3.48837 13.2354L3.84481 12.8711C4.32139 12.3844 4.32057 11.6057 3.84286 11.1201L3.49423 10.7656C2.62755 9.88428 2.45526 8.53242 3.07333 7.46191L3.60751 6.53809C4.22563 5.4676 5.48218 4.94097 6.6788 5.25098L7.15927 5.37598C7.81857 5.54673 8.49354 5.15784 8.67685 4.50195L8.81356 4.01074C9.14531 2.82216 10.229 2.00006 11.463 2H12.5362ZM12.0001 8.75C10.2052 8.75007 8.75009 10.2051 8.75009 12C8.75009 13.7949 10.2052 15.2499 12.0001 15.25C13.795 15.25 15.2501 13.7949 15.2501 12C15.2501 10.2051 13.795 8.75 12.0001 8.75Z" fillRule="evenodd" clipRule="evenodd" fill="currentColor" />
+    </svg>
+  );
+}
+
+function DrawingCustomSettings({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M17.0278 6.10156L17.5093 5.97683C18.3795 5.75139 19.2933 6.13433 19.7428 6.91287L20.2762 7.83664C20.726 8.61565 20.6004 9.5991 19.9692 10.24L19.622 10.5926C18.8567 11.3697 18.8551 12.6167 19.6185 13.3957L19.9756 13.7601C20.6039 14.4013 20.728 15.3826 20.2792 16.16L19.7425 17.0895C19.2936 17.8669 18.3817 18.25 17.5123 18.0264L17.0189 17.8995C15.9625 17.6278 14.8833 18.2526 14.5929 19.3039L14.4606 19.7826C14.2211 20.6496 13.4323 21.25 12.5328 21.25H11.466C10.5669 21.25 9.77828 20.65 9.53844 19.7835L9.40545 19.3031C9.11456 18.2521 8.03541 17.6279 6.97937 17.8997L6.48854 18.026C5.61903 18.2499 4.70692 17.8668 4.25797 17.0892L3.72115 16.1595C3.2724 15.3823 3.3963 14.4014 4.02419 13.7601L4.38079 13.396C5.1434 12.6172 5.14197 11.3712 4.37757 10.5941L4.02921 10.24C3.39866 9.59902 3.27336 8.61604 3.72295 7.83738L4.2567 6.91296C4.70625 6.13437 5.62007 5.75144 6.49038 5.97695L6.97117 6.10153C8.02635 6.37494 9.10616 5.75304 9.3992 4.70314L9.53619 4.21233C9.77747 3.34787 10.5651 2.75 11.4626 2.75H12.5366C13.4343 2.75 14.222 3.34811 14.4631 4.21279L14.5997 4.70267C14.8926 5.75278 15.9724 6.37494 17.0278 6.10156Z" strokeWidth="2" strokeLinejoin="round" stroke="currentColor" /><circle cx="12" cy="12" r="3" strokeWidth="2" stroke="currentColor" />
+    </svg>
+  );
+}
+
+function DrawingCustomAlertTriangle({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M12 8.75V12.75M12 15.5V15.49M12.25 15.5C12.25 15.6381 12.1381 15.75 12 15.75C11.8619 15.75 11.75 15.6381 11.75 15.5C11.75 15.3619 11.8619 15.25 12 15.25C12.1381 15.25 12.25 15.3619 12.25 15.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M2.79693 16.2276L10.2809 3.64094C11.0561 2.33714 12.9438 2.33714 13.719 3.64093L21.203 16.2276C21.9957 17.5608 21.035 19.2498 19.484 19.2498H4.516C2.96497 19.2498 2.00424 17.5608 2.79693 16.2276Z" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+    </svg>
+  );
+}
+
+function DrawingCustomContactBook({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M4.75 20V4.75C4.75 3.64543 5.64543 2.75 6.75 2.75H19.25V18.75H6C5.30964 18.75 4.75 19.3096 4.75 20ZM4.75 20C4.75 20.6904 5.30964 21.25 6 21.25H19.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M12 12.25C9.75 12.25 9.75 13.75 9.75 13.75H14.25C14.25 13.75 14.25 12.25 12 12.25Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M13 9.25C13 9.80228 12.5523 10.25 12 10.25C11.4477 10.25 11 9.80228 11 9.25C11 8.69772 11.4477 8.25 12 8.25C12.5523 8.25 13 8.69772 13 9.25Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M11.5 9.25H12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DrawingCustomBarChart({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M9.25 14.75H10C10 14.3358 9.66421 14 9.25 14V14.75ZM3.75 20.25H3V21H3.75V20.25ZM14.75 9.25H15.5C15.5 8.83579 15.1642 8.5 14.75 8.5V9.25ZM20.25 20.25V21H21V20.25H20.25ZM1.75 19.5C1.33579 19.5 1 19.8358 1 20.25C1 20.6642 1.33579 21 1.75 21V19.5ZM22.25 21C22.6642 21 23 20.6642 23 20.25C23 19.8358 22.6642 19.5 22.25 19.5V21ZM4.75 15.5H9.25V14H4.75V15.5ZM8.5 14.75V20.25H10V14.75H8.5ZM9.25 19.5H3.75V21H9.25V19.5ZM4.5 20.25V15.75H3V20.25H4.5ZM4.75 14C3.7835 14 3 14.7835 3 15.75H4.5C4.5 15.6119 4.61193 15.5 4.75 15.5V14ZM10.25 10H14.75V8.5H10.25V10ZM14 9.25V20.25H15.5V9.25H14ZM14.75 19.5H9.25V21H14.75V19.5ZM10 20.25V10.25H8.5V20.25H10ZM10.25 8.5C9.2835 8.5 8.5 9.2835 8.5 10.25H10C10 10.1119 10.1119 10 10.25 10V8.5ZM15.75 4.5H19.25V3H15.75V4.5ZM19.5 4.75V20.25H21V4.75H19.5ZM20.25 19.5H14.75V21H20.25V19.5ZM15.5 20.25V4.75H14V20.25H15.5ZM19.25 4.5C19.3881 4.5 19.5 4.61193 19.5 4.75H21C21 3.7835 20.2165 3 19.25 3V4.5ZM15.75 3C14.7835 3 14 3.7835 14 4.75H15.5C15.5 4.61193 15.6119 4.5 15.75 4.5V3ZM1.75 21H22.25V19.5H1.75V21Z" fill="currentColor" stroke="currentColor" strokeWidth="0.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DrawingCustomFileText({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M11.9216 2.75H6.75C5.64543 2.75 4.75 3.64543 4.75 4.75V19.25C4.75 20.3546 5.64543 21.25 6.75 21.25H17.25C18.3546 21.25 19.25 20.3546 19.25 19.25V10.0784C19.25 9.54799 19.0393 9.03929 18.6642 8.66421L13.3358 3.33579C12.9607 2.96071 12.452 2.75 11.9216 2.75Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M12.75 3.25V7.25C12.75 8.35457 13.6454 9.25 14.75 9.25H18.75" stroke="currentColor" strokeWidth="2" /><path d="M8.75 13.25H12.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M8.75 17.25H15.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DrawingCustomTeam({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <circle cx="12" cy="8.75" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="4" cy="9.80005" r="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="20" cy="9.80005" r="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M7.25 16.625V16.5C7.25 13.8766 9.37665 11.75 12 11.75C14.6234 11.75 16.75 13.8766 16.75 16.5V16.625C16.75 17.5225 16.0225 18.25 15.125 18.25H8.875C7.97754 18.25 7.25 17.5225 7.25 16.625Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M4.25 17.2602H2.75C1.64543 17.2602 0.706551 16.3538 0.919944 15.2701C1.25877 13.5493 2.15049 12.3257 4 11.8301" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M19.75 17.2601H21.25C22.3546 17.2601 23.2935 16.3538 23.08 15.27C22.7412 13.5493 21.8495 12.3257 20 11.8301" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DrawingCustomPresentationChart({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M19.25 18.25C20.3546 18.25 21.25 17.3546 21.25 16.25V5.75C21.25 4.64543 20.3546 3.75 19.25 3.75H4.75C3.64543 3.75 2.75 4.64543 2.75 5.75V16.25C2.75 17.3546 3.64543 18.25 4.75 18.25H19.25Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M7.75 12.75V14.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M12 7.75V14.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M16.25 10.75V14.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M8.85694 18.7507L8 21.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M15.1445 18.7507L16.0015 21.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export const IconDashboard = Drawing0;
-export const IconHomepage = Drawing1;
+export const IconHomepage = DrawingCustomHouse;
 export const IconPrograms = Drawing2;
 export const IconTryouts = Drawing3;
 export const IconShop = Drawing4;
 export const IconAbout = Drawing5;
 export const IconSponsors = Handshake;
-export const IconContact = Drawing6;
+export const IconContact = DrawingCustomContactBook;
 export const IconSeasons = Drawing7;
-export const IconRoster = Drawing8;
+export const IconRoster = DrawingCustomTeam;
 export const IconSchedule = Drawing7;
-export const IconMatchStats = Drawing9;
-export const IconSeasonStats = Drawing10;
+export const IconMatchStats = DrawingCustomBarChart;
+export const IconSeasonStats = DrawingCustomPresentationChart;
 export const IconStandings = Drawing11;
-export const IconRegistrations = Drawing12;
+export const IconRegistrations = DrawingCustomFileText;
 export const IconAnalytics = Drawing13;
 export const IconBranding = Drawing14;
 export const IconTeamAccess = Drawing15;
 export const IconPayments = Drawing16;
-export const IconGroupWebsite = Drawing17;
+export const IconGroupWebsite = DrawingCustomSoccerBall;
 export const IconGroupCompetition = Drawing11;
 export const IconGroupClubSettings = Drawing18;
 export const IconSearch = Drawing19;
@@ -586,7 +680,7 @@ export const IconDelete = Drawing34;
 export const IconMore = Drawing35;
 export const IconReorder = Drawing36;
 export const IconLock = Drawing37;
-export const IconWarning = Drawing38;
+export const IconWarning = DrawingCustomAlertTriangle;
 export const IconCheck = Drawing39;
 export const IconSuccess = Drawing40;
 export const IconSave = Drawing41;
@@ -603,13 +697,13 @@ export const IconUser = Drawing48;
 export const IconEyeSlash = Drawing49;
 export const IconLink = Drawing50;
 // ADMIN-RE-24: the tabs (globe and settings outline; the selected tab is solid).
-export const IconGlobe = DrawingTab0;
-export const IconSettings = DrawingTab1;
-export const IconHouseSolid = DrawingTab2;
+export const IconGlobe = DrawingCustomSoccerBall;
+export const IconSettings = DrawingCustomSettings;
+export const IconHouseSolid = DrawingCustomHouseSolid;
 export const IconCupSolid = DrawingTab3;
 export const IconLayersSolid = DrawingTab4;
-export const IconGlobeSolid = DrawingTab5;
-export const IconSettingsSolid = DrawingTab6;
+export const IconGlobeSolid = DrawingCustomSoccerBall;
+export const IconSettingsSolid = DrawingCustomSettingsSolid;
 export const IconChartSolid = DrawingTab7;
 
 export const ChevronDown = IconCaretDown;
@@ -653,3 +747,18 @@ export const ArrowLeft = IconCaretLeft;
 // Unselected semantic actions: preserve their original drawings until separately approved.
 export { Archive, Clipboard, Radio, Square } from "lucide-react";
 export const AlertCircle = IconWarning;
+
+// The drawings these picks replaced, kept so switching back is one line.
+export const IconGroupWebsitePrevious = Drawing17;
+export const IconGlobePrevious = DrawingTab0;
+export const IconGlobeSolidPrevious = DrawingTab5;
+export const IconHomepagePrevious = Drawing1;
+export const IconHouseSolidPrevious = DrawingTab2;
+export const IconSettingsSolidPrevious = DrawingTab6;
+export const IconSettingsPrevious = DrawingTab1;
+export const IconWarningPrevious = Drawing38;
+export const IconContactPrevious = Drawing6;
+export const IconMatchStatsPrevious = Drawing9;
+export const IconRegistrationsPrevious = Drawing12;
+export const IconRosterPrevious = Drawing8;
+export const IconSeasonStatsPrevious = Drawing10;

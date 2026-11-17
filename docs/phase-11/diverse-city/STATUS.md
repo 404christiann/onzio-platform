@@ -1,5 +1,124 @@
 # Diverse City FC Status
 
+## 2026-11-17 - Admin Allo font, custom icons and solid grey sidebar icons (draft PR)
+
+**Agent/package:** Claude Code, no package ID; Christian asked for every admin icon
+(he is weighing a replacement) and for the Allo 1.0.1 font on a local deployment.
+**Status:** `draft PR`. Committed and pushed on `codex/admin-allo-font` (from `main`
+`d42ee852`) at Christian's request ("Commit and open PR", "keep it in draft"). Not merged
+and not deployed.
+
+**Completed work:**
+
+- Allo (`AlloVariableFriendly.woff2`, SIL OFL, license copied beside it) loads through
+  `next/font/local` as `--font-allo` with `preload: false`, so public pages never fetch it.
+  `body:has(.admin-theme)` puts the protected admin, its portalled dialogs and popovers,
+  and modules with a hard-coded system stack on Allo. Monospace stays Geist Mono. Login
+  (outside `.admin-theme`) and public club sites are unchanged.
+- Icon inventory: `design-previews/admin-icon-inventory.html` in the main checkout
+  (untracked). 73 drawings: 64 in `components/admin/icons` (59 icons.download, 5 kept
+  Lucide: Sponsors, Archive, Clipboard, Radio, Square) and 9 Lucide defaults in
+  `components/ui` (sidebar, spinner, checkbox, calendar, native-select, number-stepper).
+
+**Files changed:** `app/layout.tsx`, `styles/globals.css`, `app/fonts/allo/*`,
+`components/admin/icons/index.tsx`, `components/admin/icons/approved-selection.json`,
+`components/admin/icons/assets/custom/*`, `components/AdminShell.tsx`, this file.
+
+**Verification:** local Supabase (`supabase db reset --local` under the DB lock, on `main`),
+dev server on `localhost:3009` as the synthetic Alpha owner. `document.fonts` reports
+`allo` loaded; body and headings compute to Allo. No typecheck, tests or build run.
+
+**Blockers/decisions:** headings keep Geist's negative letter-spacing and look tight in
+Allo; whether to keep Allo, and for which surfaces, is Christian's call.
+
+**Icon swaps (same day, same worktree):** Christian exported 8 picks from the inventory
+page and asked for them in the admin. Five new drawings live in
+`components/admin/icons/assets/custom/` and `index.tsx`: a soccer ball for
+`IconGroupWebsite`, `IconGlobe` and `IconGlobeSolid`; a filled house for `IconHomepage`
+and `IconHouseSolid`; new outline and solid gears for `IconSettings` and
+`IconSettingsSolid`; and a new outline triangle for `IconWarning` (and its aliases).
+The replaced drawings stay exported as `<Role>Previous`. `approved-selection.json`
+records them under `customSwaps`, and the October selections are unchanged. Checks:
+`npx tsc --noEmit` and eslint on the changed files pass, and `npm run test:contracts`
+passes (155 files, 2,014 tests). The local admin sidebar shows the soccer ball on
+Website and the filled house on Homepage.
+
+**Follow-up swaps:** Christian replaced the Homepage icon with an outline house with a door
+(`custom/house`); the selected-tab filled house stays. A second export added Contact
+(`custom/contact-book`), Match Stats (`custom/bar-chart`), Registrations
+(`custom/file-text`), Roster (`custom/team`) and Season Stats
+(`custom/presentation-chart`). That export also had a door-less Homepage house; it overlaps
+the direct request; Christian chose the door version ("With the door"), which is what ships. tsc, eslint and
+`npm run test:contracts` (2,014 tests) pass again. 13 roles are now custom.
+
+**Line weight:** the pasted outline icons drew at 1.5px, lighter than the existing
+icons.download medium set (2px). At Christian's request every custom outline drawing now
+uses a 2px stroke; the filled bar chart gets a 0.5px outline (1.5 → 2px), the soccer ball's
+rim is 2px and its seams 1.25px. The two solid selected-tab drawings are unchanged. Assets
+in `assets/custom/` match. tsc, eslint and the icon contract tests pass; the sidebar shows
+matching weights.
+
+**1.25px line weight (approved via the weight lab, `design-previews/admin-icon-weight.html`):**
+Christian picked 1.25px (`{"strokePx":1.25}`). All 51 built-in icons.download drawings now
+use the thin weight plus a 0.25px outline. Their assets in `components/admin/icons/assets/`
+are replaced with the thin files; `file-text` uses thin/sharp because thin/round is missing
+upstream. Custom outline picks scale 2px → 1.25px (soccer-ball seams 0.78px). The Match
+Stats bar chart is a filled 1.5px shape and can't go thinner, so it stays at 1.5px. Lucide
+Sponsors, Archive, Clipboard, Radio and Square render through `withAdminStroke` at 1.25px.
+The selected-tab solids are unchanged. `approved-selection.json` now records
+`weight: thin`, `outlinePx: 0.25`, `lineWeightPx: 1.25`, `selectedTabWeight: medium`. Contract
+updates follow the new approval: the three `weight` assertions in
+`admin-icon-refresh.test.ts` and the one in `admin-tabs.test.ts` read `thin` (tabs also pin
+`selectedTabWeight: medium`), and the Sponsors test compares against Handshake at
+`strokeWidth: 1.25`. Shared `components/ui` Lucide defaults (calendar, checkbox,
+native-select default, number stepper, sidebar toggle, spinner) are untouched because
+public pages share them. Checks: tsc and eslint pass, and `npm run test:contracts` passes
+(155 files, 2,014 tests). The local admin shows the lighter, consistent weight.
+
+**Superseded the same day by 1.75px at 32px:** Christian then sent `{"strokePx":1.75}`
+"with size 32" (with a screenshot of the lab at 32px). Built-in drawings now use the regular
+weight (1.5px) plus a 0.25px outline, with assets replaced by the regular files (no sharp
+fallback needed). Custom outline picks are at 1.75px (soccer-ball seams 1.09px), the
+Match Stats bar chart is 1.5px + 0.25px outline, and Lucide draws at `ADMIN_ICON_STROKE = 1.75`.
+`approved-selection.json`: `weight: regular`, `outlinePx: 0.25`, `lineWeightPx: 1.75`,
+`navigationSize: 32`. Sidebar route and group icons go from `size-6` to `size-8` in
+`components/AdminShell.tsx`; the 44px rows are unchanged. The contract assertions now read
+`regular` and the Sponsors test uses `strokeWidth: 1.75`. tsc passes, and
+`npm run test:contracts` passes (155 files, 2,014 tests). The weight lab defaults to 1.75px
+at 32px.
+
+**Sidebar icon size 28px:** Christian kept the dashboard Quick Actions at their size
+("Sidebar only"), then asked for 28px. Sidebar route and group icons are now `size-7`, and
+`navigationSize` is 28.
+
+**Reverted (same day):** Christian asked to revert the sizing and line weight and keep
+everything uniform. Sidebar icons are back to `size-6` (24px). All 51 built-in drawings and
+their assets are restored byte-for-byte from `HEAD` (icons.download medium, 2px). Lucide
+icons are back to their originals (Sponsors = exact Handshake), and both icon contract tests
+are restored unchanged from `HEAD`. `approved-selection.json` is back to `weight: medium` and
+`navigationSize: 24`, keeping only `customSwaps`. Every custom outline pick draws at 2px;
+the bar chart is 1.5px + 0.5px outline = 2px; the soccer ball's rim is 2px and its seams
+1.25px, since 2px seams clog the ball at 24px. tsc and eslint pass, and
+`npm run test:contracts` passes (155 files, 2,014 tests). The sidebar measures 24px. The
+weight lab baseline is back to 2px at 24px.
+
+**Solid grey sidebar icons:** sidebar route and group icons used `text-sidebar-foreground/45`,
+a 45%-transparent colour, so overlapping strokes and fills (custom picks, the soccer ball,
+the bar-chart outline) doubled up into darker patches. They now use `text-admin-sidebar-icon`
+(`styles/globals.css`): `color-mix(in srgb, hsl(var(--sidebar-foreground)) 45%, hsl(var(--sidebar)))`,
+an opaque grey of the same tone, computed per theme. The active route keeps `text-primary`.
+Measured opaque in light (~#919397) and dark (~#797a7b) in the local admin. On desktop (`(hover: hover) and (pointer: fine)`), hovering a sidebar row turns its icon
+`hsl(var(--primary))`, the active blue (measured `rgb(0, 104, 214)` on hover), with a 150ms
+colour transition. Touch screens keep the grey.
+
+**PR gates (2026-11-17):** `npx tsc --noEmit` passes. `npm run lint` passes, with one
+pre-existing warning in untouched `app/(public)/sponsors/page.tsx`. `npm run test:contracts`
+passes (155 files, 2,014 tests). `npm run build` passes, with the existing Supabase Edge
+Runtime `process.version` warning. Not run: `test:db`, full `npm test`, Playwright.
+
+**Next step:** Christian reviews `localhost:3009/admin`; on a yes, tune heading tracking, run the full gates, and open a PR. The soccer ball draws with a 0.5 stroke, lighter than
+the other 24px icons.
+
 ## 2026-11-11 - GATE-FLIP-DC undone: Diverse City back on the classic admin
 
 **Agent/package:** Claude Code, `GATE-FLIP-DC` rollback, asked by the admin-redesign

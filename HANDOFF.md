@@ -1,3 +1,19 @@
+## 2026-11-17 - Admin: Allo font, 13 custom icons, solid grey sidebar icons (draft PR)
+
+- **Status:** draft PR from `codex/admin-allo-font` (cut from `main` `d42ee852`). Not merged,
+  not deployed. No migration, env, API or data change.
+- **Font:** Allo (SIL OFL, `app/fonts/allo/`) loads through `next/font/local` with
+  `preload: false`. `body:has(.admin-theme)` applies it to the protected admin, including
+  portalled dialogs. Monospace, login and public club sites are unchanged.
+- **Icons:** Christian's 13 picks from `design-previews/admin-icon-inventory.html`, saved in
+  `components/admin/icons/assets/custom/` and recorded under `customSwaps` in
+  `approved-selection.json`. All draw at the existing 2px; replaced drawings stay exported
+  as `<Role>Previous`. A 1.25/1.75px weight and 28/32px sidebar size were tried and reverted.
+- **Sidebar icon colour:** opaque `text-admin-sidebar-icon` instead of the 45%-transparent
+  `text-sidebar-foreground/45`, so overlapping strokes no longer show darker patches. On
+  desktop the icon turns the active blue on hover; touch screens skip it.
+- **Details:** `STATUS.md` (2026-11-17 entry).
+
 ## 2026-11-11 - GATE-FLIP-DC undone: Diverse City back on the classic admin
 
 - **Status:** `released`. By Christian's decision, Diverse City was switched on at

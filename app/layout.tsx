@@ -6,6 +6,7 @@ import {
   Inter,
   DM_Sans,
 } from "next/font/google";
+import localFont from "next/font/local";
 import Script from "next/script";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
 import "flag-icons/css/flag-icons.min.css";
@@ -43,6 +44,18 @@ const academyNav = DM_Sans({
   subsets: ["latin"],
 });
 
+// Allo (SIL OFL, app/fonts/allo/OFL.txt) is the protected admin's typeface. This only
+// defines --font-allo; globals.css opts the admin in. preload is off so public
+// club pages never download it.
+const allo = localFont({
+  src: "./fonts/allo/AlloVariableFriendly.woff2",
+  weight: "100 900",
+  style: "normal",
+  variable: "--font-allo",
+  display: "swap",
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: "Onzio Platform",
   description:
@@ -65,7 +78,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${academyHeading.variable} ${academyBody.variable} ${academyNav.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${academyHeading.variable} ${academyBody.variable} ${academyNav.variable} ${allo.variable}`}
     >
       <body>
         <ClubBrandingProvider>{children}</ClubBrandingProvider>
