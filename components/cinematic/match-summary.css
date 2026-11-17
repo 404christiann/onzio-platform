@@ -1,6 +1,5 @@
-/* Sam's bold labels use Avenir Heavy (also shipped for the Robinson page); the site's body face is Avenir Medium only. */
-@font-face{font-family:SummaryAvenirHeavy;src:url('/fonts/avenir-heavy/Avenir-Heavy.ttf') format('truetype');font-weight:800;font-style:normal;font-display:swap}
-.cinematic-site .match-summary{--heavy:SummaryAvenirHeavy,'CinematicAvenir',Avenir,Arial,sans-serif}
+/* Sam's bold labels use Avenir Heavy (CinematicAvenirHeavy, loaded by CinematicAvenirFonts); the site's body face is Avenir Medium only. */
+.cinematic-site .match-summary{--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif}
 /* RC2027-MATCH-SUMMARY: Sam's Match Summary (approved preview: outer design-explorations/match-summary-2027). */
 .cinematic-site .match-summary{--summary-red:#ff0018;background:#fff;color:#141414}
 .cinematic-site .summary-heading{text-align:right;padding:66px 5.4% 46px;box-shadow:inset 0 14px 14px -14px #0003}

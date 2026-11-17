@@ -57,7 +57,7 @@
 
 /* Keep the original PlayerModal structure and interactions. Apply the
    accepted roster's Museo headings, Avenir UI text, and red accents here. */
-.cinematic-player-modal{--color-white:#fff;--color-black:#141414;--color-red:#ff0018;--color-gray-mid:#686868;--modal-heading:CinematicMuseoModerno,sans-serif;--font-display:'CinematicAvenir',Avenir,Arial,sans-serif;--font-body:'CinematicAvenir',Avenir,Arial,sans-serif;font:400 16px/1.6 var(--font-body);color:var(--color-black);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+.cinematic-player-modal{--color-white:#fff;--color-black:#141414;--color-red:#ff0018;--color-gray-mid:#686868;--modal-heading:CinematicMuseoModerno,sans-serif;--font-display:'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif;--font-body:'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif;font:400 16px/1.6 var(--font-body);color:var(--color-black);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 .cinematic-player-modal *,.cinematic-player-modal *::before,.cinematic-player-modal *::after{box-sizing:border-box;border-width:0;border-style:solid}
 .cinematic-player-modal h2{margin:0;font-weight:700;font-style:normal;line-height:1.05;letter-spacing:-.01em;text-transform:uppercase}
 .cinematic-player-modal p{margin:0}
@@ -70,4 +70,4 @@
 .cinematic-player-modal button:focus-visible{outline:2px solid var(--color-red);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.cinematic-player-modal *{transition-duration:0s!important;animation-duration:0s!important}}
 
-.cinematic-roster-status{padding:60px 5%;min-height:50vh;font:400 16px/1.6 CinematicAvenir,Avenir,Arial,sans-serif;color:#686868}.cinematic-site .cinematic-roster .cinematic-roster-empty{font:400 18px/1.6 var(--body);padding:20px 0 40px}
+.cinematic-roster-status{padding:60px 5%;min-height:50vh;font:400 16px/1.6 'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif;color:#686868}.cinematic-site .cinematic-roster .cinematic-roster-empty{font:400 18px/1.6 var(--body);padding:20px 0 40px}

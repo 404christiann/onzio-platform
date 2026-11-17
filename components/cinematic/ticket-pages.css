@@ -1,8 +1,7 @@
 /* RC2027-TICKET-PAGES: Season Ticket Membership + Know Before You Go (Sam's 2027 Final Masters, 2484px and 2342px wide).
    Ported from the approved preview (outer design-explorations/ticket-pages-2027).
    Desktop sizes are Sam's proportions in vw; phone sizes are fixed below 700px. */
-@font-face{font-family:TicketAvenirHeavy;src:url('/fonts/avenir-heavy/Avenir-Heavy.ttf') format('truetype');font-weight:800;font-style:normal;font-display:swap}
-.cinematic-site .tp-page{--tp-red:#ff0000;--tp-heading-red:#f22c22;--tp-grey:#8f8f8f;--tp-ink:#141414;--heavy:TicketAvenirHeavy,'CinematicAvenir',Avenir,Arial,sans-serif;background:#fff;color:var(--tp-ink);overflow:hidden}
+.cinematic-site .tp-page{--tp-red:#ff0000;--tp-heading-red:#f22c22;--tp-grey:#8f8f8f;--tp-ink:#141414;--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;background:#fff;color:var(--tp-ink);overflow:hidden}
 .cinematic-site .tp-page :is(h1,h2){text-transform:none}
 
 /* Title band: same as Stadium Guidelines and Contact. */

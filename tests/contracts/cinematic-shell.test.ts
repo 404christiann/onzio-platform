@@ -9,6 +9,7 @@ vi.mock("@/components/cinematic/CinematicContent", () => ({
 }));
 vi.mock("@/components/cinematic/CinematicNav", () => ({ default: () => createElement("header", null, "Navigation") }));
 vi.mock("@/components/cinematic/CinematicFooter", () => ({ default: () => createElement("footer", null, "Footer") }));
+vi.mock("@/components/cinematic/CinematicAvenirFonts", () => ({ default: () => createElement("style", { "data-test-avenir-fonts": "" }) }));
 import CinematicShell from "@/components/cinematic/CinematicShell";
 
 describe("cinematic shell integration", () => {
@@ -28,6 +29,14 @@ describe("cinematic shell integration", () => {
     expect((html.match(/<main/g) ?? []).length).toBe(1);
     expect(html).toContain('class="cinematic-site"');
     expect(html).not.toContain('id="cinematic-main"');
+  });
+  it("renders the Avenir font faces once in every mode, including content-only previews", () => {
+    for (const props of [{ editing: false }, { editing: true }, { contentOnly: true }]) {
+      const shellProps = { ...props, children: "Content" };
+      const html = renderToStaticMarkup(createElement(CinematicShell, shellProps));
+      expect((html.match(/data-test-avenir-fonts/g) ?? []).length).toBe(1);
+      expect(html.indexOf("data-test-avenir-fonts")).toBeGreaterThan(html.indexOf('class="cinematic-site"'));
+    }
   });
   it("passes trusted server content into the shared provider", () => {
     const content = { navigation: { labels: { home: "Club home" } } } as unknown as CinematicHomepageContent;

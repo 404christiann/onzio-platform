@@ -1,0 +1,6 @@
+Figtree variable font, from the npm package @fontsource-variable/figtree 5.3.0 (source: github.com/fontsource/font-files).
+License: SIL Open Font License 1.1 (OFL-1.1), see OFL.txt in this folder.
+Weights 300-900, normal style.
+
+figtree-latin-wght-normal.woff2      sha256 4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd
+figtree-latin-ext-wght-normal.woff2  sha256 bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965
