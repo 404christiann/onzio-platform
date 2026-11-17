@@ -4,7 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import NativeImage from "@/components/ResilientNativeImage";
 import type { ShopKitContent } from "@/lib/queries";
 import type { DBShopCarouselPhoto, DBShopPurchaseDetails, DBSiteSponsorLogo, ShopKitVariant } from "@/lib/db-types";
-import { withShopDefaults, type CinematicShopPresentation, type ShopCardIcon } from "@/lib/cinematic-shop-content";
+import { SHOP_EDITION_VARIANTS, withShopDefaults, type CinematicShopPresentation, type ShopCardIcon } from "@/lib/cinematic-shop-content";
 import CinematicSponsors from "./CinematicSponsors";
 import { useCinematicMotion } from "./useCinematicMotion";
 import "./shop.css";
@@ -112,15 +112,18 @@ function SizeChart({ settings, editing }: { settings: CinematicShopPresentation;
 
 export default function CinematicShop({ kits, photoRows, purchase, presentation, sponsors, treatments, selectedVariant, onVariantChange, editing = false }: CinematicShopProps) {
   const [chosen, setChosen] = useState<ShopKitVariant>("home");
-  const [editionIndex, setEditionIndex] = useState(0);
   const settings = withShopDefaults(presentation);
-  const editions = settings.editions;
-  const edition = editions[Math.min(editionIndex, editions.length - 1)];
-  // Authentic / Replica replaces Home/Away on the public page. Editors keep Home/Away so Away stays editable.
-  const showVariants = editing || !editions.length;
+  // Jersey options: option i is the whole kit SHOP_EDITION_VARIANTS[i] (Home, Away, Third). The public page
+  // offers an option only when its kit exists and it has a label or price; editors see every option so each kit stays reachable.
+  const options = settings.editions.slice(0, SHOP_EDITION_VARIANTS.length).map((item, position) => ({ item, position, variant: SHOP_EDITION_VARIANTS[position] }))
+    .filter(option => editing || (Boolean(kits[option.variant].section) && Boolean(`${option.item.label}${option.item.price}`.trim())));
+  const requested = selectedVariant ?? chosen;
+  const option = options.find(item => item.variant === requested) ?? (editing ? undefined : options[0]);
+  // With no jersey options yet, the page keeps its Home/Away toggle.
   const available = (["home", "away"] as const).filter(variant => Boolean(kits[variant].section));
-  const requested = editing ? selectedVariant ?? chosen : editions.length ? "home" : selectedVariant ?? chosen;
-  const variant = editing ? requested : available.includes(requested as "home" | "away") ? requested : available[0] ?? "home";
+  const showVariants = !options.length && (available.length > 1 || editing);
+  const variant: ShopKitVariant = editing ? requested : option ? option.variant : available.includes(requested as "home" | "away") ? requested : available[0] ?? "home";
+  const edition = option?.item;
   const kit = kits[variant];
   const section = kit.section;
   const rows = photoRows[variant];
@@ -133,9 +136,9 @@ export default function CinematicShop({ kits, photoRows, purchase, presentation,
       <LeadPhotos key={variant} kit={kit} settings={settings} editing={editing} />
       <div className="shop-copy">
         <div className="shop-copy-top" data-shop-editor-target="copy"><h1 id="shop-title">{section?.title || (editing ? "Add a kit title" : "")}</h1><p className="shop-eyebrow">{section?.eyebrow}</p>{edition?.line && <p className="shop-edition-line" aria-live="polite">{edition.line}</p>}<div className="shop-rule" aria-hidden="true" /></div>
-        {showVariants && (available.length > 1 || editing) && <div className="shop-variants" role="group" aria-label="Kit selection">{(editing ? ["home", "away"] as const : available).map(value => <button key={value} type="button" aria-pressed={variant === value} onClick={() => choose(value)}>{value === "home" ? settings.homeLabel || "Home" : settings.awayLabel || "Away"}</button>)}</div>}
-        {editions.length > 0 && <div data-shop-editor-target="editions" className="shop-variants shop-editions" role="group" aria-label="Jersey edition">{editions.map((item, i) => <button key={i} type="button" aria-pressed={item === edition} onClick={() => setEditionIndex(i)}>{[item.label, item.price].filter(Boolean).join(" ")}</button>)}</div>}
-        {editing && !editions.length && <button type="button" data-shop-editor-target="editions" className="shop-empty-slot shop-empty-inline">Add Authentic and Replica prices</button>}
+        {showVariants && <div className="shop-variants" role="group" aria-label="Kit selection">{(editing ? ["home", "away"] as const : available).map(value => <button key={value} type="button" aria-pressed={variant === value} onClick={() => choose(value)}>{value === "home" ? settings.homeLabel || "Home" : settings.awayLabel || "Away"}</button>)}</div>}
+        {options.length > 0 && <div data-shop-editor-target="editions" className="shop-jersey-options"><h2 className="shop-options-heading">{settings.editionsHeading?.trim() || "Select your jersey"}</h2><div className="shop-options" role="group" aria-label="Jersey selection">{options.map(item => <button key={item.position} type="button" className={`shop-option shop-option-${item.position + 1}`} aria-pressed={item === option} onClick={() => choose(item.variant)}>{[item.item.label, item.item.price].filter(Boolean).join(" ").trim() || "Add a label"}</button>)}</div></div>}
+        {editing && !options.length && <button type="button" data-shop-editor-target="editions" className="shop-empty-slot shop-empty-inline">Add jersey options</button>}
         <div data-shop-editor-target="copy"><p className="shop-description">{section?.description}</p>{bullets.length > 0 && <><p className="shop-includes">Includes</p><ul className="shop-bullets">{bullets.map((point, i) => <li key={i}>{point}</li>)}</ul></>}{section?.store_note && <p className="shop-store">{section.store_note}</p>}</div>
         <PurchaseLink label={section?.cta_label || (editing ? "Add a purchase button" : "")} href={buyLink} />
       </div>

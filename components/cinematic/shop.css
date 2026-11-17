@@ -167,3 +167,36 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 /* Editor-only prompts for empty RC2027 sections. */
 .cinematic-site .shop-empty-inline{width:100%;min-height:56px;margin:16px 0;cursor:pointer}
 .cinematic-site .shop-jersey-details-empty{width:83.4%;margin:24px auto}
+
+/* Rose City jersey options (Sam's Nov 17 lead): "Select your jersey" over three solid pills, each a whole kit.
+   Every pill keeps its color; the selected one gets a ring in its own color. */
+.cinematic-site .shop-jersey-options{display:flex;flex-direction:column;align-items:center;text-align:center;margin:0 0 12px}
+.cinematic-site .shop-options-heading{font:400 clamp(18px,1.68vw,26px)/1.2 var(--body);text-transform:uppercase;color:#141414;margin:0 0 18px}
+.cinematic-site .shop-options{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 20px}
+.cinematic-site .shop-option{--option:#e93c2f;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:6px clamp(12px,1.03vw,16px);border:0;border-radius:999px;background:var(--option);color:#fff;font:500 clamp(12px,.9vw,14px)/1.2 var(--body);text-transform:uppercase;text-align:center;flex:0 0 auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s ease}
+.cinematic-site .shop-option-2{--option:#141414}
+.cinematic-site .shop-option-3{--option:#223c85}
+.cinematic-site .shop-option[aria-pressed=true]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--option)}
+.cinematic-site .shop-option:focus-visible{outline:3px solid #141414;outline-offset:6px}
+.cinematic-site .shop-option:active{opacity:.85}
+@media(max-width:700px){
+ .cinematic-site .shop-jersey-options{align-self:stretch;margin:4px 0 6px}
+ .cinematic-site .shop-options-heading{font-size:clamp(17px,5vw,22px);margin-bottom:14px}
+ .cinematic-site .shop-options{gap:12px 14px}
+ .cinematic-site .shop-option{min-height:44px;padding:8px 16px;font-size:13px}
+}
+/* Desktop lead at Sam's Nov 17 proportions (his 1550px file): wider lead, the title filling the copy column,
+   and the heading centred over a pill row that sits flush with the copy column. */
+@media(min-width:1025px){
+ .cinematic-site .shop-update .shop-feature{width:89.2%;max-width:1712px;margin:0 3.2% 0 7.6%;gap:5%}
+ .cinematic-site .shop-update .shop-portrait{margin-top:9.8vw}
+ .cinematic-site .shop-update .shop-copy h1{font-size:min(5.15vw,99px);line-height:.8;white-space:normal}
+ .cinematic-site .shop-update .shop-eyebrow{margin-top:0}
+ .cinematic-site .shop-update .shop-edition-line{font-size:15px;margin-top:0}
+ .cinematic-site .shop-update .shop-rule{margin:35px 0 20px}
+ .cinematic-site .shop-update .shop-jersey-options{width:fit-content;max-width:100%;margin:0}
+ .cinematic-site .shop-update .shop-options-heading{margin-bottom:22px}
+ .cinematic-site .shop-update .shop-options{justify-content:flex-start;gap:12px 22px}
+ .cinematic-site .shop-update .shop-option{min-height:34px}
+ .cinematic-site .shop-update .shop-description{font-size:15px;line-height:32px;max-width:none}
+}

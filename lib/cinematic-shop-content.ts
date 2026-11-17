@@ -10,7 +10,9 @@ export const shopMapCropSchema = z.object({
 /** Sam's Jersey Information icons; "" shows no icon. Mirrors onzio_private.validate_cinematic_shop_content. */
 export const SHOP_CARD_ICONS = ["", "video", "jersey", "shipping-box", "no-access"] as const;
 export type ShopCardIcon = typeof SHOP_CARD_ICONS[number];
-export const MAX_SHOP_EDITIONS = 2;
+/** Jersey options: option i is the whole kit SHOP_EDITION_VARIANTS[i]. */
+export const MAX_SHOP_EDITIONS = 3;
+export const SHOP_EDITION_VARIANTS = ["home", "away", "third"] as const;
 export const MAX_SHOP_DETAILS = 6;
 export const MAX_SHOP_ATTRIBUTES = 8;
 export const MAX_SHOP_SIZE_COLUMNS = 8;
@@ -52,6 +54,10 @@ export const cinematicShopContentSchema = z.object({
   attributes: z.array(z.string().max(60)).max(MAX_SHOP_ATTRIBUTES).default([]),
   sizeChart: shopSizeChartSchema.default(EMPTY_SIZE_CHART),
   mapHeading: z.string().max(120).default(""),
+  // Rose City jersey options: the heading over the option buttons (missing or blank shows "Select your jersey").
+  // Optional with no default, and omitted from saves while blank, so a database without the
+  // jersey-options migration still accepts every save that does not use it.
+  editionsHeading: z.string().max(80).optional(),
 }).strict();
 
 export type CinematicShopContent = z.infer<typeof cinematicShopContentSchema>;
@@ -86,6 +92,10 @@ export function withShopDefaults<T extends Partial<CinematicShopPresentation>>(v
 }
 
 export function shopContentOnly(value: CinematicShopPresentation): CinematicShopContent {
-  const { mapUrl: _mapUrl, mapWidth: _mapWidth, mapHeight: _mapHeight, details, ...content } = value;
-  return { ...content, details: details.map(({ assetId, alt, title, body }) => ({ assetId, alt, title, body })) };
+  const { mapUrl: _mapUrl, mapWidth: _mapWidth, mapHeight: _mapHeight, details, editionsHeading, ...content } = value;
+  return {
+    ...content, details: details.map(({ assetId, alt, title, body }) => ({ assetId, alt, title, body })),
+    // A blank heading is never sent, keeping the payload the pre-jersey-options database accepts.
+    ...(editionsHeading?.trim() ? { editionsHeading } : {}),
+  };
 }

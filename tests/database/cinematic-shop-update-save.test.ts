@@ -37,6 +37,15 @@ async function request(presentation: unknown) {
   return { operationId: randomUUID(), surface: "shop", expectedRevision: current.revision, designRevision: current.designRevision, variants: {}, presentation };
 }
 async function save(presentation: unknown) { return (await db.query("select onzio.save_shop_page($1,$2::jsonb) as data", [clubId, JSON.stringify(await request(presentation))])).rows[0].data; }
+async function saveKit(surface: "home" | "shop", body: Record<string, unknown>) {
+  const current = (await db.query("select onzio.load_shop_page($1,$2) as data", [clubId, surface])).rows[0].data;
+  const payload = { operationId: randomUUID(), surface, expectedRevision: current.revision, designRevision: current.designRevision, variants: {}, ...body };
+  return (await db.query("select onzio.save_shop_page($1,$2::jsonb) as data", [clubId, JSON.stringify(payload)])).rows[0].data;
+}
+const thirdKit = (title: string, assetId: string) => ({
+  section: { eyebrow: "Foothill Transit 2027", title, description: "Foothill Transit Edition", bullet_points: ["Foothill crest"], store_note: "", cta_label: "Buy now", cta_link: "https://example.com/third" },
+  photos: [{ rowId: null, assetId, order: 0 }],
+});
 async function rejects(action: () => Promise<unknown>, message: string) {
   await db.query("savepoint expected_failure");
   try { await expect(action()).rejects.toThrow(message); } finally { await db.query("rollback to savepoint expected_failure"); }
@@ -72,6 +81,26 @@ describe("RC2027 Shop update joins the atomic Shop save", () => {
     expect(saved.revision).toBe(after.revision);
   });
 
+  it("saves three jersey options and the heading over them", async () => {
+    const content = { ...sam(), editions: [...sam().editions, { label: "Foothill Transit Edition jersey", price: "$115", line: "Foothill Transit Edition RCFC Jersey", link: "" }], editionsHeading: "Select your jersey" };
+    await save(content);
+    expect((await load()).presentation).toEqual({ ...content, mapAssetId: null });
+  });
+
+  it("saves the Third kit and its photo row on the cinematic@2 Shop page only", async () => {
+    const lead = await asset(), row = await asset(), other = await asset();
+    await saveKit("shop", { variants: { third: thirdKit("Going Good Places", lead) }, photoRows: { third: [{ rowId: null, assetId: row, order: 0 }] } });
+    const after = await load();
+    type Item = { kit_variant: string; assetId?: string; title?: string };
+    expect(after.sections.find((item: Item) => item.kit_variant === "third")?.title).toBe("Going Good Places");
+    expect(after.photos.filter((item: Item) => item.kit_variant === "third").map((item: Item) => item.assetId)).toEqual([lead]);
+    expect(after.photoRows.filter((item: Item) => item.kit_variant === "third").map((item: Item) => item.assetId)).toEqual([row]);
+    await rejects(() => saveKit("home", { variants: { third: thirdKit("Homepage third", other) } }), "SECTION_UNAVAILABLE");
+    await design(1);
+    await rejects(() => saveKit("shop", { variants: { third: thirdKit("Older design", other) } }), "SECTION_UNAVAILABLE");
+    await rejects(() => saveKit("shop", { photoRows: { third: [{ rowId: null, assetId: other, order: 0 }] } }), "SECTION_UNAVAILABLE");
+  });
+
   it("still loads and saves Shop settings written before the update", async () => {
     const legacy = { mapAssetId: null, mapAlt: "", mapVisible: true, mapCrop: null, sponsorsHeading: "Partners", sponsorsVisible: true, homeLabel: "Home", awayLabel: "Away", galleryLabel: "Kit photos", emptyMessage: "Soon", leadScale: 80, leadTop: 5 };
     await save(legacy);
@@ -92,7 +121,9 @@ describe("RC2027 Shop update joins the atomic Shop save", () => {
   it("rejects malformed new sections from a direct caller", async () => {
     const base = sam(), before = await load();
     for (const change of [
-      { editions: [...base.editions, base.editions[0]] },
+      { editions: [...base.editions, base.editions[0], base.editions[0]] },
+      { editionsHeading: "x".repeat(81) },
+      { editionsHeading: 80 },
       { editions: [{ ...base.editions[0], link: "javascript:alert(1)" }] },
       { details: Array.from({ length: 7 }, () => detail("Tile")) },
       { details: [{ ...detail("Tile"), title: "x".repeat(81) }] },

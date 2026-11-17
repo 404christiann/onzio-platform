@@ -18,10 +18,10 @@ export default function CinematicShopPage() {
     setState({ clubId: club.id, content: null, failed: false });
     void Promise.all([
       fetchShopKitVariants("shop", club.id), fetchShopCarouselPhotos("home", club.id),
-      fetchShopCarouselPhotos("away", club.id), fetchCinematicShopPurchase(club.id),
+      fetchShopCarouselPhotos("away", club.id), fetchShopCarouselPhotos("third", club.id), fetchCinematicShopPurchase(club.id),
       fetchCinematicShopContent(club.id), fetchSiteSponsorLogos("carousel", club.id),
-    ]).then(([kits, home, away, purchase, presentation, sponsors]) => {
-      if (active) setState({ clubId: club.id, content: { kits, photoRows: { home, away, third: [] }, purchase, presentation, sponsors }, failed: false });
+    ]).then(([kits, home, away, third, purchase, presentation, sponsors]) => {
+      if (active) setState({ clubId: club.id, content: { kits, photoRows: { home, away, third }, purchase, presentation, sponsors }, failed: false });
     }).catch(() => { if (active) setState({ clubId: club.id, content: null, failed: true }); });
     return () => { active = false; };
   }, [club.id]);

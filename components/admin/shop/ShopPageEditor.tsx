@@ -24,7 +24,7 @@ import ResilientImage from "@/components/ResilientImage";
 import ShopPreviewFrame from "./ShopPreviewFrame";
 import CinematicShopCanvas from "./CinematicShopCanvas";
 import CinematicShopFields, { type CinematicShopTarget } from "./CinematicShopFields";
-import { SHOP_CARD_ICONS, type CinematicShopPresentation, type ShopCardIcon } from "@/lib/cinematic-shop-content";
+import { SHOP_CARD_ICONS, SHOP_EDITION_VARIANTS, type CinematicShopPresentation, type ShopCardIcon } from "@/lib/cinematic-shop-content";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
 import { submitPageSave } from "@/lib/page-editor-save";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
@@ -71,7 +71,8 @@ export default function ShopPageEditor() {
   const sharedWithHomepage = isClubhouse || isEditorial;
   const generic = !isAcademy && !isClubhouse && !isEditorial;
   const hasHomeFeature = !sharedWithHomepage;
-  const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];
+  // Cinematic jersey options map to Home / Away / Third, so its Shop page edits all three kits.
+  const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : isCinematic ? [...SHOP_EDITION_VARIANTS] : ["home", "away"];
 
   const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>("shop");
   const surface: ShopSurface = hasHomeFeature ? surfaceChoice : "shop";
@@ -360,7 +361,7 @@ export default function ShopPageEditor() {
                 <ToolButton label="Edit kit text" onClick={() => setTarget("copy")} />
                 <ToolButton label="Edit kit photos" onClick={() => setTarget("photos")} />
                 {showExtras && <><ToolButton label="Edit photo row" onClick={() => setTarget("photoRows")} /><ToolButton label="Edit purchase details" onClick={() => setTarget("purchase")} /></>}
-                {isCinematic && surface === "shop" && <><ToolButton label="Edit prices" onClick={() => setTarget("editions")} /><ToolButton label="Edit jersey details" onClick={() => setTarget("details")} /><ToolButton label="Edit care line" onClick={() => setTarget("attributes")} /><ToolButton label="Edit size chart" onClick={() => setTarget("sizeChart")} /><ToolButton label="Edit map" onClick={() => setTarget("map")} /><ToolButton label="Edit sponsors" onClick={() => setTarget("sponsors")} /><ToolButton label="Edit page labels" onClick={() => setTarget("page")} /></>}
+                {isCinematic && surface === "shop" && <><ToolButton label="Edit jersey options" onClick={() => setTarget("editions")} /><ToolButton label="Edit jersey details" onClick={() => setTarget("details")} /><ToolButton label="Edit care line" onClick={() => setTarget("attributes")} /><ToolButton label="Edit size chart" onClick={() => setTarget("sizeChart")} /><ToolButton label="Edit map" onClick={() => setTarget("map")} /><ToolButton label="Edit sponsors" onClick={() => setTarget("sponsors")} /><ToolButton label="Edit page labels" onClick={() => setTarget("page")} /></>}
               </div>
               <ShopPreviewFrame host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} onSelect={(selection) => setTarget(selection as Target)}>
                 {isEditorial ? <EditorialShell editing>
@@ -369,7 +370,7 @@ export default function ShopPageEditor() {
                 </EditorialShell> : <TemplateFontScope templateKey={template}>
                   {isAcademy ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
                   {isClubhouse && <ClubhouseShopPage editorContent={content} onEditorSelectKit={setSelectedVariant} />}
-                  {isCinematic && surface === "shop" && <CinematicShopCanvas kits={content} draft={draft} variant={currentVariant} onVariantChange={variant => { setSelectedVariant(variant); setTarget("copy"); }} />}
+                  {isCinematic && surface === "shop" && <CinematicShopCanvas kits={content} draft={draft} variant={currentVariant} onVariantChange={variant => { setSelectedVariant(variant); setTarget(current => current === "editions" ? current : "copy"); }} />}
                   {generic && !(isCinematic && surface === "shop") && <>
                     <div className={surface === "shop" ? "pt-24 sm:pt-28" : ""} style={{ backgroundColor: "var(--color-white)" }}>
                       <ShopKitSectionContainer surface={surface} headingTag={surface === "shop" ? "h1" : "h2"} fadeImageToWhite editorContent={content} selectedVariant={currentVariant} onVariantChange={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
@@ -383,7 +384,7 @@ export default function ShopPageEditor() {
             </div>
             <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`shop-page-inspector min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
               {target ? <>
-                <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "editions" ? "Jersey prices" : target === "details" ? "Jersey details" : target === "attributes" ? "Color, material and care" : target === "sizeChart" ? "Size chart" : target === "map" ? "Shop map" : target === "sponsors" ? "Shop sponsors" : target === "page" ? "Page labels and image framing" : target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
+                <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "editions" ? "Jersey options" : target === "details" ? "Jersey details" : target === "attributes" ? "Color, material and care" : target === "sizeChart" ? "Size chart" : target === "map" ? "Shop map" : target === "sponsors" ? "Shop sponsors" : target === "page" ? "Page labels and image framing" : target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
                 <fieldset disabled={locked} className="min-w-0">
                 {target === "fixed" ? <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">This copy belongs to the website design and is managed by Onzio.</p> : null}
                 {(target === "copy" || target === "kit" || target === "cta") && currentKit && <>

@@ -6,6 +6,8 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 import { APPROVED_SHOP_MAP_CROP, MAX_SHOP_ATTRIBUTES, MAX_SHOP_DETAILS, MAX_SHOP_EDITIONS, MAX_SHOP_SIZE_COLUMNS, MAX_SHOP_SIZE_ROWS, type CinematicShopPresentation, type ShopDetailPresentation, type ShopEdition } from "@/lib/cinematic-shop-content";
 
 export type CinematicShopTarget = "map" | "sponsors" | "page" | "editions" | "details" | "attributes" | "sizeChart";
+/** Option i is the kit SHOP_EDITION_VARIANTS[i]: Home, Away, Third. */
+const EDITION_KIT_LABELS = ["Home kit option", "Away kit option", "Third kit option"];
 
 export default function CinematicShopFields({ target, value, onChange, uploading, onUploadMap, onRemoveMap, onUploadDetail, onRemoveDetail }: {
   target: CinematicShopTarget;
@@ -26,16 +28,18 @@ export default function CinematicShopFields({ target, value, onChange, uploading
   };
   return <div className="space-y-4">
     {target === "editions" && <>
-      <p className="text-sm text-muted-foreground">These buttons replace Home/Away on the public Shop page and switch the price and the line under the title. Leave a purchase link blank to use the kit’s Buy now link.</p>
+      <p className="text-sm text-muted-foreground">Each option shows one whole kit: the first is the Home kit, the second the Away kit, the third the Third kit. Choosing an option switches the kit photos, words, photo row and the line under the title. An option appears on the website once its kit has been saved. Leave a purchase link blank to use that kit’s Buy now link.</p>
+      <label className="block"><span className={ADMIN_LABEL_CLASS}>Section heading</span><input type="text" className={ADMIN_INPUT_CLASS} style={{ fontSize: 16 }} value={value.editionsHeading ?? ""} placeholder="Select your jersey" maxLength={80} onChange={event => onChange("editionsHeading", event.target.value)} /></label>
       {editions.map((edition, index) => <fieldset key={index} className="space-y-3 rounded-lg border border-border p-3">
-        <legend className="px-1 text-xs font-semibold">Jersey option {index + 1}</legend>
+        <legend className="px-1 text-xs font-semibold">{EDITION_KIT_LABELS[index] ?? `Jersey option ${index + 1}`}</legend>
         <Text label="Button label" value={edition.label} onChange={text => setEdition(index, { label: text })} />
         <Text label="Price" value={edition.price} onChange={text => setEdition(index, { price: text })} />
         <Text label="Line under the title" value={edition.line} onChange={text => setEdition(index, { line: text })} />
         <Text label="Purchase link (optional)" type="url" value={edition.link} onChange={text => setEdition(index, { link: text.trim() })} />
-        <button type="button" onClick={() => onChange("editions", editions.filter((_, i) => i !== index))} className="min-h-11 rounded-lg border border-border px-3 text-sm font-semibold text-destructive">Remove option {index + 1}</button>
+        {/* Only the last option can be removed, so the others keep their kits. */}
+        {index === editions.length - 1 && <button type="button" onClick={() => onChange("editions", editions.slice(0, -1))} className="min-h-11 rounded-lg border border-border px-3 text-sm font-semibold text-destructive">Remove {(EDITION_KIT_LABELS[index] ?? `option ${index + 1}`).toLowerCase()}</button>}
       </fieldset>)}
-      {editions.length < MAX_SHOP_EDITIONS && <button type="button" onClick={() => onChange("editions", [...editions, { label: "", price: "", line: "", link: "" }])} className="min-h-11 rounded-lg border border-border px-3 text-sm font-semibold">Add jersey option</button>}
+      {editions.length < MAX_SHOP_EDITIONS && <button type="button" onClick={() => onChange("editions", [...editions, { label: "", price: "", line: "", link: "" }])} className="min-h-11 rounded-lg border border-border px-3 text-sm font-semibold">Add {EDITION_KIT_LABELS[editions.length].toLowerCase()}</button>}
     </>}
     {target === "details" && <>
       <Text label="Section heading" value={value.detailsHeading} onChange={text => onChange("detailsHeading", text)} />

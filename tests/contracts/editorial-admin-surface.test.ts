@@ -345,7 +345,7 @@ describe("editorial@1 admin surface hides", () => {
       expect(editor).toContain('const isAcademy = template === "academy@1";');
       expect(editor).toContain('const isClubhouse = template === "clubhouse@1";');
       expect(editor).toContain('const isEditorial = template === "editorial@1";');
-      expect(editor).toContain('const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];');
+      expect(editor).toContain('const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : isCinematic ? [...SHOP_EDITION_VARIANTS] : ["home", "away"];');
       expect(source("components/editorial/EditorialShopPage.tsx")).toContain('const VARIANT_ORDER: ShopKitVariant[] = ["home", "away", "third"];');
       expect(source("components/ClubhouseShopPage.tsx")).toContain('(["home", "third", "away"] as ShopKitVariant[])');
       expect(source(SHOP_SAVE)).toContain("if (page_surface='home' or template='academy@1') and (variants ? 'third' or variants ? 'away')");

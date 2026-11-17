@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { EMPTY_CINEMATIC_SHOP_CONTENT } from "@/lib/cinematic-shop-content";
+import CinematicShopFields from "@/components/admin/shop/CinematicShopFields";
+import { EMPTY_CINEMATIC_SHOP_CONTENT, type ShopEdition } from "@/lib/cinematic-shop-content";
 import { shopSaveRequestSchema, type ShopSnapshot } from "@/lib/shop-editor/contract";
 import { draftFromShopSnapshot, toShopSaveRequest } from "@/lib/shop-editor/model";
 import { hydrateShopSnapshot } from "@/lib/shop-editor/server";
@@ -61,5 +64,83 @@ describe("RC2027 Shop update editor draft", () => {
     const remove = editor.slice(editor.indexOf("async function removeDetailPhoto"), editor.indexOf("async function savePage"));
     expect(remove).toContain("cleanupUnsavedDetail(");
     expect(editor).toMatch(/disabled=\{[^}]*uploading[^}]*\} onClick=\{\(\) => void savePage\(\)\}/);
+  });
+
+  it("gives the cinematic Shop page Home, Away and Third kit tabs, leaving other designs and the homepage feature alone", () => {
+    const editor = readFileSync(resolve(process.cwd(), "components/admin/shop/ShopPageEditor.tsx"), "utf8");
+    expect(editor).toContain('const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : isCinematic ? [...SHOP_EDITION_VARIANTS] : ["home", "away"];');
+    expect(editor).toContain('const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };');
+    expect(editor).toContain('const currentVariant: ShopVariant = surface === "home" || !variants.includes(selectedVariant) ? "home" : selectedVariant;');
+    expect(editor).toContain('{surface === "shop" && variants.length > 1 && <div className="flex flex-wrap items-center gap-2" aria-label="Edit kit">');
+    expect(editor).toContain('<ToolButton label="Edit jersey options" onClick={() => setTarget("editions")} />');
+    expect(editor).toContain('target === "editions" ? "Jersey options"');
+    expect(editor).not.toContain("Edit prices");
+    // A jersey option in the canvas selects its kit tab.
+    expect(editor).toContain('onVariantChange={variant => { setSelectedVariant(variant); setTarget(current => current === "editions" ? current : "copy"); }}');
+  });
+
+  it("edits up to three jersey options titled by kit, plus the heading over them", () => {
+    const option = (label: string): ShopEdition => ({ label, price: "$115", line: "", link: "" });
+    const fields = (editions: ShopEdition[], editionsHeading = "") => renderToStaticMarkup(createElement(CinematicShopFields, {
+      target: "editions", value: { ...EMPTY_CINEMATIC_SHOP_CONTENT, editions, editionsHeading }, onChange: () => undefined, uploading: false,
+      onUploadMap: () => undefined, onRemoveMap: () => undefined, onUploadDetail: () => undefined, onRemoveDetail: () => undefined,
+    }));
+    const three = fields([option("Home jersey"), option("Away jersey"), option("Foothill Transit Edition jersey")], "Pick your kit");
+    expect([...three.matchAll(/<legend[^>]*>([^<]*)<\/legend>/g)].map(match => match[1])).toEqual(["Home kit option", "Away kit option", "Third kit option"]);
+    expect(three).not.toContain(">Add ");
+    expect(three).toContain(">Remove third kit option<");
+    expect(three).not.toContain(">Remove home kit option<");
+    expect(three).toContain("Section heading");
+    expect(three).toContain('placeholder="Select your jersey" maxLength="80" value="Pick your kit"');
+    const two = fields([option("Home jersey"), option("Away jersey")]);
+    expect(two).toContain(">Add third kit option<");
+    expect(two).toContain(">Remove away kit option<");
+    expect(fields([])).toContain(">Add home kit option<");
+  });
+
+  it("round-trips the heading and saves a Third kit with its photo row", () => {
+    const snapshot: ShopSnapshot = { ...base, presentation: { ...EMPTY_CINEMATIC_SHOP_CONTENT, editionsHeading: "Pick your kit" } };
+    const draft = draftFromShopSnapshot(withEnv(() => hydrateShopSnapshot(snapshot)));
+    expect(draft.presentation.editionsHeading).toBe("Pick your kit");
+    draft.presentation.editionsHeading = "Select your jersey";
+    draft.presentation.editions = [{ label: "Home jersey", price: "$115", line: "", link: "" }, { label: "Away jersey", price: "$115", line: "", link: "" }, { label: "Foothill Transit Edition jersey", price: "$115", line: "", link: "" }];
+    draft.presentationChanged = true;
+    draft.variants.third = { exists: true, section: { ...draft.variants.third.section, title: "Going Good Places", bullet_points: ["Foothill crest"] }, photos: [{ rowId: null, assetId: photo, url: "/third.png", order: 0 }] };
+    draft.photoRows.third = [{ rowId: null, assetId: foreign, url: "/row.png", order: 0 }];
+    draft.changedVariants = ["third"]; draft.changedRows = ["third"];
+    const request = toShopSaveRequest(snapshot, draft, operationId);
+    expect(request.presentation?.editionsHeading).toBe("Select your jersey");
+    expect(request.presentation?.editions).toHaveLength(3);
+    expect(Object.keys(request.variants)).toEqual(["third"]);
+    expect(request.photoRows).toEqual({ third: [{ rowId: null, assetId: foreign, order: 0 }] });
+    expect(shopSaveRequestSchema.safeParse(request).success).toBe(true);
+  });
+
+  it("sends exactly the payload the database before the jersey-options migration accepts when no new feature is used", () => {
+    // The keys that 20261104040000's validate_cinematic_shop_content allows (legacy required, added optional).
+    const oldSql = readFileSync(resolve(process.cwd(), "supabase/migrations/20261104040000_cinematic_shop_update.sql"), "utf8");
+    const list = (name: string) => [...oldSql.match(new RegExp(`${name} text\\[\\]:=array\\[([^\\]]*)\\]`))![1].matchAll(/'([^']+)'/g)].map(match => match[1]);
+    const legacyKeys = list("legacy"), addedKeys = list("added");
+    expect(addedKeys).not.toContain("editionsHeading");
+    const current: ShopSnapshot = {
+      ...base,
+      sections: [{ id: "home-kit", kit_variant: "home", eyebrow: "Match home 2027", title: "City of the Roses", description: "", bullet_points: ["League patch"], store_note: "", cta_label: "Buy now", cta_link: "https://example.com/kit" }],
+      photos: [{ rowId: photo, assetId: null, url: "/lead.png", order: 0, kit_variant: "home" }],
+      presentation: { ...EMPTY_CINEMATIC_SHOP_CONTENT, editions: [{ label: "Authentic jersey", price: "$115", line: "", link: "" }, { label: "Replica jersey", price: "$95", line: "", link: "" }] },
+    };
+    for (const heading of [undefined, "", "  "]) {
+      const draft = draftFromShopSnapshot(withEnv(() => hydrateShopSnapshot(current)));
+      if (heading !== undefined) draft.presentation.editionsHeading = heading;
+      draft.presentation.sponsorsHeading = "Our partners";
+      draft.presentationChanged = true;
+      draft.variants.home.section.title = "City of the Roses 2027";
+      draft.changedVariants = ["home"];
+      // The admin route forwards the parsed request to save_shop_page.
+      const forwarded = JSON.parse(JSON.stringify(shopSaveRequestSchema.parse(toShopSaveRequest(current, draft, operationId))));
+      expect(Object.keys(forwarded.presentation).sort()).toEqual([...legacyKeys, ...addedKeys].sort());
+      expect(forwarded.presentation.editions.length).toBeLessThanOrEqual(2);
+      expect(Object.keys(forwarded.variants)).toEqual(["home"]);
+      expect(forwarded).not.toHaveProperty("photoRows");
+    }
   });
 });
