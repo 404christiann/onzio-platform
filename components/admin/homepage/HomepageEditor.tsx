@@ -29,6 +29,8 @@ import HomepagePreviewFrame from "./HomepagePreviewFrame";
 import HomepageFields from "./HomepageFields";
 import ClassicHomepageEditor from "./ClassicHomepageEditor";
 import HomepageNotifications, { useHomepageNotification } from "./HomepageNotifications";
+import { AdminPageHeader } from "@/components/admin/AdminPage";
+import saveButtonStyles from "@/components/admin/ui/AdminSaveButton.module.css";
 import { savedLabel, websiteState } from "@/lib/save-status";
 import "./homepage-editor.css";
 
@@ -216,7 +218,10 @@ function ExistingHomepageEditor() {
   const done = () => { captureAnchor(piece); panel.current?.close(); restoreSelectionFocus(); dispatch({ type: "done" }); };
   const saveDisabled = !!getHomepageSaveBlocker(state) || !!editor.recoveryConflict;
   const status = state.save === "saving" ? "Saving your homepage…" : state.save === "saved" ? "Saved. Your homepage is updated." : editor.dirty.length ? `Not saved yet: ${editor.dirty.map(section => SECTION_NAMES[section]).join(", ")}` : "Nothing to save yet.";
-  const saveButton = <button type="button" className="hp-button hp-save" disabled={saveDisabled} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
+  // Classic-portal Save (only cinematic@2 reaches this editor there): main's 38px Save look, keeping its own label.
+  const saveButton = <button type="button" className={`admin-press ${saveButtonStyles.button}`} data-state={state.save === "saving" ? "saving" : saveDisabled ? "clean" : "dirty"} disabled={saveDisabled} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
+  // The phone thumb bar keeps its compact 44px touch target.
+  const thumbSaveButton = <button type="button" className="hp-button hp-save" disabled={saveDisabled} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
   const editBar = reimagined ? <EditBar
     state={state.save === "saving" ? "saving" : editor.dirty.length ? "dirty" : state.save === "saved" ? "saved" : "clean"}
     unsaved={editor.dirty.map(section => EDIT_BAR_NAMES[section])}
@@ -243,7 +248,7 @@ function ExistingHomepageEditor() {
 
   return <div ref={root} className="hp-editor" data-sheet-open={!!disclosure && !playback} data-playback={playback} data-portal={reimagined ? "reimagined" : undefined}>
     {editBar}
-    {!reimagined && <header className="hp-heading"><div><h1>Homepage</h1><p>Click a part of your page to make it yours.</p></div><div className="hp-desktop-save">{!disclosure && saveButton}</div></header>}
+    {!reimagined && <AdminPageHeader className="mb-3 sm:mb-[18px]" eyebrow="Public website" title="Homepage" description="Click a part of your page to make it yours." actions={mobile ? undefined : <div className="hp-desktop-save">{!disclosure && saveButton}</div>} />}
     {!reimagined && <div className="hp-status" role="status" aria-live="off" data-dirty={editor.dirty.length > 0}>{status}</div>}
     {!navigationOpen && !mobile && !disclosure && !destination && <HomepageNotifications {...notificationProps} />}
     {editor.recoveryUnavailable && <p className="hp-recovery-notice" role="alert">Browser recovery is unavailable. Keep this page open until you save; your unsaved work may not survive closing it.</p>}
@@ -298,7 +303,7 @@ function ExistingHomepageEditor() {
     </div>
     {mobile && !navigationOpen && !disclosure && !destination && <div className="hp-mobile-notification-slot"><HomepageNotifications {...notificationProps} /></div>}
     <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
-    <div ref={thumbBar} className="hp-thumb-bar" hidden={navigationOpen}><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div>{!reimagined && <div className="hp-thumb-save">{saveButton}</div>}{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
+    <div ref={thumbBar} className="hp-thumb-bar" hidden={navigationOpen}><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div>{!reimagined && <div className="hp-thumb-save">{thumbSaveButton}</div>}{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
     <dialog ref={dialog} className="hp-leave-dialog" aria-labelledby="hp-leave-title" onCancel={event => { if (editor.isDiscardingUnsaved()) event.preventDefault(); else setDestination(null); }}><h2 id="hp-leave-title">{reimagined ? "Save your changes first?" : "Save your homepage changes?"}</h2><p>Your changes have not been saved yet.</p>{(state.submitted || editor.recoveryConflict) && <p>Your browser draft and any unconfirmed save will be kept when you leave.</p>}{destination && <HomepageNotifications {...notificationProps} inModal />}<div><button className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict || editor.discardingUnsaved} onClick={async () => { if (await editor.save()) { setDestination(null); if (destination) router.push(destination); } }}>Save and continue</button><button className="hp-button" disabled={editor.discardingUnsaved} onClick={() => { if (!editor.isDiscardingUnsaved()) setDestination(null); }}>Keep editing</button><button className="hp-button" disabled={state.save === "saving" || editor.discardingUnsaved} onClick={async () => { if (!await editor.discardUnsavedUploads()) return; setDestination(null); if (destination) router.push(destination); }}>Leave without saving</button></div></dialog>
   </div>;
 }

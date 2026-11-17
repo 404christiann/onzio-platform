@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { z } from "zod";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
-import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
-import { Button } from "@/components/ui/button";
-import NativeImage from "@/components/ResilientNativeImage";
+import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import {
+  EditorActionButton, EditorField, EditorGroup, EditorImage, EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorReorderButtons,
+  EditorSaveBar, EditorSecondaryButton, EditorSection, EditorSwitch, heldSaveState, kit,
+} from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { createClient } from "@/lib/admin-client";
 import { loadVisitorPageEditor, saveVisitorPageEditor } from "@/lib/visitor-page-editor";
 import { loadTicketsEditor } from "@/lib/tickets-editor";
@@ -34,31 +38,34 @@ type Section = Exclude<keyof RobinsonContent, "images">;
 const PAGE = "Robinson Stadium";
 
 function TextField({ label, value, max, disabled, multiline, hint, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: string; onChange: (value: string) => void }) {
-  return <label className="block space-y-2"><span className="text-sm font-medium">{label}</span>
-    {multiline ? <textarea className={ADMIN_INPUT_CLASS + " min-h-28"} disabled={disabled} value={value} maxLength={max} onChange={event => onChange(event.target.value)} />
-      : <input className={ADMIN_INPUT_CLASS} disabled={disabled} value={value} maxLength={max} onChange={event => onChange(event.target.value)} />}
-    {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}</label>;
+  return <EditorField label={label} value={value} max={max} disabled={disabled} multiline={multiline} hint={hint} onChange={onChange} />;
 }
 
 function TextList({ label, items, max, disabled, onChange }: { label: string; items: string[]; max: number; disabled: boolean; onChange: (items: string[]) => void }) {
-  return <div className="space-y-4">{items.map((item, index) => <div key={index} className="space-y-2">
+  return <div className={kit.stack}>{items.map((item, index) => <div key={index} className="grid min-w-0 gap-2">
     <TextField label={`${label} ${index + 1}`} value={item} max={4000} multiline disabled={disabled} onChange={value => onChange(items.map((current, position) => position === index ? value : current))} />
-    <div className="flex flex-wrap gap-2">
-      <Button className="min-h-11" variant="outline" disabled={disabled || index === 0} onClick={() => onChange(moveItem(items, index, -1))}>Move up</Button>
-      <Button className="min-h-11" variant="outline" disabled={disabled || index === items.length - 1} onClick={() => onChange(moveItem(items, index, 1))}>Move down</Button>
-      <Button className="min-h-11" variant="outline" disabled={disabled} onClick={() => onChange(removeItem(items, index))}>Remove {label.toLowerCase()} {index + 1}</Button>
-    </div></div>)}
-    <Button className="min-h-11" variant="outline" disabled={disabled || items.length >= max} onClick={() => onChange(appendItem(items, "", max))}>Add {label.toLowerCase()}</Button>
+    <EditorReorderButtons index={index} length={items.length} disabled={disabled} noun={label.toLowerCase()} onMove={delta => onChange(moveItem(items, index, delta))} onRemove={() => onChange(removeItem(items, index))} />
+  </div>)}
+    <div><EditorActionButton disabled={disabled || items.length >= max} onClick={() => onChange(appendItem(items, "", max))}>Add {label.toLowerCase()}</EditorActionButton></div>
+  </div>;
+}
+
+function YesNoField({ label, value, disabled, onChange }: { label: string; value: boolean; disabled: boolean; onChange: (value: boolean) => void }) {
+  const id = useId();
+  return <div className={kit.field}><label htmlFor={id}>{label}</label>
+    <select id={id} disabled={disabled} value={value ? "yes" : "no"} onChange={event => onChange(event.target.value === "yes")}><option value="yes">Yes</option><option value="no">No</option></select>
   </div>;
 }
 
 export default function RobinsonStadiumEditor() {
   const club = useClubContext();
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState<RobinsonSnapshot | null>(null), [draft, setDraft] = useState<RobinsonContent | null>(null);
   const [media, setMedia] = useState<RobinsonSnapshot["media"]>([]), [uploads, setUploads] = useState<string[]>([]), [pending, setPending] = useState<RobinsonSaveRequest | null>(null);
   const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<RobinsonImageSlot | null>(null), [message, setMessage] = useState(""), [failed, setFailed] = useState(false);
   const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [ticketing, setTicketing] = useState<StadiumTicketing>(emptyTicketsContent());
-  const [previewPhone, setPreviewPhone] = useState(false), [loadedClubId, setLoadedClubId] = useState<string | null>(null);
+  const [loadedClubId, setLoadedClubId] = useState<string | null>(null);
+  const [confirmReload, setConfirmReload] = useState(false), [leaveTo, setLeaveTo] = useState<string | null>(null), [previewPhone, setPreviewPhone] = useState(false);
   const recoveryKey = useRef<string | null>(null), epoch = useRef(0);
   const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch {} };
   const dirty = !!draft && !!snapshot && robinsonDraftFingerprint(draft) !== robinsonDraftFingerprint(snapshot.content ?? emptyRobinsonContent());
@@ -114,27 +121,40 @@ export default function RobinsonStadiumEditor() {
     setMessage(""); setFailed(false);
   };
   const patch = <K extends Section>(section: K, value: Partial<RobinsonContent[K]>) => change(content => ({ ...content, [section]: { ...content[section], ...value } }));
+  /** Leaving for another admin page asks first when there is an unsaved draft (the same decision the native confirm made). */
   function guardLink(event: MouseEvent<HTMLAnchorElement>) {
-    if (locked || (dirty && !window.confirm(`Leave this page? Your unsaved ${PAGE} draft will be kept on this browser.`))) event.preventDefault();
+    if (locked) { event.preventDefault(); return; }
+    if (!dirty) return;
+    event.preventDefault();
+    setLeaveTo(event.currentTarget.getAttribute("href"));
   }
-  async function save() {
-    if (!draft || !snapshot || busy || uploading) return;
+  /** Resolves true only when the server committed the save, so the Save button can show Saved. */
+  async function save(): Promise<boolean> {
+    if (!draft || !snapshot || busy || uploading) return false;
     const parsed = robinsonSaveSchema.safeParse(pending ?? { operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision, content: draft, retiredMediaAssetIds: unusedUploads(uploads, draft) });
-    if (!parsed.success) { setFailed(true); setMessage("Review the fields before saving. Each Directions section needs its own anchor."); return; }
+    if (!parsed.success) { setFailed(true); setMessage("Review the fields before saving. Each Directions section needs its own anchor."); return false; }
     const request = parsed.data, generation = epoch.current;
     setPending(request); setBusy(true); setFailed(false); setMessage(`Saving ${PAGE}…`);
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, uploads })); } catch {}
     const result = await saveVisitorPageEditor<RobinsonContent>("robinson", request);
-    if (generation !== epoch.current) return;
+    if (generation !== epoch.current) return false;
     setBusy(false);
     if (result.status === "committed") {
       setSnapshot(result.snapshot); setDraft(result.snapshot.content ?? emptyRobinsonContent()); setMedia(result.snapshot.media);
       setUploads([]); setPending(null); setMessage(result.snapshot.cleanupPending ? `${PAGE} saved. Image cleanup will retry automatically.` : `${PAGE} saved.`); clearRecovery();
+      return true;
     } else if (result.status === "uncertain") { setPending(result.request); setFailed(true); setMessage(result.message); }
     else { setPending(null); setFailed(true); setMessage(result.message); }
+    return false;
+  }
+  /** Reload asks first when there are unsaved edits (the same decision the native confirm made). */
+  function requestReload() {
+    if (locked) return;
+    if (dirty) setConfirmReload(true);
+    else void reload();
   }
   async function reload() {
-    if (locked || (dirty && !window.confirm(`Discard unsaved ${PAGE} edits and load the saved page?`))) return;
+    if (locked) return;
     const generation = epoch.current;
     setBusy(true);
     try {
@@ -163,25 +183,30 @@ export default function RobinsonStadiumEditor() {
     } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } }
     finally { if (generation === epoch.current) setUploading(null); }
   }
+  const saveAction = useSaveState({
+    isDirty: dirty || !!pending || uploads.length > 0,
+    onSave: async () => { if (!(await save())) throw new Error(`${PAGE} was not saved.`); },
+  });
 
   const page = draft ? hydrateRobinsonContent(draft, media) : null;
-  const imageSlot = (slot: RobinsonImageSlot, label: string, hint?: string) => draft && page && <fieldset className="min-w-0 space-y-3 rounded-lg border border-border p-4" key={slot}>
-    <legend className="px-1 text-sm font-medium">{label}</legend>
-    {page.images[slot].url ? <NativeImage src={page.images[slot].url!} alt={draft.images[slot].alt} style={{ height: 120, width: "100%", objectFit: "contain" }} /> : <p className="text-sm text-muted-foreground">No image. Nothing shows here on the page.</p>}
-    <label className="block space-y-2"><span className="text-sm">{uploading === slot ? "Adding image…" : `Replace ${label.toLowerCase()}`}</span><input className={ADMIN_INPUT_CLASS} type="file" accept="image/png,image/webp" disabled={locked} onChange={event => { const file = event.target.files?.[0]; if (file) void upload(slot, file); event.target.value = ""; }} /></label>
-    <TextField label="Image description" value={draft.images[slot].alt} max={1000} disabled={locked} hint={hint} onChange={alt => change(content => ({ ...content, images: { ...content.images, [slot]: { ...content.images[slot], alt } } }))} />
-    <Button className="min-h-11" variant="outline" disabled={locked || !draft.images[slot].assetId} onClick={() => change(content => setImage(content, slot, null))}>Remove image</Button>
-  </fieldset>;
-  const panel = (section: Section, title: string, children: ReactNode, description?: ReactNode) => draft && <AdminPanel key={section}>
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{title}</h2>{description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}</div>
-      <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" disabled={locked} checked={draft[section].visible} onChange={event => patch(section, { visible: event.target.checked } as Partial<RobinsonContent[typeof section]>)} />Show on page</label></div>
-    <div className="space-y-5">{children}</div>
-  </AdminPanel>;
+  const imageSlot = (slot: RobinsonImageSlot, label: string, hint?: string) => draft && page && <EditorGroup key={slot} legend={label}>
+    <EditorImage label={label} url={page.images[slot].url} alt={draft.images[slot].alt} accept="image/png,image/webp" empty="No image. Nothing shows here on the page."
+      uploading={uploading === slot} disabled={locked} hasImage={!!page.images[slot].url} onFile={file => void upload(slot, file)}
+      onRemove={() => change(content => setImage(content, slot, null))} removeDisabled={locked || !draft.images[slot].assetId} />
+    <EditorField label="Image description" value={draft.images[slot].alt} max={1000} disabled={locked} hint={hint}
+      onChange={alt => change(content => ({ ...content, images: { ...content.images, [slot]: { ...content.images[slot], alt } } }))} />
+  </EditorGroup>;
+  const panel = (section: Section, title: string, children: ReactNode, description?: ReactNode) => draft && <EditorSection key={section} title={title} description={description}
+    aside={<EditorSwitch checked={draft[section].visible} disabled={locked} label={`Show ${title} on the page`} onChange={visible => patch(section, { visible } as Partial<RobinsonContent[typeof section]>)} />}>
+    <div className={kit.stack}>{children}</div>
+  </EditorSection>;
+  const saveState = heldSaveState(saveAction.state, busy || !!uploading);
 
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader title={PAGE} description="This page is unavailable for the current website design." /></AdminPage>;
-  return <AdminPage className="pb-24"><AdminPageHeader title={PAGE} description="Edit the Robinson Stadium page. Save applies all changes together." actions={<Link className="text-primary underline" href="/stadium" target="_blank">Open Stadium page</Link>} />
-    {message && <div className={failed ? "rounded-lg border border-destructive p-4 text-sm" : "rounded-lg border border-border p-4 text-sm"} role={failed ? "alert" : "status"}>{message}</div>}
-    {!draft || !page || loadedClubId !== club.id ? <AdminPanel><p role="status">Loading {PAGE}…</p>{failed && <Button onClick={() => location.reload()}>Try again</Button>}</AdminPanel> : <>
+  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader eyebrow="Public website" title={PAGE} description="This page is unavailable for the current website design." /></AdminPage>;
+  return <AdminPage className={kit.page}>
+    <AdminPageHeader eyebrow="Public website" title={PAGE} description="Edit the Robinson Stadium page. Save applies all changes together." actions={<EditorPageLink href="/stadium">Open Stadium page</EditorPageLink>} />
+    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
+    {!draft || !page || loadedClubId !== club.id ? <EditorLoading label={`Loading ${PAGE}…`} failed={failed} onRetry={() => location.reload()} /> : <>
       {panel("heading", "Page heading", <div className="grid gap-5 md:grid-cols-2">
         <TextField label="Title" value={draft.heading.title} max={120} disabled={locked} onChange={title => patch("heading", { title })} />
         <TextField label="Subtitle" value={draft.heading.subtitle} max={120} disabled={locked} onChange={subtitle => patch("heading", { subtitle })} />
@@ -202,23 +227,20 @@ export default function RobinsonStadiumEditor() {
           <TextField label="Heading" value={draft.info.heading} max={120} disabled={locked} onChange={heading => patch("info", { heading })} />
           <TextField label="Note" value={draft.info.note} max={120} disabled={locked} onChange={note => patch("info", { note })} />
         </div>
-        {draft.info.rows.map((row, index) => <fieldset key={index} className="grid gap-4 rounded-lg border border-border p-4 md:grid-cols-[1fr_10rem]"><legend className="px-1 text-sm">Row {index + 1}</legend>
+        {draft.info.rows.map((row, index) => <EditorGroup key={index} legend={`Row ${index + 1}`}><div className="grid min-w-0 gap-4 md:grid-cols-[1fr_10rem]">
           <TextField label="Label" value={row.label} max={120} disabled={locked} onChange={label => patch("info", { rows: draft.info.rows.map((current, position) => position === index ? { ...current, label } : current) })} />
-          <label className="block space-y-2"><span className="text-sm font-medium">Value</span><select className={ADMIN_INPUT_CLASS} disabled={locked} value={row.available ? "yes" : "no"} onChange={event => patch("info", { rows: draft.info.rows.map((current, position) => position === index ? { ...current, available: event.target.value === "yes" } : current) })}><option value="yes">Yes</option><option value="no">No</option></select></label>
-          <div className="flex flex-wrap gap-2 md:col-span-2">
-            <Button className="min-h-11" variant="outline" disabled={locked || index === 0} onClick={() => patch("info", { rows: moveItem(draft.info.rows, index, -1) })}>Move up</Button>
-            <Button className="min-h-11" variant="outline" disabled={locked || index === draft.info.rows.length - 1} onClick={() => patch("info", { rows: moveItem(draft.info.rows, index, 1) })}>Move down</Button>
-            <Button className="min-h-11" variant="outline" disabled={locked} onClick={() => patch("info", { rows: removeItem(draft.info.rows, index) })}>Remove row {index + 1}</Button>
-          </div></fieldset>)}
-        <Button className="min-h-11" variant="outline" disabled={locked || draft.info.rows.length >= MAX_ROBINSON_INFO_ROWS} onClick={() => change(addInfoRow)}>Add row</Button>
+          <YesNoField label="Value" value={row.available} disabled={locked} onChange={available => patch("info", { rows: draft.info.rows.map((current, position) => position === index ? { ...current, available } : current) })} />
+          <div className="md:col-span-2"><EditorReorderButtons index={index} length={draft.info.rows.length} disabled={locked} noun="row" onMove={delta => patch("info", { rows: moveItem(draft.info.rows, index, delta) })} onRemove={() => patch("info", { rows: removeItem(draft.info.rows, index) })} /></div>
+        </div></EditorGroup>)}
+        <div><EditorActionButton disabled={locked || draft.info.rows.length >= MAX_ROBINSON_INFO_ROWS} onClick={() => change(addInfoRow)}>Add row</EditorActionButton></div>
       </>)}
-      {panel("match", "Next home match", imageSlot("partner", "Partner logo under the match"), <>Match wording comes from <Link className="text-primary underline" href="/admin/homepage" onClick={guardLink}>Homepage</Link>, fixtures from <Link className="text-primary underline" href="/admin/schedule" onClick={guardLink}>Schedule</Link>, and the purchase link from <Link className="text-primary underline" href="/admin/tickets" onClick={guardLink}>Tickets</Link>.</>)}
+      {panel("match", "Next home match", imageSlot("partner", "Partner logo under the match"), <>Match wording comes from <Link className={kit.inlineLink} href="/admin/homepage" onClick={guardLink}>Homepage</Link>, fixtures from <Link className={kit.inlineLink} href="/admin/schedule" onClick={guardLink}>Schedule</Link>, and the purchase link from <Link className={kit.inlineLink} href="/admin/tickets" onClick={guardLink}>Tickets</Link>.</>)}
       {panel("lockers", "Lockers image", imageSlot("lockers", "Lockers image", "Decorative. Leave the description empty unless the image carries information."))}
       {panel("food", "Food & Beverage", <>
         <TextField label="Heading" value={draft.food.heading} max={120} disabled={locked} onChange={heading => patch("food", { heading })} />
         {imageSlot("mealPass", "Meal pass")}
         <TextField label="Text" value={draft.food.body} max={4000} multiline disabled={locked} hint="Line breaks show on desktop." onChange={body => patch("food", { body })} />
-        <div className="grid gap-5 md:grid-cols-3">{draft.food.steps.map((step, index) => <div key={index} className="space-y-3">
+        <div className="grid gap-5 md:grid-cols-3">{draft.food.steps.map((step, index) => <div key={index} className="grid min-w-0 gap-2">
           <TextField label={`Step ${index + 1}`} value={step.label} max={120} disabled={locked} onChange={label => patch("food", { steps: draft.food.steps.map((current, position) => position === index ? { label } : current) })} />
           {imageSlot((["step1", "step2", "step3"] as const)[index], `Step ${index + 1} icon`)}
         </div>)}</div>
@@ -231,22 +253,32 @@ export default function RobinsonStadiumEditor() {
         <div className="grid gap-6 md:grid-cols-2">{imageSlot("bus", "Bus")}{imageSlot("routeMap", "Route map")}</div>
       </>)}
       {panel("directions", "Directions", <>
-        {draft.directions.blocks.map((block, index) => <fieldset key={block.id} className="space-y-4 rounded-lg border border-border p-4"><legend className="px-1 text-sm font-medium">Section {index + 1}</legend>
+        {draft.directions.blocks.map((block, index) => <EditorGroup key={block.id} legend={`Section ${index + 1}`}>
           <TextField label="Heading" value={block.heading} max={120} disabled={locked} hint={`Page link: /stadium#${block.id}`} onChange={heading => change(content => updateBlock(content, index, { heading }))} />
           <TextList label="Paragraph" items={block.paragraphs} max={MAX_ROBINSON_PARAGRAPHS} disabled={locked} onChange={paragraphs => change(content => updateBlock(content, index, { paragraphs }))} />
           <TextField label="Italic note" value={block.note} max={4000} multiline disabled={locked} onChange={note => change(content => updateBlock(content, index, { note }))} />
           <TextList label="Bullet" items={block.bullets} max={MAX_ROBINSON_BULLETS} disabled={locked} onChange={bullets => change(content => updateBlock(content, index, { bullets }))} />
           <TextField label="Closing line" value={block.closing} max={4000} multiline disabled={locked} hint="Shown on its own line after the bullets." onChange={closing => change(content => updateBlock(content, index, { closing }))} />
-          <div className="flex flex-wrap gap-2">
-            <Button className="min-h-11" variant="outline" disabled={locked || index === 0} onClick={() => patch("directions", { blocks: moveItem(draft.directions.blocks, index, -1) })}>Move section up</Button>
-            <Button className="min-h-11" variant="outline" disabled={locked || index === draft.directions.blocks.length - 1} onClick={() => patch("directions", { blocks: moveItem(draft.directions.blocks, index, 1) })}>Move section down</Button>
-            <Button className="min-h-11" variant="outline" disabled={locked} onClick={() => patch("directions", { blocks: removeItem(draft.directions.blocks, index) })}>Remove section {index + 1}</Button>
-          </div></fieldset>)}
-        <Button className="min-h-11" variant="outline" disabled={locked || draft.directions.blocks.length >= MAX_ROBINSON_BLOCKS} onClick={() => change(addBlock)}>Add section</Button>
+          <EditorReorderButtons index={index} length={draft.directions.blocks.length} disabled={locked} noun="section" onMove={delta => patch("directions", { blocks: moveItem(draft.directions.blocks, index, delta) })} onRemove={() => patch("directions", { blocks: removeItem(draft.directions.blocks, index) })} />
+        </EditorGroup>)}
+        <div><EditorActionButton disabled={locked || draft.directions.blocks.length >= MAX_ROBINSON_BLOCKS} onClick={() => change(addBlock)}>Add section</EditorActionButton></div>
       </>, "The Stadium parking menu link opens the section whose page link ends in #parking-lot-no-5.")}
-      <p className="text-sm text-muted-foreground">Images: PNG or WebP, up to 5 MB and 3000 pixels per side.</p>
-      <AdminPanel><details><summary className="flex min-h-11 cursor-pointer items-center text-lg font-semibold">Preview current edits</summary><div className="my-4 flex gap-3"><Button className="min-h-11" variant={!previewPhone ? "default" : "outline"} onClick={() => setPreviewPhone(false)}>Desktop</Button><Button className="min-h-11" variant={previewPhone ? "default" : "outline"} onClick={() => setPreviewPhone(true)}>Phone</Button></div><div className="overflow-auto rounded-lg border border-border" style={{ "--hp-viewport": "100dvh" } as CSSProperties}><div style={{ width: previewPhone ? 390 : 1280 }}><HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={PAGE}><CinematicShell contentOnly initialContent={shared}><CinematicRobinson content={page} ticketing={ticketing} /></CinematicShell></HomepagePreviewFrame></div></div></details></AdminPanel>
-      <div className="sticky bottom-3 z-10 flex flex-wrap gap-3 rounded-xl border border-border bg-background p-4 shadow-lg"><Button className="min-h-11" disabled={busy || !!uploading || (!dirty && !pending && !uploads.length)} onClick={() => void save()}>{busy ? "Saving…" : pending ? "Retry same save" : `Save ${PAGE}`}</Button><Button className="min-h-11" variant="outline" disabled={locked} onClick={() => void reload()}>Reload saved page</Button><span className="self-center text-sm text-muted-foreground">{pending ? "Awaiting save confirmation" : dirty ? "Unsaved changes" : "All changes saved"}</span></div>
+      <p className={kit.note}>Images: PNG or WebP, up to 5 MB and 3000 pixels per side.</p>
+      <EditorPreview phone={previewPhone} onPhoneChange={setPreviewPhone}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={PAGE}><CinematicShell contentOnly initialContent={shared}><CinematicRobinson content={page} ticketing={ticketing} /></CinematicShell></HomepagePreviewFrame>
+      </EditorPreview>
+      <EditorSaveBar state={saveState} retry={!!pending} onSave={() => { void saveAction.save().catch(() => undefined); }}
+        status={pending ? "Awaiting save confirmation" : saveState === "dirty" ? "Unsaved changes" : ""}>
+        <EditorSecondaryButton disabled={locked} onClick={requestReload}>Reload saved page</EditorSecondaryButton>
+      </EditorSaveBar>
     </>}
+    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+      onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
+      Discard unsaved {PAGE} edits and load the saved page?
+    </AdminConfirmDialog>
+    <AdminConfirmDialog open={leaveTo !== null} title="Leave this page?" confirmLabel="Leave page"
+      onCancel={() => setLeaveTo(null)} onConfirm={() => { const href = leaveTo; setLeaveTo(null); if (href) router.push(href); }}>
+      Your unsaved {PAGE} draft will be kept on this browser.
+    </AdminConfirmDialog>
   </AdminPage>;
 }

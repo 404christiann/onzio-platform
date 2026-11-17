@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { ChevronDown, ChevronUp, X } from "@/components/admin/icons";
-import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
-import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
+import { ChevronDown, ChevronUp, IconUpload } from "@/components/admin/icons";
+import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
+import { EditorActionButton, EditorIconButton, EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorRemoveButton, EditorSaveBar, EditorSecondaryButton, EditorSection, EditorSegmented, editorSaveState, kit, useSavedFlash } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
 import { useClubContext } from "@/components/ClubContextProvider";
 import NativeImage from "@/components/ResilientNativeImage";
 import CinematicPartners from "@/components/cinematic/CinematicPartners";
 import CinematicShell from "@/components/cinematic/CinematicShell";
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/admin-client";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import {
@@ -60,6 +61,8 @@ export default function CinematicPartnersEditor() {
   const [failed, setFailed] = useState(false);
   const [previewPage, setPreviewPage] = useState<PartnerPage>("partners");
   const [phone, setPhone] = useState(false);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const [saved, setSaved] = useSavedFlash();
   const recoveryKey = useRef<string | null>(null);
   const uploadTarget = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -113,7 +116,7 @@ export default function CinematicPartnersEditor() {
   const locked = busy || !!pending || !!uploading;
   const update = (change: (value: CinematicPartnersContent) => CinematicPartnersContent | void) => {
     setDraft(current => { if (!current) return current; const next = structuredClone(current); return change(next) ?? next; });
-    setMessage(""); setFailed(false);
+    setMessage(""); setFailed(false); setSaved(false);
   };
   const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch {} };
   const logoUrls = Object.fromEntries(logos.map(logo => [logo.id, logoUrl(logo)]));
@@ -152,7 +155,7 @@ export default function CinematicPartnersEditor() {
       await retireUploads(unusedUploads(uploads, saved));
       setSnapshot(result.snapshot); setDraft(saved); setPending(null); setUploads([]);
       setLogos(mergeLogos(result.snapshot.logos));
-      setMessage("Partners saved."); clearRecovery();
+      setMessage("Partners saved."); clearRecovery(); setSaved(true);
     } else if (result.status === "uncertain") {
       setPending(result.request); setMessage(result.message); setFailed(true);
     } else {
@@ -160,9 +163,9 @@ export default function CinematicPartnersEditor() {
     }
   }
 
-  async function reload() {
+  async function reload(confirmed = false) {
     if (locked) return;
-    if ((dirty || uploads.length) && !window.confirm("Discard unsaved Partners edits and load the saved pages?")) return;
+    if ((dirty || uploads.length) && !confirmed) { setConfirmReload(true); return; }
     try {
       const loaded = await loadCinematicPartnersEditor();
       await retireUploads(unusedUploads(uploads, loaded.content ?? starterCinematicPartnersContent()));
@@ -172,90 +175,80 @@ export default function CinematicPartnersEditor() {
   }
 
   const textField = (label: string, value: string, maximum: number, onChange: (value: string) => void, hint?: string) =>
-    <label className="block space-y-2"><span className="text-sm font-medium">{label}</span>
+    <label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>{label}</span>
       <input className={ADMIN_INPUT_CLASS} disabled={locked} value={value} maxLength={maximum} onChange={event => onChange(event.target.value)} />
-      {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}</label>;
-  const pagePanel = (page: PartnerPage) => draft && <AdminPanel key={page}>
-    <h2 className="mb-1 text-lg font-semibold">{PAGE_LABELS[page]} page</h2>
-    <p className="mb-5 text-sm text-muted-foreground">{page === "partners" ? "Shown at /sponsors." : `Shown at ${PARTNERSHIP_ROUTE}.`}</p>
+      {hint && <span className={kit.hint}>{hint}</span>}</label>;
+  const pagePanel = (page: PartnerPage) => draft && <EditorSection key={page} title={`${PAGE_LABELS[page]} page`} description={page === "partners" ? "Shown at /sponsors." : `Shown at ${PARTNERSHIP_ROUTE}.`}>
     <div className="grid gap-5 md:grid-cols-2">
       {textField("Heading", draft.pages[page].title, 80, value => update(content => { content.pages[page].title = value; }))}
       {textField("Subtitle", draft.pages[page].subtitle, 120, value => update(content => { content.pages[page].subtitle = value; }))}
-      <label className="block space-y-2 md:col-span-2"><span className="text-sm font-medium">Intro</span>
+      <label className="block min-w-0 md:col-span-2"><span className={ADMIN_LABEL_CLASS}>Intro</span>
         <textarea className={`${ADMIN_INPUT_CLASS} min-h-28`} disabled={locked} maxLength={1200} value={draft.pages[page].intro} onChange={event => update(content => { content.pages[page].intro = event.target.value; })} /></label>
       {textField("Bottom bar text", draft.pages[page].ctaPrompt, 160, value => update(content => { content.pages[page].ctaPrompt = value; }))}
       {textField("Button text", draft.pages[page].ctaLabel, 40, value => update(content => { content.pages[page].ctaLabel = value; }), "Leave blank to hide the bottom bar.")}
       {page === "partners"
-        ? <p className="text-xs text-muted-foreground md:col-span-2">The button opens the Partnership Opportunities page.</p>
+        ? <p className={`${kit.hint} md:col-span-2`}>The button opens the Partnership Opportunities page.</p>
         : <div className="md:col-span-2">{textField("Button link", draft.pages.opportunities.ctaHref, 2000, value => update(content => { content.pages.opportunities.ctaHref = value; }),
             "A full HTTPS link, a mailto: email address, or a site page starting with /. The bottom bar stays hidden until a link is saved.")}</div>}
     </div>
-  </AdminPanel>;
+  </EditorSection>;
 
-  return <AdminPage className="pb-24">
-    <AdminPageHeader title="Partners" description="Edit the Club Partners and Partnership Opportunities pages. Both pages show the same partner list. Save applies all changes together."
-      actions={<span className="flex gap-4"><Link className="text-primary underline" href="/sponsors" target="_blank">Open Club Partners</Link><Link className="text-primary underline" href={PARTNERSHIP_ROUTE} target="_blank">Open Partnership Opportunities</Link></span>} />
-    {message && <div className={failed ? "rounded-lg border border-destructive p-4 text-sm" : "rounded-lg border border-border p-4 text-sm"} role={failed ? "alert" : "status"}>{message}</div>}
-    {!draft || !snapshot ? <AdminPanel><p role="status">Loading Partners…</p>{failed && <Button onClick={() => location.reload()}>Try again</Button>}</AdminPanel> : <>
+  return <AdminPage className={kit.page}>
+    <AdminPageHeader eyebrow="Public website" title="Partners" description="Edit the Club Partners and Partnership Opportunities pages. Both pages show the same partner list. Save applies all changes together."
+      actions={<span className={kit.headerActions}><EditorPageLink href="/sponsors">Open Club Partners</EditorPageLink><EditorPageLink href={PARTNERSHIP_ROUTE}>Open Partnership Opportunities</EditorPageLink></span>} />
+    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
+    {!draft || !snapshot ? <EditorLoading label="Loading Partners…" failed={failed} onRetry={() => location.reload()} /> : <>
       {pagePanel("partners")}
       {pagePanel("opportunities")}
-      <AdminPanel>
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <div><h2 className="text-lg font-semibold">Partners</h2>
-            <p className="text-sm text-muted-foreground">Shown on both pages in this order. Choose a logo already used in <Link className="text-primary underline" href="/admin/sponsors">Sponsors</Link>, or upload a new one (PNG, JPEG or WebP).</p></div>
-          <span className="text-sm text-muted-foreground">{draft.partners.length}/{MAX_PARTNERS}</span>
-        </div>
-        {draft.partners.length === 0 && <p className="mb-4 text-sm text-muted-foreground">No partners yet. The pages hide the partner grid until one is added.</p>}
-        <ol className="space-y-4">{draft.partners.map((partner, index) => {
+      <EditorSection title="Partners" aside={`${draft.partners.length}/${MAX_PARTNERS}`}
+        description={<>Shown on both pages in this order. Choose a logo already used in <Link className={kit.inlineLink} href="/admin/sponsors">Sponsors</Link>, or upload a new one (PNG, JPEG or WebP).</>}>
+        {draft.partners.length === 0 && <p className={`${kit.note} mb-4`}>No partners yet. The pages hide the partner grid until one is added.</p>}
+        <ol className="grid gap-4">{draft.partners.map((partner, index) => {
           const url = partner.logoAssetId ? logoUrls[partner.logoAssetId] : "";
-          return <li key={partner.id} className="grid gap-4 rounded-lg border border-border p-4 md:grid-cols-[180px_minmax(0,1fr)]">
-            <div className="flex h-24 items-center justify-center rounded-md border border-border bg-white p-3">
-              {url ? <NativeImage src={url} alt={partner.name || `Partner ${index + 1} logo`} className="max-h-full max-w-full object-contain" style={{ filter: partner.tone === "grey" ? "brightness(.62)" : partner.tone === "black" ? "brightness(0)" : undefined }} />
-                : <span className="text-center text-xs text-muted-foreground">No logo yet. The page shows the name with “Original logo pending”.</span>}
+          const name = partner.name || `partner ${index + 1}`;
+          return <li key={partner.id} className={`${kit.group} grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]`}>
+            <div className={kit.imagePreview} data-tone="light">
+              {url ? <NativeImage src={url} alt={partner.name || `Partner ${index + 1} logo`} style={{ filter: partner.tone === "grey" ? "brightness(.62)" : partner.tone === "black" ? "brightness(0)" : undefined }} />
+                : <span className={kit.imageEmpty}>No logo yet. The page shows the name with “Original logo pending”.</span>}
             </div>
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               {textField("Name", partner.name, 80, value => update(content => { content.partners[index].name = value; }))}
               {textField("Role", partner.role, 160, value => update(content => { content.partners[index].role = value; }))}
-              <label className="block space-y-2"><span className="text-sm font-medium">Logo</span>
+              <label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Logo</span>
                 <select className={ADMIN_INPUT_CLASS} disabled={locked} value={partner.logoAssetId ?? ""} onChange={event => update(content => { content.partners[index].logoAssetId = event.target.value || null; })}>
                   <option value="">No logo</option>
                   {logos.map(logo => <option key={logo.id} value={logo.id}>{logo.label}</option>)}
                 </select></label>
-              <label className="block space-y-2"><span className="text-sm font-medium">Logo colour on the white page</span>
+              <label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Logo colour on the white page</span>
                 <select className={ADMIN_INPUT_CLASS} disabled={locked} value={partner.tone} onChange={event => update(content => { content.partners[index].tone = event.target.value as PartnerLogoTone; })}>
                   {Object.entries(TONES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select></label>
-              <div className="flex flex-wrap gap-2 md:col-span-2">
-                <Button variant="outline" disabled={locked} onClick={() => { uploadTarget.current = partner.id; fileInput.current?.click(); }}>{uploading === partner.id ? "Uploading…" : "Upload new logo"}</Button>
-                <Button variant="outline" disabled={locked || index === 0} aria-label={`Move ${partner.name || `partner ${index + 1}`} up`} onClick={() => update(content => movePartner(content, index, -1))}><ChevronUp width="16" height="16" /></Button>
-                <Button variant="outline" disabled={locked || index === draft.partners.length - 1} aria-label={`Move ${partner.name || `partner ${index + 1}`} down`} onClick={() => update(content => movePartner(content, index, 1))}><ChevronDown width="16" height="16" /></Button>
-                <Button variant="outline" disabled={locked} aria-label={`Remove ${partner.name || `partner ${index + 1}`}`} onClick={() => update(content => removePartner(content, index))}><X width="14" height="14" /> Remove</Button>
+              <div className={`${kit.toolbar} md:col-span-2`}>
+                <EditorActionButton disabled={locked} onClick={() => { uploadTarget.current = partner.id; fileInput.current?.click(); }}><IconUpload size={16} aria-hidden="true" />{uploading === partner.id ? "Uploading…" : "Upload new logo"}</EditorActionButton>
+                <span className={kit.spacer} />
+                <EditorIconButton label={`Move ${name} up`} disabled={locked || index === 0} onClick={() => update(content => movePartner(content, index, -1))}><ChevronUp width="16" height="16" /></EditorIconButton>
+                <EditorIconButton label={`Move ${name} down`} disabled={locked || index === draft.partners.length - 1} onClick={() => update(content => movePartner(content, index, 1))}><ChevronDown width="16" height="16" /></EditorIconButton>
+                <EditorRemoveButton label={`Remove ${name}`} disabled={locked} onClick={() => update(content => removePartner(content, index))} />
               </div>
             </div>
           </li>;
         })}</ol>
-        <Button className="mt-4" variant="outline" disabled={locked || draft.partners.length >= MAX_PARTNERS} onClick={() => update(content => addPartner(content))}>Add partner</Button>
+        <div className="mt-4"><EditorActionButton disabled={locked || draft.partners.length >= MAX_PARTNERS} onClick={() => update(content => addPartner(content))}>Add partner</EditorActionButton></div>
         <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event => {
           const file = event.target.files?.[0]; const target = uploadTarget.current;
           event.target.value = "";
           if (file && target) void upload(target, file);
         }} />
-      </AdminPanel>
-      <AdminPanel><details><summary className="flex min-h-11 cursor-pointer items-center text-lg font-semibold">Preview current edits</summary>
-        <div className="my-4 flex flex-wrap gap-3">
-          <Button variant={previewPage === "partners" ? "default" : "outline"} onClick={() => setPreviewPage("partners")}>Club Partners</Button>
-          <Button variant={previewPage === "opportunities" ? "default" : "outline"} onClick={() => setPreviewPage("opportunities")}>Partnership Opportunities</Button>
-          <span className="w-px bg-border" aria-hidden="true" />
-          <Button variant={!phone ? "default" : "outline"} onClick={() => setPhone(false)}>Desktop</Button>
-          <Button variant={phone ? "default" : "outline"} onClick={() => setPhone(true)}>Phone</Button>
-        </div>
-        <div className="overflow-auto rounded-lg border border-border" style={{ "--hp-viewport": "100dvh" } as CSSProperties}><div style={{ width: phone ? 390 : 1280 }}><HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={PAGE_LABELS[previewPage]}><CinematicShell contentOnly initialContent={shared}><CinematicPartners page={previewPage} content={draft} logoUrls={logoUrls} /></CinematicShell></HomepagePreviewFrame></div></div>
-      </details></AdminPanel>
-      <div className="sticky bottom-3 z-10 flex flex-wrap gap-3 rounded-xl border border-border bg-background p-4 shadow-lg">
-        <Button disabled={busy || !!uploading || (!dirty && !pending)} onClick={() => void save()}>{busy ? "Saving…" : pending ? "Retry same save" : "Save Partners"}</Button>
-        <Button variant="outline" disabled={locked} onClick={() => void reload()}>Reload saved pages</Button>
-        <span className="self-center text-sm text-muted-foreground">{pending ? "Awaiting save confirmation" : uploading ? "Uploading logo…" : dirty ? "Unsaved changes" : "All changes saved"}</span>
-      </div>
+      </EditorSection>
+      <EditorPreview phone={phone} onPhoneChange={setPhone}
+        controls={<EditorSegmented label="Page to preview" value={previewPage} onChange={setPreviewPage} options={[{ value: "partners", label: PAGE_LABELS.partners }, { value: "opportunities", label: PAGE_LABELS.opportunities }]} />}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={PAGE_LABELS[previewPage]}><CinematicShell contentOnly initialContent={shared}><CinematicPartners page={previewPage} content={draft} logoUrls={logoUrls} /></CinematicShell></HomepagePreviewFrame>
+      </EditorPreview>
+      <EditorSaveBar state={editorSaveState({ busy, canSave: !busy && !uploading && (dirty || !!pending), saved })} retry={!!pending} onSave={() => void save()}
+        status={pending ? "Awaiting save confirmation" : uploading ? "Uploading logo…" : dirty ? "Unsaved changes" : ""}>
+        <EditorSecondaryButton disabled={locked} onClick={() => void reload()}>Reload saved pages</EditorSecondaryButton>
+      </EditorSaveBar>
     </>}
+    <AdminConfirmDialog open={confirmReload} title="Discard your Partners edits?" confirmLabel="Discard and reload" destructive onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(true); }}>Your unsaved Partners edits will be discarded and the saved pages loaded.</AdminConfirmDialog>
   </AdminPage>;
 }

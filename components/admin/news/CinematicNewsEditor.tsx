@@ -1,17 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
+import { EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorPrimaryButton, EditorRemoveButton, EditorSaveBar, EditorSecondaryButton, EditorSection, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import FileUpload from "@/components/admin/FileUpload";
-import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
 import NewsEditorList from "@/components/admin/news/NewsEditorList";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { CinematicNewsArticle } from "@/components/cinematic/CinematicNews";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import NativeImage from "@/components/ResilientNativeImage";
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/admin-client";
 import { NEWS_CATEGORIES, NEWS_LIMITS, newsInstantToLocal, newsLocalToInstant, newsSlug, splitNewsParagraphs, type NewsArticleSave, type NewsEditorArticle } from "@/lib/cinematic-news";
 import { emptyNewsDraft, loadNewsEditor, newsDraftFromArticle, newsSaveRequest, saveNewsArticle, type NewsDraft, type NewsDraftProblems } from "@/lib/cinematic-news-editor";
@@ -39,6 +39,7 @@ export default function CinematicNewsEditor() {
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
   const [phone, setPhone] = useState(true);
+  const [confirming, setConfirming] = useState<{ kind: "cancel" } | { kind: "remove"; article: NewsEditorArticle } | null>(null);
   const uploadClub = useRef(club.id);
   const dirty = !!editing && JSON.stringify(editing.draft) !== editing.original;
 
@@ -102,16 +103,16 @@ export default function CinematicNewsEditor() {
     if (saved) setEditing(null);
   }
 
-  async function cancel() {
+  async function cancel(confirmed = false) {
     if (!editing || locked) return;
-    if (dirty && !window.confirm("Discard your changes to this article?")) return;
+    if (dirty && !confirmed) { setConfirming({ kind: "cancel" }); return; }
     await discardUnsavedCover(editing.draft.coverAssetId, editing.article);
     setEditing(null); setProblems({}); setMessage(""); setFailed(false);
   }
 
-  async function setRemoved(article: NewsEditorArticle, remove: boolean) {
+  async function setRemoved(article: NewsEditorArticle, remove: boolean, confirmed = false) {
     if (locked) return;
-    if (remove && !window.confirm(`Remove “${article.content.title}” from the site? You can restore it later.`)) return;
+    if (remove && !confirmed) { setConfirming({ kind: "remove", article }); return; }
     await send({ operationId: crypto.randomUUID(), action: remove ? "remove" : "restore", articleId: article.id, expectedRevision: article.revision },
       remove ? "Article removed from the site. Restore it any time." : "Article restored to the site.");
   }
@@ -140,10 +141,10 @@ export default function CinematicNewsEditor() {
     await discardUnsavedCover(previous, editing.article);
   }
 
-  const field = (key: keyof NewsDraft, label: string, control: ReactNode, hint?: string) => <label className="block space-y-2">
-    <span className="text-sm font-medium">{label}</span>{control}
-    {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
-    {problems[key] && <span className="block text-sm text-destructive" role="alert">{problems[key]}</span>}
+  const field = (key: keyof NewsDraft, label: string, control: ReactNode, hint?: string) => <label className="block min-w-0">
+    <span className={ADMIN_LABEL_CLASS}>{label}</span>{control}
+    {hint && <span className={kit.hint}>{hint}</span>}
+    {problems[key] && <span className={kit.error} role="alert">{problems[key]}</span>}
   </label>;
   const text = (key: "cardHeading" | "title" | "subtitle" | "coverAlt" | "actionLabel" | "actionHref", label: string, max: number, hint?: string) => editing &&
     field(key, label, <input className={ADMIN_INPUT_CLASS} disabled={locked} value={editing.draft[key]} maxLength={max} aria-invalid={!!problems[key]} onChange={event => update({ [key]: event.target.value })} />, hint);
@@ -157,19 +158,16 @@ export default function CinematicNewsEditor() {
     cover: draft.coverUrl ? { url: draft.coverUrl, width: 2287, height: 1237 } : null,
   };
 
-  return <AdminPage className="pb-24">
-    <AdminPageHeader title="News" description="Write the articles shown on your News page. Saving shows an article on the site right away." actions={<Link className="text-primary underline" href="/news" target="_blank">Open News page</Link>} />
-    {message && <div className={failed ? "rounded-lg border border-destructive p-4 text-sm" : "rounded-lg border border-border p-4 text-sm"} role={failed ? "alert" : "status"}>{message}</div>}
-    {!articles ? <AdminPanel><p role="status">{failed ? "News could not be loaded." : "Loading News…"}</p>{failed && <Button onClick={() => location.reload()}>Try again</Button>}</AdminPanel>
-      : !editing || !draft ? <AdminPanel>
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Articles</h2><Button disabled={locked} onClick={() => open(null)}>Add article</Button></div>
+  return <AdminPage className={kit.page}>
+    <AdminPageHeader eyebrow="Public website" title="News" description="Write the articles shown on your News page. Saving shows an article on the site right away." actions={<EditorPageLink href="/news">Open News page</EditorPageLink>} />
+    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
+    {!articles ? <EditorLoading label={failed ? "News could not be loaded." : "Loading News…"} failed={failed} onRetry={() => location.reload()} />
+      : !editing || !draft ? <EditorSection title="Articles" aside={<EditorPrimaryButton disabled={locked} onClick={() => open(null)}>Add article</EditorPrimaryButton>}>
         <NewsEditorList articles={articles} timeZone={timeZone} disabled={locked} onEdit={open} onRemove={article => void setRemoved(article, true)} onRestore={article => void setRemoved(article, false)} />
-        {pending && <div className="mt-5 flex flex-wrap items-center gap-3"><Button onClick={() => void send(pending, "Saved.")}>Retry the same save</Button><span className="text-sm text-muted-foreground">Waiting for the last save to be confirmed.</span></div>}
-      </AdminPanel>
+        {pending && <div className={`${kit.toolbar} mt-5`}><EditorPrimaryButton onClick={() => void send(pending, "Saved.")}>Retry the same save</EditorPrimaryButton><span className={kit.note}>Waiting for the last save to be confirmed.</span></div>}
+      </EditorSection>
       : <>
-        <AdminPanel>
-          <h2 className="mb-1 text-lg font-semibold">{editing.article ? "Edit article" : "New article"}</h2>
-          <p className="mb-5 text-sm text-muted-foreground">Web address: /news/{editing.article?.slug ?? (newsSlug(draft.title) || "…")}{editing.article ? "" : " (set when you first save; it doesn’t change later)"}</p>
+        <EditorSection title={editing.article ? "Edit article" : "New article"} description={`Web address: /news/${editing.article?.slug ?? (newsSlug(draft.title) || "…")}${editing.article ? "" : " (set when you first save; it doesn’t change later)"}`}>
           <div className="grid gap-5 md:grid-cols-2">
             {field("category", "Category", <select className={ADMIN_INPUT_CLASS} disabled={locked} value={draft.category} onChange={event => update({ category: event.target.value as NewsDraft["category"] })}>
               {NEWS_CATEGORIES.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}
@@ -179,36 +177,37 @@ export default function CinematicNewsEditor() {
             {text("title", "Title", NEWS_LIMITS.title)}
             <div className="md:col-span-2">{text("subtitle", "Subtitle (optional)", NEWS_LIMITS.subtitle)}</div>
           </div>
-        </AdminPanel>
-        <AdminPanel>
-          <h2 className="mb-5 text-lg font-semibold">Cover photo</h2>
+        </EditorSection>
+        <EditorSection title="Cover photo">
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="space-y-3">
-              {draft.coverUrl ? <NativeImage src={draft.coverUrl} alt={draft.coverAlt || "Cover photo"} className="h-auto w-full rounded-lg border border-border" />
-                : <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">No photo yet. The website shows a dark box here.</p>}
+            <div className="grid min-w-0 gap-3">
+              <div className={kit.imagePreview} data-shape="wide">
+                {draft.coverUrl ? <NativeImage src={draft.coverUrl} alt={draft.coverAlt || "Cover photo"} />
+                  : <span className={kit.imageEmpty}>No photo yet. The website shows a dark box here.</span>}
+              </div>
               <FileUpload label={draft.coverAssetId ? "Replace photo" : "Upload photo"} accept="image/png,image/jpeg,image/webp" onUpload={files => void uploadCover(files)} uploading={uploading} />
-              {draft.coverAssetId && <button type="button" disabled={locked} onClick={() => void removeCover()} className="min-h-11 rounded-lg border border-border px-3 text-sm font-semibold text-destructive">Remove photo</button>}
+              {draft.coverAssetId && <div><EditorRemoveButton disabled={locked} onClick={() => void removeCover()}>Remove photo</EditorRemoveButton></div>}
             </div>
             {text("coverAlt", "Photo description", NEWS_LIMITS.coverAlt, "Describe the photo for people using screen readers.")}
           </div>
-        </AdminPanel>
-        <AdminPanel>
-          <h2 className="mb-5 text-lg font-semibold">Article</h2>
+        </EditorSection>
+        <EditorSection title="Article">
           {field("body", "Article text", <textarea className={`${ADMIN_INPUT_CLASS} min-h-72`} disabled={locked} value={draft.body} aria-invalid={!!problems.body} onChange={event => update({ body: event.target.value })} />, `Put each paragraph on its own line. Up to ${NEWS_LIMITS.paragraphs} paragraphs.`)}
           <div className="mt-5 grid gap-5 md:grid-cols-2">
             {text("actionLabel", "Button label (optional)", NEWS_LIMITS.actionLabel, "Shown under the article, like “Partner with us”.")}
             {text("actionHref", "Button link", NEWS_LIMITS.actionHref, "A page on this site, like /community/partnership, or a full https:// link. Leave both blank for no button.")}
           </div>
-        </AdminPanel>
-        {preview && <AdminPanel><details><summary className="flex min-h-11 cursor-pointer items-center text-lg font-semibold">Preview this article</summary>
-          <div className="my-4 flex gap-3"><Button variant={phone ? "default" : "outline"} onClick={() => setPhone(true)}>Phone</Button><Button variant={!phone ? "default" : "outline"} onClick={() => setPhone(false)}>Desktop</Button></div>
-          <div className="overflow-auto rounded-lg border border-border" style={{ "--hp-viewport": "100dvh" } as CSSProperties}><div style={{ width: phone ? 390 : 1280 }}><HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="News article"><CinematicShell contentOnly initialContent={shared}><CinematicNewsArticle article={preview} timeZone={timeZone} /></CinematicShell></HomepagePreviewFrame></div></div>
-        </details></AdminPanel>}
-        <div className="sticky bottom-3 z-10 flex flex-wrap gap-3 rounded-xl border border-border bg-background p-4 shadow-lg">
-          <Button disabled={busy || uploading || (!dirty && !pending && !!editing.article)} onClick={() => void save()}>{busy ? "Saving…" : pending ? "Retry the same save" : editing.article ? "Save article" : "Add to News"}</Button>
-          <Button variant="outline" disabled={locked} onClick={() => void cancel()}>Cancel</Button>
-          <span className="self-center text-sm text-muted-foreground">{uploading ? "Uploading photo…" : pending ? "Waiting for save confirmation" : dirty ? "Unsaved changes" : "No changes"}</span>
-        </div>
+        </EditorSection>
+        {preview && <EditorPreview title="What visitors see · this article" phone={phone} onPhoneChange={setPhone}>
+          <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="News article"><CinematicShell contentOnly initialContent={shared}><CinematicNewsArticle article={preview} timeZone={timeZone} /></CinematicShell></HomepagePreviewFrame>
+        </EditorPreview>}
+        <EditorSaveBar state={busy ? "saving" : "dirty"} onSave={() => void save()}
+          status={uploading ? "Uploading photo…" : pending ? "Waiting for save confirmation" : dirty ? "Unsaved changes" : ""}
+          primary={<EditorPrimaryButton busy={busy} disabled={uploading || (!dirty && !pending && !!editing.article)} onClick={() => void save()}>{busy ? "Saving…" : pending ? "Retry the same save" : editing.article ? "Save article" : "Add to News"}</EditorPrimaryButton>}>
+          <EditorSecondaryButton disabled={locked} onClick={() => void cancel()}>Cancel</EditorSecondaryButton>
+        </EditorSaveBar>
       </>}
+    <AdminConfirmDialog open={confirming?.kind === "cancel"} title="Discard your changes?" confirmLabel="Discard changes" cancelLabel="Keep editing" destructive onCancel={() => setConfirming(null)} onConfirm={() => { setConfirming(null); void cancel(true); }}>Your changes to this article will be discarded.</AdminConfirmDialog>
+    <AdminConfirmDialog open={confirming?.kind === "remove"} title={`Remove “${confirming?.kind === "remove" ? confirming.article.content.title : ""}” from the site?`} confirmLabel="Remove article" destructive onCancel={() => setConfirming(null)} onConfirm={() => { const target = confirming?.kind === "remove" ? confirming.article : null; setConfirming(null); if (target) void setRemoved(target, true, true); }}>Visitors will no longer see this article. You can restore it later.</AdminConfirmDialog>
   </AdminPage>;
 }

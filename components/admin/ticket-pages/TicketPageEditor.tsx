@@ -1,15 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
-import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
-import { Button } from "@/components/ui/button";
-import NativeImage from "@/components/ResilientNativeImage";
+import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
+import {
+  EditorActionButton, EditorField, EditorGroup, EditorImage, EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorReorderButtons,
+  EditorSaveBar, EditorSecondaryButton, EditorSection, EditorSwitch, heldSaveState, kit,
+} from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { createClient } from "@/lib/admin-client";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { loadVisitorPageEditor, saveVisitorPageEditor } from "@/lib/visitor-page-editor";
@@ -22,28 +24,26 @@ import { setTicketPageImage, unusedTicketPageUploads } from "@/lib/cinematic-tic
 import "@/components/admin/homepage/homepage-editor.css";
 
 export function TextField({ label, value, max, disabled, multiline, hint, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: string; onChange: (value: string) => void }) {
-  return <label className="block space-y-2"><span className="text-sm font-medium">{label}</span>
-    {multiline ? <textarea className={ADMIN_INPUT_CLASS + " min-h-28"} disabled={disabled} value={value} maxLength={max} onChange={event => onChange(event.target.value)} />
-      : <input className={ADMIN_INPUT_CLASS} disabled={disabled} value={value} maxLength={max} onChange={event => onChange(event.target.value)} />}
-    {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}</label>;
+  return <EditorField label={label} value={value} max={max} disabled={disabled} multiline={multiline} hint={hint} onChange={onChange} />;
 }
 
 export function MoveButtons({ index, length, disabled, noun, onMove, onRemove }: { index: number; length: number; disabled: boolean; noun: string; onMove: (delta: -1 | 1) => void; onRemove: () => void }) {
-  return <div className="flex flex-wrap gap-2">
-    <Button className="min-h-11" variant="outline" disabled={disabled || index === 0} onClick={() => onMove(-1)}>Move up</Button>
-    <Button className="min-h-11" variant="outline" disabled={disabled || index === length - 1} onClick={() => onMove(1)}>Move down</Button>
-    <Button className="min-h-11" variant="outline" disabled={disabled} onClick={onRemove}>Remove {noun} {index + 1}</Button>
-  </div>;
+  return <EditorReorderButtons index={index} length={length} disabled={disabled} noun={noun} onMove={onMove} onRemove={onRemove} />;
 }
 
 /** A list of plain text lines (bullet points) with add, reorder and remove. */
 export function TextList({ label, items, max, maxLength, disabled, onChange }: { label: string; items: string[]; max: number; maxLength: number; disabled: boolean; onChange: (items: string[]) => void }) {
-  return <div className="space-y-4">{items.map((item, index) => <div key={index} className="space-y-2">
+  return <div className={kit.stack}>{items.map((item, index) => <div key={index} className="grid min-w-0 gap-2">
     <TextField label={`${label} ${index + 1}`} value={item} max={maxLength} disabled={disabled} onChange={value => onChange(items.map((current, position) => position === index ? value : current))} />
     <MoveButtons index={index} length={items.length} disabled={disabled} noun={label.toLowerCase()} onMove={delta => onChange(moveItem(items, index, delta))} onRemove={() => onChange(removeItem(items, index))} />
   </div>)}
-    <Button className="min-h-11" variant="outline" disabled={disabled || items.length >= max} onClick={() => onChange(appendItem(items, "", max))}>Add {label.toLowerCase()}</Button>
+    <div><EditorActionButton disabled={disabled || items.length >= max} onClick={() => onChange(appendItem(items, "", max))}>Add {label.toLowerCase()}</EditorActionButton></div>
   </div>;
+}
+
+/** A bordered group inside a section: one tile, one seating section, one benefit. */
+export function ItemCard({ legend, children }: { legend: string; children: ReactNode }) {
+  return <EditorGroup legend={legend}>{children}</EditorGroup>;
 }
 
 export type TicketFieldsApi<K extends TicketPageKey> = {
@@ -53,14 +53,12 @@ export type TicketFieldsApi<K extends TicketPageKey> = {
   change: (edit: (content: TicketPageContent<K>) => TicketPageContent<K>) => void;
   /** Upload, describe or remove the image in one slot. Empty slots say they are waiting for a file. */
   imageSlot: (slot: string, label: string, hint?: string) => ReactNode;
-  visibleToggle: (checked: boolean, onChange: (visible: boolean) => void) => ReactNode;
+  /** `label` names the section for the switch's accessible name, for example "Show the raffle on the page". */
+  visibleToggle: (checked: boolean, onChange: (visible: boolean) => void, label: string) => ReactNode;
 };
 
 export function SectionPanel({ title, description, toggle, children }: { title: string; description?: ReactNode; toggle?: ReactNode; children: ReactNode }) {
-  return <AdminPanel>
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{title}</h2>{description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}</div>{toggle}</div>
-    <div className="space-y-5">{children}</div>
-  </AdminPanel>;
+  return <EditorSection title={title} description={description} aside={toggle}><div className={kit.stack}>{children}</div></EditorSection>;
 }
 
 const mediaSchema = z.array(z.object({ id: z.uuid(), storage_bucket: z.string(), storage_path: z.string(), width: z.number(), height: z.number() }).strict());
@@ -80,7 +78,8 @@ export default function TicketPageEditor<K extends TicketPageKey>({ pageKey, tit
   const [snapshot, setSnapshot] = useState<TicketPageSnapshot<K> | null>(null), [draft, setDraft] = useState<TicketPageContent<K> | null>(null);
   const [media, setMedia] = useState<TicketPageSnapshot<K>["media"]>([]), [uploads, setUploads] = useState<string[]>([]), [pending, setPending] = useState<TicketPageSaveRequest<K> | null>(null);
   const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<string | null>(null), [message, setMessage] = useState(""), [failed, setFailed] = useState(false);
-  const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [previewPhone, setPreviewPhone] = useState(false), [loadedClubId, setLoadedClubId] = useState<string | null>(null);
+  const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [loadedClubId, setLoadedClubId] = useState<string | null>(null);
+  const [confirmReload, setConfirmReload] = useState(false), [previewPhone, setPreviewPhone] = useState(false);
   const recoveryKey = useRef<string | null>(null), epoch = useRef(0);
   const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch {} };
   const fingerprint = (content: TicketPageContent<K>) => { try { return ticketPageDraftFingerprint(pageKey, content); } catch { return JSON.stringify(content); } };
@@ -139,24 +138,33 @@ export default function TicketPageEditor<K extends TicketPageKey>({ pageKey, tit
     setDraft(current => current && edit(current));
     setMessage(""); setFailed(false);
   };
-  async function save() {
-    if (!draft || !snapshot || busy || uploading) return;
+  /** Resolves true only when the server committed the save, so the Save button can show Saved. */
+  async function save(): Promise<boolean> {
+    if (!draft || !snapshot || busy || uploading) return false;
     const parsed = saveSchema.safeParse(pending ?? { operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision, content: draft, retiredMediaAssetIds: unusedTicketPageUploads(uploads, draft) });
-    if (!parsed.success) { setFailed(true); setMessage("Review the fields before saving. Links must start with https://, mailto: or / (a page on this site)."); return; }
+    if (!parsed.success) { setFailed(true); setMessage("Review the fields before saving. Links must start with https://, mailto: or / (a page on this site)."); return false; }
     const request = parsed.data as TicketPageSaveRequest<K>, generation = epoch.current;
     setPending(request); setBusy(true); setFailed(false); setMessage(`Saving ${title}…`);
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, uploads })); } catch {}
     const result = await saveVisitorPageEditor<TicketPageContent<K>>(pageKey, request);
-    if (generation !== epoch.current) return;
+    if (generation !== epoch.current) return false;
     setBusy(false);
     if (result.status === "committed") {
       setSnapshot(result.snapshot); setDraft(result.snapshot.content ?? emptyTicketPageContent(pageKey)); setMedia(result.snapshot.media);
       setUploads([]); setPending(null); setMessage(result.snapshot.cleanupPending ? `${title} saved. Image cleanup will retry automatically.` : `${title} saved.`); clearRecovery();
+      return true;
     } else if (result.status === "uncertain") { setPending(result.request as TicketPageSaveRequest<K>); setFailed(true); setMessage(result.message); }
     else { setPending(null); setFailed(true); setMessage(result.message); }
+    return false;
+  }
+  /** Reload asks first when there are unsaved edits (the same decision the native confirm made). */
+  function requestReload() {
+    if (locked) return;
+    if (dirty) setConfirmReload(true);
+    else void reload();
   }
   async function reload() {
-    if (locked || (dirty && !window.confirm(`Discard unsaved ${title} edits and load the saved page?`))) return;
+    if (locked) return;
     const generation = epoch.current;
     setBusy(true);
     try {
@@ -185,26 +193,41 @@ export default function TicketPageEditor<K extends TicketPageKey>({ pageKey, tit
     } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } }
     finally { if (generation === epoch.current) setUploading(null); }
   }
+  const saveAction = useSaveState({
+    isDirty: dirty || !!pending || uploads.length > 0,
+    onSave: async () => { if (!(await save())) throw new Error(`${title} was not saved.`); },
+  });
 
   const view: TicketPageView<K> | null = draft ? ticketPageView(draft, media) : null;
-  const imageSlot = (slot: string, label: string, hint?: string) => draft && view && draft.images[slot] && <fieldset className="min-w-0 space-y-3 rounded-lg border border-border p-4" key={slot}>
-    <legend className="px-1 text-sm font-medium">{label}</legend>
-    {view.images[slot]?.url ? <NativeImage src={view.images[slot].url!} alt={draft.images[slot].alt} style={{ height: 96, width: "100%", objectFit: "contain" }} />
-      : <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">Waiting for an image. Nothing shows here on the public page until you add one.</p>}
-    <label className="block space-y-2"><span className="text-sm">{uploading === slot ? "Adding image…" : view.images[slot]?.url ? `Replace ${label.toLowerCase()}` : `Add ${label.toLowerCase()}`}</span><input className={ADMIN_INPUT_CLASS} type="file" accept="image/png,image/webp" disabled={locked} onChange={event => { const file = event.target.files?.[0]; if (file) void upload(slot, file); event.target.value = ""; }} /></label>
-    <TextField label="Image description" value={draft.images[slot].alt} max={1000} disabled={locked} hint={hint ?? "Leave empty when the text next to the image already says the same thing."} onChange={alt => change(content => ({ ...content, images: { ...content.images, [slot]: { ...content.images[slot], alt } } }))} />
-    <Button className="min-h-11" variant="outline" disabled={locked || !draft.images[slot].assetId} onClick={() => change(content => setTicketPageImage(content, slot, null))}>Remove image</Button>
-  </fieldset>;
-  const visibleToggle = (checked: boolean, onChange: (visible: boolean) => void) => <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" disabled={locked} checked={checked} onChange={event => onChange(event.target.checked)} />Show on page</label>;
+  const imageSlot = (slot: string, label: string, hint?: string) => draft && view && draft.images[slot] && <EditorGroup key={slot} legend={label}>
+    <EditorImage label={label} url={view.images[slot]?.url} alt={draft.images[slot].alt} accept="image/png,image/webp"
+      empty="Waiting for an image. Nothing shows here on the public page until you add one."
+      uploading={uploading === slot} disabled={locked} hasImage={!!view.images[slot]?.url} onFile={file => void upload(slot, file)}
+      onRemove={() => change(content => setTicketPageImage(content, slot, null))} removeDisabled={locked || !draft.images[slot].assetId} />
+    <EditorField label="Image description" value={draft.images[slot].alt} max={1000} disabled={locked} hint={hint ?? "Leave empty when the text next to the image already says the same thing."}
+      onChange={alt => change(content => ({ ...content, images: { ...content.images, [slot]: { ...content.images[slot], alt } } }))} />
+  </EditorGroup>;
+  const visibleToggle = (checked: boolean, onChange: (visible: boolean) => void, label: string) => <EditorSwitch checked={checked} disabled={locked} label={label} onChange={onChange} />;
+  const saveState = heldSaveState(saveAction.state, busy || !!uploading);
 
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader title={title} description="This page is unavailable for the current website design." /></AdminPage>;
-  return <AdminPage className="pb-24"><AdminPageHeader title={title} description={description} actions={<Link className="text-primary underline" href={TICKET_PAGE_PATHS[pageKey]} target="_blank">Open {title} page</Link>} />
-    {message && <div className={failed ? "rounded-lg border border-destructive p-4 text-sm" : "rounded-lg border border-border p-4 text-sm"} role={failed ? "alert" : "status"}>{message}</div>}
-    {!draft || !view || loadedClubId !== club.id ? <AdminPanel><p role="status">Loading {title}…</p>{failed && <Button onClick={() => location.reload()}>Try again</Button>}</AdminPanel> : <>
+  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader eyebrow="Public website" title={title} description="This page is unavailable for the current website design." /></AdminPage>;
+  return <AdminPage className={kit.page}>
+    <AdminPageHeader eyebrow="Public website" title={title} description={description} actions={<EditorPageLink href={TICKET_PAGE_PATHS[pageKey]}>Open {title} page</EditorPageLink>} />
+    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
+    {!draft || !view || loadedClubId !== club.id ? <EditorLoading label={`Loading ${title}…`} failed={failed} onRetry={() => location.reload()} /> : <>
       {fields({ draft, view, locked, change, imageSlot, visibleToggle })}
-      <p className="text-sm text-muted-foreground">Images: PNG or WebP, up to 5 MB and 3000 pixels per side.</p>
-      <AdminPanel><details><summary className="flex min-h-11 cursor-pointer items-center text-lg font-semibold">Preview current edits</summary><p className="mt-2 text-sm text-muted-foreground">Dashed boxes mark images still to add. Visitors never see them.</p><div className="my-4 flex gap-3"><Button className="min-h-11" variant={!previewPhone ? "default" : "outline"} onClick={() => setPreviewPhone(false)}>Desktop</Button><Button className="min-h-11" variant={previewPhone ? "default" : "outline"} onClick={() => setPreviewPhone(true)}>Phone</Button></div><div className="overflow-auto rounded-lg border border-border" style={{ "--hp-viewport": "100dvh" } as CSSProperties}><div style={{ width: previewPhone ? 390 : 1280 }}><HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={title}><CinematicShell contentOnly initialContent={shared}>{preview(view)}</CinematicShell></HomepagePreviewFrame></div></div></details></AdminPanel>
-      <div className="sticky bottom-3 z-10 flex flex-wrap gap-3 rounded-xl border border-border bg-background p-4 shadow-lg"><Button className="min-h-11" disabled={busy || !!uploading || (!dirty && !pending && !uploads.length)} onClick={() => void save()}>{busy ? "Saving…" : pending ? "Retry same save" : `Save ${title}`}</Button><Button className="min-h-11" variant="outline" disabled={locked} onClick={() => void reload()}>Reload saved page</Button><span className="self-center text-sm text-muted-foreground">{pending ? "Awaiting save confirmation" : dirty ? "Unsaved changes" : "All changes saved"}</span></div>
+      <p className={kit.note}>Images: PNG or WebP, up to 5 MB and 3000 pixels per side. Dashed boxes in the preview mark images still to add. Visitors never see them.</p>
+      <EditorPreview phone={previewPhone} onPhoneChange={setPreviewPhone}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={title}><CinematicShell contentOnly initialContent={shared}>{preview(view)}</CinematicShell></HomepagePreviewFrame>
+      </EditorPreview>
+      <EditorSaveBar state={saveState} retry={!!pending} onSave={() => { void saveAction.save().catch(() => undefined); }}
+        status={pending ? "Awaiting save confirmation" : saveState === "dirty" ? "Unsaved changes" : ""}>
+        <EditorSecondaryButton disabled={locked} onClick={requestReload}>Reload saved page</EditorSecondaryButton>
+      </EditorSaveBar>
     </>}
+    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+      onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
+      Discard unsaved {title} edits and load the saved page?
+    </AdminConfirmDialog>
   </AdminPage>;
 }

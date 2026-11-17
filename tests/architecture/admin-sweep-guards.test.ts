@@ -44,34 +44,6 @@ const REIMAGINED_CONFIRM_ALLOWLIST: { file: string; within: string; call: string
   { file: "app/admin/(protected)/tryouts/page.tsx", within: "function startCreate(", call: 'window.confirm("Discard unsaved tryout changes?")', why: "LegacyAdminTryoutsPage (not rendered; kept because contract tests read its text)" },
 ];
 
-// TEMPORARY (Rose City cinematic@2 editors, merged from codex/rose-city-homepage-2027 with main 6b9a7d07): these editors
-// predate the ADMIN-CL-27 sweep and still use a native confirm and/or the "All changes saved" wording. The Rose City
-// admin polish step removes every entry below by moving them to the admin/ui confirm dialog and main's save wording.
-// The polish step is not done until both lists are empty. An entry that no longer matches its file fails the test.
-const TEMPORARY_ROSE_CITY_CONFIRM_FILES = [
-  "components/admin/chick-fil-a/ChickFilAEditor.tsx",
-  "components/admin/contact/CinematicContactEditor.tsx",
-  "components/admin/injury-report/CinematicInjuryReportEditor.tsx",
-  "components/admin/news/CinematicNewsEditor.tsx",
-  "components/admin/partners/CinematicPartnersEditor.tsx",
-  "components/admin/policies/CinematicPolicyEditor.tsx",
-  "components/admin/stadium/RobinsonStadiumEditor.tsx",
-  "components/admin/stadium/StadiumEditor.tsx",
-  "components/admin/ticket-pages/TicketPageEditor.tsx",
-  "components/admin/tickets/TicketsEditor.tsx",
-];
-const TEMPORARY_ROSE_CITY_SAVED_WORDING_FILES = [
-  "components/admin/chick-fil-a/ChickFilAEditor.tsx",
-  "components/admin/contact/CinematicContactEditor.tsx",
-  "components/admin/injury-report/CinematicInjuryReportEditor.tsx",
-  "components/admin/partners/CinematicPartnersEditor.tsx",
-  "components/admin/policies/CinematicPolicyEditor.tsx",
-  "components/admin/stadium/RobinsonStadiumEditor.tsx",
-  "components/admin/stadium/StadiumEditor.tsx",
-  "components/admin/ticket-pages/TicketPageEditor.tsx",
-  "components/admin/tickets/TicketsEditor.tsx",
-];
-
 /** Source without comments, so prose that mentions confirm() is not a call. */
 function code(path: string) {
   return readFileSync(path, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[\s;{}])\/\/.*$/gm, "$1");
@@ -114,11 +86,7 @@ function confirmOffenders() {
 
 describe("admin sweep guards (reimagined excluded)", () => {
   it("never opens a native confirm (window.confirm, globalThis.confirm or a bare confirm call)", () => {
-    expect(confirmOffenders().filter((file) => !TEMPORARY_ROSE_CITY_CONFIRM_FILES.includes(file))).toEqual([]);
-  });
-  it("keeps the TEMPORARY Rose City confirm list exact (remove an entry once its editor is fixed)", () => {
-    const offending = confirmOffenders();
-    expect(TEMPORARY_ROSE_CITY_CONFIRM_FILES.filter((file) => !offending.includes(file))).toEqual([]);
+    expect(confirmOffenders()).toEqual([]);
   });
   it("lists each reimagined-portal confirm exactly once, in its named function", () => {
     const stale = REIMAGINED_CONFIRM_ALLOWLIST.filter((entry) => {
@@ -163,11 +131,7 @@ describe("admin sweep guards (reimagined excluded)", () => {
 `, list))).toBe(true);
   });
   it('never shows the "All changes saved" wording', () => {
-    expect(offenders("All changes saved").filter((file) => !TEMPORARY_ROSE_CITY_SAVED_WORDING_FILES.includes(file))).toEqual([]);
-  });
-  it('keeps the TEMPORARY Rose City "All changes saved" list exact (remove an entry once its editor is fixed)', () => {
-    const offending = offenders("All changes saved");
-    expect(TEMPORARY_ROSE_CITY_SAVED_WORDING_FILES.filter((file) => !offending.includes(file))).toEqual([]);
+    expect(offenders("All changes saved")).toEqual([]);
   });
   it("keeps the retired pill and bouncing-dots loaders gone", () => {
     expect(offenders(/AdminSaveFeedback|AdminLoadingDots|spinner-ellipsis|admin-save-feedback/)).toEqual([]);

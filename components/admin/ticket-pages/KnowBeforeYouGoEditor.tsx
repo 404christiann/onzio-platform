@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import CinematicKnowBeforeYouGo from "@/components/cinematic/CinematicKnowBeforeYouGo";
+import { EditorActionButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { MAX_KBYG_TILES, type KnowBeforeYouGoContent } from "@/lib/cinematic-ticket-pages-content";
 import { addListItem, moveListItem, removeListItem } from "@/lib/cinematic-ticket-pages-editor";
-import TicketPageEditor, { MoveButtons, SectionPanel, TextField } from "./TicketPageEditor";
+import TicketPageEditor, { ItemCard, MoveButtons, SectionPanel, TextField } from "./TicketPageEditor";
 
 const ICON_HINT = "Leave the description empty: the label says what it is. Upload icons on the 752 × 350 canvas (PNG or WebP) so every icon keeps its size and lines up.";
 const LINK_HINT = "Starts with https://, mailto: or / for a page on this site.";
@@ -21,8 +21,8 @@ export default function KnowBeforeYouGoEditor() {
           <TextField label="Title" value={heading.title} max={120} disabled={locked} onChange={title => set("heading", { title })} />
           <TextField label="Subtitle (red line)" value={heading.subtitle} max={120} disabled={locked} onChange={subtitle => set("heading", { subtitle })} />
         </div></SectionPanel>
-        <SectionPanel title="Next home match" toggle={visibleToggle(match.visible, visible => set("match", { visible }))}
-          description={<>The date, venue, opponent and both crests come from the next home match in <Link className="text-primary underline" href="/admin/schedule">Schedule</Link>.</>}>
+        <SectionPanel title="Next home match" toggle={visibleToggle(match.visible, visible => set("match", { visible }), "Show the next home match on the page")}
+          description={<>The date, venue, opponent and both crests come from the next home match in <Link href="/admin/schedule">Schedule</Link>.</>}>
           <TextField label="Competition line" value={match.competition} max={120} disabled={locked} hint="Used when the Schedule match has no competition." onChange={competition => set("match", { competition })} />
           <div className="grid gap-5 md:grid-cols-2">
             <TextField label="Watch line" value={match.watchLabel} max={120} disabled={locked} onChange={watchLabel => set("match", { watchLabel })} />
@@ -30,15 +30,15 @@ export default function KnowBeforeYouGoEditor() {
           </div>
           {imageSlot("youtube", "YouTube logo", "Until the logo is added, this description shows as text after the watch line.")}
         </SectionPanel>
-        <SectionPanel title="Match-day tiles" description="An icon and a short label each, 3 across on desktop." toggle={visibleToggle(facts.visible, visible => set("facts", { visible }))}>
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{facts.tiles.map((tile, index) => <fieldset key={tile.id} className="min-w-0 space-y-4 rounded-lg border border-border p-4"><legend className="px-1 text-sm font-medium">Tile {index + 1}</legend>
+        <SectionPanel title="Match-day tiles" description="An icon and a short label each, 3 across on desktop." toggle={visibleToggle(facts.visible, visible => set("facts", { visible }), "Show the match-day tiles on the page")}>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{facts.tiles.map((tile, index) => <ItemCard key={tile.id} legend={`Tile ${index + 1}`}>
             <TextField label="Label" value={tile.label} max={120} disabled={locked} onChange={label => set("facts", { tiles: facts.tiles.map((current, position) => position === index ? { ...current, label } : current) })} />
             {imageSlot(tile.id, "Icon or logo", ICON_HINT)}
             <MoveButtons index={index} length={facts.tiles.length} disabled={locked} noun="tile" onMove={delta => change(content => moveListItem("know-before-you-go", content, "tiles", index, delta))} onRemove={() => change(content => removeListItem("know-before-you-go", content, "tiles", index))} />
-          </fieldset>)}</div>
-          <Button className="min-h-11" variant="outline" disabled={locked || facts.tiles.length >= MAX_KBYG_TILES} onClick={() => change(content => addListItem("know-before-you-go", content, "tiles"))}>Add tile</Button>
+          </ItemCard>)}</div>
+          <div><EditorActionButton disabled={locked || facts.tiles.length >= MAX_KBYG_TILES} onClick={() => change(content => addListItem("know-before-you-go", content, "tiles"))}>Add tile</EditorActionButton></div>
         </SectionPanel>
-        <SectionPanel title="Halftime raffle" toggle={visibleToggle(raffle.visible, visible => set("raffle", { visible }))}>
+        <SectionPanel title="Halftime raffle" toggle={visibleToggle(raffle.visible, visible => set("raffle", { visible }), "Show the halftime raffle on the page")}>
           <div className="grid gap-5 md:grid-cols-2">
             <TextField label="Heading" value={raffle.heading} max={120} disabled={locked} onChange={value => set("raffle", { heading: value })} />
             <TextField label="Prize (red line)" value={raffle.subheading} max={120} disabled={locked} onChange={subheading => set("raffle", { subheading })} />
@@ -46,7 +46,7 @@ export default function KnowBeforeYouGoEditor() {
           {imageSlot("raffle", "Prize photo")}
           <TextField label="Text" value={raffle.body} max={2000} multiline disabled={locked} hint="Put **two stars** on each side of words to make them bold, for example **PlayStation 5**." onChange={body => set("raffle", { body })} />
         </SectionPanel>
-        <SectionPanel title="Raffle donor" toggle={visibleToggle(donor.visible, visible => set("donor", { visible }))}>
+        <SectionPanel title="Raffle donor" toggle={visibleToggle(donor.visible, visible => set("donor", { visible }), "Show the raffle donor on the page")}>
           <div className="grid gap-5 md:grid-cols-2">
             <TextField label="Heading" value={donor.heading} max={120} disabled={locked} onChange={value => set("donor", { heading: value })} />
             <TextField label="Donor name" value={donor.name} max={120} disabled={locked} hint="Shows in place of the logo until the logo is added." onChange={name => set("donor", { name })} />
