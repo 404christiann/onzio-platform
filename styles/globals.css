@@ -162,6 +162,140 @@ main.dark {
   --destructive-foreground: 220 20% 10%;
 }
 
+.admin-portal:not([data-admin-shell="reimagined"]) {
+  --admin-motion-ease-out: cubic-bezier(.23,1,.32,1);
+  --admin-motion-drawer: cubic-bezier(.32,.72,0,1);
+  --admin-motion-press: 120ms;
+  --admin-motion-dialog-in: 140ms;
+  --admin-motion-dialog-out: 90ms;
+  --admin-motion-sheet-in: 240ms;
+  --admin-motion-sheet-out: 160ms;
+  --admin-motion-menu-in: 140ms;
+  --admin-motion-menu-out: 90ms;
+  --admin-motion-switch: 180ms;
+  --admin-motion-tab-underline: 220ms;
+  --admin-motion-bars: 300ms;
+  --admin-motion-bar-stagger: 40ms;
+  --admin-motion-max-bars: 6;
+  --admin-motion-list-leave: 160ms;
+  --admin-motion-list-flip: 240ms;
+  --admin-motion-list-add: 180ms;
+  --admin-motion-toast-in: 200ms;
+  --admin-motion-toast-out: 120ms;
+  --admin-motion-pending-ring: 450ms;
+  --admin-motion-skeleton-delay: 150ms;
+  --admin-motion-skeleton-minimum: 350ms;
+  --admin-motion-skeleton-crossfade: 160ms;
+  --admin-motion-skeleton-shimmer: 1600ms;
+  --admin-motion-save-color: 220ms;
+  --admin-motion-save-label: 140ms;
+  --admin-motion-save-check-draw: 280ms;
+  --admin-motion-save-check-delay: 80ms;
+  --admin-motion-save-pop: 320ms;
+  --admin-motion-saving-minimum: 400ms;
+  --admin-motion-saved-shown: 1900ms;
+  --admin-motion-undo-window: 5000ms;
+  --admin-motion-reduced-motion-fade: 120ms;
+}
+
+.admin-theme[data-admin-theme="light"] .admin-portal:not([data-admin-shell="reimagined"]) {
+  --primary-foreground: 0 0% 100%;
+  --ios-green: #34C759;
+}
+
+.admin-theme[data-admin-theme="dark"] .admin-portal:not([data-admin-shell="reimagined"]) {
+  --primary-foreground: 0 0% 100%;
+  --ios-green: #30D158;
+}
+
+:where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press {
+  touch-action: manipulation;
+}
+
+:where(.admin-portal:not([data-admin-shell="reimagined"]) .admin-press) {
+  position: relative;
+}
+
+:where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--admin-motion-press) var(--admin-motion-ease-out);
+}
+
+/* Replace the guided shell's brightness filter with the press overlay. */
+.admin-portal:not([data-admin-shell="reimagined"]) .admin-press:active:not(:disabled, [aria-disabled="true"]) {
+  filter: none;
+}
+
+:where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press:active:not(:disabled, [aria-disabled="true"])::after {
+  opacity: .04;
+}
+
+/* Tailwind 3 emits ungated hover utilities. Keep touch on the resting styles
+   inside the classic portal, including the calendar and billing overrides. */
+@media not all and (hover: hover) and (pointer: fine) {
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-primary/90"]):hover {
+    background-color: hsl(var(--primary));
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-destructive/90"]):hover {
+    background-color: hsl(var(--destructive));
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-brand/90"]):hover {
+    background-color: hsl(var(--brand));
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-secondary/80"]):hover {
+    background-color: hsl(var(--secondary));
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-accent"].bg-background):hover {
+    background-color: hsl(var(--background));
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-accent"]:not(.bg-background)):not(:where([data-selected-single="true"], [data-range-start="true"], [data-range-middle="true"], [data-range-end="true"])):hover {
+    background-color: transparent;
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:text-accent-foreground"]):not(:where([data-selected-single="true"], [data-range-start="true"], [data-range-middle="true"], [data-range-end="true"])):hover {
+    color: hsl(var(--foreground));
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-billing-warning"]):hover {
+    background-color: hsl(var(--billing-warning-soft));
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:text-billing-warning-foreground"]):hover {
+    color: hsl(var(--billing-warning-foreground));
+  }
+
+  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:underline"]):hover {
+    text-decoration-line: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press:not(.admin-press-row) {
+    transition: all 150ms cubic-bezier(.4,0,.2,1), transform var(--admin-motion-press) var(--admin-motion-ease-out);
+  }
+
+  :where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press:active:not(.admin-press-row, :disabled, [aria-disabled="true"]) {
+    transform: scale(.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press::after {
+    transition: opacity var(--admin-motion-reduced-motion-fade) var(--admin-motion-ease-out);
+  }
+}
+
 .admin-theme {
   --billing-warning: 48 96% 53%;
   --billing-warning-soft: 48 96% 93%;
@@ -469,58 +603,6 @@ body:has([data-font-pack="academy"]) {
       padding-top: 9rem;
       padding-bottom: 9rem;
     }
-  }
-}
-
-/* Keyframes for the admin save-feedback pill
-   (components/admin/AdminSaveFeedback.tsx), referenced there through
-   arbitrary `animate-[...]` utilities. Kept outside @layer so Tailwind
-   never tree-shakes them. */
-@keyframes admin-save-feedback-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes admin-save-feedback-check {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-/* Keyframe for the shared admin loading indicator
-   (components/admin/AdminLoading.tsx), referenced there through arbitrary
-   `animate-[...]` utilities exactly like the save-feedback keyframes above.
-   Kept outside @layer so Tailwind never tree-shakes it. */
-@keyframes spinner-ellipsis {
-  0%,
-  70%,
-  100% {
-    transform: translateY(0);
-  }
-  35% {
-    transform: translateY(-0.4em);
-  }
-}
-
-@keyframes admin-save-feedback-success {
-  0% {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  8%,
-  82% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(4px) scale(0.99);
   }
 }
 

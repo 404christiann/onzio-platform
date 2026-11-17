@@ -22,14 +22,14 @@ function count(source: string, value: string): number {
 }
 
 describe("admin schedule match editor UX", () => {
-  const schedule = read(SCHEDULE_ADMIN);
+  const schedule = read(SCHEDULE_ADMIN) + read("components/admin/schedule/ScheduleMatchForm.tsx") + read("components/admin/schedule/schedule-model.ts");
   const sidePanel = read(SIDE_PANEL);
-  const panel = section(schedule, "<AdminSidePanel", "</AdminSidePanel>");
+  const panel = section(schedule, "<AdminDialog open={panelOpen}", "</AdminDialog>");
   const panelProps = panel.slice(0, panel.indexOf("<MatchForm"));
   const panelBody = panel.slice(panel.indexOf("<MatchForm"));
   const matchForm = section(
     schedule,
-    "function MatchForm(",
+    "export function MatchForm(",
     "function OpponentLogoUpload",
   );
   const matchFormSection = schedule.slice(
@@ -39,14 +39,12 @@ describe("admin schedule match editor UX", () => {
 
   it("opts only the schedule editor into a wider panel with fixed actions", () => {
     expect(sidePanel).toContain("max-w-md");
-    expect(panelProps).toContain('className="max-w-2xl"');
+    expect(panelProps).toContain('size="md"');
     expect(panelProps).toContain("footer={");
     expect(panelProps).toContain('role="alert"');
     expect(panelProps).toContain("Delete");
     expect(panelProps).toContain("Cancel");
-    expect(panelProps).toContain(
-      "onClick={editingId ? handleSaveEdit : handleAdd}",
-    );
+    expect(panelProps).toContain("<AdminSaveButton");
 
     expect(panelBody).not.toContain('role="alert"');
     expect(panelBody).not.toContain(">Delete<");
@@ -54,17 +52,14 @@ describe("admin schedule match editor UX", () => {
     expect(panelBody).not.toContain("handleSaveEdit");
   });
 
-  it("keeps fixed actions responsive and touch friendly", () => {
-    expect(panelProps).toContain(
-      "flex flex-col gap-3 sm:flex-row sm:items-center",
-    );
-    expect(panelProps).toContain(
-      "grid w-full grid-cols-2 gap-3 sm:ml-auto sm:flex sm:w-auto",
-    );
-    expect(count(panelProps, "min-h-11")).toBeGreaterThanOrEqual(3);
-    const deleteAction = section(panelProps, "{editingId && (", "</button>");
-    expect(deleteAction).toContain("w-full");
-    expect(deleteAction).toContain("sm:w-auto");
+  it("uses the shared responsive fixed footer and approved delete confirmation", () => {
+    expect(panelProps).toContain("<AdminDialogFooter");
+    expect(panelProps).toContain("<AdminSaveButton");
+    expect(panelProps).toContain('className="min-h-11"');
+    expect(schedule).toContain("<AdminConfirmDialog");
+    expect(schedule).toContain('title="Delete this match?" destructive');
+    expect(schedule).toContain('supabase.from("matches").delete().eq("id", id)');
+    expect(schedule).not.toMatch(/Save\s?Feedback/i);
   });
 
   it("presents the form as five ordered, semantically labelled sections", () => {
@@ -101,13 +96,13 @@ describe("admin schedule match editor UX", () => {
   });
 
   it("uses mobile-first fields with deliberate tablet and desktop groupings", () => {
-    expect(matchForm).toContain('className="space-y-8"');
+    expect(matchForm).toContain('className="relative space-y-8"');
     expect(
       count(matchForm, "grid grid-cols-1 gap-4 sm:grid-cols-2"),
     ).toBeGreaterThanOrEqual(3);
     expect(matchForm).toContain("sm:col-span-2");
     expect(matchForm).toContain(
-      "grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]",
+      "grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]",
     );
   });
 
@@ -140,41 +135,32 @@ describe("admin schedule match editor UX", () => {
     }
 
     for (const uploadId of ["match-opponent-logo", "match-sponsor-logo"]) {
-      expect(matchForm).toContain(`<Field id="${uploadId}"`);
+      expect(matchForm).toContain(`<div className="sm:col-span-2">`);
       expect(matchForm).toContain(`inputId="${uploadId}"`);
     }
-    expect(count(schedule, "id={inputId}")).toBe(2);
+    expect(schedule).toContain("<AdminImageField");
   });
 
   it("keeps date and media actions usable as touch targets", () => {
     expect(matchForm).toMatch(
       /id="match-date"[\s\S]*?className="min-h-11 w-full/,
     );
-    const opponentUpload = section(
-      schedule,
-      "function OpponentLogoUpload(",
-      "function SponsorLogoUpload(",
-    );
-    const sponsorUpload = section(
-      schedule,
-      "function SponsorLogoUpload(",
-      "function Field(",
-    );
-    expect(opponentUpload).toContain("min-h-11");
-    expect(opponentUpload).toContain('"Upload opponent logo"');
-    expect(opponentUpload).toContain('aria-label="Remove opponent logo"');
-    expect(sponsorUpload).toContain("min-h-11");
-    expect(sponsorUpload).toContain('"Upload sponsor logo"');
-    expect(sponsorUpload).toContain('aria-label="Remove sponsor logo"');
+    expect(schedule).toContain('<AdminImageField');
+    expect(schedule).toContain('size={64}');
+    expect(schedule).toContain('allowedTypes={["image/png", "image/webp"]}');
+    expect(schedule).toContain('maxBytes={5 * 1024 * 1024}');
+    expect(schedule).toContain('label="Opponent logo"');
+    expect(schedule).toContain('label="Sponsor logo"');
+    expect(schedule).toContain('uploadPhoto(files[0], bucket, folder)');
   });
 
   it("keeps add and edit on the same form and mutation boundaries", () => {
     expect(panelBody).toContain("form={panelForm}");
     expect(panelBody).toContain("onChange={panelOnChange}");
     expect(panelBody).toContain("seasons={seasons}");
-    expect(panelBody).toContain("cleanupDraftUploads={!editingId}");
-    expect(panelProps).toContain("{editingId && (");
-    expect(panelProps).toContain("handleDelete(editingId)");
+    expect(panelBody).toContain("cleanupDraftUploads={!editingId && !createdMatchId}");
+    expect(panelProps).toContain("destructive={editingId ?");
+    expect(schedule).toContain("handleDelete(editingId)");
   });
 
   it("keeps the presented-by section behind the existing template gate", () => {

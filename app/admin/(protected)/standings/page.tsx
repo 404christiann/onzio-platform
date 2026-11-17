@@ -1,13 +1,14 @@
 "use client";
 
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import ClassicStandingsPage from "@/components/admin/standings/ClassicStandingsPage";
+
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,7 +86,7 @@ async function uploadStandingLogo(file: File): Promise<string> {
   return data.publicUrl;
 }
 
-export default function AdminStandingsPage() {
+function LegacyStandingsPage() {
   const club = useClubContext();
   const clubId = useClubId();
   const standingsPolicy = codeSiteAdminFor(club)?.standings;
@@ -425,7 +426,7 @@ export default function AdminStandingsPage() {
     // overflow-hidden without that landmine, matching the convention used
     // in homepage/page.tsx and shop/page.tsx.
     <AdminPage className="max-w-7xl overflow-x-clip">
-      <AdminSaveFeedback saving={saving} saved={saved} />
+      <p className="sr-only" role="status">{saving ? "Saving changes…" : saved ? "Saved successfully" : ""}</p>
       <AdminPageHeader
         title="Standings"
         description="Edit the homepage league table and optional team logos."
@@ -446,7 +447,6 @@ export default function AdminStandingsPage() {
               disabled={loading || loadFailed || saving || uploading || !dirty}
               className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-body rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Standings"}
             </button>
           </>
@@ -896,4 +896,8 @@ function TableNumberField({
       )}
     />
   );
+}
+
+export default function AdminStandingsPage() {
+  return useAdminPortal().portal === "classic" ? <ClassicStandingsPage /> : <LegacyStandingsPage />;
 }

@@ -1,3 +1,4 @@
+import { saveHomepage, expectHomepageClean } from "./helpers/homepage-editor-controls";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test, type Page } from "@playwright/test";
@@ -34,7 +35,6 @@ async function openHeading(page: Page) {
   const heading = page.frameLocator('iframe[title="Homepage preview"]').locator('[data-homepage-piece="hero.heading"]');
   await expect(heading).toBeVisible();
   await heading.click();
-  await page.getByRole("button", { name: "Change the words", exact: true }).filter({ visible: true }).click();
   await expect(page.getByLabel("Line one", { exact: true })).toBeVisible();
   return heading;
 }
@@ -50,7 +50,7 @@ for (const width of [1440, 390]) {
     await page.getByLabel("Line one", { exact: true }).fill(marker);
     await reassignAndReturn();
     const response = page.waitForResponse(reply => reply.url().endsWith("/api/admin/homepage") && reply.request().method() === "POST");
-    await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+    await saveHomepage(page, "hero.heading");
     const rejected = await response;
     expect(rejected.status()).toBe(409);
     expect(await rejected.json()).toMatchObject({ error: { code: "DESIGN_CHANGED" } });
@@ -101,7 +101,7 @@ test("a committed response lost before reassignment reconciles without another b
   try {
     const heading = await openHeading(page);
     await page.getByLabel("Line one", { exact: true }).fill(marker);
-    await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+    await saveHomepage(page, "hero.heading");
     await expect(page.locator(".hp-error").filter({ visible: true })).toContainText("Your changes are still here");
     await reassignAndReturn();
     expect(submitted).toBeDefined();
@@ -110,7 +110,7 @@ test("a committed response lost before reassignment reconciles without another b
     expect(await replay.json()).toEqual(committed);
     await page.reload();
     await expect(heading).toContainText(marker);
-    await expect(page.getByText("Nothing to save yet.", { exact: true })).toBeVisible();
+    await expectHomepageClean(page);
     expect(posts).toBe(1);
     expect(receiptChecks).toBe(1);
     await page.screenshot({ path: info.outputPath("assignment-receipt-reconciled.png"), fullPage: true });

@@ -12,8 +12,11 @@ const WHOLE_NUMBER_INPUTS = [
   "components/admin/StatInput.tsx",
   "components/admin/stats/StatsWorkspace.tsx",
   "app/admin/(protected)/standings/page.tsx",
+  "components/admin/standings/StandingNumberField.tsx",
   "app/admin/(protected)/roster/page.tsx",
-  "app/admin/(protected)/schedule/page.tsx",
+  "components/admin/schedule/LegacySchedulePage.tsx",
+  "components/admin/schedule/ScheduleMatchForm.tsx",
+  "components/admin/schedule/ScheduleMatchList.tsx",
 ];
 
 function numberInputs(source: string): string[] {

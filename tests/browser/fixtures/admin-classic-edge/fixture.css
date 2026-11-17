@@ -1,0 +1,14 @@
+* { box-sizing: border-box; }
+body { margin: 0; }
+.fixture { min-height: 100vh; padding: 28px 32px; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+.fixture button { min-height: 44px; border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 0 14px; background: hsl(var(--card)); color: hsl(var(--foreground)); }
+.edge-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.edge-toolbar h2 { margin: 0; font-size: 16px; }
+.edge-list { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.edge-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; min-width: 0; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; }
+.edge-row > * { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-empty-state] { margin: 16px 0 0; }
+@media (max-width: 639px) {
+  .fixture { padding: 20px; }
+  .edge-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}

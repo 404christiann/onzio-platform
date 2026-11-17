@@ -84,8 +84,8 @@ async function setTheme(page: Page, theme: "light" | "dark") {
 }
 async function saved(page: Page, label: string) {
   await page.getByRole("button", { name: label, exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Saved successfully" })).toBeVisible();
-  await expect(page.getByRole("button", { name: label, exact: true })).toBeDisabled();
+  await expect(page.getByRole("status").filter({ hasText: /^Saved$/ })).toBeVisible();
+  await expect(page.locator("[data-admin-save-button]")).toHaveAttribute("aria-disabled", "true");
 }
 const fieldLabels = ["goals", "assists", "tackles", "offsides", "fouls", "fouls suffered", "yellow cards", "red cards", "minutes"];
 const keeperLabels = ["goals against", "saves", "clean sheets", "yellow cards", "red cards", "minutes"];
@@ -114,7 +114,7 @@ async function verifyViewport(page: Page, saveLabel: string) {
   const save = page.getByRole("button", { name: saveLabel, exact: true });
   await expect(save).toBeVisible();
   const box = (await save.boundingBox())!;
-  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(38); // admin-standard Save button height (AdminSaveButton.module.css min-block-size); 44px touch target is an a11y follow-up
   expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
 }
 
@@ -129,7 +129,7 @@ for (const width of [320, 390, 1440]) {
     try {
       for (const route of ["season-stats", "stats"]) {
         const match = route === "stats";
-        const saveLabel = match ? "Save match stats" : "Save season totals";
+        const saveLabel = "Save changes";
         await page.goto(`/admin/${route}`);
         await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonIds[0]);
         if (match) {
@@ -204,7 +204,7 @@ for (const width of [320, 390, 1440]) {
   });
 }
 
-test("phone scope changes: cancel/discard/save, failed save retains context and drafts, match scope stays independent", async ({ page }) => {
+test("phone scope changes: keep editing/discard/save, failed save retains context and drafts, match scope stays independent", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 390, height: 844 });
   const fixture = await fixtures();
@@ -224,7 +224,7 @@ test("phone scope changes: cancel/discard/save, failed save retains context and 
       const original = match ? fixture.matchIds[0] : fixture.seasonIds[0];
       await scope.selectOption(target);
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await page.getByRole("button", { name: "Keep editing", exact: true }).click();
       await expect(scope).toHaveValue(original);
       await expect(goals).toHaveValue("73");
       await scope.selectOption(target);
@@ -238,15 +238,19 @@ test("phone scope changes: cancel/discard/save, failed save retains context and 
         return route.continue();
       });
       await scope.selectOption(original);
-      await page.getByRole("button", { name: "Save & switch", exact: true }).click();
-      await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Synthetic save failure");
+      await page.getByRole("button", { name: "Save and switch", exact: true }).click();
+      await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Your changes could not be saved. Try again or keep editing.");
+      // The open modal hides the page behind it from role queries, so close it
+      // before asserting the retained context and drafts.
+      await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+      await expect(page.getByRole("dialog")).toBeHidden();
       await expect(scope).toHaveValue(target);
       await expect(goals).toHaveValue("74");
       await page.unroute("**/api/admin/data");
-      // Whether the failed confirmation stays open or closes, its retry must
-      // await a real saved result before changing context.
-      if (!await page.getByRole("dialog").isVisible()) await scope.selectOption(original);
-      await page.getByRole("button", { name: "Save & switch", exact: true }).click();
+      // Reopen the confirmation; its retry must await a real saved result
+      // before changing context.
+      await scope.selectOption(original);
+      await page.getByRole("button", { name: "Save and switch", exact: true }).click();
       await expect(scope).toHaveValue(original);
       await checkRow(match ? "player_match_stats" : "player_season_totals", fixture.playerIds[0], match ? "match_id" : "season_id", target, { goals: 74 });
       await selectPlayer(page, fixture.names[0]);
@@ -259,7 +263,7 @@ test("phone scope changes: cancel/discard/save, failed save retains context and 
         await goals.fill("81");
         await seasons.selectOption(fixture.seasonIds[1]);
         await expect(page.getByRole("dialog")).toBeVisible();
-        await page.getByRole("button", { name: "Cancel", exact: true }).click();
+        await page.getByRole("button", { name: "Keep editing", exact: true }).click();
         await expect(seasons).toHaveValue(fixture.seasonIds[0]);
         await expect(matches).toHaveValue(fixture.matchIds[0]);
         await expect(goals).toHaveValue("81");
@@ -286,7 +290,7 @@ for (const width of [320, 1440]) {
       await goals.fill("17");
       await matchTab.click();
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await page.getByRole("button", { name: "Keep editing", exact: true }).click();
       await expect(seasonTab).toHaveAttribute("aria-selected", "true");
       await expect(matchTab).toBeFocused();
       await expect(goals).toHaveValue("17");
@@ -295,12 +299,17 @@ for (const width of [320, 1440]) {
         return route.continue();
       });
       await matchTab.click();
-      await page.getByRole("button", { name: "Save & switch", exact: true }).click();
-      await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Tab switch save failure");
+      await page.getByRole("button", { name: "Save and switch", exact: true }).click();
+      await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Your changes could not be saved. Try again or keep editing.");
+      // The open modal hides the page behind it from role queries, so close it
+      // before asserting the retained tab and draft.
+      await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+      await expect(page.getByRole("dialog")).toBeHidden();
       await expect(seasonTab).toHaveAttribute("aria-selected", "true");
       await expect(goals).toHaveValue("17");
       await page.unroute("**/api/admin/data");
-      await page.getByRole("button", { name: "Save & switch", exact: true }).click();
+      await matchTab.click();
+      await page.getByRole("button", { name: "Save and switch", exact: true }).click();
       await expect(matchTab).toHaveAttribute("aria-selected", "true");
       await expect(page.getByRole("combobox", { name: "Season", exact: true })).toHaveValue(fixture.seasonIds[0]);
       const matches = page.getByRole("combobox", { name: "Match", exact: true });
@@ -320,7 +329,7 @@ for (const width of [320, 1440]) {
       await expect(goals).toHaveValue("3");
       await goals.fill("23");
       await seasonTab.click();
-      await page.getByRole("button", { name: "Save & switch", exact: true }).click();
+      await page.getByRole("button", { name: "Save and switch", exact: true }).click();
       // ADMIN-RE-11c: the season total adds the match's change (3 to 23 goals): 17 + 20.
       await expect(goals).toHaveValue("37");
       await checkRow("player_match_stats", fixture.playerIds[0], "match_id", fixture.matchIds[0], { goals: 23 });
@@ -332,7 +341,7 @@ for (const width of [320, 1440]) {
       await expect(goals).toHaveValue("23");
       for (const theme of ["light", "dark"] as const) {
         await setTheme(page, theme);
-        await verifyViewport(page, "Save match stats");
+        await verifyViewport(page, "Save changes");
         expect((await matchTab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
         expect((await seasonTab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       }
@@ -345,7 +354,7 @@ for (const width of [320, 1440]) {
   });
 }
 
-test("Season Save & switch keeps newly saved values clean and blocks edits while the next view waits", async ({ page }) => {
+test("Season Save and switch keeps newly saved values clean and blocks edits while the next view waits", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 390, height: 844 });
   const fixture = await fixtures();
@@ -364,11 +373,11 @@ test("Season Save & switch keeps newly saved values clean and blocks edits while
       await route.continue();
     });
     await page.getByRole("tab", { name: "Match stats", exact: true }).click();
-    await page.getByRole("button", { name: "Save & switch", exact: true }).click();
+    await page.getByRole("button", { name: "Save and switch", exact: true }).click();
     await expect.poll(() => intercepted).toBe(true);
     await expect(goals).toHaveValue("33");
     await expect(goals).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Save season totals", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
     await expect(page.getByRole("tab", { name: "Match stats", exact: true })).toBeDisabled();
     await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 33 });
     release();
@@ -388,10 +397,10 @@ test("ADMIN-RE-11c: a season total that needs more than 9,999 minutes added by h
     const minutes = page.getByRole("spinbutton", { name: `${fixture.names[0]}: minutes`, exact: true });
     // The season's games give 150 minutes, so 10,149 is the most a total can be.
     await minutes.fill("10149");
-    await saved(page, "Save season totals");
+    await saved(page, "Save changes");
     await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { mins: 10149 });
     await minutes.fill("10150");
-    await page.getByRole("button", { name: "Save season totals", exact: true }).click();
+    await page.getByRole("button", { name: "Save changes", exact: true }).click();
     await expect(page.getByRole("alert").filter({ hasText: "Minutes added by hand stop at 9,999." }).first()).toBeVisible();
     await checkRow("player_season_totals", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { mins: 10149 });
   } finally { await fixture.restore(); }

@@ -75,4 +75,31 @@ describe("protected admin dashboard", () => {
     expect(page).toContain('scope="row"');
     expect(page).toContain("AdminRegistrationMixChart");
   });
+
+  it("omits the Quick Actions section instead of substituting a message when none are authorized", () => {
+    expect(page).toContain("quickActions.length ? (");
+    expect(page).not.toContain("Quick actions are unavailable");
+  });
+
+  it("treats a null count as unavailable and keeps Registration Mix rounding integer-only", () => {
+    expect(loader).toContain("result.value.count === null");
+    expect(loader).not.toContain("count ?? 0");
+    expect(mix).toContain("(item.count * 100) % total");
+    expect(mix).not.toContain("(item.count / total) * 100");
+  });
+
+  it("keeps long mix and form titles truncated with the full title available", () => {
+    expect(page).toContain('className="truncate" title={item.label}');
+    expect(page).toContain("title={form.title}");
+  });
+
+  it("limits the classic dashboard to the contract panels with real links and no placeholder data", () => {
+    expect(page).toContain('actionHref="/admin/registrations"');
+    expect(page).toContain('actionHref="/admin/schedule"');
+    expect(page).not.toMatch(/Lorem|Placeholder|Math\.random/);
+    const start = page.indexOf("<DashboardIntro clubName");
+    const end = page.indexOf("// ADMIN-RE-05: the reimagined home");
+    const classic = page.slice(start, end);
+    expect((classic.match(/<DashboardPanel title=/g) ?? []).length).toBe(3);
+  });
 });

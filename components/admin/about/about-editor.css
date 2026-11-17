@@ -67,3 +67,49 @@
 .aep-empty-section { min-height:96px; padding:1.25rem; border:1px dashed #938bd8; border-radius:.65rem; background:#fff; }
 .aep-empty-section h2 { margin:0 0 .45rem; font-size:1rem; font-weight:700; }
 .aep-empty-section p { margin:0; font-size:.9rem; line-height:1.5; }
+
+.aep-classic { max-width:74rem; padding-bottom:2rem; }
+.aep-classic .aep-layout { grid-template-columns:minmax(0,1fr); gap:1rem; }
+.aep-classic .aep-canvas { border-radius:1rem; background:hsl(var(--muted) / .45); }
+.aep-classic .aep-canvas-top { border:0; padding:1rem 1rem .25rem; }
+.aep-classic .aep-browser { padding:1rem; }
+.aep-classic .aep-frame-viewport { border-radius:.75rem; }
+.aep-classic .aep-browser[data-loading] .aep-frame-viewport { background:hsl(var(--muted)); }
+.aep-classic .aep-browser[data-phase=skeleton] .aep-frame { visibility:hidden; }
+.aep-classic .aep-browser[data-loading] .aep-frame-viewport::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,transparent,hsl(var(--foreground) / .06),transparent); animation:aep-shimmer 1.6s ease-in-out infinite; }
+@keyframes aep-shimmer { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+.aep-external { display:inline-flex; justify-self:start; align-items:center; gap:.5rem; min-height:44px; color:hsl(var(--muted-foreground)); font-size:.875rem; }
+.aep-error-bar { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; padding:.85rem 1rem; border:1px solid hsl(var(--destructive) / .5); border-radius:.75rem; background:hsl(var(--destructive) / .08); color:hsl(var(--destructive)); font-size:.875rem; }
+.aep-error-bar button { min-height:44px; border:1px solid currentColor; border-radius:.65rem; padding:.4rem .75rem; }
+.aep-classic-fields .aep-fields { padding:0; }
+.aep-classic-fields .aep-inspector-head { display:none; }
+.aep-classic-fields .aep-fields > div { min-width:0; }
+.aep-classic-fields .aep-fields input[aria-invalid=true] { border-color:hsl(var(--warning, 38 92% 50%)); }
+.aep-counter { display:block; text-align:right; color:hsl(var(--muted-foreground)); font-size:.75rem; }
+.aep-values-editor,.aep-values-list { display:grid; gap:.85rem; min-width:0; }
+.aep-value-card { display:grid; gap:.75rem; min-width:0; padding:.85rem; border:1px solid hsl(var(--border)); border-radius:.75rem; background:hsl(var(--card)); }
+.aep-value-actions { display:flex; align-items:center; justify-content:space-between; gap:.5rem; color:hsl(var(--muted-foreground)); font-size:.8125rem; }
+.aep-value-actions > div { display:flex; gap:.3rem; }
+.aep-value-actions button { display:grid; place-items:center; min-width:44px; min-height:44px; border:1px solid hsl(var(--border)); border-radius:.5rem; }
+.aep-value-actions button:disabled { opacity:.35; }
+.aep-inline-error { color:hsl(var(--warning, 38 92% 50%)); font-size:.8125rem; }
+@media(max-width:700px) {
+  .aep-classic .aep-browser { padding:.6rem; }
+  .aep-classic .aep-canvas-top { padding:.6rem; }
+  .aep-classic-fields .aep-fields > .grid { grid-template-columns:minmax(0,1fr); }
+}
+@media(prefers-reduced-motion:reduce) { .aep-classic .aep-browser[data-loading] .aep-frame-viewport::after { animation:none; } }
+
+.aep-classic .aep-browser[data-phase=waiting] .aep-frame-viewport { background:transparent; }
+.aep-classic .aep-browser[data-phase=crossfade] .aep-frame { animation:aep-reveal 160ms ease-out; }
+@keyframes aep-reveal { from { opacity:0; } to { opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .aep-classic .aep-browser[data-phase=crossfade] .aep-frame { animation:aep-reveal 120ms ease-out; } }
+
+.aep-classic-logo .aep-layout { grid-template-columns:minmax(0,1fr) minmax(290px,350px); }
+@media(max-width:900px) { .aep-classic-logo .aep-layout { grid-template-columns:minmax(0,1fr); } }
+
+.aep-classic-fields [data-admin-image-initials] { padding:8px; text-align:center; font-size:12px; line-height:1.4; }
+.aep-classic-fields .aep-closing-fields > .grid { grid-template-columns:repeat(2,minmax(160px,1fr)); align-items:start; }
+@media(max-width:700px) { .aep-classic-fields .aep-closing-fields > .grid { grid-template-columns:minmax(120px,1fr); } }
+
+.aep-toast-page-host { position:fixed; z-index:230; bottom:max(16px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100vw - 32px); }

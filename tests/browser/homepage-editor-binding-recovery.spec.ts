@@ -1,3 +1,4 @@
+import { saveHomepage, expectHomepageClean } from "./helpers/homepage-editor-controls";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test, type Page } from "@playwright/test";
@@ -31,7 +32,6 @@ async function editHeading(page: Page, marker: string) {
   await page.goto("/admin/homepage");
   const heading = page.frameLocator('iframe[title="Homepage preview"]').locator('[data-homepage-piece="hero.heading"]');
   await heading.click();
-  await page.getByRole("button", { name: "Change the words", exact: true }).filter({ visible: true }).click();
   await page.getByLabel("Line one", { exact: true }).fill(marker);
   await page.waitForTimeout(900);
   return heading;
@@ -73,7 +73,7 @@ for (const width of [1440, 390]) {
       await expect(page.frameLocator('iframe[title="Homepage preview"]').locator('[data-homepage-piece="hero.intro"]')).toHaveText(otherText);
       expect(posts).toBe(0);
       const response = page.waitForResponse(reply => reply.url().endsWith("/api/admin/homepage") && reply.request().method() === "POST");
-      await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+      await saveHomepage(page);
       const saved = await response;
       expect(saved.ok()).toBe(true);
       expect(saved.request().postDataJSON()).toMatchObject({ expectedRevision: latest.revision, designRevision: latest.designRevision });
@@ -115,7 +115,7 @@ test("an uncommitted uncertain save checks its receipt before assignment review"
   });
   try {
     const heading = await editHeading(page, marker);
-    await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+    await saveHomepage(page);
     await expect(page.locator(".hp-error").filter({ visible: true })).toContainText("Your changes are still here");
     await reassignAndReturn();
     await page.reload();
@@ -129,7 +129,7 @@ test("an uncommitted uncertain save checks its receipt before assignment review"
     await review.getByRole("button", { name: "Use recovered changes", exact: true }).click();
     const current = await (await page.request.get("/api/admin/homepage")).json();
     const response = page.waitForResponse(reply => reply.url().endsWith("/api/admin/homepage") && reply.request().method() === "POST");
-    await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+    await saveHomepage(page);
     const saved = await response;
     expect(saved.ok()).toBe(true);
     if (!submitted) throw new Error("No uncertain operation was captured");
@@ -290,7 +290,6 @@ test("storage upgrade preserves legacy records and files while older clients can
   await page.waitForTimeout(900);
   expect(await readStoredRecord(page)).toEqual(original);
   await heading.click();
-  await page.getByRole("button", { name: "Change the words", exact: true }).filter({ visible: true }).click();
   await page.getByLabel("Line one", { exact: true }).fill(`${marker} edited`);
   await page.waitForTimeout(900);
   const versioned = await readStoredRecord(page);
@@ -337,7 +336,7 @@ test("a committed receipt wins over incompatible recovery metadata and keeps lat
   });
   try {
     const heading = await editHeading(page, marker);
-    await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+    await saveHomepage(page);
     await expect(page.locator(".hp-error").filter({ visible: true })).toContainText("Your changes are still here");
     await changeStoredMeaning(page, "revision");
     await reassignAndReturn();
@@ -350,7 +349,7 @@ test("a committed receipt wins over incompatible recovery metadata and keeps lat
     await page.reload();
     await expect(heading).toContainText(marker);
     await expect(page.frameLocator('iframe[title="Homepage preview"]').locator('[data-homepage-piece="hero.intro"]')).toHaveText(otherText);
-    await expect(page.getByText("Nothing to save yet.", { exact: true })).toBeVisible();
+    await expectHomepageClean(page);
     await expect(page.getByRole("button", { name: "Review recovered draft", exact: true })).toHaveCount(0);
     expect(posts).toBe(1);
     expect(receiptChecks).toBe(1);
@@ -408,7 +407,7 @@ for (const version of [1, 2]) {
     });
     try {
       const heading = await editHeading(page, marker);
-      await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+      await saveHomepage(page);
       await expect(page.locator(".hp-error").filter({ visible: true })).toContainText("Your changes are still here");
       if (version === 1) await changeStoredMeaning(page, "legacy");
       await page.reload();
@@ -416,7 +415,7 @@ for (const version of [1, 2]) {
       expect(submitted).toHaveLength(1);
       expect(receiptChecks).toBe(1);
       const response = page.waitForResponse(reply => reply.url().endsWith("/api/admin/homepage") && reply.request().method() === "POST");
-      await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
+      await saveHomepage(page);
       expect((await response).ok()).toBe(true);
       expect(submitted).toHaveLength(2);
       expect(submitted[1]).toEqual(submitted[0]);

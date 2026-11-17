@@ -68,7 +68,7 @@ describe("admin dates", () => {
   });
 
   it("the schedule's date labels come from the shared helper", () => {
-    const schedule = read("app/admin/(protected)/schedule/page.tsx");
+    const schedule = read("app/admin/(protected)/schedule/page.tsx") + read("components/admin/schedule/ScheduleMatchForm.tsx") + read("components/admin/schedule/schedule-model.ts");
     expect(schedule).toContain('formatClubDate(dateValue, "month-year")');
     expect(schedule).toContain('formatClubDate(dateValue, "weekday-day")');
     expect(schedule).toContain('formatClubDate(dateValue, "weekday-day-month")');

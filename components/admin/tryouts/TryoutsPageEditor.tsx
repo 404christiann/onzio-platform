@@ -5,7 +5,6 @@ import { IconCaretDown as AdminSelectChevron, ArrowDown, ArrowUp, Plus, X } from
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { AlertDialog } from "@base-ui/react/alert-dialog";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { TryoutsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
@@ -23,6 +22,7 @@ import type { DBContactProfile, DBProgram, DBRegistrationForm, DBTryout, DBTryou
 import { mapTryout } from "@/lib/queries";
 import { compareTryoutsByDate } from "@/lib/sign-up-state";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import ClassicTryoutsPageEditor from "./ClassicTryoutsPageEditor";
 import { clubToday } from "@/lib/club-time";
 import {
   buildTryoutMutationPayload, buildTryoutsPageMutationPayload, emptyTryoutDraft,
@@ -86,13 +86,15 @@ function serverPhoneViewport() { return false; }
 
 export default function TryoutsPageEditor() {
   const club = useClubContext();
-  if (!codeSiteAdminFor(club)?.tryouts.routeVisible) {
+  const { portal } = useAdminPortal();
+  const policy = codeSiteAdminFor(club)?.tryouts;
+  if (!policy?.routeVisible) {
     return <AdminPage><AdminPageHeader eyebrow="Public website" title="Tryouts"
       description="This website design does not publish a Tryouts page." />
       <p className="rounded-xl border border-border bg-card p-6 font-body text-sm text-muted-foreground">Choose a supported website design before editing a public Tryouts page.</p>
     </AdminPage>;
   }
-  return <TryoutsPageEditorContent />;
+  return portal === "classic" ? <ClassicTryoutsPageEditor policy={policy} /> : <TryoutsPageEditorContent />;
 }
 
 function TryoutsPageEditorContent() {
@@ -394,7 +396,7 @@ function TryoutsPageEditorContent() {
     <AdminPage className="overflow-x-clip pb-4 lg:pb-8 [&>*]:shrink-0">
     <AdminPageHeader eyebrow="Public website" title="Tryouts"
       description="Tap the page introduction or an event card to edit what visitors see. One Save page publishes all changes together."
-      actions={<div className="flex flex-wrap gap-2">
+      actions={<div data-admin-page-action-group="" className="flex flex-wrap gap-2">
         <button type="button" onClick={addEvent} disabled={!canEdit || loading} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 font-body text-sm font-semibold normal-case text-foreground hover:bg-accent disabled:opacity-40"><Plus size={16} />Add event</button>
         <button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold normal-case text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button>
       </div>} />
@@ -456,7 +458,7 @@ function TryoutsPageEditorContent() {
       </PageEditorInspector>
     </div>}
     <div ref={scrollport.saveBar} data-tryouts-save-bar className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 [padding-left:max(1rem,env(safe-area-inset-left,0px))] [padding-right:max(1rem,env(safe-area-inset-right,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"><span className="font-body text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "Tryouts page"}</span><button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button></div>
-    <AdminSaveFeedback saving={saving || uploading} saved={saved} savingLabel={uploading ? "Uploading hero image…" : "Saving Tryouts page…"} successLabel="Tryouts page saved" />
+    <p className="sr-only" role="status">{saving || uploading ? uploading ? "Uploading hero image…" : "Saving Tryouts page…" : saved ? "Tryouts page saved" : ""}</p>
     <AlertDialog.Root open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
       <AlertDialog.Portal container={dialogContainer}>
         <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/45" />

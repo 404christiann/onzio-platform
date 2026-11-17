@@ -5,14 +5,13 @@ import { IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import { AdminStatsGroupsSkeleton } from "@/components/admin/AdminCompetitionSkeletons";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminPageToolbar } from "@/components/admin/AdminPage";
 import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import { StatsWorkspace } from "@/components/admin/stats/StatsWorkspace";
-import { StatsSaveBar } from "@/components/admin/stats/StatsSaveBar";
-import { StatsScopeSwitchDialog } from "@/components/admin/stats/StatsScopeSwitchDialog";
 import type { StatsEditorProps, StatsFieldGroup, StatsPlayer, StatsValue } from "@/components/admin/stats/types";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/admin-client";
 
@@ -74,7 +73,7 @@ const POSITIONS = ["Goalkeeper", "Defender", "Midfielder", "Forward"] as const;
 
 // ── Main component ────────────────────────────
 
-export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlayerChange, showPlayerDetail, onShowPlayerDetailChange, onViewChange, controlsRef, onSavingChange, selectedMatchId, onSelectedMatchChange }: StatsEditorProps) {
+export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlayerChange, showPlayerDetail, onShowPlayerDetailChange, onViewChange, controlsRef, onSavingChange, onSaveStateChange, selectedMatchId, onSelectedMatchChange }: StatsEditorProps) {
   const {
     selectedSeasonId,
     setSelectedSeasonId,
@@ -92,8 +91,6 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
   const setSelectedMatch = onSelectedMatchChange;
   const [stats, setStats]         = useState<StatsMap>({});
   const [baselineStats, setBaselineStats] = useState<StatsMap>({});
-  const [pendingScope, setPendingScope] = useState<PendingScope | null>(null);
-  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveLock = useRef(false);
   const dirtyPlayerIds = useMemo(() => new Set(players.filter(player => JSON.stringify(stats[player.id]) !== JSON.stringify(baselineStats[player.id])).map(player => player.id)), [players, stats, baselineStats]);
   // Position indicators describe the draft; saving remains one whole-match action.
@@ -101,7 +98,6 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
   const hasChanges = dirtyGroups.size > 0;
   const [loading, setLoading]     = useState(false);
   const [saving, setSaving]       = useState(false);
-  const [saved, setSaved]         = useState(false);
   const [error, setError]         = useState<string | null>(null);
 
   const playersPending = seasonsLoading || Boolean(selectedSeasonId && loadedPlayersSeasonId !== selectedSeasonId);
@@ -205,7 +201,6 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
     setStatsLoadFailed(false);
     setStats({});
     setBaselineStats({});
-    setSaved(false);
     setError(null);
 
     const supabase = createClient();
@@ -277,7 +272,6 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
   // Selection, search and collapsed groups never change this page-owned draft.
   function updateStat(playerId: string, field: string, value: StatsValue) {
     if (saving || saveLock.current || !statsReady) return;
-    setSaved(false);
     setStats(previous => ({ ...previous, [playerId]: { ...previous[playerId], [field]: value } }));
   }
 
@@ -287,7 +281,6 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasChanges]);
-  useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
 
   async function handleSave(): Promise<boolean> {
     if (!statsReady || saving || saveLock.current || !selectedMatch || !hasChanges) return false;
@@ -320,9 +313,6 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
         return false;
       }
       setBaselineStats(stats);
-      setSaved(true);
-      if (savedTimer.current) clearTimeout(savedTimer.current);
-      savedTimer.current = setTimeout(() => setSaved(false), 3000);
       return true;
     } catch (saveError: unknown) {
       setError(saveError instanceof Error ? saveError.message : "Failed to save match stats. Your changes are still here.");
@@ -333,10 +323,12 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
     }
   }
 
+  const selectedMatchData = matches.find((m) => m.id === selectedMatch);
+  const matchLabel = selectedMatchData ? describeMatch(selectedMatchData) : "this match";
+
   function applyScope(next: PendingScope) {
-    if (next.kind === "view") { onViewChange(next.view); setPendingScope(null); return; }
+    if (next.kind === "view") { onViewChange(next.view); return; }
     setError(null);
-    setSaved(false);
     setStats({});
     setBaselineStats({});
     setLoadedMatchId(null);
@@ -344,39 +336,31 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
       setSelectedSeasonId(next.id);
       setSelectedMatch?.(null);
     } else setSelectedMatch?.(next.id);
-    setPendingScope(null);
   }
   function requestScope(next: PendingScope) {
     if (saving || saveLock.current) return;
     if (next.kind === "season" ? next.id === selectedSeasonId : next.kind === "match" ? next.id === selectedMatch : false) return;
-    if (hasChanges) setPendingScope(next);
-    else applyScope(next);
+    const nextMatch = next.kind === "match" ? matches.find(match => match.id === next.id) : undefined;
+    const target = next.kind === "season" ? seasonState.seasons.find(season => season.id === next.id)?.label ?? "another season"
+      : next.kind === "match" ? (nextMatch ? describeMatch(nextMatch) : "no match")
+      : "Season stats";
+    requestNavigation({ kind: "switch", label: target, continue: () => applyScope(next) });
   }
-  function discardAndSwitch() {
-    if (pendingScope && !saving && !saveLock.current) {
-      setStats(baselineStats);
-      applyScope(pendingScope);
-    }
-  }
-  async function saveAndSwitch() {
-    const next = pendingScope;
-    if (next && await handleSave()) applyScope(next);
-  }
+  const save = useSaveState({ isDirty: statsReady && hasChanges, onSave: async () => { if (!(await handleSave())) throw new Error("Match stats were not saved"); } });
+  const requestNavigation = useUnsavedGuard({ dirty: hasChanges, edited: `match stats for ${matchLabel}`, onSave: handleSave, onDiscard: () => setStats(baselineStats) });
 
   useImperativeHandle(controlsRef, () => ({
     changeSeason: (id: string) => requestScope({ kind: "season", id }),
     changeView: () => requestScope({ kind: "view", view: "season" }),
+    save: () => { void save.save().catch(() => undefined); },
   }));
+  useEffect(() => { onSaveStateChange(save.state); }, [save.state, onSaveStateChange]);
   useEffect(() => { onSavingChange(saving); }, [saving, onSavingChange]);
 
-  const selectedMatchData = matches.find((m) => m.id === selectedMatch);
   const seasonMatches = matches.filter((match) => match.season_id === selectedSeasonId);
-
-  const matchLabel = selectedMatchData ? `${selectedMatchData.date} · ${selectedMatchData.home ? "vs" : "@"} ${selectedMatchData.opponent}` : "this match";
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <AdminSaveFeedback saving={saving} saved={saved} />
       <AdminPageToolbar className="items-stretch sm:items-end">
         <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-end">
           <label className="block min-w-0 flex-1 font-body text-sm font-medium text-foreground">
@@ -400,16 +384,16 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
         showPlayerDetail={showPlayerDetail} onShowPlayerDetailChange={onShowPlayerDetailChange}
         dirtyPlayerIds={dirtyPlayerIds} groupsForPlayer={matchFieldGroups} onChange={updateStat} disabled={saving}
         positionGroupIdPrefix="match-stats" contextLabel={matchLabel} description="Enter this player’s statistics for the selected match." />}
-      {(error || matchesError) && pendingScope === null && <p role="alert" className="font-body text-sm text-destructive">Error: {error || matchesError}</p>}
+      {(error || matchesError) && <p role="alert" className="font-body text-sm text-destructive">Error: {error || matchesError}</p>}
       {statsReady && !error && players.length === 0 && <p className="font-body text-sm text-muted-foreground">No players are assigned to this season.</p>}
       {statsPending && <AdminStatsGroupsSkeleton label="Loading match stats"
         groups={playersPending ? undefined : POSITIONS.map(position => players.filter(player => player.position === position).length).filter(Boolean)} />}
-      <StatsSaveBar label="Save match stats" saving={saving} disabled={saving || !statsReady || !hasChanges || !selectedMatch}
-        dirtyCount={dirtyPlayerIds.size} onSave={() => void handleSave()} contextLabel={selectedMatchData ? `All player stats for ${matchLabel}.` : "Select a match to enter player stats."} />
-      <StatsScopeSwitchDialog open={pendingScope !== null} currentLabel={`match stats for ${matchLabel}`} busy={saving} error={error}
-        onCancel={() => setPendingScope(null)} onDiscard={discardAndSwitch} onSaveAndSwitch={() => void saveAndSwitch()} />
     </div>
   );
+}
+
+function describeMatch(match: Match) {
+  return `${match.date} · ${match.home ? "vs" : "@"} ${match.opponent}`;
 }
 
 function matchFieldGroups(player: StatsPlayer): StatsFieldGroup[] {

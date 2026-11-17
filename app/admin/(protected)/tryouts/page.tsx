@@ -4,8 +4,6 @@ import { IconCaretDown as AdminSelectChevron, MoreVertical } from "@/components/
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import {
   AdminPage,
   AdminPageHeader,
@@ -17,6 +15,7 @@ import {
   type AdminSectionRailItem,
 } from "@/components/admin/AdminSectionRail";
 import FileUpload from "@/components/admin/FileUpload";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { OperationsToolbarSkeleton, TryoutsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import { Textarea } from "@/components/ui/textarea";
@@ -96,6 +95,7 @@ function LegacyAdminTryoutsPage() {
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<TryoutDraft | null>(null);
   const [errors, setErrors] = useState<TryoutValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -425,9 +425,6 @@ function LegacyAdminTryoutsPage() {
   async function deleteTryout(tryout: TryoutDraft) {
     if (!tryout.id || deletingId) return;
     setDeleteMenuOpen(false);
-    if (!window.confirm("Delete this tryout event? This cannot be undone.")) {
-      return;
-    }
     const id = tryout.id;
     setDeletingId(id);
     setSaved(false);
@@ -564,16 +561,10 @@ function LegacyAdminTryoutsPage() {
               disabled={saving || uploading || !dirty}
               className="rounded-lg bg-primary px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
             >
-              {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
               Save changes
             </button>
           </div>
-          <AdminSaveFeedback
-            saving={saving || uploading}
-            saved={saved}
-            savingLabel={uploading ? "Uploading hero image…" : "Saving tryout…"}
-            successLabel="Tryout saved"
-          />
+          <p className="sr-only" role="status">{saving || uploading ? uploading ? "Uploading hero image…" : "Saving tryout…" : saved ? "Tryout saved" : ""}</p>
         </AdminPageToolbar>
       )}
 
@@ -765,7 +756,7 @@ function LegacyAdminTryoutsPage() {
                                 <button
                                   type="button"
                                   role="menuitem"
-                                  onClick={() => void deleteTryout(draft)}
+                                  onClick={() => { setDeleteMenuOpen(false); setDeleteTarget(draft); }}
                                   disabled={deletingId === draft.id}
                                   className="flex w-full items-center rounded-md px-3 py-2 text-left font-display text-xs font-bold uppercase tracking-wider text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
@@ -931,6 +922,10 @@ function LegacyAdminTryoutsPage() {
           </div>
         </div>
       )}
+      <AdminConfirmDialog open={deleteTarget !== null} title="Delete this tryout event?" confirmLabel="Delete tryout" destructive busy={deletingId !== null}
+        onCancel={() => setDeleteTarget(null)} onConfirm={() => { const target = deleteTarget; setDeleteTarget(null); if (target) void deleteTryout(target); }}>
+        This cannot be undone.
+      </AdminConfirmDialog>
     </AdminPage>
   );
 }

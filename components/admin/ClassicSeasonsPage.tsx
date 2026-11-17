@@ -1,10 +1,9 @@
 "use client";
 
-import { AdminModal } from "@/components/admin/AdminModal";
 import { useEffect, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { AdminPendingButton } from "@/components/admin/ui/AdminPendingButton";
 import {
   AdminPage,
   AdminPageHeader,
@@ -63,6 +62,7 @@ export default function ClassicSeasonsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showCreateConfirm, setShowCreateConfirm] = useState(false);
 
@@ -137,6 +137,11 @@ export default function ClassicSeasonsPage() {
   }
 
   async function handleCreateNextSeason() {
+    setCreating(true);
+    try { await createNextSeason(); } finally { setCreating(false); }
+  }
+
+  async function createNextSeason() {
     if (seasons.length === 0) return;
     setSaving(true);
     setError(null);
@@ -228,35 +233,25 @@ export default function ClassicSeasonsPage() {
 
   return (
     <AdminPage className="max-w-4xl">
-      <AdminSaveFeedback
-        saving={saving}
-        saved={saved}
-        savingLabel="Updating seasons…"
-        successLabel="Season changes saved"
-      />
-      <AdminModal open={showCreateConfirm} onClose={() => setShowCreateConfirm(false)}
-          aria-labelledby="create-season-title"
-          backdropClassName="fixed inset-0 z-[200] bg-background/80 backdrop-blur-sm"
-          className="fixed left-1/2 top-1/2 z-[201] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl">
-            <h2 id="create-season-title" className="font-body font-semibold text-foreground mb-2" style={{ fontSize: "1.4rem" }}>Create {nextLabel} Season?</h2>
-            <p className="font-body text-sm leading-relaxed mb-1 text-muted-foreground">This will:</p>
-            <ul className="font-body text-sm mb-5 space-y-1 text-muted-foreground">
-              <li>• Create the <strong className="text-foreground">{nextLabel}</strong> season</li>
-              <li>• Seed zero stats for all active players</li>
-              <li>• Keep the current season active until you change it</li>
-            </ul>
-            <p className="font-body text-xs mb-6 text-muted-foreground">A new season remains removable until matches or recorded stats are added.</p>
-            <div className="flex gap-3">
-              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex-1 rounded-xl bg-primary px-5 py-2.5 font-body text-xs font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">{saving && <AdminLoadingDots className="mr-2" />}{saving ? "Creating…" : "Create Season"}</button>
-              <button onClick={() => setShowCreateConfirm(false)} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex-1 px-5 py-2.5 rounded-xl font-body font-semibold text-xs bg-secondary text-muted-foreground">Cancel</button>
-            </div>
-      </AdminModal>
+      <p className="sr-only" role="status">{saving ? "Updating seasons…" : saved ? "Season changes saved" : ""}</p>
+      <AdminConfirmDialog open={showCreateConfirm} title={`Create ${nextLabel} Season?`} busy={saving}
+        confirmLabel="Create Season" onCancel={() => setShowCreateConfirm(false)}
+        onConfirm={() => { setShowCreateConfirm(false); void handleCreateNextSeason(); }}>
+        <p className="font-body text-sm leading-relaxed mb-1 text-muted-foreground">This will:</p>
+        <ul className="font-body text-sm mb-5 space-y-1 text-muted-foreground">
+          <li>• Create the <strong className="text-foreground">{nextLabel}</strong> season</li>
+          <li>• Seed zero stats for all active players</li>
+          <li>• Keep the current season active until you change it</li>
+        </ul>
+        <p className="font-body text-xs text-muted-foreground">A new season remains removable until matches or recorded stats are added.</p>
+      </AdminConfirmDialog>
 
       <AdminPageHeader
         title="Seasons"
         description="Create seasons, choose what is active, and protect historical records."
         actions={(
-          <button onClick={() => setShowCreateConfirm(true)} disabled={loading || saving || seasons.length === 0} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">Create Next Season</button>
+          <AdminPendingButton label="Create Next Season" pendingLabel="Creating…" pending={creating} variant="default" className="min-h-11"
+            disabled={loading || (saving && !creating) || seasons.length === 0} onClick={() => setShowCreateConfirm(true)} />
         )}
       />
 
@@ -268,7 +263,7 @@ export default function ClassicSeasonsPage() {
         <p className="font-body text-xs text-muted-foreground sm:max-w-sm sm:text-right">The active season is what Roster, Schedule and Match Stats read. Changing it changes each of those pages. Standings is one league table that does not change with the season.</p>
       </AdminPageToolbar>
 
-      {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
+      {error && <p role="alert" className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {loading ? (
         <AdminSkeletonRegion className="space-y-3" label="Loading seasons">

@@ -104,9 +104,9 @@ export default function Hero({
               <Link href={primaryHref}>
                 {heroContent.primary_cta_label.trim() || "Next match"}
               </Link>
-              <Link href={secondaryHref}>
-                {heroContent.secondary_cta_label.trim() || "Meet the squad"}
-              </Link>
+              {heroContent.secondary_cta_label.trim() && <Link href={secondaryHref}>
+                {heroContent.secondary_cta_label.trim()}
+              </Link>}
             </div>
           </div>
           <div className="clubhouse-hero-media" aria-label={`${club.name} crest`}>
@@ -176,13 +176,13 @@ export default function Hero({
               >
                 {heroContent.primary_cta_label.trim() || "Next match"}
               </Link>
-              <Link
+              {heroContent.secondary_cta_label.trim() && <Link
                 href={secondaryHref}
                 className="font-display inline-flex min-h-12 items-center justify-center rounded-md border border-white/30 px-7 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform duration-200 hover:-translate-y-0.5"
                 style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
               >
-                {heroContent.secondary_cta_label.trim() || "Meet the squad"}
-              </Link>
+                {heroContent.secondary_cta_label.trim()}
+              </Link>}
             </div>
           </div>
           <div

@@ -133,6 +133,9 @@
 - **Undecided:** the four motion changes.
 - **Exact next step:** Christian decides the motion changes and says go for step 1, the shared
   foundations (Save button, editor dialog, skeletons), as its own package.
+- **Decision (2026-11-17):** Christian approved 38px as the admin-standard Save button height
+  (`components/admin/ui/AdminSaveButton.module.css` `min-block-size`). A 44px touch target is logged
+  as an accessibility follow-up.
 
 ## 2026-11-11 - ADMIN-RE-10b Website numbers only with Sponsor Insights
 

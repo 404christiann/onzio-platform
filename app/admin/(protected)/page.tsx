@@ -231,11 +231,13 @@ async function AdminDashboardContent() {
     <AdminPage>
       <DashboardIntro clubName={club.name} />
 
-      <section aria-labelledby="quick-actions-heading" className={guided.taskSection}>
-        <h2 id="quick-actions-heading" className={guided.taskHeading}>
-          Quick Actions
-        </h2>
-        {quickActions.length ? (
+      {/* Unauthorized actions disappear with no substitution; with none left the
+          whole section is omitted and the page reflows. */}
+      {quickActions.length ? (
+        <section aria-labelledby="quick-actions-heading" className={guided.taskSection}>
+          <h2 id="quick-actions-heading" className={guided.taskHeading}>
+            Quick Actions
+          </h2>
           <div className={guided.taskList}>
             {quickActions.map((action) => {
               const Icon = ACTION_ICONS[action.id];
@@ -262,10 +264,8 @@ async function AdminDashboardContent() {
               );
             })}
           </div>
-        ) : (
-          <EmptyState message="Quick actions are unavailable while content changes are paused." />
-        )}
-      </section>
+        </section>
+      ) : null}
 
       {data.activeSeasonLabel ? (
         <p className="-mb-3 text-sm font-medium text-muted-foreground">{data.activeSeasonLabel} season overview</p>

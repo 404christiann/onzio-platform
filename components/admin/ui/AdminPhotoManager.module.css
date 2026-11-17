@@ -1,0 +1,43 @@
+.manager { min-width: 0; color: hsl(var(--foreground)); }
+.heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.heading h3 { margin: 0; font-size: 15px; font-weight: 650; }
+.heading p { margin: 3px 0 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.counter { flex: none; padding: 4px 8px; border-radius: 999px; background: hsl(var(--secondary)); font-size: 12px; font-weight: 650; }
+.drop { position: relative; min-width: 0; padding: 12px; border: 1px dashed hsl(var(--border)); border-radius: 12px; }
+.drop[data-dragging] { border-color: hsl(var(--primary)); background: hsl(var(--primary) / .06); }
+.list { display: grid; gap: 10px; min-width: 0; }
+.list[data-variant="tiles"] { grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr)); }
+.item { display: flex; gap: 12px; min-width: 0; padding: 10px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--background)); }
+.list[data-variant="tiles"] .item { flex-direction: column; }
+.thumb { position: relative; flex: none; width: 96px; height: 72px; overflow: hidden; border-radius: 7px; background: hsl(var(--secondary)); }
+.list[data-variant="tiles"] .thumb { width: 100%; height: 112px; }
+.image { object-fit: cover; }
+.item[data-success] .image { animation: image-in 160ms ease-out both; }
+.badge { position: absolute; left: 6px; top: 6px; padding: 2px 6px; border-radius: 5px; background: hsl(var(--background) / .92); color: hsl(var(--foreground)); font-size: 11px; font-weight: 700; }
+.itemBody { display: grid; align-content: start; gap: 4px; flex: 1; min-width: 0; }
+.itemTitle { display: flex; align-items: center; gap: 3px; min-width: 0; font-size: 12px; font-weight: 600; }
+.itemTitle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.itemTitle svg { color: hsl(var(--muted-foreground)); flex: none; }
+.itemBody label { font-size: 11px; color: hsl(var(--muted-foreground)); }
+.description { width: 100%; min-width: 0; height: 36px; padding: 0 9px; border: 1px solid hsl(var(--border)); border-radius: 7px; background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 12px; }
+.description[aria-invalid="true"] { border-color: hsl(var(--warning, 38 92% 50%)); box-shadow: 0 0 0 1px hsl(var(--warning, 38 92% 50%) / .6); }
+.description:focus-visible, .itemActions button:focus-visible, .add:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.itemActions { display: flex; align-items: start; gap: 3px; flex: none; }
+.itemActions button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid hsl(var(--border)); border-radius: 7px; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+.itemActions button:disabled { opacity: .42; }
+.list[data-variant="tiles"] .itemActions { justify-content: end; }
+.add { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 12px; padding: 0 13px; border: 1px solid hsl(var(--border)); border-radius: 9px; background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 13px; font-weight: 600; }
+.add:disabled { opacity: .45; }
+.pendingItem { opacity: .7; }
+.pendingOverlay { position: absolute; inset: 0; display: grid; place-items: center; background: hsl(var(--background) / .45); }
+.pendingName { align-self: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.list[data-variant="tiles"] .pendingName { align-self: start; }
+
+.ring { width: 22px; height: 22px; border: 3px solid hsl(var(--primary)); border-right-color: transparent; border-radius: 50%; animation: ring 450ms linear infinite; }
+.message { min-height: 18px; margin: 7px 0 0; color: hsl(var(--destructive)); font-size: 12px; }
+.fileInput { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+@keyframes ring { to { transform: rotate(360deg); } }
+@keyframes image-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 560px) { .list[data-variant="rows"] .item { flex-wrap: wrap; } .list[data-variant="rows"] .itemBody { flex-basis: calc(100% - 110px); } .list[data-variant="rows"] .itemActions { flex-basis: 100%; justify-content: flex-end; margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { .ring { animation: none; border-right-color: hsl(var(--primary)); } .item[data-success] .image { animation-duration: 120ms; } }
+

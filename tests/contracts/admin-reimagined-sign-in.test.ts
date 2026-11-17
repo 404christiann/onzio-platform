@@ -37,10 +37,13 @@ describe("the members page keeps both admins working (ADMIN-RE-18)", () => {
     expect(page).toContain("<SignInPeople");
   });
 
-  it("leaves the classic Team access page as it was", () => {
-    expect(page).toContain('title="Team access"');
-    expect(page).toContain("otherOwners.map(");
-    expect(page).toContain('body: JSON.stringify({ action: "add", email })');
+  it("keeps classic Team access in the Club settings frame", () => {
+    expect(page).toContain('<ClubSettingsFrame active="team">');
+    const frame = source("components/admin/club-settings/ClubSettingsFrame.tsx");
+    expect(frame).toContain('title="Club settings"');
+    expect(frame).toContain('{ id: "team", label: "Team access" }');
+    expect(page).toContain("owners.map(");
+    expect(page).toContain('body: JSON.stringify({ action: "add", email: submitted })');
     expect(page).toContain("function ClassicMembersPage");
   });
 });

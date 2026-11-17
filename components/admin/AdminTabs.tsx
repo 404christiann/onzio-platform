@@ -1,18 +1,13 @@
 "use client";
 
-import { useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
-import guided from "@/components/admin/AdminGuided.module.css";
+import styles from "./AdminTabs.module.css";
 
 import { cn } from "@/lib/utils";
 
 /**
- * AdminTabs — controlled segmented-tab primitive.
- *
- * Generalizes the hand-rolled "Forms / Archived" segmented control from
- * app/admin/(protected)/registrations/page.tsx into a reusable component:
- * a rounded-lg bordered track (`bg-muted/50 p-1`) holding `role="tab"`
- * buttons, with the active tab getting `bg-card shadow-sm`.
+ * AdminTabs — controlled tablist primitive.
  *
  * This component only renders the tab list. It does not render or manage
  * any panel content — pair each tab with a panel by giving the panel
@@ -71,6 +66,37 @@ export function AdminTabs({
   className,
 }: AdminTabsProps) {
   const tabRefs = useRef(new Map<string, HTMLButtonElement>());
+  const listRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+
+    function measure() {
+      const tab = tabRefs.current.get(value);
+      if (!tab || !list) {
+        setIndicator(null);
+        return;
+      }
+      const left = tab.offsetLeft;
+      const width = tab.offsetWidth;
+      setIndicator((previous) =>
+        previous?.left === left && previous.width === width ? previous : { left, width },
+      );
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    for (const tab of tabRefs.current.values()) observer.observe(tab);
+    const frame = window.requestAnimationFrame(() => setReady(true));
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+    };
+  }, [items, value]);
 
   const enabledItems = items.filter((item) => !item.disabled);
 
@@ -108,13 +134,11 @@ export function AdminTabs({
 
   return (
     <div
+      ref={listRef}
       role="tablist"
       aria-label={label}
-      className={cn(
-        "inline-flex w-full rounded-lg border border-border bg-muted/50 p-1 sm:w-auto",
-        guided.tabs,
-        className,
-      )}
+      className={cn(styles.list, className)}
+      data-admin-tabs=""
     >
       {items.map((item, index) => {
         const isSelected = item.id === value;
@@ -135,30 +159,27 @@ export function AdminTabs({
             tabIndex={isSelected ? 0 : -1}
             onClick={() => onChange(item.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
-            className={cn(
-              "min-h-11 flex-1 rounded-md px-3 text-sm font-semibold transition sm:flex-none",
-              isSelected
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-              item.disabled && "cursor-not-allowed opacity-50 hover:text-muted-foreground",
-            )}
+            className={cn(styles.tab, item.disabled && styles.disabled)}
           >
-            {item.label}
+            <span className={styles.label}>{item.label}</span>
             {item.badge !== undefined && (
-              <span
-                className={cn(
-                  "ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold",
-                  isSelected
-                    ? "bg-primary/10 text-primary"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                {item.badge}
-              </span>
+              <span className={styles.badge}>{item.badge}</span>
             )}
           </button>
         );
       })}
+      <span
+        aria-hidden="true"
+        data-admin-tab-indicator=""
+        data-ready={ready}
+        className={styles.indicator}
+        style={{
+          opacity: indicator ? 1 : 0,
+          transform: indicator
+            ? `translateX(${indicator.left}px) scaleX(${indicator.width / 100})`
+            : "translateX(0) scaleX(0)",
+        }}
+      />
     </div>
   );
 }

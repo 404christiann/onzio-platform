@@ -1,6 +1,6 @@
 "use client";
 
-import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { useClubId } from "@/components/ClubContextProvider";
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
@@ -11,15 +11,16 @@ import {
 } from "@/lib/queries";
 import type { Player, GoalkeeperStats, FieldStats } from "@/lib/data";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
-import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
-import { AnalyticsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
+import { AdminBar } from "@/components/admin/ui/AdminBar";
+import { Shimmer, ShimmerRegion } from "@/components/admin/ui/Shimmer";
+import styles from "./analytics/classic-analytics.module.css";
+import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
 import {
   AdminPage,
   AdminPageHeader,
   AdminPageToolbar,
   AdminPanel,
 } from "@/components/admin/AdminPage";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import type { AdminTheme } from "@/lib/admin-theme";
 
@@ -29,15 +30,14 @@ Chart.register(...registerables);
 
 type PositionKey = "All" | "Goalkeeper" | "Defender" | "Midfielder" | "Forward";
 const POSITIONS: PositionKey[] = ["All", "Goalkeeper", "Defender", "Midfielder", "Forward"];
+const POSITION_LABELS: Record<PositionKey, string> = { All: "All", Goalkeeper: "GK", Defender: "DF", Midfielder: "MF", Forward: "FW" };
 
 // Chart.js needs concrete colours rather than Tailwind classes. Resolve the
 // protected wrapper's current semantic tokens whenever the explicit admin
 // theme changes so canvas content stays in lockstep with the DOM presentation.
 type AdminChartTheme = {
   accent: string;
-  accentFill: string;
   accentSoft: string;
-  comparison: string;
   grid: string;
   tick: string;
   font: { family: string; size: number };
@@ -73,23 +73,11 @@ function resolveChartTheme(
       "--primary",
       dark ? "hsl(230 86% 70%)" : "hsl(231 74% 59%)",
     ),
-    accentFill: cssTokenColor(
-      styles,
-      "--primary",
-      dark ? "hsl(230 86% 70% / 0.82)" : "hsl(231 74% 59% / 0.82)",
-      0.82,
-    ),
     accentSoft: cssTokenColor(
       styles,
       "--primary",
       dark ? "hsl(230 86% 70% / 0.12)" : "hsl(231 74% 59% / 0.12)",
       0.12,
-    ),
-    comparison: cssTokenColor(
-      styles,
-      "--muted-foreground",
-      dark ? "hsl(215 16% 65% / 0.22)" : "hsl(220 9% 46% / 0.22)",
-      0.22,
     ),
     grid: cssTokenColor(
       styles,
@@ -189,7 +177,6 @@ const DELTA_TONE_CLASSES: Record<DeltaTone, string> = {
 
 export default function ClassicAnalyticsPage() {
   const clubId = useClubId();
-  const club = useClubContext();
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [seasonLabel, setSeasonLabel] = useState("");
   const [loading, setLoading] = useState(true);
@@ -249,19 +236,6 @@ export default function ClassicAnalyticsPage() {
 
   const player = filtered.find((p) => p.id === selectedId) ?? filtered[0] ?? null;
 
-  if (loading) {
-    return (
-      <AdminPage>
-        <AdminPageHeader
-          eyebrow="Performance"
-          title="Analytics"
-          description="Player performance, peer comparisons, and match trends."
-        />
-        <AnalyticsWorkspaceSkeleton />
-      </AdminPage>
-    );
-  }
-
   if (loadError) {
     return (
       <AdminPage>
@@ -280,35 +254,10 @@ export default function ClassicAnalyticsPage() {
           <button
             type="button"
             onClick={() => setLoadAttempt((attempt) => attempt + 1)}
-            className="min-h-11 mt-5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            className="admin-press min-h-11 mt-5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             Try again
           </button>
-        </AdminPanel>
-      </AdminPage>
-    );
-  }
-
-  if (!allPlayers.length) {
-    return (
-      <AdminPage>
-        <AdminPageHeader
-          eyebrow="Performance"
-          title="Analytics"
-          description={
-            seasonLabel
-              ? `${seasonLabel} season · Player performance and match trends.`
-              : "Player performance and match trends."
-          }
-        />
-        <AdminPanel className="flex min-h-64 flex-col items-center justify-center text-center">
-          <h2 className="text-base font-semibold text-foreground">
-            No players found
-          </h2>
-          <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Add active players to the roster to begin comparing season
-            performance.
-          </p>
         </AdminPanel>
       </AdminPage>
     );
@@ -319,9 +268,16 @@ export default function ClassicAnalyticsPage() {
       <AdminPageHeader
         eyebrow="Performance"
         title="Analytics"
-        description={`${seasonLabel} season · Compare player output, position benchmarks, and recent match trends.`}
+        description={<span className={styles.subtitle}>{seasonLabel ? `${seasonLabel} season · ` : ""}Compare player output, position benchmarks, and recent match trends.</span>}
       />
 
+      <ShimmerRegion loading={loading} skeleton={<AnalyticsSkeleton />} minHeight={0} loadingLabel="Loading analytics">
+      {!allPlayers.length ? (
+        <AdminPanel className="flex min-h-64 flex-col items-center justify-center text-center">
+          <h2 className="text-base font-semibold text-foreground">No players found</h2>
+          <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">Add active players to the roster to begin comparing season performance.</p>
+        </AdminPanel>
+      ) : <div className={styles.workspace}>
       <AdminPageToolbar>
         <div>
           <p className="text-sm font-semibold text-foreground">Position group</p>
@@ -340,20 +296,21 @@ export default function ClassicAnalyticsPage() {
               type="button"
               onClick={() => setPosFilter(position)}
               aria-pressed={posFilter === position}
-              className={`min-h-11 flex-none rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none ${
+              aria-label={position}
+              className={`admin-press min-h-11 flex-none rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none ${
                 posFilter === position
                   ? "bg-card text-primary shadow-sm"
                   : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
               }`}
             >
-              {position}
+              {POSITION_LABELS[position]}
             </button>
           ))}
         </div>
       </AdminPageToolbar>
 
-      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]">
-        <AdminPanel as="aside" className="xl:sticky xl:top-24">
+      <div className={styles.columns}>
+        <AdminPanel as="aside" className={styles.rail} aria-label="Players">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Players</h2>
@@ -367,7 +324,7 @@ export default function ClassicAnalyticsPage() {
           </div>
 
           {filtered.length > 0 ? (
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 xl:mx-0 xl:max-h-[calc(100svh-16rem)] xl:flex-col xl:overflow-x-visible xl:overflow-y-auto xl:px-0 xl:pb-0">
+            <div className={styles.players}>
             {filtered.map((p) => {
               const active = p.id === selectedId;
               return (
@@ -376,7 +333,8 @@ export default function ClassicAnalyticsPage() {
                   type="button"
                   onClick={() => p.id && setSelectedId(p.id)}
                   aria-pressed={active}
-                  className={`flex min-h-14 w-44 flex-none items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none xl:w-full ${
+                  title={p.name}
+                  className={`admin-press admin-press-row ${styles.player} flex min-h-14 flex-none items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none ${
                     active
                       ? "border-primary/40 bg-primary/10"
                       : "border-transparent bg-transparent hover:border-border hover:bg-accent"
@@ -416,7 +374,7 @@ export default function ClassicAnalyticsPage() {
                       {p.name}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      #{p.number} · {p.position}
+                      #{p.number} · {POSITION_LABELS[p.position as PositionKey] ?? p.position}
                     </p>
                   </div>
                 </button>
@@ -434,7 +392,6 @@ export default function ClassicAnalyticsPage() {
         <div className="min-w-0">
           {player ? (
             <PlayerDashboard
-              key={player.id ?? player.name}
               player={player}
               allPlayers={allPlayers}
               seasonLabel={seasonLabel}
@@ -449,6 +406,8 @@ export default function ClassicAnalyticsPage() {
           )}
         </div>
       </div>
+      </div>}
+      </ShimmerRegion>
     </AdminPage>
   );
 }
@@ -470,15 +429,29 @@ function PlayerDashboard({
   const stats = player.stats;
 
   // Trend data
-  const [trend, setTrend]               = useState<PlayerMatchTrendPoint[]>([]);
+  const [trend, setTrend] = useState<{ playerId: string | undefined; data: PlayerMatchTrendPoint[] }>({ playerId: undefined, data: [] });
   const [trendLoading, setTrendLoading] = useState(true);
 
   useEffect(() => {
-    if (!player.id) { setTrend([]); setTrendLoading(false); return; }
+    let active = true;
+    if (!player.id) {
+      setTrend({ playerId: undefined, data: [] });
+      setTrendLoading(false);
+      return;
+    }
     setTrendLoading(true);
     fetchPlayerMatchTrend(player.id, gk, undefined, clubId)
-      .then((data) => { setTrend(data); setTrendLoading(false); })
-      .catch(() => { setTrend([]); setTrendLoading(false); });
+      .then((data) => {
+        if (!active) return;
+        setTrend({ playerId: player.id, data });
+        setTrendLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setTrend({ playerId: player.id, data: [] });
+        setTrendLoading(false);
+      });
+    return () => { active = false; };
   }, [clubId, player.id, gk]);
 
   // ── KPIs ──────────────────────────────────────
@@ -562,6 +535,7 @@ function PlayerDashboard({
       const peers = allPlayers.filter((p) => isGK(p.stats)).map((p) => p.stats as GoalkeeperStats);
       return {
         labels: ["Saves", "Clean Sheets", "Starts", "Mins / 10"],
+        max: [Math.max(...peers.map((p) => p.saves), 1), Math.max(...peers.map((p) => p.cleanSheets), 1), Math.max(...peers.map((p) => p.starts), 1), Math.max(...peers.map((p) => Math.round(p.mins / 10)), 1)],
         player: [s.saves, s.cleanSheets, s.starts, Math.round(s.mins / 10)],
         posAvg: [avg(peers.map((p) => p.saves)), avg(peers.map((p) => p.cleanSheets)), avg(peers.map((p) => p.starts)), Math.round(avg(peers.map((p) => p.mins)) / 10)],
       };
@@ -570,6 +544,7 @@ function PlayerDashboard({
       const peers = allPlayers.filter((p) => !isGK(p.stats)).map((p) => p.stats as FieldStats);
       return {
         labels: ["Goals", "Assists", "Tackles", "Starts"],
+        max: [Math.max(...peers.map((p) => p.goals), 1), Math.max(...peers.map((p) => p.assists), 1), Math.max(...peers.map((p) => p.tackles), 1), Math.max(...peers.map((p) => p.starts), 1)],
         player: [s.goals, s.assists, s.tackles, s.starts],
         posAvg: [avg(peers.map((p) => p.goals)), avg(peers.map((p) => p.assists)), avg(peers.map((p) => p.tackles)), avg(peers.map((p) => p.starts))],
       };
@@ -579,8 +554,8 @@ function PlayerDashboard({
   const disciplineScore = Math.max(0, 100 - stats.yellow * 15 - stats.red * 30);
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
-      <AdminPanel className="flex items-center gap-4 sm:gap-5">
+    <div className={styles.dashboard} data-analytics-dashboard="">
+      <AdminPanel className="flex items-center gap-4 sm:gap-5" data-analytics-part="summary">
         <div className="h-16 w-16 flex-none overflow-hidden rounded-2xl border border-primary/30 bg-primary/10 sm:h-20 sm:w-20">
           {player.image ? (
             <ResilientNativeImage
@@ -601,26 +576,23 @@ function PlayerDashboard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          <h2 title={player.name} className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             {player.name}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {player.position} · {seasonLabel} season
+          </h2>
+          <p className="mt-1 truncate text-sm text-muted-foreground" title={`#${player.number} · ${POSITION_LABELS[player.position]} · ${seasonLabel} season`}>
+            #{player.number} · {POSITION_LABELS[player.position as PositionKey] ?? player.position} · {seasonLabel} season
           </p>
         </div>
-        <span className="flex-none rounded-xl border border-border bg-muted/70 px-3 py-2 font-mono text-sm font-semibold tabular-nums text-foreground">
-          #{player.number}
-        </span>
       </AdminPanel>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={styles.kpis} data-analytics-part="metrics">
         {kpis.map((k) => (
           <AdminPanel key={k.label} className="p-4 sm:p-5">
-            <p className="font-body text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-              {k.value.toLocaleString()}
-            </p>
-            <p className="mt-2 text-xs font-semibold text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {k.label}
+            </p>
+            <p className="mt-2 font-body text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+              {k.value.toLocaleString()}
             </p>
             <p className={`mt-2 text-xs leading-5 ${DELTA_TONE_CLASSES[deltaTone(k.delta)]}`}>
               {k.delta}
@@ -629,8 +601,9 @@ function PlayerDashboard({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className={styles.charts} data-analytics-part="charts">
         <RadarCard
+          identity={player.id ?? player.name}
           labels={radarData.labels}
           playerVals={radarData.player}
           avgVals={radarData.posAvg}
@@ -638,9 +611,9 @@ function PlayerDashboard({
         <ComparisonBar data={comparisonData} />
       </div>
 
-      <TrendLine data={trend} loading={trendLoading} gk={gk} />
+      <TrendLine data={trend.playerId === player.id ? trend.data : []} loading={trendLoading || trend.playerId !== player.id} gk={gk} />
 
-      <AdminPanel>
+      <AdminPanel data-analytics-part="discipline">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Discipline</h2>
@@ -682,25 +655,7 @@ function PlayerDashboard({
             <span className="text-xs font-medium text-muted-foreground">Red</span>
           </div>
           <div>
-            <div
-              className="h-2 overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-label="Discipline score"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={disciplineScore}
-            >
-              <div
-                className={
-                  disciplineScore >= 85
-                    ? "h-full rounded-full bg-success transition-[width] duration-300 motion-reduce:transition-none"
-                    : disciplineScore >= 60
-                      ? "h-full rounded-full bg-warning transition-[width] duration-300 motion-reduce:transition-none"
-                      : "h-full rounded-full bg-destructive transition-[width] duration-300 motion-reduce:transition-none"
-                }
-                style={{ width: `${disciplineScore}%` }}
-              />
-            </div>
+            <AdminBar fraction={disciplineScore / 100} label={`Discipline score ${disciplineScore} out of 100`} />
             <p className="mt-2 text-right text-xs text-muted-foreground">
               {disciplineScore}% discipline score
             </p>
@@ -714,14 +669,29 @@ function PlayerDashboard({
 // ── Radar Card ─────────────────────────────────
 
 function RadarCard({
+  identity,
   labels,
   playerVals,
   avgVals,
 }: {
+  identity: string;
   labels: string[];
   playerVals: number[];
   avgVals: number[];
 }) {
+  const radarRef = useRef<HTMLDivElement>(null);
+  const signature = `${identity}|${labels.join(",")}|${playerVals.join(",")}|${avgVals.join(",")}`;
+  const previous = useRef(signature);
+  useEffect(() => {
+    if (previous.current === signature) return;
+    previous.current = signature;
+    const animation = radarRef.current?.animate(
+      [{ opacity: 0.35 }, { opacity: 1 }],
+      { duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 160, easing: "ease-out" },
+    );
+    return () => animation?.cancel();
+  }, [signature]);
+  const summary = labels.map((label, i) => `${label}: player ${playerVals[i]}, position average ${avgVals[i]}`).join("; ");
   const cx = 110, cy = 110, r = 78, n = labels.length;
   const angle = (i: number) => (Math.PI * 2 * i) / n - Math.PI / 2;
   const pt    = (i: number, scale: number) => [
@@ -733,31 +703,17 @@ function RadarCard({
 
   return (
     <AdminPanel>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Player profile</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Relative strength across five season measures.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="h-px w-4 bg-muted-foreground/50" />
-            Position avg
-          </span>
-          <span className="flex items-center gap-1.5 text-xs text-primary">
-            <span className="h-0.5 w-4 bg-primary" />
-            Player
-          </span>
-        </div>
+      <div className={styles.chartHeading}>
+        <h2 className="text-sm font-semibold text-foreground">Player profile</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Compared with the position average.</p>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-5">
+      <div ref={radarRef} className={styles.radar}>
         <svg
           viewBox="-10 -10 240 240"
           role="img"
-          aria-label="Radar chart showing player profile vs position average"
-          className="mx-auto h-auto w-full max-w-60"
+          aria-label={`Radar chart showing player profile vs position average. ${summary}`}
+          className={styles.radarSvg}
         >
           {[0.25, 0.5, 0.75, 1].map((s) => (
             <polygon key={s} points={labels.map((_, i) => pt(i, s).join(",")).join(" ")} className="fill-none stroke-border" strokeWidth="0.5" />
@@ -782,35 +738,11 @@ function RadarCard({
           })}
         </svg>
 
-        <div className="flex min-w-0 flex-col gap-3">
-          {labels.map((l, i) => (
-            <div
-              key={l}
-              className="flex min-w-0 items-center gap-2"
-              aria-label={`${l}: player ${playerVals[i]}, position average ${avgVals[i]}`}
-            >
-              <span className="w-20 flex-none truncate text-xs text-muted-foreground">
-                {l}
-              </span>
-              <div className="relative h-1.5 min-w-0 flex-1 rounded-full bg-muted">
-                <div
-                  className="absolute -bottom-0.5 -top-0.5 w-0.5 -translate-x-1/2 rounded-full bg-muted-foreground/60"
-                  style={{ left: `${avgVals[i]}%` }}
-                />
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${playerVals[i]}%` }}
-                />
-              </div>
-              <span className="w-14 flex-none text-right font-mono text-xs font-semibold tabular-nums text-foreground">
-                {playerVals[i]}
-                <span className="font-normal text-muted-foreground">
-                  /{avgVals[i]}
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
+        <p className="sr-only">{summary}</p>
+      </div>
+      <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-primary" />Player</span>
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-muted-foreground/50" />Position average</span>
       </div>
     </AdminPanel>
   );
@@ -818,88 +750,28 @@ function RadarCard({
 
 // ── Comparison Bar ─────────────────────────────
 
-function ComparisonBar({ data }: { data: { labels: string[]; player: number[]; posAvg: number[] } }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef  = useRef<Chart | null>(null);
-  const { theme } = useAdminTheme();
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    chartRef.current?.destroy();
-    chartRef.current = null;
-    const chartTheme = resolveChartTheme(canvasRef.current, theme);
-    const axes = chartAxes(chartTheme);
-    const chart = new Chart(canvasRef.current, {
-      type: "bar",
-      data: {
-        labels: data.labels,
-        datasets: [
-          {
-            label: "Player",
-            data: data.player,
-            backgroundColor: chartTheme.accentFill,
-            borderRadius: 5,
-            barPercentage: 0.58,
-          },
-          {
-            label: "Pos. avg",
-            data: data.posAvg,
-            backgroundColor: chartTheme.comparison,
-            borderRadius: 5,
-            barPercentage: 0.58,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { ...chartTheme.tooltip },
-        },
-        scales: {
-          x: { ...axes.x },
-          y: { ...axes.y, beginAtZero: true },
-        },
-      },
-    });
-    chartRef.current = chart;
-    return () => {
-      chart.destroy();
-      if (chartRef.current === chart) chartRef.current = null;
-    };
-  }, [data, theme]);
-
+function ComparisonBar({ data }: { data: { labels: string[]; player: number[]; posAvg: number[]; max: number[] } }) {
   return (
     <AdminPanel>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">
-            Position comparison
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Player output against the position average.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          {[
-            { label: "Player", swatchClass: "bg-primary/80" },
-            { label: "Position avg", swatchClass: "bg-muted-foreground/25" },
-          ].map((legend) => (
-            <span
-              key={legend.label}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-            >
-              <span className={`h-2 w-2 rounded-sm ${legend.swatchClass}`} />
-              {legend.label}
-            </span>
-          ))}
-        </div>
+      <div className={styles.chartHeading}>
+        <h2 className="text-sm font-semibold text-foreground">Stats vs position average</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Each bar is scaled to the best in the position group.</p>
       </div>
-      <div className="relative h-56">
-        <canvas ref={canvasRef} role="img" aria-label="Bar chart comparing player stats vs position average">
-          Player vs position average comparison.
-        </canvas>
+      <div className={styles.comparison}>
+        {data.labels.map((label, i) => (
+          <div key={i}>
+            <div className="mb-1.5 flex justify-between gap-3 text-xs">
+              <span>{label}</span>
+              <span className="text-muted-foreground tabular-nums">{data.player[i]} · avg {data.posAvg[i]}</span>
+            </div>
+            <AdminBar fraction={data.player[i] / data.max[i]} label={`${label}: player ${data.player[i]}`} staggerIndex={i} />
+            <AdminBar className={styles.average} fraction={data.posAvg[i] / data.max[i]} label={`${label}: position average ${data.posAvg[i]}`} staggerIndex={i} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-primary" />Player</span>
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-muted-foreground/50" />Position average</span>
       </div>
     </AdminPanel>
   );
@@ -919,47 +791,22 @@ function TrendLine({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef  = useRef<Chart | null>(null);
   const metric    = gk ? "Saves" : "G+A";
+  const delayed = useDelayedLoading(loading);
   const { theme } = useAdminTheme();
 
   useEffect(() => {
-    if (loading || data.length < 2 || !canvasRef.current) return;
-    chartRef.current?.destroy();
-    chartRef.current = null;
-    const chartTheme = resolveChartTheme(canvasRef.current, theme);
-    const axes = chartAxes(chartTheme);
+    if (!canvasRef.current) return;
     const chart = new Chart(canvasRef.current, {
       type: "line",
-      data: {
-        labels: data.map((d) => d.opponent),
-        datasets: [{
-          label: metric,
-          data: data.map((d) => d.value),
-          borderColor: chartTheme.accent,
-          backgroundColor: chartTheme.accentSoft,
-          pointBackgroundColor: chartTheme.accent,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          tension: 0.35,
-          fill: true,
-          borderWidth: 2,
-        }],
-      },
+      data: { labels: [], datasets: [{ label: "", data: [], pointRadius: 4, pointHoverRadius: 6, tension: 0.35, fill: true, borderWidth: 2 }] },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            ...chartTheme.tooltip,
-            callbacks: {
-              title: (items) => data[items[0].dataIndex]?.opponent ?? "",
-              label: (ctx)   => ` ${metric}: ${ctx.parsed.y}  ·  ${data[ctx.dataIndex]?.mins ?? 0} min`,
-            },
-          },
-        },
+        animation: false,
+        plugins: { legend: { display: false } },
         scales: {
-          x: { ...axes.x, ticks: { ...axes.x.ticks, maxRotation: 30 } },
-          y: { ...axes.y, min: 0, ticks: { ...axes.y.ticks, stepSize: 1 } },
+          x: {},
+          y: { min: 0 },
         },
       },
     });
@@ -968,44 +815,103 @@ function TrendLine({
       chart.destroy();
       if (chartRef.current === chart) chartRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !canvasRef.current) return;
+    const chartTheme = resolveChartTheme(canvasRef.current, theme);
+    const axes = chartAxes(chartTheme);
+    chart.data.labels = data.map((point) => point.opponent);
+    Object.assign(chart.data.datasets[0], {
+      label: metric,
+      data: data.map((point) => point.value),
+      borderColor: chartTheme.accent,
+      backgroundColor: chartTheme.accentSoft,
+      pointBackgroundColor: chartTheme.accent,
+    });
+    chart.options.plugins = {
+      legend: { display: false },
+      tooltip: {
+        ...chartTheme.tooltip,
+        callbacks: {
+          title: (items) => data[items[0].dataIndex]?.opponent ?? "",
+          label: (ctx) => ` ${metric}: ${ctx.parsed.y}  ·  ${data[ctx.dataIndex]?.mins ?? 0} min`,
+        },
+      },
+    };
+    chart.options.scales = {
+      x: { ...axes.x, ticks: { ...axes.x.ticks, maxRotation: 30 } },
+      y: { ...axes.y, min: 0, ticks: { ...axes.y.ticks, stepSize: 1 } },
+    };
+    chart.resize();
+    chart.update("none");
   }, [data, loading, metric, theme]);
 
   return (
-    <AdminPanel>
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">
-            {gk ? "Saves per match" : "Goal contributions per match"}
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Recent match-by-match output.
-          </p>
-        </div>
-        {data.length > 0 && !loading && (
-          <span className="rounded-lg bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-            {data.length} match{data.length !== 1 ? "es" : ""}
-          </span>
-        )}
+    <AdminPanel data-analytics-part="trend">
+      <div className={`${styles.chartHeading} ${styles.trendHeading}`}>
+        <h2 className="text-sm font-semibold text-foreground">{gk ? "Saves per match" : "Goal contributions per match"}</h2>
+        <span className="rounded-lg bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+          {!loading ? `${data.length} match${data.length !== 1 ? "es" : ""}` : "Matches"}
+        </span>
+        <p className="text-xs text-muted-foreground">Recent match-by-match output.</p>
       </div>
-      <div className="relative h-48">
-        {loading ? (
-          <AdminSkeletonRegion label="Loading match trends" className="h-full">
-            <Skeleton className="h-48 w-full rounded-xl" />
-          </AdminSkeletonRegion>
-        ) : data.length < 2 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-muted-foreground">
-              {data.length === 0
-                ? "No match data yet"
-                : "Two matches are needed to show a trend."}
-            </p>
+      <div className={styles.trend} data-phase={delayed.phase} aria-busy={delayed.phase !== "content"}>
+        <canvas
+          ref={canvasRef}
+          hidden={!delayed.showContent || data.length < 2}
+          role="img"
+          aria-label={`${gk ? "Saves" : "Goal contributions"} per match: ${data.map((point) => `${point.opponent} ${point.value}, ${point.mins} minutes`).join("; ")}`}
+        >
+          {data.map((point) => `${point.opponent}: ${point.value}`).join("; ")}
+        </canvas>
+        {delayed.showSkeleton && <div className={styles.trendSkeleton} role="status" aria-label="Loading match trends"><Shimmer className={styles.trend} /></div>}
+        {delayed.showContent && data.length < 2 ? (
+          <div className={styles.trendEmpty}>
+            {data.length === 0 ? "No match data yet" : "Two matches are needed to show a trend."}
           </div>
-        ) : (
-          <canvas ref={canvasRef} role="img" aria-label={`Line chart showing ${metric} trend over matches`}>
-            {metric} trend over recent matches.
-          </canvas>
-        )}
+        ) : null}
       </div>
     </AdminPanel>
+  );
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className={styles.workspace} aria-hidden="true" data-analytics-skeleton="">
+      <AdminPageToolbar>
+        <div><p className="text-sm font-semibold">Position group</p><p className="mt-1 text-sm text-muted-foreground">Narrow the roster without changing the season comparison.</p></div>
+        <div className="flex gap-1 rounded-xl border border-border bg-muted/60 p-1">
+          {POSITIONS.map((position) => <Shimmer key={position} className="h-11 w-11 rounded-lg" />)}
+        </div>
+      </AdminPageToolbar>
+      <div className={styles.columns}>
+        <AdminPanel as="aside" className={styles.rail}>
+          <div className="mb-4"><h2 className="text-sm font-semibold">Players</h2><Shimmer className="mt-1 h-4 w-24" /></div>
+          <div className={styles.players}>
+            {[0, 1, 2, 3].map((i) => <div key={i} className={styles.skeletonPlayer}><Shimmer className="h-10 w-10 flex-none rounded-full" /><Shimmer className="h-8 w-full" /></div>)}
+          </div>
+        </AdminPanel>
+        <div className={styles.dashboard}>
+          <AdminPanel data-analytics-part="summary"><div className={styles.skeletonSummary}><Shimmer className="h-full w-16 flex-none rounded-2xl sm:w-20" /><Shimmer className="h-12 w-48 max-w-full" /></div></AdminPanel>
+          <div className={styles.kpis} data-analytics-part="metrics">{[0, 1, 2, 3].map((i) => <AdminPanel key={i} className="p-4 sm:p-5"><Shimmer className={styles.skeletonMetric} /></AdminPanel>)}</div>
+          <div className={styles.charts} data-analytics-part="charts">
+            <AdminPanel><Shimmer className={styles.skeletonHeading} /><Shimmer className={styles.radar} /><Shimmer className="mt-4 h-4 w-44" /></AdminPanel>
+            <AdminPanel><Shimmer className={styles.skeletonHeading} /><Shimmer className={styles.radar} /><Shimmer className="mt-4 h-4 w-44" /></AdminPanel>
+          </div>
+          <AdminPanel data-analytics-part="trend"><Shimmer className={styles.skeletonHeading} /><Shimmer className={styles.trend} /></AdminPanel>
+          <AdminPanel data-analytics-part="discipline">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div><h2 className="text-sm font-semibold text-foreground">Discipline</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">Season card record and availability score.</p></div>
+              <Shimmer className="h-6 w-24 rounded-full" />
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:items-center">
+              <Shimmer className="h-12 w-28" /><Shimmer className="h-12 w-24" /><Shimmer className="h-8 w-full" />
+            </div>
+          </AdminPanel>
+        </div>
+      </div>
+    </div>
   );
 }

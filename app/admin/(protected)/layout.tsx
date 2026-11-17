@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
 import { AdminPortalProvider } from "@/components/admin/AdminPortalProvider";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
+import { ClassicAdminUnsavedGuardProvider } from "@/components/admin/ui/UnsavedGuardDialog";
 import { ReimaginedShell } from "@/components/admin/reimagined/ReimaginedShell";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { readAdminPortal } from "@/lib/admin-portal";
@@ -99,7 +100,9 @@ export default async function ProtectedLayout({
             {children}
           </ReimaginedShell>
         ) : (
-          <AdminShell>{children}</AdminShell>
+          <ClassicAdminUnsavedGuardProvider>
+            <AdminShell>{children}</AdminShell>
+          </ClassicAdminUnsavedGuardProvider>
         )}
       </AdminPortalProvider>
     </AdminThemeProvider>

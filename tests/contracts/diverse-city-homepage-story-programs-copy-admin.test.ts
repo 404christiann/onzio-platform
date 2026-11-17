@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -45,6 +46,7 @@ const ROOT = resolve(__dirname, "../..");
 const CLUB_NAME = "Diverse City FC";
 
 function source(path: string): string {
+  if (path === "app/admin/(protected)/programs/page.tsx") return readProgramsEditorSource();
   return readFileSync(resolve(ROOT, path), "utf8");
 }
 
@@ -592,7 +594,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
       ).toContain(field);
     }
 
-    const brandingAdmin = source("app/admin/(protected)/branding/page.tsx");
+    const brandingAdmin = source("components/admin/club-settings/LegacyBranding.tsx");
     expect(brandingAdmin).toContain("footer_tagline");
     expect(brandingAdmin).toContain("footerTagline");
   });

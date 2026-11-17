@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { registrationsEditorSource } from "../helpers/registrations-editor-source";
 
 async function source(path: string) {
   return readFile(resolve(process.cwd(), path), "utf8");
@@ -8,7 +9,7 @@ async function source(path: string) {
 
 describe("registrations admin UI", () => {
   it("uses plain lifecycle copy, cards, and server-owned public links", async () => {
-    const page = await source("app/admin/(protected)/registrations/page.tsx");
+    const page = await registrationsEditorSource();
     expect(page).toContain('"Live" | "Not published" | "Archived"');
     expect(page).toContain("Stop registrations");
     expect(page).toContain("Copy link");
@@ -19,7 +20,7 @@ describe("registrations admin UI", () => {
   });
 
   it("uses a dollar input and separate mobile roster disclosures", async () => {
-    const page = await source("app/admin/(protected)/registrations/page.tsx");
+    const page = await registrationsEditorSource();
     expect(page).toContain('inputMode="decimal"');
     expect(page).toContain("parseRegistrationUsdInput");
     expect(page).toContain("formatRegistrationUsd(entry.amount_cents)");

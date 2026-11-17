@@ -14,7 +14,7 @@ const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf
 const page = source("app/admin/(protected)/add-game/page.tsx");
 const form = source("components/admin/reimagined/AddGame.tsx");
 const loader = source("lib/admin-add-game-data.ts");
-const classic = source("app/admin/(protected)/schedule/page.tsx");
+const classic = source("app/admin/(protected)/schedule/page.tsx") + source("components/admin/schedule/ScheduleMatchForm.tsx") + source("components/admin/schedule/schedule-model.ts") + source("components/admin/schedule/ScheduleMatchList.tsx");
 
 const SEASON = "11111111-1111-4111-8111-111111111111";
 const GAME = {

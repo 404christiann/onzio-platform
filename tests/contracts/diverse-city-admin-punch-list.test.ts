@@ -1,3 +1,4 @@
+import { readProgramsEditorSource } from "../helpers/programs-editor-source";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,7 +10,7 @@ import {
 } from "@/lib/homepage-story-content";
 
 const root = process.cwd();
-const source = (path: string) => readFileSync(resolve(root, path), "utf8");
+const source = (path: string) => path === "app/admin/(protected)/programs/page.tsx" ? readProgramsEditorSource() : readFileSync(resolve(root, path), "utf8");
 const CLUB_NAME = "Diverse City FC";
 
 const SHOP_ADMIN = "app/admin/(protected)/shop/page.tsx";
@@ -28,7 +29,7 @@ const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
 const PROGRAMS_ADMIN = "app/admin/(protected)/programs/page.tsx";
 const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
 const HOMEPAGE_ADMIN = "app/admin/(protected)/homepage/page.tsx";
-const BRANDING_ADMIN = "app/admin/(protected)/branding/page.tsx";
+const BRANDING_ADMIN = "components/admin/club-settings/LegacyBranding.tsx";
 
 /**
  * Christian reported four admin-portal failures against the live Diverse City
@@ -102,7 +103,7 @@ describe("Diverse City admin punch list", () => {
     });
 
     it("gates the sponsor inputs behind the academy@1 check", () => {
-      const schedule = source(SCHEDULE_ADMIN);
+      const schedule = source(SCHEDULE_ADMIN) + source("components/admin/schedule/ScheduleMatchForm.tsx") + source("components/admin/schedule/schedule-model.ts") + source("components/admin/schedule/ScheduleMatchList.tsx");
       expect(schedule).toContain(
         'codeSiteAdminFor(club)?.schedule',
       );
@@ -122,7 +123,7 @@ describe("Diverse City admin punch list", () => {
     it("keeps the sponsor columns, upload, and cleanup logic intact", () => {
       // A pure admin-UI hide: nothing about persistence changes, so a template
       // switch would restore the fields with their data still present.
-      const schedule = source(SCHEDULE_ADMIN);
+      const schedule = source(SCHEDULE_ADMIN) + source("components/admin/schedule/ScheduleMatchForm.tsx") + source("components/admin/schedule/schedule-model.ts") + source("components/admin/schedule/ScheduleMatchList.tsx");
       expect(schedule).toContain("sponsor_name: editForm.sponsor_name");
       expect(schedule).toContain("sponsor_logo_url: editForm.sponsor_logo_url");
       expect(schedule).toContain("sponsor_link: editForm.sponsor_link");
@@ -320,11 +321,11 @@ describe("Diverse City admin punch list", () => {
     // "Result: Rose City X - Y opponent" regardless of which club was actually
     // using the portal. Platform-wide, not academy@1-specific.
     it("uses the club's own name in the score label and result line", () => {
-      const schedule = source(SCHEDULE_ADMIN);
+      const schedule = source(SCHEDULE_ADMIN) + source("components/admin/schedule/ScheduleMatchForm.tsx") + source("components/admin/schedule/schedule-model.ts") + source("components/admin/schedule/ScheduleMatchList.tsx");
       expect(schedule).not.toContain("Rose City");
       expect(schedule).toContain("`${club.name} score`");
       expect(schedule).toContain('label={`${club.name} score`} optional');
-      expect(schedule).toContain("Result: {club.name}");
+      expect(schedule).toContain("Result: {clubName}");
     });
   });
 

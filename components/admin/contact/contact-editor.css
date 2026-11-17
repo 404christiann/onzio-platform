@@ -85,3 +85,53 @@
 @media(max-width:767px) {
  .cep-inspector-head,.cep-inspector-body { padding-left:max(1rem,env(safe-area-inset-left,0px)); padding-right:max(1rem,env(safe-area-inset-right,0px)); }
 }
+
+.cc-root { min-width:0; }
+.cc-preview { min-width:0; overflow:hidden; border:1px solid hsl(var(--border)); border-radius:12px; background:hsl(var(--card)); }
+.cc-preview-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; min-height:64px; padding:12px 16px; border-bottom:1px solid hsl(var(--border)); color:hsl(var(--muted-foreground)); font-size:13px; }
+.cc-browser { width:100%; min-width:0; padding:12px; }
+.cc-browser .cep-frame-viewport { border:0; }
+.cc-editor { display:flex; flex-direction:column; gap:20px; min-width:0; }
+.cc-scope { display:inline-flex; align-self:flex-start; border:1px solid hsl(var(--primary) / .25); border-radius:999px; padding:4px 9px; background:hsl(var(--primary) / .08); color:hsl(var(--admin-selected-foreground,var(--primary))); font-size:12px; font-weight:600; }
+.cc-scope[data-shared="true"] { background:hsl(var(--warning) / .12); border-color:hsl(var(--warning) / .35); color:hsl(var(--foreground)); }
+.cc-note { margin:0; color:hsl(var(--muted-foreground)); font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
+.cc-field { min-width:160px; width:100%; }
+.cc-field label { display:block; margin-bottom:7px; font-size:13px; font-weight:600; }
+.cc-field input,.cc-field textarea { display:block; min-width:0; width:100%; min-height:44px; padding:10px 12px; border:1px solid hsl(var(--input)); border-radius:8px; background:hsl(var(--background)); color:hsl(var(--foreground)); font-size:16px; }
+.cc-field textarea { resize:vertical; }
+.cc-field input:focus-visible,.cc-field textarea:focus-visible { outline:2px solid hsl(var(--ring)); outline-offset:2px; }
+.cc-field [aria-invalid="true"] { border-color:hsl(var(--warning)); }
+.cc-field-help { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; margin-top:5px; font-size:12px; }
+.cc-counter { margin-left:auto; color:hsl(var(--muted-foreground)); }
+.cc-field-error { flex-basis:100%; color:hsl(var(--destructive)); }
+.cc-two { display:grid; grid-template-columns:repeat(2,minmax(160px,1fr)); gap:16px; }
+.cc-social-chips { display:flex; flex-wrap:wrap; gap:8px; color:hsl(var(--muted-foreground)); font-size:13px; }
+.cc-social-chips > span { padding:6px 10px; border:1px solid hsl(var(--border)); border-radius:999px; }
+.cc-settings-link { display:inline-flex; align-items:center; align-self:flex-start; min-height:44px; padding:10px 14px; border:1px solid hsl(var(--border)); border-radius:8px; color:hsl(var(--foreground)); font-size:13px; font-weight:600; }
+.cc-settings-link:focus-visible { outline:2px solid hsl(var(--ring)); outline-offset:2px; }
+.cc-error { border:1px solid hsl(var(--warning) / .5); border-radius:10px; padding:12px 16px; background:hsl(var(--warning) / .08); font-size:14px; }
+.cc-error button { margin:8px 8px 0 0; }
+.cc-confirm-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; color:hsl(var(--muted-foreground)); font-size:13px; }
+.cc-confirm-actions button { min-width:150px; }
+.cc-loading-region { position:relative; }
+.cc-preview-content[data-visible="false"] { opacity:0; pointer-events:none; }
+.cc-loading-layer { position:absolute; inset:0; padding:12px; }
+.cc-loading-shimmer { width:100%; height:100%; min-height:120px; }
+.cc-loading-region[data-phase="crossfade"] .cc-preview-content { animation:cc-content-reveal var(--admin-motion-skeleton-crossfade) ease-out both; }
+.cc-loading-region[data-phase="crossfade"] .cc-loading-layer { opacity:0; transition:opacity var(--admin-motion-skeleton-crossfade) ease-out; }
+@keyframes cc-content-reveal { from { opacity:0; } to { opacity:1; } }
+@media(max-width:700px) {
+  .cc-two { grid-template-columns:minmax(120px,1fr); }
+  .cc-field { min-width:120px; }
+  .cc-browser { padding:8px; }
+  .cc-preview-toolbar { padding:12px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .cc-loading-region[data-phase="crossfade"] .cc-preview-content { animation-duration:var(--admin-motion-reduced-motion-fade); }
+  .cc-loading-region[data-phase="crossfade"] .cc-loading-layer { transition-duration:var(--admin-motion-reduced-motion-fade); }
+}
+
+@media(max-width:640px) {
+  .cc-confirm-actions { display:grid; width:100%; text-align:center; }
+  .cc-confirm-actions button { width:100%; min-height:44px; }
+}

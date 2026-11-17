@@ -1,0 +1,97 @@
+.control {
+  display: inline-flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.track {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 46px;
+  height: 28px;
+  flex: none;
+  padding: 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background-color: hsl(var(--secondary));
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.track:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.track[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.track[aria-disabled="true"]:active {
+  filter: none;
+}
+
+.thumb {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #fff;
+}
+
+.track[aria-checked="true"] {
+  border-color: transparent;
+  background-color: var(--ios-green);
+}
+
+.track[aria-checked="true"] .thumb {
+  transform: translateX(18px);
+}
+
+.track[aria-checked="true"]:dir(rtl) .thumb {
+  transform: translateX(-18px);
+}
+
+.reason {
+  color: hsl(var(--muted-foreground));
+  font-size: .8125rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .track {
+    transition:
+      background-color var(--admin-motion-switch) ease,
+      border-color var(--admin-motion-switch) ease;
+  }
+
+  .thumb {
+    transition: transform var(--admin-motion-switch) var(--admin-motion-ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track[aria-checked="true"] {
+    border-color: hsl(var(--border));
+    background-color: hsl(var(--secondary));
+  }
+
+  .track::before {
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background-color: var(--ios-green);
+    opacity: 0;
+    transition: opacity var(--admin-motion-reduced-motion-fade) ease-out;
+    content: "";
+  }
+
+  .track[aria-checked="true"]::before {
+    opacity: 1;
+  }
+}

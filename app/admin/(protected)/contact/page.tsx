@@ -3,10 +3,12 @@
 import { ChevronRight as AdminLinkArrow } from "@/components/admin/icons";
 
 import Link from "next/link";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import ClassicContactEditor from "@/components/admin/contact/ClassicContactEditor";
 import { useCallback, useEffect, useRef, useState } from "react";
-import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { ContactContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import ContactPageCanvas, { type ContactCanvasTarget } from "@/components/admin/contact/ContactPageCanvas";
@@ -88,6 +90,7 @@ function ContactEditor() {
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<ContactEditorSnapshot | null>(null);
   const [unconfirmed, setUnconfirmed] = useState<ContactEditorSaveRequest | null>(null);
+  const [discardConflict, setDiscardConflict] = useState(false);
   const phone = deviceChoice === "phone" || (deviceChoice === null && narrow);
   const dirty = JSON.stringify(normalizedDraft(draft)) !== JSON.stringify(normalizedDraft(baseline));
 
@@ -225,7 +228,7 @@ function ContactEditor() {
   const canSave = !loading && !saving && !conflict && (dirty || Boolean(unconfirmed));
   const buttonLabel = saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page";
 
-  const mobileSave = <div className="cep-mobile-save"><span>{dirty ? "Unsaved changes" : "All changes saved"}</span><button type="button" disabled={!canSave} onClick={() => void save()}>{buttonLabel}</button></div>;
+  const mobileSave = <div className="cep-mobile-save"><span>{dirty ? "Unsaved changes" : ""}</span><button type="button" disabled={!canSave} onClick={() => void save()}>{buttonLabel}</button></div>;
   const inspectorContents = <>
           <div className="cep-inspector-head"><div><span className="cep-scope" data-shared={selected !== "hero"}>{selected === "hero" ? "Contact page only" : "Shared club data"}</span><h2 id="contact-section-title">{current.label}</h2></div><button type="button" onClick={() => setSheetOpen(false)}>Done</button></div>
           <div className="cep-inspector-body">
@@ -251,14 +254,14 @@ function ContactEditor() {
   </>;
 
   return <AdminPage className="cep-root">
-    <AdminSaveFeedback saving={saving} saved={saved} savingLabel="Saving contact content…" successLabel="Contact content saved" />
+    <p className="sr-only" role="status">{saving ? "Saving contact content…" : saved ? "Contact content saved" : ""}</p>
     <AdminPageHeader eyebrow="Public website" title="Contact" description="Choose a section to edit. Your changes appear on the public page preview before you save." />
     {loading ? <ContactContentSkeleton label="Loading contact content…" showContactPreviewSkeleton={codeSiteAdminFor(club)?.contact.showContactPreviewSkeleton ?? false} hidesHeroImageField={false} /> : !loaded ? <div role="alert" className="cep-error">{error || "Unable to load contact content"}<button type="button" onClick={() => void load()}>Try again</button></div> : <>
       {error && <div role="alert" className="cep-error">{error}</div>}
       {conflict && <div className="cep-error" role="region" aria-label="Review latest Contact page">
         <strong>Another editor saved this page.</strong> Your draft is still here. The latest saved headline is “{conflict.page?.headline || "Untitled"}” and its public email is {conflict.profile?.public_email || "blank"}.
         <button type="button" onClick={() => { setConflict(null); setRevision(conflict.revision); setError(null); }}>Keep my draft and save over latest</button>
-        <button type="button" onClick={() => { if (window.confirm("Discard your Contact draft and load the latest saved page?")) void load(); }}>Discard draft and load latest</button>
+        <button type="button" onClick={() => setDiscardConflict(true)}>Discard draft and load latest</button>
       </div>}
       <div className="cep-layout">
         <nav className="cep-section-guide" aria-label="Contact page sections">
@@ -299,13 +302,15 @@ function ContactEditor() {
       <div className="cep-savebar"><p>{dirty ? "Unsaved changes" : "All Contact changes saved"} · One Save updates this page and the shared contact details together.</p><button type="button" disabled={!canSave} onClick={() => void save()}>{buttonLabel}</button></div>
       {mobileSave}
     </>}
+    <AdminConfirmDialog open={discardConflict} title="Discard your Contact draft?" confirmLabel="Discard draft and load latest" destructive onCancel={() => setDiscardConflict(false)} onConfirm={() => { setDiscardConflict(false); void load(); }}>Load the latest saved Contact page and shared club details. Your current changes will be discarded.</AdminConfirmDialog>
   </AdminPage>;
 }
 
 export default function AdminContactPage() {
+  const { portal } = useAdminPortal();
   const club = useClubContext();
   if (!codeSiteAdminFor(club)?.contact.routeVisible) {
     return <AdminPage><AdminPageHeader eyebrow="Public website" title="Contact" description="This website design does not publish a Contact page." /></AdminPage>;
   }
-  return <ContactEditor />;
+  return portal === "reimagined" ? <ContactEditor /> : <ClassicContactEditor />;
 }

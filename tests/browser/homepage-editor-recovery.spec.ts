@@ -1,3 +1,4 @@
+import { saveHomepage, expectHomepageSaved, navigateHomepageOwner } from "./helpers/homepage-editor-controls";
 import { createHash, randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test } from "@playwright/test";
@@ -109,9 +110,8 @@ test.describe("homepage editor local draft recovery", () => {
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       const heading = frame.locator('[data-homepage-piece="hero.heading"]');
       await heading.click();
-      await heading.click();
       await page.getByLabel("Line one", { exact: true }).fill("Recovered after reload");
-      await expect(page.getByRole("status").filter({ hasText: "Not saved yet" })).toBeVisible();
+      await expect(page.locator("[data-admin-save-status]")).toContainText("Unsaved changes");
 
       // Recovery is written on a 500ms debounce; give it time to land before reloading.
       await page.waitForTimeout(900);
@@ -123,8 +123,8 @@ test.describe("homepage editor local draft recovery", () => {
 
       // Shared content left the editing canvas; the editor's explicit shortcut
       // is now what raises the unsaved-changes guard.
-      await page.getByRole("button", { name: "Edit in About" }).filter({ visible: true }).click();
-      await page.getByRole("button", { name: "Leave without saving" }).click();
+      await navigateHomepageOwner(page, "About");
+      await page.getByRole("button", { name: "Discard changes" }).click();
       await expect(page).toHaveURL(/\/admin\/about$/);
 
       await page.goto("/admin/homepage");
@@ -160,12 +160,11 @@ test.describe("homepage editor local draft recovery", () => {
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       const heading = frame.locator('[data-homepage-piece="hero.heading"]');
       await heading.click();
-      await heading.click();
       await page.getByLabel("Line one", { exact: true }).fill(marker);
       await page.waitForTimeout(900);
       await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
-      await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
-      await expect(page.getByText("Saved. Your homepage is updated.", { exact: true })).toBeVisible();
+      await saveHomepage(page);
+      await expectHomepageSaved(page);
 
       await page.reload();
       await expect(page.getByText("Restored an unsaved draft from before.", { exact: false })).toHaveCount(0);

@@ -201,7 +201,7 @@ describe("Add a game form (ADMIN-RE-07b)", () => {
 
 describe("Sponsors page keeps a logo a game still shows", () => {
   it("checks the games before deleting a sponsor logo file", () => {
-    for (const page of ["app/admin/(protected)/sponsors/page.tsx", "components/admin/reimagined/Sponsors.tsx"]) {
+    for (const page of ["components/admin/sponsors/ClassicSponsorsPage.tsx", "components/admin/reimagined/Sponsors.tsx"]) {
       expect(source(page), page).toContain("deleteUnusedSponsorStorageUrls(");
     }
     expect(sponsorsPage).toContain('.from("matches")');

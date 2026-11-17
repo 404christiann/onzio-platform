@@ -44,17 +44,24 @@ describe("registration waiver starter content", () => {
     const sqlTemplate = migration.match(
       /\$registration_waiver\$([\s\S]*?)\$registration_waiver\$/,
     )?.[1];
-    const adminPage = readFileSync(
+    const editorModel = readFileSync(
       new URL(
-        "../../app/admin/(protected)/registrations/page.tsx",
+        "../../components/admin/registrations/registration-editor-model.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const formFields = readFileSync(
+      new URL(
+        "../../components/admin/registrations/RegistrationFormFields.tsx",
         import.meta.url,
       ),
       "utf8",
     );
 
     expect(sqlTemplate).toBe(REGISTRATION_WAIVER_TEMPLATE);
-    expect(adminPage).toContain("buildDefaultRegistrationWaiverText(clubName)");
-    expect(adminPage).toContain("{REGISTRATION_WAIVER_LEGAL_HINT}");
-    expect(adminPage).toContain('aria-describedby="registration-waiver-guidance"');
+    expect(editorModel).toContain("buildDefaultRegistrationWaiverText(clubName)");
+    expect(formFields).toContain("{REGISTRATION_WAIVER_LEGAL_HINT}");
+    expect(formFields).toContain('aria-describedby="registration-waiver-guidance"');
   });
 });

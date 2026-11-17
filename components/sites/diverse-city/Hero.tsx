@@ -128,12 +128,12 @@ export default function Hero({
             >
               {heroContent.primary_cta_label.trim() || "Next match"}
             </Link>
-            <Link
+            {heroContent.secondary_cta_label.trim() && <Link
               href={secondaryHref}
               className="border border-white/50 px-7 py-4 text-center font-display text-sm font-bold uppercase text-white transition-colors hover:border-white hover:bg-white/10"
             >
-              {heroContent.secondary_cta_label.trim() || "Meet the squad"}
-            </Link>
+              {heroContent.secondary_cta_label.trim()}
+            </Link>}
           </div>
         </div>
       </div>

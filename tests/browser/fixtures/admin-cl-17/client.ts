@@ -1,0 +1,4 @@
+type QueryData={table:string;single:boolean};
+function query(table:string){const data:QueryData={table,single:false};let proxy:any;proxy=new Proxy({}, {get(_target,key){if(key==="then")return (resolve:any,reject:any)=>fetch("/__cl17__/data",{method:"POST",body:JSON.stringify(data)}).then(r=>r.json()).then(resolve,reject);return (..._args:unknown[])=>{if(key==="single"||key==="maybeSingle")data.single=true;return proxy;};}});return proxy;}
+export function createClient(){const client:any={from:query,schema:()=>client,auth:{getUser:async()=>({data:{user:{id:"44444444-4444-4444-8444-444444444444"}},error:null})},storage:{from:()=>({upload:async(path:string,file:File)=>(await fetch("/__cl17__/upload?path="+encodeURIComponent(path),{method:"POST",body:file})).json(),getPublicUrl:(path:string)=>({data:{publicUrl:location.origin+"/__cl17__/asset/"+path}})})}};return client;}
+export const supabase=createClient();

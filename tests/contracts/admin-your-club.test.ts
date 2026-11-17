@@ -205,7 +205,7 @@ describe("how it saves", () => {
 
 describe("the old Branding page", () => {
   it("still tells owners PNG or WebP (the JPG copy fix, PR #88, ADMIN-PLATFORM-FIXES-02 section 3)", () => {
-    const branding = source("app/admin/(protected)/branding/page.tsx");
+    const branding = source("components/admin/club-settings/LegacyBranding.tsx");
     expect(branding).not.toMatch(/JPG|image\/jpeg/);
     expect(branding).toContain("GRAPHIC_UPLOAD_TYPES_LABEL");
   });

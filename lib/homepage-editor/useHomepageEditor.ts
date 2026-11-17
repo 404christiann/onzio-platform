@@ -40,6 +40,7 @@ export function useHomepageEditor(clubId: string) {
   const uploading = useRef(new Set<string>());
   const uploadTasks = useRef(new Map<string, Promise<void>>());
   const pendingUploadCleanup = useRef(new Set<string>());
+  const cleanedUploads = useRef(new Set<string>());
   const cleanupTasks = useRef(new Map<string, Promise<boolean>>());
   const recoveryDiscardBusy = useRef(false);
   const generation = useRef(0);
@@ -102,6 +103,7 @@ export function useHomepageEditor(clubId: string) {
   const saveInFlight = () => busy.current || current.current?.save === "saving";
 
   async function cleanupUploadedAsset(assetId: string): Promise<boolean> {
+    if (cleanedUploads.current.has(assetId)) return true;
     const existing = cleanupTasks.current.get(assetId);
     if (existing) return existing;
     pendingUploadCleanup.current.add(assetId);
@@ -112,6 +114,7 @@ export function useHomepageEditor(clubId: string) {
           body: JSON.stringify({ assetId }),
         });
         if (!response.ok) throw new Error("Could not remove the unused photo.");
+        cleanedUploads.current.add(assetId);
         pendingUploadCleanup.current.delete(assetId);
         if (pendingUploadCleanup.current.size === 0) setCleanupWarning(false);
         return true;
@@ -366,9 +369,9 @@ export function useHomepageEditor(clubId: string) {
     void task.finally(() => uploadTasks.current.delete(id));
     return task;
   }
-  function addPhotos(selected: FileList | null) {
+  async function addPhotos(selected: FileList | readonly File[] | null): Promise<HomepagePhoto[]> {
     const before = current.current;
-    if (!before || !selected || before.submitted || recoveryDiscardBusy.current || recoveryConflict) return;
+    if (!before || !selected || before.submitted || recoveryDiscardBusy.current || recoveryConflict || leaving.current) return [];
     const additions = Array.from(selected).slice(0, Math.max(0, 6 - before.draft.photos.items.length)).map(file => {
       const clientId = crypto.randomUUID(); files.current.set(clientId, file);
       // Persisted so a queued/failed file survives reload for HP-05 recovery;
@@ -380,10 +383,21 @@ export function useHomepageEditor(clubId: string) {
       return { clientId, rowId: null, assetId: null, url: null, alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "), order: 0, upload: "queued" as const, localFileKey: clientId };
     });
     dispatch({ type: "photos-changed", photos: [...before.draft.photos.items, ...additions].map((p, order) => ({ ...p, order })) });
-    additions.forEach(photo => void startUpload(photo.clientId));
+    await Promise.all(additions.map(photo => startUpload(photo.clientId)));
+    const ids = new Set(additions.map(photo => photo.clientId));
+    return current.current?.draft.photos.items.filter(photo => ids.has(photo.clientId) && photo.upload === "ready") ?? [];
   }
   return {
-    state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos, retryPhoto: startUpload, updatePhoto,
+    state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos,
+    readState: () => current.current,
+    cleanupRemovedPhotos: async (photos: readonly HomepagePhoto[]) => {
+      if (current.current?.submitted || recoveryConflict) return true;
+      const retained = new Set(current.current?.draft.photos.items.map(photo => photo.clientId));
+      const retainedAssets = new Set(current.current?.draft.photos.items.map(photo => photo.assetId));
+      const assets = new Set(photos.filter(photo => !retained.has(photo.clientId) && !retainedAssets.has(photo.assetId) && photo.rowId === null && photo.assetId).map(photo => photo.assetId!));
+      return (await Promise.all(Array.from(assets, cleanupUploadedAsset))).every(Boolean);
+    },
+    retryPhoto: startUpload, updatePhoto,
     retryLoad: () => setReload(x => x + 1), recoveryNotice, dismissRecoveryNotice: () => setRecoveryNotice(null),
     clearRecovery: clearRecoveryNow, discardUnsavedUploads, isDiscardingUnsaved: () => leaving.current, cleanupWarning, retryUnusedCleanup, removePhoto: (id: string) => {
       const before = current.current;
