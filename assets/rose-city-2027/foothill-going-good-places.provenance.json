@@ -1,0 +1,10 @@
+{
+  "source": "Christian's Dropbox file Foothill-Transit-Going-Good-Places-Logo-Horizontal-Color-2.png, supplied 2026-11-17",
+  "method": "Used unchanged: byte-for-byte copy of the supplied PNG; no resize, recolor or geometry edits.",
+  "sourceSha256": "41636a9ce0dbca063efd5107986adde2a969b5f40ef0b3be56e0c4253e7ff196",
+  "pngSha256": "41636a9ce0dbca063efd5107986adde2a969b5f40ef0b3be56e0c4253e7ff196",
+  "width": 1951,
+  "height": 313,
+  "transparentPixels": 403181,
+  "replaces": "public/images/cinematic/foothill-blue.png in the Rose City header and phone menu (old file kept)"
+}

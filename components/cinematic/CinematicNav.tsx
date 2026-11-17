@@ -207,7 +207,7 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
           </div>
         </div> : <Link key={item.id} data-nav-id={item.id} className={`nav-item${isCurrent(item.href) ? " active" : ""}`} href={item.href ?? "/"} aria-current={isCurrent(item.href) ? "page" : undefined}>{label(item.id, item.label)}</Link>)}
       </nav>
-      {partner?.url && <div className="header-partner" data-transparent-mark={foothillPartner || undefined}><NativeImage src={foothillPartner ? "/images/cinematic/foothill-blue.png" : partner.url} alt={partner.alt} /></div>}
+      {partner?.url && <div className="header-partner" data-transparent-mark={foothillPartner || undefined}><NativeImage src={foothillPartner ? "/images/cinematic/foothill-going-good-places.png" : partner.url} alt={partner.alt} /></div>}
       <button ref={menuButton} type="button" className="menu-toggle" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls={`${prefix}-drawer`} onClick={openPhone}><span className="menu-word">Menu</span><NavIcon name="menu" /></button>
     </header>
     <dialog ref={drawer} id={`${prefix}-drawer`} className="mobile-drawer" aria-label={`${club.name} navigation`} data-keyboard-input={keyboardInput || undefined} onCancel={event => { event.preventDefault(); closePhone(true); }} onClose={() => {
@@ -217,7 +217,7 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
       <header className="phone-menu-head">
         <div className="phone-brand">
           {clubLogoUrl && <NativeImage src={clubLogoUrl} alt={`${club.name} crest`} />}
-          {partner?.url && <NativeImage className="phone-partner" src={foothillPartner ? "/images/cinematic/foothill-blue.png" : partner.url} alt={partner.alt} />}
+          {partner?.url && <NativeImage className="phone-partner" src={foothillPartner ? "/images/cinematic/foothill-going-good-places.png" : partner.url} alt={partner.alt} />}
         </div>
         <button type="button" className="close-menu" aria-label="Close navigation" autoFocus onClick={() => closePhone()}><NavIcon name="close" /></button>
       </header>

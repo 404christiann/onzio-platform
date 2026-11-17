@@ -40,18 +40,19 @@ describe("cinematic navigation preserves club content", () => {
     expect(html).toContain('aria-label="Close navigation"');
     expect(html).toContain('sprite.svg#close');
   });
-  it("uses the transparent blue-lettering Foothill mark in the white header and phone menu only for Rose City", () => {
+  it("uses the Foothill Transit Going Good Places logo in the white header and phone menu only for Rose City", () => {
     fixture.slug = "rose-city";
     fixture.content!.presentation.headerPartner = { assetId: null, url: "/original-foothill.png", alt: "Foothill Transit" };
     const html = render();
-    expect((html.match(/src="\/images\/cinematic\/foothill-blue.png"/g) ?? []).length).toBe(2);
+    expect((html.match(/src="\/images\/cinematic\/foothill-going-good-places.png"/g) ?? []).length).toBe(2);
+    expect(html).not.toContain("foothill-blue.png");
     expect(html).not.toContain('src="/original-foothill.png"');
     fixture.slug = "another-club";
-    expect(render()).not.toContain('src="/images/cinematic/foothill-blue.png"');
+    expect(render()).not.toContain('src="/images/cinematic/foothill-going-good-places.png"');
     expect((render().match(/src="\/original-foothill.png"/g) ?? []).length).toBe(2);
     fixture.slug = "rose-city";
     fixture.content!.presentation.headerPartner.alt = "Another sponsor";
-    expect(render()).not.toContain('src="/images/cinematic/foothill-blue.png"');
+    expect(render()).not.toContain('src="/images/cinematic/foothill-going-good-places.png"');
   });
   it("opens Season Ticket Membership and Know Before You Go from a Tickets drop-down, and Stadium's Know before you from the same page", () => {
     fixture.content!.navigation.labels["season-membership"] = "Season tickets";
