@@ -42,8 +42,10 @@ function ArtworkField({ legend, help, url, alt, uploading, failed, error, disabl
   </EditorGroup>;
 }
 
-export default function CinematicHomepageFields({ piece, content, disabled, change, replaceArtwork, retryArtwork }: {
-  piece: PieceId; content: CinematicHomepageContent; disabled: boolean;
+export default function CinematicHomepageFields({ piece, part, content, disabled, change, replaceArtwork, retryArtwork }: {
+  piece: PieceId;
+  /** Overview editor: "Menu and footer" and "External forms" are separate parts of revamp.navigation. Omitted = both, as before. */
+  part?: "menu" | "forms"; content: CinematicHomepageContent; disabled: boolean;
   change: (content: CinematicHomepageContent) => void;
   replaceArtwork: (slot: CinematicArtworkSlot, file: File) => void;
   retryArtwork: (slot: CinematicArtworkSlot) => void;
@@ -61,6 +63,8 @@ export default function CinematicHomepageFields({ piece, content, disabled, chan
       {text("Describe this image", item.alt, 1000, (draft, value) => { cinematicArtwork(draft, slot).alt = value; }, true)}
     </ArtworkField>;
   };
+  const menuBody = <>{art("footerLogo", { legend: "Footer logo", help: "Optional. When set, this logo appears alone in the footer instead of the club crest and name.", removeLabel: "Remove footer logo" })}<p className={kit.hint}>Rename the tabs and menu links. The footer uses the same names.</p>{CINEMATIC_NAV_ITEMS.flatMap(item => [item, ...("children" in item ? item.children ?? [] : [])]).map(item => <div key={item.id}>{text(item.label, content.navigation.labels[item.id] ?? item.label, 60, (draft, value) => { if (value.trim()) draft.navigation.labels[item.id] = value.trim(); else delete draft.navigation.labels[item.id]; })}</div>)}</>;
+  const formsBody = <EditorGroup legend="External forms"><p className={kit.hint}>Tryouts, Media credentials, and National anthem request open these forms. Leave a destination blank to show the page placeholder.</p>{text("Tryouts form URL", content.navigation.destinations.tryouts, 2000, (draft, value) => { draft.navigation.destinations.tryouts = value; })}{text("Media credentials form URL", content.navigation.destinations.mediaCredentials, 2000, (draft, value) => { draft.navigation.destinations.mediaCredentials = value; })}{text("National anthem request form URL", content.navigation.destinations.nationalAnthem, 2000, (draft, value) => { draft.navigation.destinations.nationalAnthem = value; })}</EditorGroup>;
   if (piece === "revamp.sponsors") return <div className={kit.stack}>{text("Heading", content.sponsors.heading, 120, (draft, value) => { draft.sponsors.heading = value; })}<p className={kit.hint}>Partner logos are managed in Branding.</p></div>;
   if (piece === "revamp.raffle") return art("raffle");
   if (piece === "revamp.ticket") return <div className={kit.stack}><EditorSwitch checked={content.ticket.visible} label="Show ticket and map on homepage" disabled={disabled} onChange={visible => update(draft => { draft.ticket.visible = visible; })} />{art("ticket")}</div>;
@@ -91,6 +95,6 @@ export default function CinematicHomepageFields({ piece, content, disabled, chan
     {text("Paragraph", content.championship.body, 1200, (draft, value) => { draft.championship.body = value; }, true)}
     {art("trophy")}
   </div>;
-  if (piece === "revamp.navigation") return <div className={kit.stack}>{art("footerLogo", { legend: "Footer logo", help: "Optional. When set, this logo appears alone in the footer instead of the club crest and name.", removeLabel: "Remove footer logo" })}<p className={kit.hint}>Rename the tabs and menu links. The footer uses the same names.</p>{CINEMATIC_NAV_ITEMS.flatMap(item => [item, ...("children" in item ? item.children ?? [] : [])]).map(item => <div key={item.id}>{text(item.label, content.navigation.labels[item.id] ?? item.label, 60, (draft, value) => { if (value.trim()) draft.navigation.labels[item.id] = value.trim(); else delete draft.navigation.labels[item.id]; })}</div>)}<EditorGroup legend="External forms"><p className={kit.hint}>Tryouts, Media credentials, and National anthem request open these forms. Leave a destination blank to show the page placeholder.</p>{text("Tryouts form URL", content.navigation.destinations.tryouts, 2000, (draft, value) => { draft.navigation.destinations.tryouts = value; })}{text("Media credentials form URL", content.navigation.destinations.mediaCredentials, 2000, (draft, value) => { draft.navigation.destinations.mediaCredentials = value; })}{text("National anthem request form URL", content.navigation.destinations.nationalAnthem, 2000, (draft, value) => { draft.navigation.destinations.nationalAnthem = value; })}</EditorGroup></div>;
+  if (piece === "revamp.navigation") return <div className={kit.stack}>{part !== "forms" && menuBody}{part !== "menu" && formsBody}</div>;
   return null;
 }

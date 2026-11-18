@@ -20,7 +20,8 @@ import CinematicHomepageFields from "./CinematicHomepageFields";
 import AcademyShell from "@/components/sites/diverse-city/Shell";
 import HomepageRecoveryReview from "./HomepageRecoveryReview";
 import HomepageEditorSkeleton from "./HomepageEditorSkeleton";
-import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
+import HomepageOverviewEditor from "./HomepageOverviewEditor";
+import { homepageRendererForClub, resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
 import { getChangedHomepagePieces } from "@/lib/homepage-editor/changed-pieces";
 import { getHomepageSaveBlocker, type HomepageDraft, type PieceId } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PIECE_LABELS, HomepagePreviewContext } from "@/lib/homepage-editor/preview-context";
@@ -44,6 +45,8 @@ export default function HomepageEditor() {
   // and artwork tools; ClassicHomepageEditor has no revamp support yet.
   const classic = useAdminPortal().portal === "classic" && club.presentationTemplateKey !== "cinematic@2";
   const { openMobile: navigationOpen } = useSidebar();
+  // RC-ADMIN-05: a homepage with the matchday ("revamp") sections, which today is Rose City, is edited in the Overview (the page at half size, numbered parts); every other editor is unchanged.
+  if (resolveHomepageCapabilities(homepageRendererForClub(club)).editableSections.includes("revamp")) return <HomepageOverviewEditor />;
   return classic ? <ClassicHomepageEditor PreviewShell={HomepagePublicPreview} navigationOpen={navigationOpen} /> : <ExistingHomepageEditor />;
 }
 

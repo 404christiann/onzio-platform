@@ -28,29 +28,27 @@ async function uploadArtwork(page: Page, buffer: Buffer, mimeType: string, fileN
   expect(finalized.status()).toBe(200);
   return (await finalized.json()).data;
 }
-async function openPiece(page: Page, piece: string) {
-  const target = page.frameLocator('iframe[title="Homepage preview"]').locator(`[data-homepage-piece="${piece}"]`).first();
-  // The Rose City header is sticky (top:0, z-index:10) since 2f70087, which landed after this spec was written. Scroll
-  // each piece to just below it so the (12, 12) click lands on the piece, not on the header covering its top edge.
-  await target.evaluate(element => {
-    element.scrollIntoView({ block: "start" });
-    const header = element.ownerDocument.querySelector(".club-header");
-    if (header && header !== element) element.ownerDocument.defaultView?.scrollBy(0, -header.getBoundingClientRect().bottom);
-  });
-  await target.click({ position: { x: 12, y: 12 } });
-  await target.click({ position: { x: 12, y: 12 } });
-  await expect(page.locator(".hp-panel")).toBeVisible();
+/** The Overview draws the real public page in inert frames; each numbered part is a button over its block. */
+const PART_TITLES = { "revamp.navigation": "Menu and footer", "revamp.prices": "Ticket prices", "revamp.ticket": "Ticket and map", "revamp.raffle": "Raffle" } as const;
+const overviewFrame = (page: Page) => page.frameLocator('iframe[title="Homepage preview"]').first();
+const partDialog = (page: Page) => page.locator("[data-editor-dialog]");
+async function openPiece(page: Page, piece: keyof typeof PART_TITLES) {
+  const button = page.getByRole("button", { name: new RegExp(`^Edit ${PART_TITLES[piece]}`) }).first();
+  await button.scrollIntoViewIfNeeded();
+  await button.click();
+  await expect(partDialog(page)).toBeVisible();
 }
 async function editorReady(page: Page) {
-  await expect(page.frameLocator('iframe[title="Homepage preview"]').locator(".cinematic-slides img")).toHaveCount(7, { timeout: 20_000 });
+  await expect(overviewFrame(page).locator(".cinematic-slides img")).toHaveCount(7, { timeout: 30_000 });
+  await expect(page.locator("button[data-part]").first()).toBeVisible({ timeout: 30_000 });
 }
-async function done(page: Page) { await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).first().click(); await expect(page.locator(".hp-panel")).toHaveCount(0); }
+async function done(page: Page) { await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).first().click(); await expect(partDialog(page)).toHaveCount(0); }
 async function saveThroughUi(page: Page) {
-  const button = page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).first();
-  await expect(button).toBeEnabled();
+  const button = page.locator("[data-page-save-button]").filter({ visible: true }).first();
+  await expect(button).toHaveAttribute("data-state", "dirty");
   const response = page.waitForResponse(result => result.url().endsWith("/api/admin/homepage") && result.request().method() === "POST");
   await button.click(); expect((await response).status()).toBe(200);
-  await expect(page.locator(".hp-status")).toHaveText("Saved. Your homepage is updated.");
+  await expect(button).toHaveAttribute("data-state", "saved");
 }
 async function plainArtwork(page: Page) {
   for (const selector of [".raffle img", ".ticket-art img"]) {
@@ -84,16 +82,16 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "
     try {
       await page.goto("/", { waitUntil: "domcontentloaded" }); await plainArtwork(page);
       await page.goto("/admin/homepage", { waitUntil: "domcontentloaded" });
-      const frame = page.frameLocator('iframe[title="Homepage preview"]');
+      const frame = overviewFrame(page);
       await editorReady(page);
       await openPiece(page, "revamp.navigation");
-      await page.locator(".hp-panel").getByLabel("Community", { exact: true }).fill(`Community ${viewport.name}`);
+      await partDialog(page).getByLabel("Community", { exact: true }).fill(`Community ${viewport.name}`);
       await done(page);
       await openPiece(page, "revamp.prices");
-      await page.locator(".hp-panel").getByLabel("Price or offer", { exact: true }).first().fill("$8");
+      await partDialog(page).getByLabel("Price or offer", { exact: true }).first().fill("$8");
       await done(page);
       await openPiece(page, "revamp.ticket");
-      await page.locator(".hp-panel").getByLabel("Show ticket and map on homepage", { exact: true }).uncheck();
+      await partDialog(page).getByLabel("Show ticket and map on homepage", { exact: true }).uncheck();
       await done(page);
       await expect(frame.locator(".ticket-art")).toHaveCount(0);
       await saveThroughUi(page);
@@ -107,14 +105,14 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "
       await expect(frame.locator(".ticket-art")).toHaveCount(0);
       await expect(frame.locator(".price-item h3").first()).toContainText("$8");
       await openPiece(page, "revamp.ticket");
-      await page.locator(".hp-panel").getByLabel("Show ticket and map on homepage", { exact: true }).check();
+      await partDialog(page).getByLabel("Show ticket and map on homepage", { exact: true }).check();
       await done(page);
       await openPiece(page, "revamp.raffle");
-      await page.locator(".hp-panel").getByLabel("Replace image", { exact: true }).setInputFiles("assets/rose-city-2027/inputs/trophies.webp");
-      await expect(page.locator(".hp-panel").getByText("Adding your image…", { exact: true })).toHaveCount(0);
-      await expect(page.locator(".hp-panel").getByRole("alert")).toHaveCount(0);
+      await partDialog(page).getByLabel("Replace image", { exact: true }).setInputFiles("assets/rose-city-2027/inputs/trophies.webp");
+      await expect(partDialog(page).getByText("Adding your image…", { exact: true })).toHaveCount(0);
+      await expect(partDialog(page).getByRole("alert")).toHaveCount(0);
       await expect.poll(async () => await frame.locator(".raffle img").getAttribute("src")).not.toBe(originalRevamp.raffle.url);
-      await expect(page.locator(".hp-panel img")).toBeVisible();
+      await expect(partDialog(page).locator("img").first()).toBeVisible();
       await done(page);
       replaced = true;
       await saveThroughUi(page);

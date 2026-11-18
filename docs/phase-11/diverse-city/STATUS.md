@@ -1,5 +1,63 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-05 Rose City Homepage editor, Overview
+
+**Agent/package:** Claude Code (Sonnet worker W5, orchestrated), RC-ADMIN-05, branch `claude/rc-admin-05`
+on `7370d307`. **Status:** `in_progress`, draft PR. It merges only on Christian's word. App code
+only: no migration, schema, RPC, data or production change, and nothing under `components/cinematic/`.
+
+**Completed work:**
+
+- **Which clubs get it:** clubs whose capabilities include the matchday ("revamp") sections, which is
+  Rose City, get `HomepageOverviewEditor`. It uses no template check, so the selector debt is
+  unchanged. Diverse City and every other template keep the old editor.
+- **Layout:**
+  - The public homepage appears in two columns at about half size, with 11 numbered parts.
+  - The column heights are measured, so nothing shifts on load and there's no blank box.
+  - A Whole page / Actual size switch sits above the page.
+  - "External forms" is a dashed chip above the previews, the only setting not on the page.
+  - "Menu and footer" is a part on the page.
+- **Editing:** clicking a part opens EditorDialog, or the full-screen sheet on phone. The "Edit in …"
+  shortcut chips no longer show for these clubs.
+- **Fields shown follow the prototype:**
+  - Top of the page: headings and buttons, with a note that Onzio sets the video.
+  - Behind the Rose: heading and description.
+  - Slideshow: a description per photo; no captions, because `photoCaptionEditable` is false.
+- **Save is unchanged:** every edit goes through `useHomepageEditor` and the same
+  `buildHomepageSaveRequest`. Load, recovery, uploads and media rules are untouched.
+- **Save button:**
+  - Saved shows its check, then returns to Save.
+  - "Retry same save" re-sends the same body.
+  - A conflict offers "Load latest and keep my edits", using the existing recovery step, and the
+    existing review.
+  - "Discard and reload" asks for confirmation first.
+
+**Files changed:** `components/admin/homepage/HomepageEditor.tsx`, `CinematicHomepageFields.tsx` (an
+optional `part` prop), `tests/browser/cinematic-homepage-editor.spec.ts`. New files:
+`HomepageOverviewEditor.tsx`, `HomepageOverviewPreview.tsx`, `HomepageOverviewSkeleton.tsx`,
+`HomepagePartFields.tsx`, `homepage-parts.ts`, `HomepageOverview.module.css`, and
+`tests/contracts/homepage-overview-editor.test.ts`.
+
+**Verification:** `verify.sh run --route /admin/homepage --touched homepage` on `7370d307` exits 0.
+- Scope: PASS.
+- Payloads: the 13 untouched editors are identical.
+- Save states: clean, dirty, saving, saved, retry, conflict and discard all PASS, including a
+  footer-logo description edit.
+- Visuals: CLS 0.00001 at 1440 and 0 at 390, light and dark; 0 new axe violations; 0 reduced-motion
+  offenders.
+- Repo: `tsc` clean, 3648 unit tests, 152 architecture tests, selector debt unchanged.
+- Diverse City: 8/8 pages identical.
+
+One earlier run failed once at 390 dark, while opening the old editor on the origin/main comparison
+page. A re-run passed every gate.
+
+**Blockers or unresolved decisions:** none. Known items:
+- The shared CinematicEditorKit remove button has a colour-contrast finding that existed before.
+- The preview's 23 prefetch 404s are the same on main.
+- The dead "Edit in …" code and its selector-debt pin are left for a cleanup package.
+
+**Exact next step:** bot review; Christian decides the merge.
+
 ## 2026-11-18 - RC-ADMIN-02 Robinson Stadium editor on the Previews layout
 
 **Agent/package:** Claude Code (Sonnet worker W2, orchestrated), RC-ADMIN-02, branch `claude/rc-admin-02`

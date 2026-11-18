@@ -1,0 +1,55 @@
+/* Overview: the public homepage in two columns at about half size, with a numbered, clickable part over each block. */
+.root { display: grid; gap: 12px; min-inline-size: 0; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-block-size: 44px; }
+.hint { margin: 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.5; flex: 1 1 260px; min-inline-size: 0; }
+.zoom { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--muted)); }
+.zoom button { min-block-size: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: hsl(var(--muted-foreground)); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+.zoom button[aria-pressed="true"] { background: hsl(var(--background)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px hsl(var(--foreground) / .12); }
+.zoom button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+.columns { display: grid; gap: 16px; grid-template-columns: repeat(var(--columns, 2), minmax(0, 1fr)); min-inline-size: 0; }
+
+/* The box keeps one aspect ratio before, during and after the page paints, so nothing below it moves. */
+.box { position: relative; overflow: hidden; min-inline-size: 0; border: 1px solid hsl(var(--border)); border-radius: 12px; background: #fff; contain: layout paint; }
+.box[data-actual="true"] { aspect-ratio: auto; block-size: min(78vh, 900px); overflow: auto; contain: paint; }
+.clip { position: absolute; inset-inline: 0; top: 0; overflow: hidden; }
+.stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+.stage iframe { display: block; border: 0; background: #fff; pointer-events: none; }
+.scrollSpacer { position: relative; }
+
+.cover { position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: 0; }
+
+.part { position: absolute; z-index: 2; margin: 0; padding: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; outline: 2px solid transparent; outline-offset: -2px; transition: outline-color 120ms ease, background-color 120ms ease; }
+.part:focus-visible { outline: 3px solid hsl(var(--ring)); background: hsl(var(--primary) / .08); }
+.part:active { background: hsl(var(--primary) / .14); }
+@media (hover: hover) { .part:hover { outline-color: hsl(var(--primary)); background: hsl(var(--primary) / .07); } .part:hover .chip { opacity: 1; transform: none; } }
+.part:focus-visible .chip { opacity: 1; transform: none; }
+
+.num { position: absolute; inset-block-start: 4px; inset-inline-start: 4px; display: grid; place-items: center; inline-size: 26px; block-size: 26px; border-radius: 999px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: .8125rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 1px 3px #0003; }
+.chip { position: absolute; inset-block-start: 4px; inset-inline-end: 4px; display: inline-flex; align-items: center; gap: 6px; max-inline-size: calc(100% - 44px); min-block-size: 26px; padding: 0 10px; border-radius: 999px; background: hsl(var(--foreground)); color: hsl(var(--background)); font-size: .75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(-3px); transition: opacity 120ms ease, transform 120ms cubic-bezier(.23, 1, .32, 1); pointer-events: none; }
+
+.hidden { position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: 8px; min-block-size: 36px; max-inline-size: calc(100% - 16px); padding: 0 12px; border: 1px dashed hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: .8125rem; font-weight: 500; cursor: pointer; transform: translateY(-50%); }
+.hidden:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+.forms { display: flex; align-items: center; gap: 10px; min-block-size: 44px; padding: 0 14px; border: 1px dashed hsl(var(--border)); border-radius: 12px; background: transparent; color: hsl(var(--foreground)); font-size: .875rem; font-weight: 500; cursor: pointer; text-align: start; }
+.forms span { color: hsl(var(--muted-foreground)); font-weight: 400; font-size: .8125rem; }
+.forms:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+@media (hover: hover) { .forms:hover { border-style: solid; background: hsl(var(--accent) / .5); } }
+
+.notices { display: grid; gap: 8px; }
+.notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); font-size: .875rem; line-height: 1.45; }
+.notice[data-tone="error"] { border-color: hsl(var(--destructive) / .5); }
+.notice p { margin: 0; flex: 1 1 240px; min-inline-size: 0; }
+.notice button { min-block-size: 38px; padding: 0 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+.notice button:disabled { opacity: .55; cursor: not-allowed; }
+.notice button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+@media (max-width: 767px) {
+  .part { -webkit-touch-callout: none; user-select: none; }
+  .chip { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .part, .chip, .cover { transition: none; }
+  .chip { transform: none; }
+}
