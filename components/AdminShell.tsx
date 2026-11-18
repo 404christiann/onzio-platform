@@ -25,6 +25,7 @@ import {
   type AdminSearchRoute,
 } from "@/components/admin/AdminRouteSearch";
 import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
+import { shellTopTrail } from "@/components/admin/shellTopTrail";
 import { PageFrameRegistryContext } from "@/components/admin/ui/editor-kit/pageFrameRegistry";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import {
@@ -105,6 +106,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     [navigation],
   );
   const breadcrumb = getAdminBreadcrumb(pathname, accessContext);
+  const topTrail = shellTopTrail(breadcrumb, pageHasFrame);
   const activeGroup = getAdminGroupForPathname(pathname, accessContext);
   const [openGroupKey, setOpenGroupKey] = useState(activeGroup);
 
@@ -359,12 +361,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <Menu className="size-5" aria-hidden="true" />
           </button>
           <div className="hidden min-w-0 xl:block">
-            {breadcrumb && pageHasFrame ? (
-              <p className="truncate text-sm text-muted-foreground" data-admin-top-trail="">
-                {breadcrumb.slice(0, -1).join(" / ")}{" / "}
-                <span className="font-semibold text-foreground">{breadcrumb[breadcrumb.length - 1]}</span>
-              </p>
-            ) : breadcrumb ? (
+            {topTrail === "none" ? null : topTrail === "breadcrumb" && breadcrumb ? (
               <nav aria-label="Breadcrumb">
                 <ol className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                   {breadcrumb.map((crumb, index) => (

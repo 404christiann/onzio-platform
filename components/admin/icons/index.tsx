@@ -545,6 +545,25 @@ function DrawingTab7({ size = 24, ...props }: AdminIconProps) {
   );
 }
 
+/** icons.download medium/outline/round coffee (food and drink, the Chick-fil-A concession) (RC-ADMIN-01b). */
+export function IconCoffee({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M5 3C3.89543 3 3 3.89543 3 5V11C3 15.1421 6.35786 18.5 10.5 18.5H11.5C14.4049 18.5 16.924 16.8485 18.1698 14.4332C21.465 13.9689 24 11.1376 24 7.71429C24 6.21523 22.7848 5 21.2857 5H19C19 3.89543 18.1046 3 17 3H5ZM11.5 16.5C14.5376 16.5 17 14.0376 17 11V5H5V11C5 14.0376 7.46243 16.5 10.5 16.5H11.5ZM19 7L19 11C19 11.4058 18.9678 11.8042 18.9057 12.1925C20.714 11.5091 22 9.76189 22 7.71429C22 7.3198 21.6802 7 21.2857 7H19Z" fill="currentColor" />
+      <path d="M3 20C2.44772 20 2 20.4477 2 21C2 21.5523 2.44772 22 3 22H19C19.5523 22 20 21.5523 20 21C20 20.4477 19.5523 20 19 20H3Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** icons.download medium/outline/round briefcase (partners) (RC-ADMIN-01b). */
+export function IconBriefcase({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M17 5V4C17 2.34315 15.6569 1 14 1H10C8.34315 1 7 2.34315 7 4V5H4C2.89543 5 2 5.89543 2 7V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V7C22 5.89543 21.1046 5 20 5H17ZM15 4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V5H15V4ZM19.0418 11.7453L20 11.386V19H4V11.386L4.95818 11.7453C5.40729 11.9137 5.88302 12 6.36267 12H7V13C7 13.5523 7.44772 14 8 14C8.55229 14 9 13.5523 9 13V12H15V13C15 13.5523 15.4477 14 16 14C16.5523 14 17 13.5523 17 13V12H17.6373C18.1169 12 18.5927 11.9137 19.0418 11.7453ZM4 9.25V7H20V9.24999L18.3395 9.87266C18.115 9.95687 17.8771 10 17.6373 10H6.36267C6.12285 10 5.88498 9.95687 5.66042 9.87266L4 9.25Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 export const IconDashboard = Drawing0;
 export const IconHomepage = Drawing1;
 export const IconPrograms = Drawing2;

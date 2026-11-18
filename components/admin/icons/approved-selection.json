@@ -8,6 +8,8 @@
     "shop": "commerce/cart",
     "about": "system/info",
     "sponsors": "current",
+    "chick-fil-a": "navigation/coffee",
+    "partners": "commerce/briefcase",
     "contact": "communication/contacts",
     "seasons": "date-and-time/calendar",
     "roster": "communication/users",
