@@ -18,7 +18,7 @@ import { useShopPresentation } from "../ShopPageEditor";
 import { KIT_NAMES, KitPicker, RoseCityShopFields, type ShopSectionId } from "./RoseCityShopFields";
 import { HomeFeaturePreview, KIT_PART_CSS, SHARED_LEFT_CSS, SHARED_RIGHT_CSS, ShopPagePreview, kitContentFromDraft, useShopSponsorLogos } from "./ShopPreviewParts";
 import { ShopScaledFrame } from "./ShopScaledFrame";
-import { visibleKits } from "./shop-fields-model";
+import { editionsForKit, nextKitToAdd, visibleKits } from "./shop-fields-model";
 import styles from "./RoseCityShopEditor.module.css";
 
 /** Natural size the public page is laid out at inside each preview box. */
@@ -340,15 +340,12 @@ function ShopEditor() {
     if (id) openSection(id, KIT_SECTIONS.includes(id) ? kit : null);
   }
 
+  const nextKit = nextKitToAdd(KIT_ORDER, kitsOnPage);
   function addKit() {
-    if (!draft) return;
-    // Option i is kit i, so adding the next kit pads any missing options before it with blank ones.
-    const target = kitsOnPage.length;
-    if (target >= KIT_ORDER.length) return;
-    const editions = [...draft.presentation.editions];
-    while (editions.length <= target) editions.push({ label: "", price: "", line: "", link: "" });
-    updatePresentation("editions", editions);
-    setActiveKit(KIT_ORDER[target]);
+    if (!draft || !nextKit) return;
+    // Option i is kit i, so pad blank options up to this kit's own and no further.
+    updatePresentation("editions", editionsForKit(draft.presentation.editions, KIT_ORDER.indexOf(nextKit), () => ({ label: "", price: "", line: "", link: "" })));
+    setActiveKit(nextKit);
   }
 
   const description = surface === "shop"
@@ -420,10 +417,10 @@ function ShopEditor() {
                 </div>
               </li>;
             })}
-            {surface === "shop" && kitsOnPage.length < KIT_ORDER.length && <li className={styles.addColumn}>
+            {surface === "shop" && nextKit && <li className={styles.addColumn}>
               <button type="button" className={`admin-press ${styles.addKit}`} onClick={addKit} disabled={locked}>
                 <IconAdd size={20} aria-hidden="true" />
-                <b>Add {KIT_NAMES[KIT_ORDER[kitsOnPage.length]].toLowerCase()}</b>
+                <b>Add {KIT_NAMES[nextKit].toLowerCase()}</b>
                 <small>A jersey option with its own photos, words and photo row</small>
               </button>
             </li>}

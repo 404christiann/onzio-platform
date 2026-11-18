@@ -29,3 +29,15 @@ export function clampTo(value: number, min: number, max: number): number {
 export function visibleKits(options: { editionCount: number; kits: Record<"home" | "away" | "third", { exists: boolean; photoCount: number }> }, order: readonly ("home" | "away" | "third")[]): ("home" | "away" | "third")[] {
   return order.filter((kit, index) => index === 0 || index < options.editionCount || options.kits[kit].exists || options.kits[kit].photoCount > 0);
 }
+
+/** The kit the dashed "Add" column adds: the first kit in order that is not on the page yet, or null when every kit is. */
+export function nextKitToAdd<K extends string>(order: readonly K[], onPage: readonly K[]): K | null {
+  return order.find((kit) => !onPage.includes(kit)) ?? null;
+}
+
+/** Option i is kit i, so adding a kit pads blank options up to and including its own. Never adds options past it. */
+export function editionsForKit<E>(editions: readonly E[], kitIndex: number, blank: () => E): E[] {
+  const next = [...editions];
+  while (next.length <= kitIndex) next.push(blank());
+  return next;
+}

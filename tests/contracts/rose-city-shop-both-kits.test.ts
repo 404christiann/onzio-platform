@@ -7,7 +7,7 @@ import { cinematicShopContentSchema, EMPTY_CINEMATIC_SHOP_CONTENT, MAX_SHOP_EDIT
 import { shopSaveRequestSchemaFor, type ShopSnapshot } from "@/lib/shop-editor/contract";
 import { draftFromShopSnapshot, shopDraftDirty, toShopSaveRequest } from "@/lib/shop-editor/model";
 import { RoseCityShopFields } from "@/components/admin/shop/rose-city/RoseCityShopFields";
-import { LEAD_SCALE_BOUNDS, LEAD_TOP_BOUNDS, sizeColumnsFromText, sizeRowsFromTable, sizeTableRows, visibleKits } from "@/components/admin/shop/rose-city/shop-fields-model";
+import { LEAD_SCALE_BOUNDS, LEAD_TOP_BOUNDS, editionsForKit, nextKitToAdd, sizeColumnsFromText, sizeRowsFromTable, sizeTableRows, visibleKits } from "@/components/admin/shop/rose-city/shop-fields-model";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const operationId = "1c9d50f5-a8e5-41de-901b-7ef884155a09";
@@ -119,6 +119,37 @@ describe("Rose City Shop, Both kits: jersey options", () => {
     expect(visibleKits({ editionCount: 2, kits: kits(false, false) }, order)).toEqual(["home", "away"]);
     expect(visibleKits({ editionCount: 3, kits: kits(false, false) }, order)).toEqual(["home", "away", "third"]);
     expect(visibleKits({ editionCount: 2, kits: kits(false, true) }, order)).toEqual(["home", "away", "third"]);
+  });
+});
+
+describe("Rose City Shop, Both kits: adding the next kit", () => {
+  const order = ["home", "away", "third"] as const;
+  const kits = (away: boolean, third: boolean) => ({ home: { exists: true, photoCount: 0 }, away: { exists: away, photoCount: 0 }, third: { exists: third, photoCount: third ? 1 : 0 } });
+  const blank = () => ({ label: "", price: "", line: "", link: "" });
+  const plan = (editionCount: number, away: boolean, third: boolean) => {
+    const onPage = visibleKits({ editionCount, kits: kits(away, third) }, order);
+    const next = nextKitToAdd(order, onPage);
+    const editions = next ? editionsForKit(Array.from({ length: editionCount }, blank), order.indexOf(next), blank).length : null;
+    return { onPage, next, editions };
+  };
+  it("a gapped page (one option, photographed Third) adds Away, pads to 2 options and no more", () => {
+    expect(plan(1, false, true)).toEqual({ onPage: ["home", "third"], next: "away", editions: 2 });
+  });
+  it("prefix pages add the next kit in order", () => {
+    expect(plan(1, false, false)).toEqual({ onPage: ["home"], next: "away", editions: 2 });
+    expect(plan(2, true, false)).toEqual({ onPage: ["home", "away"], next: "third", editions: 3 });
+    expect(plan(0, true, false)).toEqual({ onPage: ["home", "away"], next: "third", editions: 3 });
+  });
+  it("hides the add column when every kit is on the page", () => {
+    expect(plan(3, true, true).next).toBeNull();
+    expect(plan(1, true, true).next).toBeNull();
+  });
+  it("the editor drives the label, the padding and the focus from the same next kit", () => {
+    const editor = read("components/admin/shop/rose-city/RoseCityShopEditor.tsx");
+    expect(editor).toContain("nextKitToAdd(KIT_ORDER, kitsOnPage)");
+    expect(editor).toContain("setActiveKit(nextKit)");
+    expect(editor).toContain("KIT_NAMES[nextKit]");
+    expect(editor).not.toContain("kitsOnPage.length");
   });
 });
 
