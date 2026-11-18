@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   ADMIN_HOME_JOBS,
@@ -236,6 +237,25 @@ describe("strict admin route manifest", () => {
     expect([...listed].sort()).toEqual(website.map((route) => route.id).sort());
     expect(new Set(listed).size).toBe(listed.length);
     expect(listed).not.toContain("website-pages");
+  });
+
+  it("never repeats a crumb in a Website trail and keys crumbs by position", () => {
+    const context = { ...OWNER_ACCESS, presentationTemplateKey: "cinematic@2" };
+    expect(getAdminBreadcrumb("/admin/partners", context)).toEqual(["Website", "Partners"]);
+    expect(getAdminBreadcrumb("/admin/stadium", context)).toEqual(["Website", "Tickets and stadium", "Robinson Stadium"]);
+    const websiteRoutes = getVisibleAdminRoutes(context).filter((route) => route.groupId === "website");
+    expect(websiteRoutes.length).toBeGreaterThan(0);
+    for (const route of websiteRoutes) {
+      const trail = getAdminBreadcrumb(route.href, context);
+      expect(trail, route.id).not.toBeNull();
+      expect(new Set(trail).size, `${route.id}: ${trail?.join(" / ")}`).toBe(trail?.length);
+    }
+    // Source guard (no DOM env in this repo): a text-only key duplicates whenever two crumbs share a label.
+    for (const file of ["components/AdminShell.tsx", "components/admin/ui/editor-kit/PageFrame.tsx"]) {
+      const source = readFileSync(file, "utf8");
+      expect(source, file).not.toMatch(/key=\{crumb(\.label)?\}/);
+      expect(source, file).toMatch(/key=\{`\$\{index\}-\$\{crumb/);
+    }
   });
 
   it("highlights the hub row's pages and names Website > group > page in the top bar", () => {

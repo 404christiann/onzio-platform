@@ -369,7 +369,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 <ol className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                   {breadcrumb.map((crumb, index) => (
                     <li
-                      key={crumb}
+                      key={`${index}-${crumb}`}
                       aria-current={index === breadcrumb.length - 1 ? "page" : undefined}
                       className={index === breadcrumb.length - 1 ? "font-semibold text-foreground" : undefined}
                     >

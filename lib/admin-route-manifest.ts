@@ -763,7 +763,10 @@ export function getAdminBreadcrumb(
   if (sections.length === 0) return null;
   if (route.id === hub.hubRouteId) return ["Website", route.label];
   const section = sections.find((candidate) => candidate.routes.some((row) => row.id === route.id));
-  return section ? ["Website", section.label, ROUTE_BY_ID.get(route.id)?.pageTitle ?? route.label] : null;
+  if (!section) return null;
+  const page = ROUTE_BY_ID.get(route.id)?.pageTitle ?? route.label;
+  // A page that shares its group heading's name (Partners under Partners) is one crumb, not two.
+  return page === section.label ? ["Website", section.label] : ["Website", section.label, page];
 }
 
 /** Whether this club can open the Website hub page. Same visibility check as every other route. */

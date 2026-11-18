@@ -56,8 +56,8 @@ export function PageFrame({
         <div className={styles.heading}>
           <nav aria-label="Breadcrumb" className={styles.crumbs} data-page-frame-breadcrumb="">
             <ol>
-              {breadcrumb.map((crumb) => (
-                <li key={crumb.label}>
+              {breadcrumb.map((crumb, index) => (
+                <li key={`${index}-${crumb.label}`}>
                   {crumb.href ? <Link href={crumb.href}>{crumb.label}</Link> : <span>{crumb.label}</span>}
                 </li>
               ))}
