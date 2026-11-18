@@ -12,7 +12,7 @@ import {
 } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { createClient } from "@/lib/admin-client";
 import { loadTicketsEditor, saveTicketsEditor } from "@/lib/tickets-editor";
-import { TICKET_ARTWORK_SLOTS, isTicketPurchaseUrl, emptyTicketsContent, hydrateTicketsContent, ticketsDraftSchema, ticketsDraftFingerprint, ticketsSaveSchema, type TicketArtworkSlot, type TicketsContent, type TicketsSnapshot, type TicketsSaveRequest } from "@/lib/tickets-content";
+import { TICKET_ARTWORK_SLOTS, isTicketPurchaseUrl, emptyTicketsContent, hydrateTicketsContent, ticketsDraftSchema, ticketsDraftFingerprint, ticketsSaveSchema, type TicketArtworkSlot, type TicketVisibilityKey, type TicketsContent, type TicketsSnapshot, type TicketsSaveRequest } from "@/lib/tickets-content";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import CinematicTickets from "@/components/cinematic/CinematicTickets";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
@@ -200,7 +200,7 @@ export default function TicketsEditor() {
             setUploading(null);
         }
     }
-    const field = (label: string, key: Exclude<keyof TicketsContent, "artwork" | "perkLabels" | "benefits" | "bannerHeightFraction">, multiline = false) => <EditorField key={key} label={label} value={draft?.[key] ?? ""} multiline={multiline} max={multiline ? 4000 : key === "purchaseUrl" ? 2000 : 120} disabled={locked}
+    const field = (label: string, key: Exclude<keyof TicketsContent, "artwork" | "perkLabels" | "benefits" | "bannerHeightFraction" | TicketVisibilityKey>, multiline = false) => <EditorField key={key} label={label} value={draft?.[key] ?? ""} multiline={multiline} max={multiline ? 4000 : key === "purchaseUrl" ? 2000 : 120} disabled={locked}
         invalid={key === "purchaseUrl" && !!draft?.purchaseUrl && !isTicketPurchaseUrl(draft.purchaseUrl)} describedBy={key === "purchaseUrl" ? "tickets-purchase-help" : undefined}
         onChange={value => update(v => { v[key] = value; })}/>;
     const page = draft ? hydrateTicketsContent(draft, media, false) : null;

@@ -18,6 +18,13 @@ export function isTicketPurchaseUrl(value: string): boolean {
 }
 const art = z.object({ assetId: z.uuid().nullable(), alt: z.string().max(1000) }).strict();
 export const ticketArtworkSchema = z.object(Object.fromEntries(TICKET_ARTWORK_SLOTS.map(slot => [slot, art])) as Record<TicketArtworkSlot, typeof art>).strict();
+/**
+ * RC-ADMIN-07: optional show/hide flags, one per public section of the Tickets page. Absent means shown; the page hides a
+ * section only on an explicit false. Mirrors onzio_private.check_tickets_content. Never injected by load or save.
+ */
+export const TICKET_VISIBILITY_KEYS = ["perksVisible", "includesVisible", "transitVisible", "directionsVisible", "purchaseVisible"] as const;
+export type TicketVisibilityKey = typeof TICKET_VISIBILITY_KEYS[number];
+export const isTicketSectionShown = (content: Partial<Record<TicketVisibilityKey, boolean>>, key: TicketVisibilityKey): boolean => content[key] !== false;
 export const ticketsContentSchema = z.object({
     title: heading, subtitle: heading, perksHeading: heading,
     perkLabels: z.tuple([heading, heading, heading]),
@@ -26,6 +33,8 @@ export const ticketsContentSchema = z.object({
     directionsHeading: heading, directionsBody: body, parkingHeading: heading, parkingBody: body, parkingNote: body,
     purchaseUrl: z.string().max(2000).refine(isTicketPurchaseUrl, "Use a full HTTPS ticket purchase link."),
     missingPurchaseLabel: heading, bannerHeightFraction: z.number().min(0.5).max(1), artwork: ticketArtworkSchema,
+    perksVisible: z.boolean().optional(), includesVisible: z.boolean().optional(), transitVisible: z.boolean().optional(),
+    directionsVisible: z.boolean().optional(), purchaseVisible: z.boolean().optional(),
 }).strict();
 export const ticketsDraftSchema = ticketsContentSchema.extend({ purchaseUrl: z.string().max(2000) });
 export function ticketsDraftFingerprint(content: TicketsContent): string { return JSON.stringify(ticketsDraftSchema.parse(content)); }
