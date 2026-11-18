@@ -28,7 +28,7 @@ type Editor = {
   open?: (page: Page) => Promise<void>;         // make the field editable (open a piece, a panel, an article)
   field?: (page: Page) => Locator;              // default: first enabled text field in main or an open dialog
   beforeSave?: (page: Page) => Promise<void>;   // close the panel or dialog, if Save needs it
-  saveButton?: (page: Page) => Locator;         // default: [data-admin-save-button]
+  saveButton?: (page: Page) => Locator;         // default: the visible Save button, either kind (see SAVE_BUTTON)
 };
 const genericField = (page: Page) => page.locator(["main", "[role=dialog]"].flatMap((scope) => [
   `${scope} input:not([type]):not([disabled])`, `${scope} input[type=text]:not([disabled])`, `${scope} textarea:not([disabled])`,
@@ -93,7 +93,39 @@ async function deterministic(page: Page) {
   });
 }
 
-const saveButton = (page: Page, editor?: Editor) => editor?.saveButton?.(page) ?? page.locator("[data-admin-save-button]").first();
+// An editor saves with either the old AdminSaveButton (`data-admin-save-button`) or the editor kit's
+// PageSaveButton (`data-page-save-button`, inside PageFrame; under 768px PageFrame moves it into a
+// fixed bottom bar, it is still the one button). Both carry `data-state`; the check mark, the
+// "Unsaved changes" status and the retry/error/conflict states differ and are mapped below.
+const SAVE_BUTTON = "[data-admin-save-button], [data-page-save-button]";
+const SAVE_CHECK = "[data-admin-save-check], [data-page-save-check]";
+const saveLocator = (page: Page) => page.locator(SAVE_BUTTON).filter({ visible: true }).first();
+const saveButton = (page: Page, editor?: Editor) => editor?.saveButton?.(page) ?? saveLocator(page);
+type SaveKind = "admin" | "page";
+const saveKind = (button: Locator): Promise<SaveKind> => button.evaluate((el) => (el.hasAttribute("data-page-save-button") ? "page" : "admin"));
+// The editor's own "Reload saved page" control, or PageFrame's "Discard changes" (which opens the same confirmation).
+const discardTrigger = (page: Page) => page.getByRole("button", { name: /^(Reload saved pages?|Discard changes)$/ }).filter({ visible: true }).first();
+
+// Gates 3 and 4 need an editable field. A route outside EDITORS (a hub or index page) that has
+// no text field and no Save button reports "not applicable" instead of FAIL. A route listed in
+// EDITORS is always applicable, so a slow or broken editor still fails.
+type Applicability = { applicable: true } | { applicable: false; reason: string };
+let applicability: Promise<Applicability> | undefined;
+function editableRoute(browser: Browser): Promise<Applicability> {
+  applicability ??= (async (): Promise<Applicability> => {
+    if (editorFor(ROUTE)) return { applicable: true };
+    const context = await browser.newContext({ storageState: STORAGE, viewport: { width: 1440, height: 900 } });
+    try {
+      const page = await context.newPage();
+      await page.goto(HEAD + ROUTE);
+      await expect(page.locator("h1").first()).toBeVisible();
+      try { await expect(genericField(page)).toBeVisible({ timeout: 15_000 }); return { applicable: true }; } catch { /* no field: look for a Save button below */ }
+      if (await saveLocator(page).count()) return { applicable: true }; // a Save button without a field is a broken editor: let the gates fail it
+      return { applicable: false, reason: `${ROUTE} has no editable field and no Save button` };
+    } finally { await context.close(); }
+  })();
+  return applicability;
+}
 
 async function openEditor(page: Page, base: string, editor: Editor) {
   await page.goto(base + editor.route);
@@ -185,13 +217,20 @@ const SAVED_GREENS = ["rgb(52, 199, 89)", "rgb(48, 209, 88)"];
 test.describe("gate 3: save behaviour", () => {
   test(`save states on ${ROUTE}`, async ({ browser }) => {
     const editor = editorFor(ROUTE) ?? { key: ROUTE, route: ROUTE, save: /\/api\/admin\// };
+    const probe = await editableRoute(browser);
+    if (!probe.applicable) {
+      record("save-behaviour", { gate: 3, route: ROUTE, applicable: false, reason: probe.reason, steps: {} });
+      test.info().annotations.push({ type: "not applicable", description: probe.reason });
+      return;
+    }
     const steps: Record<string, string> = {};
     const step = async (name: string, body: () => Promise<void>) => {
       try { await body(); steps[name] = "pass"; } catch (error) { steps[name] = `FAIL: ${String(error).split("\n").slice(0, 3).join(" ")}`; }
     };
     const context = await browser.newContext({ storageState: STORAGE, viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    const button = page.locator("[data-admin-save-button]");
+    const button = saveLocator(page);
+    let kind: SaveKind = "admin";
     const isSave = (r: Request) => r.method() === "POST" && editor.save.test(new URL(r.url()).pathname);
     let field!: Locator;
     let saved = "";
@@ -199,14 +238,20 @@ test.describe("gate 3: save behaviour", () => {
     await step("clean", async () => {
       field = await openEditor(page, HEAD, editor);
       saved = await field.inputValue();
+      kind = await saveKind(button);
       await expect(button).toHaveAttribute("data-state", "clean");
       await expect(button).toHaveAttribute("aria-disabled", "true");
+      if (kind === "page") await expect(button).toHaveText("Save");
       await forbiddenCopy(page);
     });
     await step("dirty", async () => {
       await mark(field, "d1");
       await expect(button).toHaveAttribute("data-state", "dirty");
-      await expect(page.locator("[data-cinematic-save-bar] [role=status], [data-admin-save-status]").first()).toHaveText("Unsaved changes");
+      if (kind === "admin") await expect(page.locator("[data-cinematic-save-bar] [role=status], [data-admin-save-status]").first()).toHaveText("Unsaved changes");
+      else { // PageSaveButton has no status line: it is the enabled "Save" button
+        await expect(button).toHaveAttribute("aria-disabled", "false");
+        await expect(button).toHaveText("Save");
+      }
     });
     await step("saving", async () => {
       await page.route(editor.save, async (route) => { await new Promise((r) => setTimeout(r, 1500)); await route.continue(); }, { times: 1 });
@@ -216,7 +261,7 @@ test.describe("gate 3: save behaviour", () => {
     });
     await step("saved", async () => {
       await expect(button).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
-      await expect(button.locator("[data-admin-save-check]")).toBeVisible();
+      await expect(button.locator(SAVE_CHECK)).toBeVisible();
       expect(SAVED_GREENS).toContain(await button.evaluate((el) => getComputedStyle(el).backgroundColor));
       await page.screenshot({ path: join(OUT, "screenshots", "save-saved.png") });
       await forbiddenCopy(page);
@@ -229,8 +274,9 @@ test.describe("gate 3: save behaviour", () => {
       await page.route(editor.save, (route) => { lost = route.request().postData() ?? ""; return route.abort("failed"); }, { times: 1 });
       await page.route((url) => editor.save.test(url.pathname) && url.searchParams.has("operationId"), (route) => route.abort("failed"));
       await button.click();
-      const retry = page.getByRole("button", { name: /^Retry( the)? same save$/ });
+      const retry = page.getByRole("button", { name: /^Retry( the)? same save$/ }).filter({ visible: true }).first();
       await expect(retry).toBeVisible();
+      if (kind === "page") await expect(button).toHaveAttribute("data-state", "retry");
       await expect(field).toBeDisabled();
       await page.screenshot({ path: join(OUT, "screenshots", "save-retry.png") });
       await page.unrouteAll({ behavior: "wait" });
@@ -248,14 +294,15 @@ test.describe("gate 3: save behaviour", () => {
         const otherPage = await other.newPage();
         const otherField = await openEditor(otherPage, HEAD, editor);
         await mark(otherField, "c2");
-        await otherPage.locator("[data-admin-save-button]").click();
-        await expect(otherPage.locator("[data-admin-save-button]")).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
+        await saveLocator(otherPage).click();
+        await expect(saveLocator(otherPage)).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
       } finally { await other.close(); }
       const mine = await mark(field, "c1");
       await button.click();
       await expect(page.getByRole("alert").first()).toBeVisible({ timeout: 20_000 });
       const keep = page.getByRole("button", { name: "Load latest and keep my edits" });
       await expect(keep).toBeVisible();
+      if (kind === "page") await expect(button).toHaveAttribute("data-state", "conflict");
       await page.screenshot({ path: join(OUT, "screenshots", "save-conflict.png") });
       await keep.click();
       await expect(field).toHaveValue(mine);
@@ -268,7 +315,7 @@ test.describe("gate 3: save behaviour", () => {
     await step("discard", async () => {
       await mark(field, "x1");
       await expect(button).toHaveAttribute("data-state", "dirty");
-      await page.getByRole("button", { name: /^Reload saved pages?$/ }).click();
+      await discardTrigger(page).click();
       const dialog = page.getByRole("dialog");
       await expect(dialog).toBeVisible();
       await dialog.getByRole("button", { name: "Discard and reload" }).click();
@@ -276,7 +323,7 @@ test.describe("gate 3: save behaviour", () => {
       await expect(button).toHaveAttribute("data-state", "clean");
     });
     await context.close();
-    record("save-behaviour", { gate: 3, route: ROUTE, steps });
+    record("save-behaviour", { gate: 3, route: ROUTE, applicable: true, saveButton: kind, steps });
     for (const [name, outcome] of Object.entries(steps)) expect.soft(outcome, `save behaviour: ${name}`).toBe("pass");
   });
 });
@@ -324,6 +371,34 @@ async function movingAnimations(page: Page) {
   }), MOVING.source);
 }
 
+// Phone (390px): PageFrame moves its Save button into a fixed bottom bar. It must stay fully on
+// screen and must not cover the end of the page content. A route that still uses AdminSaveButton
+// has no bar to check.
+type SaveBar = { kind: SaveKind; problems: string[]; fixed?: boolean; button?: { top: number; bottom: number }; contentBottom?: number; barTop?: number };
+async function checkSaveBar(page: Page): Promise<SaveBar> {
+  const kind = await saveKind(saveLocator(page));
+  if (kind === "admin") return { kind, problems: [] };
+  const found = await page.evaluate(() => {
+    const button = document.querySelector("[data-page-save-button]") as HTMLElement;
+    const group = button.closest("[data-page-frame-save]") as HTMLElement | null;
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    const rect = button.getBoundingClientRect();
+    const bar = group?.getBoundingClientRect();
+    const content = document.querySelector("[data-page-frame]")?.lastElementChild as HTMLElement | null;
+    const last = (content?.lastElementChild ?? content) as HTMLElement | null;
+    const contentBottom = last ? last.getBoundingClientRect().bottom : undefined;
+    const fixed = !!group && getComputedStyle(group).position === "fixed";
+    const result = { fixed, top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, vh: window.innerHeight, vw: window.innerWidth, barTop: bar?.top, contentBottom };
+    window.scrollTo(0, 0);
+    return result;
+  });
+  const problems: string[] = [];
+  if (!found.fixed) problems.push("Save is not in a fixed bottom bar under 768px");
+  if (found.top < 0 || found.bottom > found.vh + 0.5 || found.left < 0 || found.right > found.vw + 0.5) problems.push(`Save is not fully on screen (top ${found.top}, bottom ${found.bottom}, viewport ${found.vw}x${found.vh})`);
+  if (found.barTop !== undefined && found.contentBottom !== undefined && found.contentBottom > found.barTop + 0.5) problems.push(`the bar covers the end of the page (content ends ${found.contentBottom}, bar starts ${found.barTop})`);
+  return { kind, problems, fixed: found.fixed, button: { top: found.top, bottom: found.bottom }, contentBottom: found.contentBottom, barTop: found.barTop };
+}
+
 test.describe("gate 4: visual", () => {
   const editor = editorFor(ROUTE) ?? { key: ROUTE.replace(/\W+/g, "-"), route: ROUTE, save: /\/api\/admin\// };
   for (const width of [390, 1440]) for (const scheme of ["light", "dark"] as const) {
@@ -332,14 +407,26 @@ test.describe("gate 4: visual", () => {
       const page = await context.newPage();
       await trackShift(page);
       const slug = `${editor.key}-${width}-${scheme}`;
+      const probe = await editableRoute(browser);
+      if (!probe.applicable) {
+        await page.goto(HEAD + ROUTE);
+        await expect(page.locator("h1").first()).toBeVisible();
+        await page.waitForTimeout(1_500);
+        await page.screenshot({ path: join(OUT, "screenshots", `${slug}.png`), fullPage: true });
+        await context.close();
+        record(`visual-${slug}`, { gate: 4, width, scheme, applicable: false, reason: probe.reason });
+        test.info().annotations.push({ type: "not applicable", description: probe.reason });
+        return;
+      }
       const field = await openEditor(page, HEAD, editor);
       await page.waitForTimeout(1_500); // editors keep polling, so networkidle never settles
       const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       await page.screenshot({ path: join(OUT, "screenshots", `${slug}.png`), fullPage: true });
       const formViolations = await axe(page, ["main"]);
+      const saveBar = width === 390 ? await checkSaveBar(page) : undefined;
       await mark(field, "v1");
-      await page.getByRole("button", { name: /^Reload saved pages?$/ }).click();
+      await discardTrigger(page).click();
       const dialog = page.getByRole("dialog");
       await expect(dialog).toBeVisible();
       await page.waitForTimeout(400);
@@ -353,7 +440,7 @@ test.describe("gate 4: visual", () => {
       await basePage.waitForTimeout(1_500);
       const baseForm = await axe(basePage, ["main"]);
       await mark(baseField, "v1");
-      await basePage.getByRole("button", { name: /^Reload saved pages?$/ }).click();
+      await discardTrigger(basePage).click();
       await expect(basePage.getByRole("dialog")).toBeVisible();
       await basePage.waitForTimeout(400);
       const baseDialog = await axe(basePage, ["[role=dialog]"]);
@@ -361,14 +448,21 @@ test.describe("gate 4: visual", () => {
       await context.close();
       const newForm = fresh(formViolations, baseForm);
       const newDialog = fresh(dialogViolations, baseDialog);
-      record(`visual-${slug}`, { gate: 4, width, scheme, cls, overflow, formViolations, dialogViolations, newFormViolations: newForm, newDialogViolations: newDialog });
+      record(`visual-${slug}`, { gate: 4, width, scheme, applicable: true, saveBar, cls, overflow, formViolations, dialogViolations, newFormViolations: newForm, newDialogViolations: newDialog });
       expect.soft(cls, "layout shift on load (CLS)").toBeLessThan(CLS_LIMIT);
       expect.soft(overflow, "page scrolls sideways").toBeLessThanOrEqual(1);
+      if (saveBar) expect.soft(saveBar.problems, "phone Save bar").toEqual([]);
       expect.soft(newForm, "axe violations in the editor form that origin/main does not have").toEqual([]);
       expect.soft(newDialog, "axe violations in the discard dialog that origin/main does not have").toEqual([]);
     });
   }
   test("reduced motion", async ({ browser }) => {
+    const probe = await editableRoute(browser);
+    if (!probe.applicable) {
+      record("reduced-motion", { gate: 4, applicable: false, reason: probe.reason, samples: [] });
+      test.info().annotations.push({ type: "not applicable", description: probe.reason });
+      return;
+    }
     const context = await browser.newContext({ storageState: STORAGE, viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
     const page = await context.newPage();
     const samples: { moment: string; moving: Awaited<ReturnType<typeof movingAnimations>> }[] = [];
@@ -376,20 +470,20 @@ test.describe("gate 4: visual", () => {
     samples.push({ moment: "load", moving: await movingAnimations(page) });
     await mark(field, "m1");
     samples.push({ moment: "dirty", moving: await movingAnimations(page) });
-    await page.getByRole("button", { name: /^Reload saved pages?$/ }).click();
+    await discardTrigger(page).click();
     await page.waitForTimeout(60);
     samples.push({ moment: "dialog opening", moving: await movingAnimations(page) });
     await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
     await page.waitForTimeout(60);
     samples.push({ moment: "dialog closing", moving: await movingAnimations(page) });
-    await page.locator("[data-admin-save-button]").click();
+    await saveLocator(page).click();
     await page.waitForTimeout(60);
     samples.push({ moment: "saving", moving: await movingAnimations(page) });
-    await expect(page.locator("[data-admin-save-button]")).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
+    await expect(saveLocator(page)).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
     samples.push({ moment: "saved", moving: await movingAnimations(page) });
     await context.close();
     const offenders = samples.filter((s) => s.moving.length);
-    record("reduced-motion", { gate: 4, samples });
+    record("reduced-motion", { gate: 4, applicable: true, samples });
     expect.soft(offenders, "movement while prefers-reduced-motion: reduce").toEqual([]);
   });
 });

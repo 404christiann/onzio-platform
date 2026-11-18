@@ -101,3 +101,102 @@ test("fix 2: the doctor refuses a worktree whose .env.local points at production
   assert.match(result.stdout, /env-target: FAIL \.env\.local: NEXT_PUBLIC_SUPABASE_URL names the production project/);
   assert.doesNotMatch(result.stdout + result.stderr, /ioalthwsdrlzrubomrow\.supabase\.co/, "values are never printed");
 });
+
+// ---------------------------------------------------------------------------------------------
+// RC-ADMIN-01b: gates 3 and 4 on routes with no editable field, and on either Save button.
+const report = join(here, "report.mjs");
+const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+
+function runDir(files) {
+  const out = mkdtempSync(join(tmpdir(), "rcv-report-"));
+  mkdirSync(join(out, "results"));
+  const put = (name, value) => writeFileSync(join(out, "results", `${name}.json`), JSON.stringify(value));
+  put("run", { package: "TEST", route: "/admin/x", touched: "", head: "0".repeat(40), base: "origin/main", baseSha: "1".repeat(40) });
+  put("scope", { failures: [], warnings: [], changedFiles: 1, appFiles: ["a.ts"], selectorDebtIdentical: true });
+  put("repo-gates", { typecheck: true, unit: true, unitSummary: "ok", architecture: true, architectureSummary: "ok", selectorDebtIdentical: true });
+  put("payload-chick-fil-a", { gate: 2, editor: "chick-fil-a", touched: false, identical: true, head: [], base: [] });
+  put("diverse-city", { gate: 6, sharedFix: false, pages: [{ path: "/admin", status: 200, h1: "Dashboard", errors: [], sameAsMain: true }] });
+  for (const [name, value] of Object.entries(files)) put(name, value);
+  const result = spawnSync("node", [report, out], { encoding: "utf8" });
+  return { result, summary: JSON.parse(readFileSync(join(out, "summary.json"), "utf8")), html: readFileSync(join(out, "report.html"), "utf8") };
+}
+const STEPS = Object.fromEntries(["clean", "dirty", "saving", "saved", "retry", "conflict", "discard"].map((k) => [k, "pass"]));
+const na = (extra = {}) => ({ applicable: false, reason: "/admin/x has no editable field and no Save button", ...extra });
+const visualNa = Object.fromEntries([[390, "light"], [390, "dark"], [1440, "light"], [1440, "dark"]].map(([w, s]) => [`visual-x-${w}-${s}`, na({ gate: 4, width: w, scheme: s })]));
+const visualRan = (overrides = {}) => Object.fromEntries([[390, "light"], [390, "dark"], [1440, "light"], [1440, "dark"]].map(([w, s]) => [`visual-x-${w}-${s}`,
+  { gate: 4, width: w, scheme: s, applicable: true, cls: 0, overflow: 0, formViolations: [], dialogViolations: [], newFormViolations: [], newDialogViolations: [], ...overrides }]));
+
+test("01b: a route with no editable field reports gates 3 and 4 as not applicable and the run passes", () => {
+  const { result, summary, html } = runDir({
+    "save-behaviour": na({ gate: 3, steps: {} }),
+    ...visualNa, "reduced-motion": na({ gate: 4, samples: [] }),
+  });
+  assert.equal(result.status, 0, result.stdout);
+  assert.match(result.stdout, /gate 3 N\/A\s+Save behaviour: not applicable: /);
+  assert.match(result.stdout, /gate 4 N\/A\s+Visual.*: not applicable: /);
+  assert.match(result.stdout, /verify-rc-admin: PASS/);
+  for (const id of [3, 4]) {
+    const g = summary.gates.find((x) => x.id === id);
+    assert.equal(g.na, true); assert.equal(g.pass, true);
+  }
+  assert.equal(summary.gates.filter((g) => g.na).length, 2, "only gates 3 and 4 may be not applicable");
+  assert.match(html, /class="na">N\/A/);
+});
+
+test("01b: not applicable never hides a failing gate that did apply", () => {
+  const na34 = { "save-behaviour": na({ gate: 3, steps: {} }), ...visualNa, "reduced-motion": na({ gate: 4, samples: [] }) };
+  const payloadFail = runDir({ ...na34, "payload-chick-fil-a": { gate: 2, editor: "chick-fil-a", touched: false, identical: false, head: [], base: [] } });
+  assert.equal(payloadFail.result.status, 1);
+  assert.match(payloadFail.result.stdout, /gate 2 FAIL/);
+  const dcFail = runDir({ ...na34, "diverse-city": { gate: 6, sharedFix: false, pages: [{ path: "/admin", status: 200, h1: "x", errors: [], sameAsMain: false }] } });
+  assert.equal(dcFail.result.status, 1);
+  assert.match(dcFail.result.stdout, /gate 6 FAIL/);
+});
+
+test("01b: gate 3 and 4 results that are missing, partial or failing still fail", () => {
+  assert.equal(runDir({ ...visualNa, "reduced-motion": na({ gate: 4, samples: [] }) }).result.status, 1, "gate 3 not run is a failure, not N/A");
+  assert.equal(runDir({ "save-behaviour": na({ gate: 3, steps: {} }) }).result.status, 1, "gate 4 not run is a failure, not N/A");
+  const mixed = { ...visualRan(), "visual-x-1440-dark": na({ gate: 4, width: 1440, scheme: "dark" }) };
+  const partial = runDir({ "save-behaviour": { gate: 3, applicable: true, steps: STEPS }, ...mixed, "reduced-motion": { gate: 4, applicable: true, samples: [] } });
+  assert.equal(partial.result.status, 1, "one sample that did not run among samples that did is a failure");
+  const failStep = runDir({ "save-behaviour": { gate: 3, applicable: true, steps: { ...STEPS, conflict: "FAIL: x" } }, ...visualRan(), "reduced-motion": { gate: 4, applicable: true, samples: [] } });
+  assert.equal(failStep.result.status, 1);
+  assert.match(failStep.result.stdout, /gate 3 FAIL/);
+});
+
+test("01b: an editor that ran passes unchanged, with either Save button", () => {
+  for (const saveButton of ["admin", "page"]) {
+    const { result, summary } = runDir({ "save-behaviour": { gate: 3, applicable: true, saveButton, steps: STEPS }, ...visualRan(), "reduced-motion": { gate: 4, applicable: true, samples: [] } });
+    assert.equal(result.status, 0, result.stdout);
+    assert.ok(summary.gates.every((g) => !g.na));
+    assert.match(result.stdout, new RegExp(`gate 3 PASS\\s+Save behaviour: ${saveButton} Save button: clean: pass`));
+  }
+});
+
+test("01b: a phone Save bar problem fails gate 4", () => {
+  const bar = { kind: "page", problems: ["Save is not in a fixed bottom bar under 768px"] };
+  const { result } = runDir({ "save-behaviour": { gate: 3, applicable: true, saveButton: "page", steps: STEPS }, ...{ ...visualRan(), "visual-x-390-light": { ...visualRan()["visual-x-390-light"], saveBar: bar } }, "reduced-motion": { gate: 4, applicable: true, samples: [] } });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /gate 4 FAIL.*phone Save bar \(light\): Save is not in a fixed bottom bar/);
+});
+
+test("01b: the spec finds the Save button by either marker and never selects only the old one", () => {
+  assert.match(spec, /const SAVE_BUTTON = "\[data-admin-save-button\], \[data-page-save-button\]"/);
+  assert.match(spec, /const SAVE_CHECK = "\[data-admin-save-check\], \[data-page-save-check\]"/);
+  const outsideConstants = spec.split("\n").filter((line) => line.includes("data-admin-save-button") && !line.trimStart().startsWith("//") && !line.includes("const SAVE_BUTTON"));
+  assert.deepEqual(outsideConstants, [], "gates 2, 3 and 4 must go through saveLocator/SAVE_BUTTON");
+  assert.doesNotMatch(spec, /data-admin-save-check\]"\)\)/, "the check mark is found through SAVE_CHECK");
+});
+
+test("01b: the spec maps the page Save states and checks the phone bottom bar", () => {
+  for (const state of ["retry", "conflict"]) assert.match(spec, new RegExp(`kind === "page"\\) await expect\\(button\\)\\.toHaveAttribute\\("data-state", "${state}"\\)`));
+  assert.match(spec, /position === "fixed"/, "the bar must be fixed under 768px");
+  assert.match(spec, /checkSaveBar\(page\)/);
+  assert.match(spec, /Reload saved pages\?\|Discard changes/, "the discard control is the editor's Reload saved page or PageFrame's Discard changes");
+});
+
+test("01b: not applicable needs a route outside EDITORS with no field and no Save button, and records it for gates 3 and 4", () => {
+  assert.match(spec, /if \(editorFor\(ROUTE\)\) return \{ applicable: true \}/, "a listed editor is always applicable");
+  assert.match(spec, /if \(await saveLocator\(page\)\.count\(\)\) return \{ applicable: true \}/, "a Save button without a field is a broken editor, not N/A");
+  assert.equal([...spec.matchAll(/record\([^\n]*applicable: false/g)].length, 3, "save behaviour, visual and reduced-motion each record it");
+});

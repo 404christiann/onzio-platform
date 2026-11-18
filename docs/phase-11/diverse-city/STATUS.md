@@ -1,5 +1,47 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-01b shared follow-ups (skill Save selector, single trail, hub icons)
+
+**Agent/package:** Claude Code (Sonnet worker W01b, orchestrated), RC-ADMIN-01b, branch
+`claude/rc-admin-01b` on `7b7c89c7`. **Status:** `in_progress`, draft PR. It merges only on
+Christian's word. App code and tooling only: no migration, schema, RPC, data or production change.
+
+**Completed work:**
+
+- **verify-rc-admin finds either Save button.** Gates 2–4 locate the old `AdminSaveButton` or the
+  new `PageSaveButton` (`data-page-save-button`).
+  - Retry and conflict require the matching `data-state`, and discard accepts PageFrame's "Discard
+    changes".
+  - At 390 px, the phone Save bar must be fixed, fully on screen and not covering content.
+  - Gates 3 and 4 report N/A only for a route outside `EDITORS` that has no field and no Save button,
+    and verify.sh exits 0 when every applicable gate passes.
+- **One trail per page.** On pages that render a PageFrame the shell top bar shows no trail, through
+  the new `shellTopTrail` helper. Every other page keeps today's breadcrumb.
+- **Distinct hub icons.** Chick-fil-A uses `IconCoffee` and Partners uses `IconBriefcase`; both are
+  from the icons.download set. Sponsors keeps its icon.
+
+**Files changed:**
+- `components/AdminShell.tsx`, `components/admin/shellTopTrail.ts` (new),
+  `components/admin/adminRouteIcons.ts`, `components/admin/icons/index.tsx`,
+  `components/admin/icons/approved-selection.json`, two icon SVGs (new),
+  `components/admin/ui/editor-kit/pageFrameRegistry.ts`.
+- Under `.claude/skills/verify-rc-admin/`: `SKILL.md`, `rc-admin-verify.spec.ts`,
+  `scripts/report.mjs`, `scripts/verify.test.mjs`.
+- Test: `tests/contracts/admin-shell-top-trail-and-route-icons.test.ts` (new).
+
+**Verification:**
+
+- `tsc` clean; `test:unit` 327 files / 3634 tests; architecture (`--project unit`) 152 tests with
+  selector debt unchanged; `verify.test.mjs` 13/13.
+- `verify.sh run --route /admin/website-pages`: exit 0. Scope PASS, payload identity 14/14, repo
+  gates PASS, Diverse City 8/8 identical. Gates 3 and 4 are N/A because the page has no editor.
+
+**Blockers or unresolved decisions:** none. The PageSaveButton paths of gates 3 and 4 and the
+framed top bar get their first real-page run on RC-ADMIN-02.
+
+**Exact next step:** bot review; Christian decides the merge. RC-ADMIN-02, 05 and 06 run their
+final verify on top of this package.
+
 ## 2026-11-18 - RC-ADMIN-01 Rose City admin shared pieces and Hub navigation
 
 **Agent/package:** Claude Code (Sonnet worker W1, orchestrated), RC-ADMIN-01, branch

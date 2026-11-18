@@ -15,13 +15,16 @@ $S/scripts/verify.sh run --worktree <pkg-worktree> --route /admin/stadium --pack
 $S/scripts/verify.sh cleanup
 ```
 
-- `--route` is the editor the package rebuilt; gates 3 and 4 run on it.
+- `--route` is the editor the package rebuilt; gates 3 and 4 run on it. A route with no editable
+  field (a hub or index page such as `/admin/website-pages`) reports gates 3 and 4 as "not
+  applicable" instead of FAIL (see Gate 3).
 - `--touched` lists the editor keys the package is allowed to change (comma-separated, keys in
   the table below). Every other editor must send a byte-identical save payload. For RC-ADMIN-01
   (shared pieces, no page changes) pass no `--touched`: every payload must be identical.
 - `--shared-fix` only when the package brief says the change is a shared fix that may change
   Diverse City's admin. Without it, any difference in Diverse City's admin fails gate 6.
-- Exit 0 = every gate passed. Show Christian the report only then; otherwise fix and re-run.
+- Exit 0 = every applicable gate passed (a "not applicable" gate 3/4 is not a failure; every other
+  gate must pass). Show Christian the report only then; otherwise fix and re-run.
 
 Hard rules (from Christian): never touch the main checkout (`doctor` refuses it) or the
 `supabase_*_onzio-rose-city-2027` stack (nothing here uses ports 55321/55322); Supabase CLI
@@ -116,20 +119,36 @@ package. Never loosen a gate to make a row pass.
   abort it (the database never changes, so both builds see the same revision). Pass = same
   method, path and body bytes on both builds for every editor not in `--touched`. Touched editors
   are captured and shown but do not fail.
-- **Gate 3 (save behaviour, real API, package build).** On `--route`: clean (`[data-admin-save-button][data-state=clean]`,
-  aria-disabled); dirty (state dirty, status "Unsaved changes"); saving (request held 1.5 s:
-  state saving, aria-busy); saved (state saved, `[data-admin-save-check]` visible, background
+- **Gate 3 (save behaviour, real API, package build).** The Save button is found by either marker:
+  the old `AdminSaveButton` (`[data-admin-save-button]`) or the kit's `PageSaveButton`
+  (`[data-page-save-button]`, states clean/dirty/saving/saved/retry/error/conflict; the same
+  `data-state` strings for the first four). Under 768px PageFrame moves it into a fixed bottom bar:
+  it is still the one button. On `--route`: clean (state clean, aria-disabled; PageSaveButton reads
+  "Save"); dirty (state dirty; AdminSaveButton shows the status "Unsaved changes", PageSaveButton has
+  no status line and is the enabled "Save" button); saving (request held 1.5 s:
+  state saving, aria-busy); saved (state saved, the check mark `[data-admin-save-check]` or
+  `[data-page-save-check]` visible, background
   rgb(52,199,89) or rgb(48,209,88), and the page never contains "All changes saved", then clean);
   retry (first POST and the `?operationId=` receipt lookup aborted → "Retry same save", field
   disabled → retry resends the identical body → saved); conflict (a second signed-in context
   saves first → this save gets an alert → "Load latest and keep my edits" → draft kept, dirty →
-  saved); discard ("Reload saved page" → dialog "Discard and reload" → saved value back, clean).
-  The editor must use `AdminSaveButton` and the visitor-editor reload/conflict controls; on main
-  only Chick-fil-A has "Load latest and keep my edits", so other routes fail conflict until a
-  package adds it.
+  saved); discard ("Reload saved page", or PageFrame's "Discard changes", → dialog "Discard and
+  reload" → saved value back, clean). With PageSaveButton the retry step also requires state `retry`
+  and the conflict step state `conflict` (the editor's own alert and "Load latest and keep my edits"
+  still do the resolving). The editor must use one of the two Save buttons and the visitor-editor
+  reload/conflict controls; on main only Chick-fil-A has "Load latest and keep my edits", so other
+  routes fail conflict until a package adds it.
+  **Not applicable:** a route that is not in the `EDITORS` table, has no editable text field after
+  15 s and no Save button reports gate 3 (and gate 4) as `N/A`. A route in `EDITORS` is always
+  applicable, and a Save button with no field counts as a broken editor (it fails), so a slow or
+  broken editor can never turn into an N/A. The report prints `N/A`, `summary.json` has `na: true`.
 - **Gate 4 (visual, package build).** 390×844 and 1440×900, light and dark: full-page screenshot,
   layout shift on load (CLS < 0.001; sub-pixel rounding only), no sideways scroll, axe-core 4.12
-  (WCAG 2.0/2.1 A+AA) on `main` (preview iframe excluded) and on the open discard dialog. Axe is a
+  (WCAG 2.0/2.1 A+AA) on `main` (preview iframe excluded) and on the open discard dialog. At 390 px an
+  editor that uses PageSaveButton must show it in a fixed bottom bar that is fully on screen and does
+  not cover the end of the page content (an AdminSaveButton editor has no bar to check). With no
+  editable field the four visual samples and the reduced-motion sample are all "not applicable"
+  (a screenshot per size and scheme is still saved); a mix of ran and not-run samples fails. Axe is a
   ratchet: a violation also present on origin/main for the same route is reported as existing
   debt; only new ones fail. Reduced motion (`reducedMotion: reduce`): no running animation or
   transition over 50 ms on transform/translate/scale/rotate/position/size/margin at load, dirty,
