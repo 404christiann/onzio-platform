@@ -1,5 +1,53 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-02 Robinson Stadium editor on the Previews layout
+
+**Agent/package:** Claude Code (Sonnet worker W2, orchestrated), RC-ADMIN-02, branch `claude/rc-admin-02`
+on `7370d307`. **Status:** `in_progress`, draft PR. It merges only on Christian's word. App code
+only: no migration, schema, RPC, data or production change, and nothing under `components/cinematic/`.
+
+**Completed work:**
+
+- `/admin/stadium` is rebuilt on the editor kit:
+  - PageFrame header: Website / Tickets and stadium / Robinson Stadium, "Open page", Save.
+  - Nine PreviewCards. Each shows the real `CinematicRobinson` with every other section hidden, plus
+    that section's own show/hide switch and an Edit button.
+  - EditorDialog in split mode (section list, fields, live section in an iframe), and on phone the
+    full-screen sheet with Fields/Preview.
+  - Section order is fixed.
+- **Save is unchanged:**
+  - The same `robinsonSaveSchema` request goes through the same visitor-pages route.
+  - The request is byte-equal to the old builder for six edits and for an untouched load and save.
+  - "Retry same save" re-sends the pending request through `useSaveState`, so it shows saving, then
+    saved.
+- **Conflict:** "Load latest and keep my edits" mirrors Chick-fil-A's `reload(keepDraft)`, alongside
+  "Reload saved page".
+- **Other editor behaviour:** discard asks for confirmation, `useUnsavedGuard` covers leaving the
+  page, and upload rules, Directions ids and reorder are kept. Validation uses the yellow
+  ValidationMessage, and the loading skeleton has the same shape as the page.
+- **Controls and previews:** reorder, add and remove use icons.download glyphs. Card previews stay
+  hidden until their images and fonts settle, so nothing shifts on screen.
+
+**Files changed:** `components/admin/stadium/RobinsonStadiumEditor.tsx` (rewritten) and, new,
+`RobinsonSectionFields.tsx`, `RobinsonStadiumEditor.module.css`, `SettledPreview.tsx`,
+`robinson-sections.ts`, plus `tests/contracts/robinson-stadium-sections.test.ts`.
+
+**Verification:** `verify.sh run --route /admin/stadium --touched stadium` on `7370d307` exits 0,
+with 21 Playwright tests.
+- Scope PASS.
+- Payloads: the 13 untouched editors are identical.
+- Save behaviour: clean, dirty, saving, saved, retry, conflict and discard all PASS.
+- Visuals: CLS 0.00001 at 1440 and 0 at 390, light and dark; 0 new axe violations; 0 reduced-motion
+  offenders.
+- Repo gates PASS: `tsc` clean, 3648 unit tests, 152 architecture tests, selector debt unchanged.
+- Diverse City: 8/8 pages identical.
+
+**Blockers or unresolved decisions:** none. One polish note for a later kit pass: card previews that
+haven't mounted or settled yet show an empty box rather than a shimmer.
+
+**Exact next step:** bot review; Christian decides the merge. Wave 2 (RC-ADMIN-03, 04) is unblocked
+by this merge and by RC-ADMIN-01d.
+
 ## 2026-11-18 - RC-ADMIN-01c verify-rc-admin for kit editors, phone breadcrumb, top-bar shift
 
 **Agent/package:** Claude Code (Sonnet worker W01c, orchestrated), RC-ADMIN-01c, branch

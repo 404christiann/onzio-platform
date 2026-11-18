@@ -1,82 +1,82 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
+import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import {
-  EditorActionButton, EditorField, EditorGroup, EditorImage, EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorReorderButtons,
-  EditorSaveBar, EditorSecondaryButton, EditorSection, EditorSwitch, heldSaveState, kit,
-} from "@/components/admin/cinematic-editor/CinematicEditorKit";
+  EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
+} from "@/components/admin/ui/editor-kit";
 import { createClient } from "@/lib/admin-client";
 import { loadVisitorPageEditor, saveVisitorPageEditor } from "@/lib/visitor-page-editor";
 import { loadTicketsEditor } from "@/lib/tickets-editor";
 import { emptyTicketsContent } from "@/lib/tickets-content";
 import {
-  MAX_ROBINSON_BLOCKS, MAX_ROBINSON_BULLETS, MAX_ROBINSON_INFO_ROWS, MAX_ROBINSON_PARAGRAPHS,
   emptyRobinsonContent, hydrateRobinsonContent, robinsonContentSchema, robinsonDraftFingerprint, robinsonSaveSchema,
   type RobinsonContent, type RobinsonImageSlot, type RobinsonSaveRequest, type RobinsonSnapshot,
 } from "@/lib/cinematic-robinson-content";
-import { addBlock, addInfoRow, appendItem, moveItem, removeItem, setImage, unusedUploads, updateBlock } from "@/lib/cinematic-robinson-editor";
+import { setImage } from "@/lib/cinematic-robinson-editor";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import CinematicRobinson from "@/components/cinematic/CinematicRobinson";
 import type { StadiumTicketing } from "@/components/cinematic/CinematicStadium";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import "@/components/admin/homepage/homepage-editor.css";
+import { SettledPreview } from "./SettledPreview";
+import { RobinsonSectionFields } from "./RobinsonSectionFields";
+import {
+  ROBINSON_SECTIONS, ROBINSON_SECTION_IMAGES, buildRobinsonSaveInput, robinsonPageState, changedRobinsonSections, robinsonSectionOnly, robinsonSectionSlice, robinsonSectionSummary,
+  type RobinsonSectionId,
+} from "./robinson-sections";
+import styles from "./RobinsonStadiumEditor.module.css";
 
 const recoverySchema = z.object({
   content: robinsonContentSchema, revision: z.string().regex(/^[0-9]+$/), designRevision: z.string(),
   pending: robinsonSaveSchema.nullable(), uploads: z.array(z.uuid()),
   media: z.array(z.object({ id: z.uuid(), storage_bucket: z.string(), storage_path: z.string(), width: z.number(), height: z.number() }).strict()),
 }).strict();
-type Section = Exclude<keyof RobinsonContent, "images">;
 const PAGE = "Robinson Stadium";
+const CRUMBS = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Tickets and stadium" }];
+const DESCRIPTION = "Edit the Robinson Stadium page. Save applies all changes together.";
 
-function TextField({ label, value, max, disabled, multiline, hint, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: string; onChange: (value: string) => void }) {
-  return <EditorField label={label} value={value} max={max} disabled={disabled} multiline={multiline} hint={hint} onChange={onChange} />;
-}
-
-function TextList({ label, items, max, disabled, onChange }: { label: string; items: string[]; max: number; disabled: boolean; onChange: (items: string[]) => void }) {
-  return <div className={kit.stack}>{items.map((item, index) => <div key={index} className="grid min-w-0 gap-2">
-    <TextField label={`${label} ${index + 1}`} value={item} max={4000} multiline disabled={disabled} onChange={value => onChange(items.map((current, position) => position === index ? value : current))} />
-    <EditorReorderButtons index={index} length={items.length} disabled={disabled} noun={label.toLowerCase()} onMove={delta => onChange(moveItem(items, index, delta))} onRemove={() => onChange(removeItem(items, index))} />
-  </div>)}
-    <div><EditorActionButton disabled={disabled || items.length >= max} onClick={() => onChange(appendItem(items, "", max))}>Add {label.toLowerCase()}</EditorActionButton></div>
-  </div>;
-}
-
-function YesNoField({ label, value, disabled, onChange }: { label: string; value: boolean; disabled: boolean; onChange: (value: boolean) => void }) {
-  const id = useId();
-  return <div className={kit.field}><label htmlFor={id}>{label}</label>
-    <select id={id} disabled={disabled} value={value ? "yes" : "no"} onChange={event => onChange(event.target.value === "yes")}><option value="yes">Yes</option><option value="no">No</option></select>
-  </div>;
-}
+type PreviewProps = {
+  id: RobinsonSectionId; content: RobinsonContent; media: RobinsonSnapshot["media"]; shared: CinematicHomepageContent | null; ticketing: StadiumTicketing; slice: string;
+};
+/** The real public page component, fed the draft with every other section switched off. Re-renders only when its own slice changes. */
+const SectionLive = memo(function SectionLive({ id, content, media, shared, ticketing }: PreviewProps) {
+  const page = useMemo(() => hydrateRobinsonContent(robinsonSectionOnly(content, id), media), [content, id, media]);
+  const urls = useMemo(() => Object.values(page.images).flatMap(image => image.url ? [image.url] : []).filter(url => ROBINSON_SECTION_IMAGES[id].some(slot => page.images[slot].url === url)), [page, id]);
+  return <SettledPreview urls={urls}><CinematicShell contentOnly initialContent={shared}><CinematicRobinson content={page} ticketing={ticketing} /></CinematicShell></SettledPreview>;
+}, (a, b) => a.id === b.id && a.slice === b.slice && a.media === b.media && a.shared === b.shared && a.ticketing === b.ticketing);
 
 export default function RobinsonStadiumEditor() {
   const club = useClubContext();
-  const router = useRouter();
   const [snapshot, setSnapshot] = useState<RobinsonSnapshot | null>(null), [draft, setDraft] = useState<RobinsonContent | null>(null);
   const [media, setMedia] = useState<RobinsonSnapshot["media"]>([]), [uploads, setUploads] = useState<string[]>([]), [pending, setPending] = useState<RobinsonSaveRequest | null>(null);
-  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<RobinsonImageSlot | null>(null), [message, setMessage] = useState(""), [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<RobinsonImageSlot | null>(null);
+  const [message, setMessage] = useState(""), [failed, setFailed] = useState(false), [status, setStatus] = useState("");
+  const [conflict, setConflict] = useState(false), [saveFailed, setSaveFailed] = useState(false), [validation, setValidation] = useState("");
   const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [ticketing, setTicketing] = useState<StadiumTicketing>(emptyTicketsContent());
   const [loadedClubId, setLoadedClubId] = useState<string | null>(null);
-  const [confirmReload, setConfirmReload] = useState(false), [leaveTo, setLeaveTo] = useState<string | null>(null), [previewPhone, setPreviewPhone] = useState(false);
-  const recoveryKey = useRef<string | null>(null), epoch = useRef(0);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const recoveryKey = useRef<string | null>(null), epoch = useRef(0), keepRef = useRef<HTMLButtonElement>(null);
+  const dialog = useEditorDialog<RobinsonSectionId>();
   const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch {} };
   const dirty = !!draft && !!snapshot && robinsonDraftFingerprint(draft) !== robinsonDraftFingerprint(snapshot.content ?? emptyRobinsonContent());
   const locked = busy || !!pending || !!uploading;
+  const unsaved = dirty || !!pending || uploads.length > 0;
 
   useEffect(() => {
     let active = true;
     epoch.current += 1;
     recoveryKey.current = null;
     setSnapshot(null); setDraft(null); setLoadedClubId(null); setPending(null); setMedia([]); setUploads([]);
-    setMessage(""); setFailed(false); setBusy(false); setUploading(null); setShared(null); setTicketing(emptyTicketsContent());
+    setMessage(""); setFailed(false); setStatus(""); setConflict(false); setSaveFailed(false); setValidation("");
+    setBusy(false); setUploading(null); setShared(null); setTicketing(emptyTicketsContent());
     if (club.presentationTemplateKey !== "cinematic@2") return;
     Promise.all([loadVisitorPageEditor<RobinsonContent>("robinson"), createClient().auth.getUser(), fetchCinematicHomepageContent(club.id), loadTicketsEditor()])
       .then(([loaded, user, homepage, tickets]) => {
@@ -118,167 +118,145 @@ export default function RobinsonStadiumEditor() {
   const change = (edit: (value: RobinsonContent) => RobinsonContent) => {
     if (locked) return;
     setDraft(current => current && edit(current));
-    setMessage(""); setFailed(false);
+    setMessage(""); setFailed(false); setValidation(""); setSaveFailed(false);
   };
-  const patch = <K extends Section>(section: K, value: Partial<RobinsonContent[K]>) => change(content => ({ ...content, [section]: { ...content[section], ...value } }));
-  /** Leaving for another admin page asks first when there is an unsaved draft (the same decision the native confirm made). */
-  function guardLink(event: MouseEvent<HTMLAnchorElement>) {
-    if (locked) { event.preventDefault(); return; }
-    if (!dirty) return;
-    event.preventDefault();
-    setLeaveTo(event.currentTarget.getAttribute("href"));
-  }
+  const patch = <K extends RobinsonSectionId>(section: K, value: Partial<RobinsonContent[K]>) => change(content => ({ ...content, [section]: { ...content[section], ...value } }));
   /** Resolves true only when the server committed the save, so the Save button can show Saved. */
   async function save(): Promise<boolean> {
     if (!draft || !snapshot || busy || uploading) return false;
-    const parsed = robinsonSaveSchema.safeParse(pending ?? { operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision, content: draft, retiredMediaAssetIds: unusedUploads(uploads, draft) });
-    if (!parsed.success) { setFailed(true); setMessage("Review the fields before saving. Each Directions section needs its own anchor."); return false; }
+    const parsed = robinsonSaveSchema.safeParse(buildRobinsonSaveInput({ pending, operationId: crypto.randomUUID(), snapshot, draft, uploads }));
+    if (!parsed.success) { setSaveFailed(true); setValidation("Review the fields before saving. Each Directions section needs its own anchor."); return false; }
     const request = parsed.data, generation = epoch.current;
-    setPending(request); setBusy(true); setFailed(false); setMessage(`Saving ${PAGE}…`);
+    setPending(request); setBusy(true); setFailed(false); setSaveFailed(false); setValidation(""); setMessage(""); setStatus(`Saving ${PAGE}…`);
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, uploads })); } catch {}
     const result = await saveVisitorPageEditor<RobinsonContent>("robinson", request);
     if (generation !== epoch.current) return false;
     setBusy(false);
     if (result.status === "committed") {
       setSnapshot(result.snapshot); setDraft(result.snapshot.content ?? emptyRobinsonContent()); setMedia(result.snapshot.media);
-      setUploads([]); setPending(null); setMessage(result.snapshot.cleanupPending ? `${PAGE} saved. Image cleanup will retry automatically.` : `${PAGE} saved.`); clearRecovery();
+      setUploads([]); setPending(null); setConflict(false); clearRecovery();
+      setMessage(result.snapshot.cleanupPending ? `${PAGE} saved. Image cleanup will retry automatically.` : ""); setStatus(`${PAGE} saved.`);
       return true;
     } else if (result.status === "uncertain") { setPending(result.request); setFailed(true); setMessage(result.message); }
-    else { setPending(null); setFailed(true); setMessage(result.message); }
+    else { setPending(null); setFailed(true); setSaveFailed(result.status !== "conflict"); setConflict(result.status === "conflict"); setMessage(result.message); }
     return false;
   }
-  /** Reload asks first when there are unsaved edits (the same decision the native confirm made). */
-  function requestReload() {
-    if (locked) return;
-    if (dirty) setConfirmReload(true);
+  /** Discard asks first when there are unsaved edits (the same decision the native confirm made). */
+  function requestDiscard() {
+    if (busy || uploading) return;
+    if (pending) { setFailed(true); setMessage("Retry the same save before discarding your edits, so nothing is lost."); return; }
+    if (dirty || uploads.length) setConfirmReload(true);
     else void reload();
   }
-  async function reload() {
+  async function reload(keepDraft = false) {
     if (locked) return;
     const generation = epoch.current;
     setBusy(true);
     try {
       const loaded = await loadVisitorPageEditor<RobinsonContent>("robinson");
+      robinsonContentSchema.parse(loaded.content ?? emptyRobinsonContent());
       if (generation !== epoch.current) return;
-      setSnapshot(loaded); setDraft(loaded.content ?? emptyRobinsonContent()); setMedia(loaded.media); setUploads([]); setMessage(""); setFailed(false); clearRecovery();
+      if (keepDraft) {
+        // Latest revision becomes the base, the edits stay, and images added in this session stay available.
+        const previous = new Set(snapshot?.media.map(image => image.id));
+        setMedia([...loaded.media, ...media.filter(image => !previous.has(image.id) && !loaded.media.some(saved => saved.id === image.id))]);
+        setMessage("Latest saved version loaded. Your edits were kept. Replace any images removed in the newer version before saving.");
+        setSnapshot(loaded);
+      } else {
+        setSnapshot(loaded); setDraft(loaded.content ?? emptyRobinsonContent()); setMedia(loaded.media); setUploads([]); setMessage(""); clearRecovery();
+      }
+      setConflict(false); setFailed(false); setSaveFailed(false); setValidation("");
     } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : `Unable to reload ${PAGE}.`); } }
     finally { if (generation === epoch.current) setBusy(false); }
   }
-  async function upload(slot: RobinsonImageSlot, file: File) {
-    if (!draft || locked) return;
+  async function upload(slot: RobinsonImageSlot, file: File): Promise<boolean> {
+    if (!draft || locked) return false;
     const generation = epoch.current;
-    setUploading(slot); setFailed(false); setMessage("Adding your image…");
+    setUploading(slot); setFailed(false); setStatus("Adding your image…");
     try {
       const result = await createClient().storage.from("homepage-artwork").upload("robinson/" + crypto.randomUUID(), file);
       if (result.error || !result.data) throw new Error(result.error?.message ?? "Image upload failed.");
       const bitmap = await createImageBitmap(file), dimensions = { width: bitmap.width, height: bitmap.height };
       bitmap.close();
-      if (generation !== epoch.current) return;
+      if (generation !== epoch.current) return false;
       const id = result.data.assetId;
       setMedia(current => [...current, { id, storage_bucket: "onzio-media", storage_path: result.data.path, ...dimensions }]);
       setUploads(current => [...current, id]);
       // Upload locks manual editing. Apply its one confirmed identity directly.
       setDraft(current => current && setImage(current, slot, id));
-      setMessage(`Image ready. Save ${PAGE} to use it.`);
-    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } }
+      setStatus(`Image ready. Save ${PAGE} to use it.`);
+      return true;
+    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } return false; }
     finally { if (generation === epoch.current) setUploading(null); }
   }
   const saveAction = useSaveState({
-    isDirty: dirty || !!pending || uploads.length > 0,
+    isDirty: unsaved,
     onSave: async () => { if (!(await save())) throw new Error(`${PAGE} was not saved.`); },
   });
+  const latestSave = useRef(save);
+  latestSave.current = save;
+  useUnsavedGuard(draft ? {
+    dirty: unsaved, edited: PAGE, onSave: () => latestSave.current(),
+    onDiscard: () => {
+      if (busy || uploading || pending) throw new Error("A save is still being confirmed.");
+      if (!snapshot) return;
+      setDraft(snapshot.content ?? emptyRobinsonContent()); setUploads([]); setMessage(""); setFailed(false); setConflict(false); setSaveFailed(false); setValidation(""); clearRecovery();
+    },
+  } : undefined);
 
+  const deferred = useDeferredValue(draft);
+  const pageState = robinsonPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
+  const changed = useMemo(() => new Set(draft && snapshot ? changedRobinsonSections(draft, snapshot.content) : []), [draft, snapshot]);
   const page = draft ? hydrateRobinsonContent(draft, media) : null;
-  const imageSlot = (slot: RobinsonImageSlot, label: string, hint?: string) => draft && page && <EditorGroup key={slot} legend={label}>
-    <EditorImage label={label} url={page.images[slot].url} alt={draft.images[slot].alt} accept="image/png,image/webp" empty="No image. Nothing shows here on the page."
-      uploading={uploading === slot} disabled={locked} hasImage={!!page.images[slot].url} onFile={file => void upload(slot, file)}
-      onRemove={() => change(content => setImage(content, slot, null))} removeDisabled={locked || !draft.images[slot].assetId} />
-    <EditorField label="Image description" value={draft.images[slot].alt} max={1000} disabled={locked} hint={hint}
-      onChange={alt => change(content => ({ ...content, images: { ...content.images, [slot]: { ...content.images[slot], alt } } }))} />
-  </EditorGroup>;
-  const panel = (section: Section, title: string, children: ReactNode, description?: ReactNode) => draft && <EditorSection key={section} title={title} description={description}
-    aside={<EditorSwitch checked={draft[section].visible} disabled={locked} label={`Show ${title} on the page`} onChange={visible => patch(section, { visible } as Partial<RobinsonContent[typeof section]>)} />}>
-    <div className={kit.stack}>{children}</div>
-  </EditorSection>;
-  const saveState = heldSaveState(saveAction.state, busy || !!uploading);
+  const loading = !draft || !page || loadedClubId !== club.id;
 
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader eyebrow="Public website" title={PAGE} description="This page is unavailable for the current website design." /></AdminPage>;
-  return <AdminPage className={kit.page}>
-    <AdminPageHeader eyebrow="Public website" title={PAGE} description="Edit the Robinson Stadium page. Save applies all changes together." actions={<EditorPageLink href="/stadium">Open Stadium page</EditorPageLink>} />
-    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
-    {!draft || !page || loadedClubId !== club.id ? <EditorLoading label={`Loading ${PAGE}…`} failed={failed} onRetry={() => location.reload()} /> : <>
-      {panel("heading", "Page heading", <div className="grid gap-5 md:grid-cols-2">
-        <TextField label="Title" value={draft.heading.title} max={120} disabled={locked} onChange={title => patch("heading", { title })} />
-        <TextField label="Subtitle" value={draft.heading.subtitle} max={120} disabled={locked} onChange={subtitle => patch("heading", { subtitle })} />
-      </div>)}
-      {panel("seating", "Seating map", <>
-        {imageSlot("seating", "Seating map", "On phones, a link opens this image full size.")}
-        <div className="grid gap-5 md:grid-cols-2">
-          <TextField label="Caption" value={draft.seating.caption} max={120} disabled={locked} onChange={caption => patch("seating", { caption })} />
-          <TextField label="Full-size link (phones)" value={draft.seating.expandLabel} max={120} disabled={locked} onChange={expandLabel => patch("seating", { expandLabel })} />
-        </div></>)}
-      {panel("story", "Story", <>
-        <TextList label="Paragraph" items={draft.story.paragraphs} max={MAX_ROBINSON_PARAGRAPHS} disabled={locked} onChange={paragraphs => patch("story", { paragraphs })} />
-        <TextField label="Quote" value={draft.story.quote} max={4000} multiline disabled={locked} hint="Quotation marks are added on the page." onChange={quote => patch("story", { quote })} />
-        <TextField label="Quote attribution" value={draft.story.attribution} max={120} disabled={locked} onChange={attribution => patch("story", { attribution })} />
-      </>)}
-      {panel("info", "Stadium Info", <>
-        <div className="grid gap-5 md:grid-cols-2">
-          <TextField label="Heading" value={draft.info.heading} max={120} disabled={locked} onChange={heading => patch("info", { heading })} />
-          <TextField label="Note" value={draft.info.note} max={120} disabled={locked} onChange={note => patch("info", { note })} />
-        </div>
-        {draft.info.rows.map((row, index) => <EditorGroup key={index} legend={`Row ${index + 1}`}><div className="grid min-w-0 gap-4 md:grid-cols-[1fr_10rem]">
-          <TextField label="Label" value={row.label} max={120} disabled={locked} onChange={label => patch("info", { rows: draft.info.rows.map((current, position) => position === index ? { ...current, label } : current) })} />
-          <YesNoField label="Value" value={row.available} disabled={locked} onChange={available => patch("info", { rows: draft.info.rows.map((current, position) => position === index ? { ...current, available } : current) })} />
-          <div className="md:col-span-2"><EditorReorderButtons index={index} length={draft.info.rows.length} disabled={locked} noun="row" onMove={delta => patch("info", { rows: moveItem(draft.info.rows, index, delta) })} onRemove={() => patch("info", { rows: removeItem(draft.info.rows, index) })} /></div>
-        </div></EditorGroup>)}
-        <div><EditorActionButton disabled={locked || draft.info.rows.length >= MAX_ROBINSON_INFO_ROWS} onClick={() => change(addInfoRow)}>Add row</EditorActionButton></div>
-      </>)}
-      {panel("match", "Next home match", imageSlot("partner", "Partner logo under the match"), <>Match wording comes from <Link className={kit.inlineLink} href="/admin/homepage" onClick={guardLink}>Homepage</Link>, fixtures from <Link className={kit.inlineLink} href="/admin/schedule" onClick={guardLink}>Schedule</Link>, and the purchase link from <Link className={kit.inlineLink} href="/admin/tickets" onClick={guardLink}>Tickets</Link>.</>)}
-      {panel("lockers", "Lockers image", imageSlot("lockers", "Lockers image", "Decorative. Leave the description empty unless the image carries information."))}
-      {panel("food", "Food & Beverage", <>
-        <TextField label="Heading" value={draft.food.heading} max={120} disabled={locked} onChange={heading => patch("food", { heading })} />
-        {imageSlot("mealPass", "Meal pass")}
-        <TextField label="Text" value={draft.food.body} max={4000} multiline disabled={locked} hint="Line breaks show on desktop." onChange={body => patch("food", { body })} />
-        <div className="grid gap-5 md:grid-cols-3">{draft.food.steps.map((step, index) => <div key={index} className="grid min-w-0 gap-2">
-          <TextField label={`Step ${index + 1}`} value={step.label} max={120} disabled={locked} onChange={label => patch("food", { steps: draft.food.steps.map((current, position) => position === index ? { label } : current) })} />
-          {imageSlot((["step1", "step2", "step3"] as const)[index], `Step ${index + 1} icon`)}
-        </div>)}</div>
-      </>)}
-      {panel("route", "Road to the Match", <>
-        <div className="grid gap-5 md:grid-cols-2">
-          <TextField label="Heading" value={draft.route.heading} max={120} disabled={locked} onChange={heading => patch("route", { heading })} />
-          <TextField label="Subheading" value={draft.route.subheading} max={120} disabled={locked} onChange={subheading => patch("route", { subheading })} />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">{imageSlot("bus", "Bus")}{imageSlot("routeMap", "Route map")}</div>
-      </>)}
-      {panel("directions", "Directions", <>
-        {draft.directions.blocks.map((block, index) => <EditorGroup key={block.id} legend={`Section ${index + 1}`}>
-          <TextField label="Heading" value={block.heading} max={120} disabled={locked} hint={`Page link: /stadium#${block.id}`} onChange={heading => change(content => updateBlock(content, index, { heading }))} />
-          <TextList label="Paragraph" items={block.paragraphs} max={MAX_ROBINSON_PARAGRAPHS} disabled={locked} onChange={paragraphs => change(content => updateBlock(content, index, { paragraphs }))} />
-          <TextField label="Italic note" value={block.note} max={4000} multiline disabled={locked} onChange={note => change(content => updateBlock(content, index, { note }))} />
-          <TextList label="Bullet" items={block.bullets} max={MAX_ROBINSON_BULLETS} disabled={locked} onChange={bullets => change(content => updateBlock(content, index, { bullets }))} />
-          <TextField label="Closing line" value={block.closing} max={4000} multiline disabled={locked} hint="Shown on its own line after the bullets." onChange={closing => change(content => updateBlock(content, index, { closing }))} />
-          <EditorReorderButtons index={index} length={draft.directions.blocks.length} disabled={locked} noun="section" onMove={delta => patch("directions", { blocks: moveItem(draft.directions.blocks, index, delta) })} onRemove={() => patch("directions", { blocks: removeItem(draft.directions.blocks, index) })} />
-        </EditorGroup>)}
-        <div><EditorActionButton disabled={locked || draft.directions.blocks.length >= MAX_ROBINSON_BLOCKS} onClick={() => change(addBlock)}>Add section</EditorActionButton></div>
-      </>, "The Stadium parking menu link opens the section whose page link ends in #parking-lot-no-5.")}
-      <p className={kit.note}>Images: PNG or WebP, up to 5 MB and 3000 pixels per side.</p>
-      <EditorPreview phone={previewPhone} onPhoneChange={setPreviewPhone}>
-        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={PAGE}><CinematicShell contentOnly initialContent={shared}><CinematicRobinson content={page} ticketing={ticketing} /></CinematicShell></HomepagePreviewFrame>
-      </EditorPreview>
-      <EditorSaveBar state={saveState} retry={!!pending} onSave={() => { void saveAction.save().catch(() => undefined); }}
-        status={pending ? "Awaiting save confirmation" : saveState === "dirty" ? "Unsaved changes" : ""}>
-        <EditorSecondaryButton disabled={locked} onClick={requestReload}>Reload saved page</EditorSecondaryButton>
-      </EditorSaveBar>
-    </>}
+  if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={PAGE} breadcrumb={CRUMBS} description="This page is unavailable for the current website design.">{null}</PageFrame>;
+
+  const sectionItems = draft ? ROBINSON_SECTIONS.map(section => ({
+    id: section.id, title: section.title, changed: changed.has(section.id), summary: robinsonSectionSummary(draft, section.id),
+    visible: draft[section.id].visible, disabled: locked,
+    onVisibleChange: (visible: boolean) => patch(section.id, { visible } as Partial<RobinsonContent[typeof section.id]>),
+  })) : [];
+  const api = draft && page ? { draft, page, locked, uploading, change, patch, upload } : null;
+  const previewOf = (id: string) => deferred && <SectionLive id={id as RobinsonSectionId} content={deferred} media={media} shared={shared} ticketing={ticketing} slice={robinsonSectionSlice(deferred, id as RobinsonSectionId)} />;
+
+  const notice = (message || validation || conflict) ? <div className={styles.notice} data-robinson-notice="">
+    {validation && <ValidationMessage live="assertive">{validation}</ValidationMessage>}
+    {(message || conflict) && <EditorNotice failed={failed || conflict}>{message}
+      {conflict && <span className={styles.noticeActions}>
+        <button ref={keepRef} type="button" className="admin-press" disabled={locked} onClick={() => void reload(true)} style={{ minHeight: 44, padding: "0 14px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--secondary))" }}>Load latest and keep my edits</button>
+        <EditorSecondaryButton disabled={locked} onClick={requestDiscard}>Reload saved page</EditorSecondaryButton>
+      </span>}
+    </EditorNotice>}
+  </div> : null;
+
+  if (!draft && failed) return <PageFrame title={PAGE} breadcrumb={CRUMBS} description={DESCRIPTION}>
+    <EditorNotice failed>{message}</EditorNotice>
+    <div><EditorSecondaryButton disabled={false} onClick={() => location.reload()}>Try again</EditorSecondaryButton></div>
+  </PageFrame>;
+
+  return <>
+    <ShimmerRegion loading={loading} loadingLabel={`Loading ${PAGE}…`} minHeight={480}
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={ROBINSON_SECTIONS.length} /></div>}>
+      <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/stadium" description={DESCRIPTION} state={pageState}
+        onSave={() => { void saveAction.save().catch(() => undefined); }}
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        <PreviewCards sections={sectionItems} label="Robinson Stadium sections" renderPreview={previewOf} previewScale={0.46}
+          onEdit={(id, event) => dialog.openSection(id as RobinsonSectionId, event)} />
+      </PageFrame>
+    </ShimmerRegion>
+    <p className={styles.srOnly} role="status" data-robinson-status="">{status}</p>
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE}`} mode="split" returnFocusRef={dialog.returnFocusRef}
+      sections={ROBINSON_SECTIONS.map(section => ({ id: section.id, title: section.title, summary: draft && (draft[section.id].visible ? robinsonSectionSummary(draft, section.id) : "Hidden on the page") }))}
+      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as RobinsonSectionId)}
+      renderSection={id => dialog.open ? <RobinsonSectionFields api={api} id={id as RobinsonSectionId} /> : null}
+      renderPreview={id => dialog.open ? <div className={styles.livePreview}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>
+          <CinematicShell contentOnly initialContent={shared}><CinematicRobinson content={hydrateRobinsonContent(robinsonSectionOnly(api.draft, id as RobinsonSectionId), media)} ticketing={ticketing} /></CinematicShell>
+        </HomepagePreviewFrame></div> : null} />}
     <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {PAGE} edits and load the saved page?
     </AdminConfirmDialog>
-    <AdminConfirmDialog open={leaveTo !== null} title="Leave this page?" confirmLabel="Leave page"
-      onCancel={() => setLeaveTo(null)} onConfirm={() => { const href = leaveTo; setLeaveTo(null); if (href) router.push(href); }}>
-      Your unsaved {PAGE} draft will be kept on this browser.
-    </AdminConfirmDialog>
-  </AdminPage>;
+  </>;
 }
