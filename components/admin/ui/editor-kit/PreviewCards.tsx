@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
+import { KIT_EDIT_PROPS } from "./kitEdit";
 import { hasVisibilityControl, type SectionCardItem } from "./SectionCards";
 import styles from "./PreviewCards.module.css";
 
@@ -98,6 +99,7 @@ export function PreviewCards({
                 tabIndex={-1}
                 onClick={(event) => onEdit(section.id, event)}
                 data-preview-button=""
+                {...KIT_EDIT_PROPS}
               />
             </div>
             <div className={styles.foot}>
@@ -129,6 +131,7 @@ export function PreviewCards({
                   aria-label={`Edit ${section.title} section`}
                   onClick={(event) => onEdit(section.id, event)}
                   data-preview-edit=""
+                  {...KIT_EDIT_PROPS}
                 >
                   Edit
                 </button>

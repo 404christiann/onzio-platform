@@ -35,23 +35,44 @@
   overflow: hidden;
 }
 
+/* One line, never wrapped. Every crumb may shrink (min-inline-size: 0) and its text truncates with an
+   ellipsis; the "/" is its own non-shrinking flex item so two separators can never collide. */
 .crumbs li {
-  display: inline-flex;
+  display: flex;
   min-inline-size: 0;
+  flex: 0 1 auto;
   align-items: center;
   gap: 6px;
 }
 
 .crumbs li + li::before {
   content: "/";
+  flex: none;
   opacity: .6;
+}
+
+.crumbs li > a,
+.crumbs li > span {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The first crumb ("Website") keeps its full word. The middle crumbs absorb the shrinking (a high shrink
+   factor, floored at about four letters and the slash); the current page only gives up width once they
+   are at that floor. (A shrink factor below 1 on the last item would cap how much it can shrink.) */
+.crumbs li:first-child:not(:last-child) {
+  flex-shrink: 0;
+}
+
+.crumbs li:not(:first-child, :last-child) {
+  min-inline-size: 5ch;
+  flex-shrink: 100;
 }
 
 .crumbs li[aria-current="page"] {
   color: hsl(var(--foreground));
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .crumbs a {

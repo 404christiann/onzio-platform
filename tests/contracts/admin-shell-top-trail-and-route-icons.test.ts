@@ -21,11 +21,12 @@ describe("shell top bar trail", () => {
 
   const source = readFileSync(resolve(process.cwd(), "components/AdminShell.tsx"), "utf8");
 
-  it("renders no trail element in the framed case and keeps the slot mounted", () => {
+  it("keeps the slot and its content in the framed case, invisible, so the top bar never shifts", () => {
     expect(source).toContain("shellTopTrail(breadcrumb, pageHasFrame)");
-    expect(source).toContain('topTrail === "none" ? null');
+    expect(source).toContain("shellTopTrail(breadcrumb, false)");
+    expect(source).toContain('"invisible hidden min-w-0 xl:block" : "hidden min-w-0 xl:block"');
+    expect(source).toContain('aria-hidden={topTrail === "none" || undefined}');
     expect(source).not.toContain("data-admin-top-trail");
-    expect(source).toContain('<div className="hidden min-w-0 xl:block">');
     // The unframed breadcrumb and label are the ones that shipped before this package.
     expect(source).toContain('<nav aria-label="Breadcrumb">');
     expect(source).toContain('{currentRoute?.label ?? "Admin"}');

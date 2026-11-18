@@ -2,6 +2,7 @@
 
 import type { MouseEvent, ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
+import { KIT_EDIT_PROPS } from "./kitEdit";
 import styles from "./SectionCards.module.css";
 
 export type SectionCardItem = {
@@ -63,6 +64,7 @@ export function SectionCards({ sections, onEdit, label = "Page sections" }: Sect
                 className={`admin-press ${styles.edit}`}
                 aria-label={`Edit ${section.title}`}
                 onClick={(event) => onEdit(section.id, event)}
+                {...KIT_EDIT_PROPS}
               >
                 Edit
               </button>

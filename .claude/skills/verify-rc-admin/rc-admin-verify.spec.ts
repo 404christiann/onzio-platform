@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { KIT_ANY_FIELD_SELECTOR, KIT_DIALOG_SELECTOR, KIT_DONE_SELECTOR, KIT_EDIT_SELECTOR, KIT_ENABLED_FIELD_SELECTOR, KIT_LIST_SELECTOR, KIT_WAIT_MS, chooseOpenPath, firstMarkableIndex, isPhoneWidth, listProblems, retryLockCheck, sectionTryOrder, sheetBarProblems } from "./scripts/kit-path.mjs";
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type Request } from "@playwright/test";
 
 const HEAD = process.env.RCV_HEAD_URL!;            // http://rose-city.localhost:3110
@@ -100,10 +101,13 @@ async function deterministic(page: Page) {
 const SAVE_BUTTON = "[data-admin-save-button], [data-page-save-button]";
 const SAVE_CHECK = "[data-admin-save-check], [data-page-save-check]";
 const saveLocator = (page: Page) => page.locator(SAVE_BUTTON).filter({ visible: true }).first();
-const saveButton = (page: Page, editor?: Editor) => editor?.saveButton?.(page) ?? saveLocator(page);
+// A row's saveButton names the OLD page's button ("Save homepage"); a kit page has the one PageSaveButton, so the row is ignored there.
+const saveButton = (page: Page, editor?: Editor) => (kitState.get(page)?.kit ? undefined : editor?.saveButton?.(page)) ?? saveLocator(page);
 type SaveKind = "admin" | "page";
 const saveKind = (button: Locator): Promise<SaveKind> => button.evaluate((el) => (el.hasAttribute("data-page-save-button") ? "page" : "admin"));
 // The editor's own "Reload saved page" control, or PageFrame's "Discard changes" (which opens the same confirmation).
+// The confirm dialog's button: "Discard and reload" on the older editors, "Discard changes" where a kit page words it so.
+const DISCARD_CONFIRM = /^Discard( and reload| changes)$/;
 const discardTrigger = (page: Page) => page.getByRole("button", { name: /^(Reload saved pages?|Discard changes)$/ }).filter({ visible: true }).first();
 
 // Gates 3 and 4 need an editable field. A route outside EDITORS (a hub or index page) that has
@@ -119,7 +123,10 @@ function editableRoute(browser: Browser): Promise<Applicability> {
       const page = await context.newPage();
       await page.goto(HEAD + ROUTE);
       await expect(page.locator("h1").first()).toBeVisible();
-      try { await expect(genericField(page)).toBeVisible({ timeout: 15_000 }); return { applicable: true }; } catch { /* no field: look for a Save button below */ }
+      try { // a text field on the page, or a kit Edit control that opens the fields in a dialog
+        await Promise.any([genericField(page).waitFor({ state: "visible", timeout: 15_000 }), kitEditLocator(page).waitFor({ state: "visible", timeout: 15_000 })]);
+        return { applicable: true };
+      } catch { /* no field: look for a Save button below */ }
       if (await saveLocator(page).count()) return { applicable: true }; // a Save button without a field is a broken editor: let the gates fail it
       return { applicable: false, reason: `${ROUTE} has no editable field and no Save button` };
     } finally { await context.close(); }
@@ -127,9 +134,165 @@ function editableRoute(browser: Browser): Promise<Applicability> {
   return applicability;
 }
 
-async function openEditor(page: Page, base: string, editor: Editor) {
+// ---------------------------------------------------------------------------------------------
+// Kit editors (PreviewCards / SectionCards + EditorDialog): no text field on the page. The fields
+// live in a dialog opened by an Edit control marked data-kit-edit (editor-kit/kitEdit.ts). openEditor
+// takes that path whenever such a control is visible in main, whatever the row says; otherwise the
+// row's own open/field/beforeSave run exactly as before. The dialog covers the page, so a test that
+// edits then clicks Save closes it with commitKit and reopens it with revealKit when it needs the field again.
+const kitEditLocator = (page: Page) => page.locator(`main ${KIT_EDIT_SELECTOR}`).filter({ visible: true }).first();
+const kitDialog = (page: Page) => page.locator(KIT_DIALOG_SELECTOR);
+// Where the field lives: `index` is its position among ALL text fields of the section's panel (enabled or not),
+// `section` the dialog section to switch to first (null: the section the clicked part opened).
+type KitState = { kit: boolean; index: number; section: number | null; clsBeforeOpen?: number };
+const kitState = new WeakMap<Page, KitState>();
+const pinned = (page: Page) => page.locator("[data-rcv-field]");
+const panelOf = (page: Page) => kitDialog(page).locator("[data-editor-dialog-panel]");
+const enabledFields = (page: Page) => panelOf(page).locator(KIT_ENABLED_FIELD_SELECTOR).filter({ visible: true });
+const sectionButtons = (page: Page) => kitDialog(page).locator("[data-editor-dialog-sections] button");
+
+async function waitForPanel(page: Page) {
+  const dialog = kitDialog(page);
+  await expect(dialog).toBeVisible({ timeout: 30_000 });
+  await expect(panelOf(page)).toBeVisible({ timeout: 30_000 });
+  await expect(dialog.locator("[aria-busy=true]")).toHaveCount(0, { timeout: 30_000 });
+}
+/** Show section `index` of the dialog. Desktop: the section nav is always there. Phone sheet: Back to the Sections list first. */
+async function gotoSection(page: Page, index: number) {
+  const dialog = kitDialog(page);
+  const back = dialog.locator("[data-editor-dialog-back]");
+  if (await back.count()) await back.click();
+  await sectionButtons(page).nth(index).click();
+  await waitForPanel(page);
+}
+// Position (among the enabled fields) of the first one the test may append to: never a URL, email, phone, slug or path field.
+async function markableIndex(page: Page) {
+  return firstMarkableIndex(await enabledFields(page).evaluateAll((els) => els.map((el) => {
+    const input = el as HTMLInputElement;
+    const named = (id: string) => id.split(/\s+/).map((part) => document.getElementById(part)?.textContent ?? "").join(" ");
+    // The accessible name, however the kit wired it: aria-label, a <label>, aria-labelledby, a wrapping label, or the text just before the field.
+    const label = input.getAttribute("aria-label") || input.labels?.[0]?.textContent || named(input.getAttribute("aria-labelledby") ?? "") || input.closest("label")?.textContent || input.previousElementSibling?.textContent || input.parentElement?.previousElementSibling?.textContent || "";
+    return { value: input.value, label: label.trim() };
+  })));
+}
+async function hasEnabledField(page: Page, wait: number) {
+  try { await expect.poll(() => markableIndex(page), { timeout: wait }).toBeGreaterThanOrEqual(0); return true; } catch { return false; }
+}
+async function pinFirstEnabled(page: Page) {
+  const pick = await markableIndex(page);
+  const found = enabledFields(page).nth(pick);
+  await expect(found).toBeEditable();
+  console.log(`kit field: #${pick} "${await found.evaluate((el) => (el as HTMLInputElement).labels?.[0]?.textContent ?? el.getAttribute("aria-label") ?? "")}"`);
+  const index = await found.evaluate((el, selector) => Array.from(el.closest("[data-editor-dialog-panel]")!.querySelectorAll(selector)).indexOf(el), KIT_ANY_FIELD_SELECTOR);
+  await page.evaluate(() => document.querySelectorAll("[data-rcv-field]").forEach((el) => el.removeAttribute("data-rcv-field")));
+  await found.evaluate((element) => element.setAttribute("data-rcv-field", ""));
+  return index;
+}
+/**
+ * The first editable text field a kit dialog has. The section the clicked part opened is tried first; a part with no
+ * text field (an image, a crop, switches) moves on through the dialog's own section list, top to bottom. A hidden,
+ * disabled or read-only field never counts, and neither does a switch or a slider.
+ */
+async function findKitField(page: Page): Promise<{ index: number; section: number | null }> {
+  await waitForPanel(page);
+  if (await hasEnabledField(page, 3_000)) return { index: await pinFirstEnabled(page), section: null };
+  const phone = await kitDialog(page).locator("[data-editor-dialog-back]").count() > 0;
+  if (phone) await kitDialog(page).locator("[data-editor-dialog-back]").click();
+  const count = await sectionButtons(page).count();
+  const active = phone ? -1 : await sectionButtons(page).evaluateAll((els) => els.findIndex((el) => el.getAttribute("aria-current") === "true"));
+  for (const index of sectionTryOrder(count, active)) {
+    await sectionButtons(page).nth(index).click();
+    await waitForPanel(page);
+    if (await hasEnabledField(page, 1_000)) return { index: await pinFirstEnabled(page), section: index };
+  }
+  throw new Error(`no section of the editor dialog has an enabled text field (${count} sections)`);
+}
+/** Reopen the kit dialog (first Edit control) if it is closed, go to the section the field lives in, and pin the same field again. No-op off the kit path. */
+async function revealKit(page: Page) {
+  const state = kitState.get(page);
+  if (!state?.kit) return;
+  if (await kitDialog(page).count() === 0) {
+    await kitEditLocator(page).click();
+    await waitForPanel(page);
+    if (state.section !== null) await gotoSection(page, state.section);
+  }
+  const found = panelOf(page).locator(KIT_ANY_FIELD_SELECTOR).nth(state.index); // may be disabled: a locked form keeps its fields
+  await expect(found).toBeVisible({ timeout: 30_000 });
+  await page.evaluate(() => document.querySelectorAll("[data-rcv-field]").forEach((el) => el.removeAttribute("data-rcv-field")));
+  await found.evaluate((element) => element.setAttribute("data-rcv-field", ""));
+}
+/** Close the kit dialog with Done (the phone sheet's Done is the same control) so Save and Discard are reachable. Returns false off the kit path. */
+async function commitKit(page: Page) {
+  if (!kitState.get(page)?.kit) return false;
+  const dialog = kitDialog(page);
+  if (await dialog.count()) {
+    await dialog.locator(KIT_DONE_SELECTOR).filter({ visible: true }).first().click();
+    await expect(dialog).toHaveCount(0, { timeout: 10_000 });
+  }
+  return true;
+}
+// Lists and tables from the kit's fields (StringListField, ObjectListField, TableEditor). When the field we edit is an
+// item or a cell of one, editing it must not add or remove items; the Add and Remove buttons must agree with the limit line.
+async function listState(field: Locator) {
+  return field.evaluate((el, selector) => {
+    const box = el.closest(selector);
+    if (!box) return null;
+    const buttons = Array.from(box.querySelectorAll("button"));
+    const removes = buttons.filter((b) => /^Remove /.test(b.getAttribute("aria-label") ?? ""));
+    const add = buttons.find((b) => /^Add /.test(b.textContent?.trim() ?? ""));
+    return {
+      items: removes.length,
+      addDisabled: Boolean(add?.disabled),
+      limit: document.getElementById(box.getAttribute("aria-describedby") ?? "")?.textContent ?? "",
+      removeDisabled: removes.map((b) => b.disabled),
+    };
+  }, KIT_LIST_SELECTOR);
+}
+// Is the phone Save button on top at its own centre? The page behind a modal is inert and not hit-testable, so inert is lifted for the
+// instant of the probe (and put back), which asks "what is painted there", not "what takes clicks".
+async function saveBarProbe(page: Page) {
+  return page.evaluate(() => {
+    const button = document.querySelector<HTMLElement>("[data-page-save-button]");
+    if (!button) return { visible: false, topIsBar: false };
+    const rect = button.getBoundingClientRect();
+    const visible = rect.width > 0 && rect.height > 0 && getComputedStyle(button).visibility !== "hidden";
+    const lifted = Array.from(document.querySelectorAll<HTMLElement>("[inert]")).filter((el) => el.inert);
+    lifted.forEach((el) => { el.inert = false; });
+    const top = visible ? document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) : null;
+    lifted.forEach((el) => { el.inert = true; });
+    return { visible, topIsBar: Boolean(top && button.contains(top)) };
+  });
+}
+// Which way this page opens: a kit Edit control, or the row's own path. A row with no `open` races
+// the control against its text field; a row with an `open` gives the control KIT_WAIT_MS first.
+async function detectOpenPath(page: Page, editor: Editor) {
+  const timeout = editor.open ? KIT_WAIT_MS : 30_000;
+  const kit = kitEditLocator(page).waitFor({ state: "visible", timeout }).then(() => "kit" as const, () => "none" as const);
+  const row = editor.open
+    ? new Promise<"row">((done) => setTimeout(() => done("row"), timeout))
+    : (editor.field ?? genericField)(page).waitFor({ state: "visible", timeout }).then(() => "row" as const, () => "none" as const);
+  const winner = await Promise.race([kit, row]);
+  // Both can be on screen in the same frame: the kit control wins, because its fields are not on the page.
+  return chooseOpenPath(winner === "row" && await kitEditLocator(page).isVisible() ? "kit" : winner);
+}
+
+// `settle`: on the kit path, let the page sit 1.5 s and read the layout shift BEFORE the dialog opens (kitState.clsBeforeOpen).
+// Opening a modal locks page scroll, which can drop the scrollbar and move the page behind it; that is the dialog's, not the page load's.
+async function openEditor(page: Page, base: string, editor: Editor, options: { settle?: boolean } = {}) {
   await page.goto(base + editor.route);
   await expect(page.locator("h1").first()).toBeVisible();
+  const path = await detectOpenPath(page, editor);
+  kitState.set(page, { kit: path === "kit", index: -1, section: null });
+  if (path === "kit") {
+    if (options.settle) {
+      await page.waitForTimeout(1_500);
+      kitState.get(page)!.clsBeforeOpen = await page.evaluate(() => (window as unknown as { __cls?: number }).__cls);
+    }
+    await kitEditLocator(page).click();
+    const where = await findKitField(page);
+    Object.assign(kitState.get(page)!, where);
+    return pinned(page);
+  }
   if (editor.open) await editor.open(page);
   const found = (editor.field ?? genericField)(page);
   await expect(found).toBeVisible({ timeout: 30_000 });
@@ -137,7 +300,7 @@ async function openEditor(page: Page, base: string, editor: Editor) {
   // Pin the element: the generic selector skips disabled fields, so it would jump to another
   // field while a save locks the form.
   await found.evaluate((element) => element.setAttribute("data-rcv-field", ""));
-  return page.locator("[data-rcv-field]");
+  return pinned(page);
 }
 
 // Deterministic edit: append a marker, trimming first if the field would overflow maxlength.
@@ -174,7 +337,7 @@ async function capture(browser: Browser, base: string, editor: Editor): Promise<
   try {
     const field = await openEditor(page, base, editor);
     await mark(field, "rcv");
-    await editor.beforeSave?.(page);
+    if (!(await commitKit(page))) await editor.beforeSave?.(page);
     armed = true;
     await saveButton(page, editor).click();
     await expect.poll(() => requests.some((r) => editor.save.test(new URL(r.path, base).pathname)), { timeout: 15_000 }).toBe(true);
@@ -244,7 +407,10 @@ test.describe("gate 3: save behaviour", () => {
       if (kind === "page") await expect(button).toHaveText("Save");
       await forbiddenCopy(page);
     });
+    let listBefore: Awaited<ReturnType<typeof listState>> = null;
     await step("dirty", async () => {
+      await revealKit(page);
+      listBefore = kitState.get(page)?.kit ? await listState(field) : null;
       await mark(field, "d1");
       await expect(button).toHaveAttribute("data-state", "dirty");
       if (kind === "admin") await expect(page.locator("[data-cinematic-save-bar] [role=status], [data-admin-save-status]").first()).toHaveText("Unsaved changes");
@@ -253,8 +419,13 @@ test.describe("gate 3: save behaviour", () => {
         await expect(button).toHaveText("Save");
       }
     });
+    if (listBefore) await step("list", async () => {
+      const problems = listProblems(listBefore!, { items: (await listState(field))!.items });
+      expect(problems, "list field limits").toEqual([]);
+    });
     await step("saving", async () => {
       await page.route(editor.save, async (route) => { await new Promise((r) => setTimeout(r, 1500)); await route.continue(); }, { times: 1 });
+      await commitKit(page);
       await button.click();
       await expect(button).toHaveAttribute("data-state", "saving");
       await expect(button).toHaveAttribute("aria-busy", "true");
@@ -266,25 +437,39 @@ test.describe("gate 3: save behaviour", () => {
       await page.screenshot({ path: join(OUT, "screenshots", "save-saved.png") });
       await forbiddenCopy(page);
       await expect(button).toHaveAttribute("data-state", "clean", { timeout: 5_000 });
+      await revealKit(page);
       saved = await field.inputValue();
     });
     await step("retry", async () => {
+      await revealKit(page);
       await mark(field, "r1");
       let lost = "";
       await page.route(editor.save, (route) => { lost = route.request().postData() ?? ""; return route.abort("failed"); }, { times: 1 });
       await page.route((url) => editor.save.test(url.pathname) && url.searchParams.has("operationId"), (route) => route.abort("failed"));
+      await commitKit(page);
       await button.click();
       const retry = page.getByRole("button", { name: /^Retry( the)? same save$/ }).filter({ visible: true }).first();
       await expect(retry).toBeVisible();
       if (kind === "page") await expect(button).toHaveAttribute("data-state", "retry");
-      await expect(field).toBeDisabled();
+      // The form must be locked while the save is pending. Old UI: the field on the page is disabled.
+      // Kit: the dialog is closed, so every Edit control must be disabled, or the reopened dialog's field is.
+      const edits = page.locator(`main ${KIT_EDIT_SELECTOR}`).filter({ visible: true });
+      const lock = retryLockCheck(kitState.get(page)?.kit ? "kit" : "row", {
+        editControls: await edits.count(),
+        editControlsDisabled: await edits.evaluateAll((els) => els.filter((el) => (el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true").length),
+      });
+      if (lock === "reopen-dialog-field") await revealKit(page);
+      if (lock !== "edit-controls") await expect(field).toBeDisabled();
+      await page.waitForTimeout(400); // a reopened kit dialog finishes fading in
       await page.screenshot({ path: join(OUT, "screenshots", "save-retry.png") });
+      await commitKit(page);
       await page.unrouteAll({ behavior: "wait" });
       const resent = page.waitForRequest(isSave);
       await retry.click();
       expect((await resent).postData(), "retry must resend the identical request (same operationId)").toBe(lost);
       await expect(button).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
       await expect(button).toHaveAttribute("data-state", "clean", { timeout: 5_000 });
+      await revealKit(page);
       saved = await field.inputValue();
     });
     await step("conflict", async () => {
@@ -294,10 +479,13 @@ test.describe("gate 3: save behaviour", () => {
         const otherPage = await other.newPage();
         const otherField = await openEditor(otherPage, HEAD, editor);
         await mark(otherField, "c2");
+        await commitKit(otherPage);
         await saveLocator(otherPage).click();
         await expect(saveLocator(otherPage)).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
       } finally { await other.close(); }
+      await revealKit(page);
       const mine = await mark(field, "c1");
+      await commitKit(page);
       await button.click();
       await expect(page.getByRole("alert").first()).toBeVisible({ timeout: 20_000 });
       const keep = page.getByRole("button", { name: "Load latest and keep my edits" });
@@ -305,20 +493,26 @@ test.describe("gate 3: save behaviour", () => {
       if (kind === "page") await expect(button).toHaveAttribute("data-state", "conflict");
       await page.screenshot({ path: join(OUT, "screenshots", "save-conflict.png") });
       await keep.click();
+      await revealKit(page);
       await expect(field).toHaveValue(mine);
       await expect(button).toHaveAttribute("data-state", "dirty");
+      await commitKit(page);
       await button.click();
       await expect(button).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
       await expect(button).toHaveAttribute("data-state", "clean", { timeout: 5_000 });
+      await revealKit(page);
       saved = await field.inputValue();
     });
     await step("discard", async () => {
+      await revealKit(page);
       await mark(field, "x1");
       await expect(button).toHaveAttribute("data-state", "dirty");
+      await commitKit(page);
       await discardTrigger(page).click();
       const dialog = page.getByRole("dialog");
       await expect(dialog).toBeVisible();
-      await dialog.getByRole("button", { name: "Discard and reload" }).click();
+      await dialog.getByRole("button", { name: DISCARD_CONFIRM }).click();
+      await revealKit(page);
       await expect(field).toHaveValue(saved);
       await expect(button).toHaveAttribute("data-state", "clean");
     });
@@ -332,9 +526,17 @@ test.describe("gate 3: save behaviour", () => {
 // Gate 4: visual, layout shift, reduced motion, accessibility (package build).
 async function trackShift(page: Page) {
   await page.addInitScript(() => {
-    (window as unknown as { __cls: number }).__cls = 0;
+    const w = window as unknown as { __cls: number; __shifts: { value: number; at: number; nodes: string[] }[] };
+    w.__cls = 0;
+    w.__shifts = [];
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!entry.hadRecentInput) (window as unknown as { __cls: number }).__cls += entry.value;
+      for (const entry of list.getEntries() as unknown as { value: number; hadRecentInput: boolean; startTime: number; sources?: { node?: Element }[] }[]) {
+        if (entry.hadRecentInput) continue;
+        w.__cls += entry.value;
+        // Which elements moved, so a shift can be handed to the right owner.
+        const name = (el?: Element) => (el ? `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${typeof el.className === "string" && el.className ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : ""}` : "?");
+        w.__shifts.push({ value: Math.round(entry.value * 1e5) / 1e5, at: Math.round(entry.startTime), nodes: (entry.sources ?? []).slice(0, 4).map((source) => name(source.node)) });
+      }
     }).observe({ type: "layout-shift", buffered: true });
   });
 }
@@ -381,7 +583,7 @@ async function checkSaveBar(page: Page): Promise<SaveBar> {
   const found = await page.evaluate(() => {
     const button = document.querySelector("[data-page-save-button]") as HTMLElement;
     const group = button.closest("[data-page-frame-save]") as HTMLElement | null;
-    window.scrollTo(0, document.documentElement.scrollHeight);
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" });
     const rect = button.getBoundingClientRect();
     const bar = group?.getBoundingClientRect();
     const content = document.querySelector("[data-page-frame]")?.lastElementChild as HTMLElement | null;
@@ -389,7 +591,7 @@ async function checkSaveBar(page: Page): Promise<SaveBar> {
     const contentBottom = last ? last.getBoundingClientRect().bottom : undefined;
     const fixed = !!group && getComputedStyle(group).position === "fixed";
     const result = { fixed, top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, vh: window.innerHeight, vw: window.innerWidth, barTop: bar?.top, contentBottom };
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: "instant" });
     return result;
   });
   const problems: string[] = [];
@@ -413,45 +615,97 @@ test.describe("gate 4: visual", () => {
         await expect(page.locator("h1").first()).toBeVisible();
         await page.waitForTimeout(1_500);
         await page.screenshot({ path: join(OUT, "screenshots", `${slug}.png`), fullPage: true });
+        // Informational, never a verdict on a not-applicable route: layout shift of the page and of origin/main's copy of it
+        // (the shell top bar moving when a framed page registers its frame shows up here).
+        const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+        const basePage = await context.newPage();
+        await trackShift(basePage);
+        await basePage.goto(BASE + ROUTE);
+        await expect(basePage.locator("h1").first()).toBeVisible();
+        await basePage.waitForTimeout(1_500);
+        const baseCls = await basePage.evaluate(() => (window as unknown as { __cls: number }).__cls);
         await context.close();
-        record(`visual-${slug}`, { gate: 4, width, scheme, applicable: false, reason: probe.reason });
+        record(`visual-${slug}`, { gate: 4, width, scheme, applicable: false, reason: probe.reason, cls, baseCls });
         test.info().annotations.push({ type: "not applicable", description: probe.reason });
         return;
       }
-      const field = await openEditor(page, HEAD, editor);
+      const field = await openEditor(page, HEAD, editor, { settle: true });
       await page.waitForTimeout(1_500); // editors keep polling, so networkidle never settles
-      const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+      const clsAfterOpen = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+      const shifts = await page.evaluate(() => (window as unknown as { __shifts: unknown[] }).__shifts);
+      const cls = kitState.get(page)?.clsBeforeOpen ?? clsAfterOpen; // kit: the shift of the page load, before the dialog's scroll lock
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      // Kit editor: the fields are in the dialog. Record it open (screenshot, axe), then close it so the page itself is what gets checked.
+      let kitDialogViolations: AxeViolation[] = [];
+      const sheetProblems: string[] = [];
+      if (kitState.get(page)?.kit) {
+        await page.screenshot({ path: join(OUT, "screenshots", `${slug}-edit-dialog.png`) });
+        kitDialogViolations = await axe(page, ["[role=dialog]"]);
+        if (isPhoneWidth(width)) { // the full-screen sheet: it opened straight into a section; Back shows the Sections list; the Save bar steps aside
+          await page.screenshot({ path: join(OUT, "screenshots", `${slug}-sheet-section.png`) });
+          const open = await saveBarProbe(page);
+          const back = kitDialog(page).locator("[data-editor-dialog-back]");
+          if (await back.count()) {
+            await back.click();
+            await expect(kitDialog(page).locator("[data-editor-dialog-sections]")).toBeVisible();
+            await page.waitForTimeout(300);
+            await page.screenshot({ path: join(OUT, "screenshots", `${slug}-sheet-list.png`) });
+          } else sheetProblems.push("the phone sheet has no Back to the Sections list");
+          await commitKit(page);
+          await page.waitForTimeout(300);
+          const closed = await saveBarProbe(page);
+          sheetProblems.push(...sheetBarProblems({ openTopIsBar: open.topIsBar, closedBarVisible: closed.visible, closedTopIsBar: closed.topIsBar }));
+        } else {
+          await commitKit(page);
+          await page.waitForTimeout(300);
+        }
+      }
       await page.screenshot({ path: join(OUT, "screenshots", `${slug}.png`), fullPage: true });
       const formViolations = await axe(page, ["main"]);
       const saveBar = width === 390 ? await checkSaveBar(page) : undefined;
+      await revealKit(page);
       await mark(field, "v1");
+      await commitKit(page);
       await discardTrigger(page).click();
       const dialog = page.getByRole("dialog");
       await expect(dialog).toBeVisible();
       await page.waitForTimeout(400);
       await page.screenshot({ path: join(OUT, "screenshots", `${slug}-dialog.png`) });
       const dialogViolations = await axe(page, ["[role=dialog]"]);
-      await dialog.getByRole("button", { name: "Discard and reload" }).click();
+      await dialog.getByRole("button", { name: DISCARD_CONFIRM }).click();
+      // Discarding must really discard, at this width (the phone's bottom-bar Discard included): clean again, edit gone.
+      await expect(saveLocator(page)).toHaveAttribute("data-state", "clean");
+      await revealKit(page);
+      await expect(field).not.toHaveValue(/ ·v1$/);
+      await commitKit(page);
       // Same checks on origin/main: only violations main does not have fail (a ratchet); the
       // rest are reported as existing debt.
       const basePage = await context.newPage();
       const baseField = await openEditor(basePage, BASE, editor);
       await basePage.waitForTimeout(1_500);
+      await commitKit(basePage); // origin/main may already be a kit page: scan its page, not the dialog over it
       const baseForm = await axe(basePage, ["main"]);
+      await revealKit(basePage);
       await mark(baseField, "v1");
-      await discardTrigger(basePage).click();
-      await expect(basePage.getByRole("dialog")).toBeVisible();
-      await basePage.waitForTimeout(400);
-      const baseDialog = await axe(basePage, ["[role=dialog]"]);
-      await basePage.getByRole("dialog").getByRole("button", { name: "Discard and reload" }).click();
+      await commitKit(basePage);
+      // An older editor on origin/main may have no discard control at all (the old Shop): then there is no baseline dialog, so every
+      // violation in the package's discard dialog counts as new.
+      let baseDialog: AxeViolation[] = [];
+      if (await discardTrigger(basePage).waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false)) {
+        await discardTrigger(basePage).click();
+        await expect(basePage.getByRole("dialog")).toBeVisible();
+        await basePage.waitForTimeout(400);
+        baseDialog = await axe(basePage, ["[role=dialog]"]);
+        await basePage.getByRole("dialog").getByRole("button", { name: DISCARD_CONFIRM }).click();
+      }
       await context.close();
       const newForm = fresh(formViolations, baseForm);
       const newDialog = fresh(dialogViolations, baseDialog);
-      record(`visual-${slug}`, { gate: 4, width, scheme, applicable: true, saveBar, cls, overflow, formViolations, dialogViolations, newFormViolations: newForm, newDialogViolations: newDialog });
+      record(`visual-${slug}`, { gate: 4, width, scheme, applicable: true, saveBar, cls, clsAfterOpen, shifts, overflow, formViolations, dialogViolations, kitDialogViolations, sheetProblems, newFormViolations: newForm, newDialogViolations: newDialog });
       expect.soft(cls, "layout shift on load (CLS)").toBeLessThan(CLS_LIMIT);
       expect.soft(overflow, "page scrolls sideways").toBeLessThanOrEqual(1);
       if (saveBar) expect.soft(saveBar.problems, "phone Save bar").toEqual([]);
+      expect.soft(sheetProblems, "phone edit sheet and Save bar").toEqual([]);
       expect.soft(newForm, "axe violations in the editor form that origin/main does not have").toEqual([]);
       expect.soft(newDialog, "axe violations in the discard dialog that origin/main does not have").toEqual([]);
     });
@@ -467,13 +721,22 @@ test.describe("gate 4: visual", () => {
     const page = await context.newPage();
     const samples: { moment: string; moving: Awaited<ReturnType<typeof movingAnimations>> }[] = [];
     const field = await openEditor(page, HEAD, editor);
+    if (kitState.get(page)?.kit) { // the kit dialog opening is the first thing that moves
+      samples.push({ moment: "edit dialog opening", moving: await movingAnimations(page) });
+      await commitKit(page);
+      await page.waitForTimeout(60);
+      samples.push({ moment: "edit dialog closing", moving: await movingAnimations(page) });
+      await page.waitForTimeout(400);
+    }
     samples.push({ moment: "load", moving: await movingAnimations(page) });
+    await revealKit(page);
     await mark(field, "m1");
+    if (await commitKit(page)) await page.waitForTimeout(400); // let the kit dialog finish closing before sampling the page
     samples.push({ moment: "dirty", moving: await movingAnimations(page) });
     await discardTrigger(page).click();
     await page.waitForTimeout(60);
     samples.push({ moment: "dialog opening", moving: await movingAnimations(page) });
-    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: /^(Cancel|Keep editing)$/ }).click();
     await page.waitForTimeout(60);
     samples.push({ moment: "dialog closing", moving: await movingAnimations(page) });
     await saveLocator(page).click();

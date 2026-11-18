@@ -1,5 +1,55 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-01c verify-rc-admin for kit editors, phone breadcrumb, top-bar shift
+
+**Agent/package:** Claude Code (Sonnet worker W01c, orchestrated), RC-ADMIN-01c, branch
+`claude/rc-admin-01c` on `4c9e5b91`. **Status:** `in_progress`, draft PR. It merges only on
+Christian's word. App code and tooling only: no migration, schema, RPC, data or production change.
+
+**Completed work:**
+
+- **Kit editors in verify-rc-admin:**
+  - A shared marker, `KIT_EDIT_ATTRIBUTE`/`KIT_EDIT_SELECTOR`/`KIT_EDIT_PROPS` in
+    `components/admin/ui/editor-kit/kitEdit.ts`, sits on the PreviewCards and SectionCards Edit
+    controls. Page packages spread `KIT_EDIT_PROPS` on their own parts that open an EditorDialog.
+  - The skill picks the part, section and field with pure functions (`scripts/kit-path.mjs`, 23
+    tests). It handles the desktop dialog and the phone sheet, and never uses a switch, slider, file,
+    URL or email field as the edit. On the kit path, discard is PageFrame's "Discard changes" plus the
+    confirm.
+  - A new list step checks that list item counts and the Add/Remove limits are unchanged.
+  - At 390 px, gate 4 checks the sheet and confirms the Save bar is hidden while the sheet is open and
+    comes back after Done. Layout-shift sources are recorded.
+  - Rows for old-style editors keep their own path, so gate 2 compares old and new UIs.
+- **Phone breadcrumb:** PageFrame's trail is one line. Middle crumbs end in an ellipsis and the
+  separators never collide; checked at 320, 390 and 1440.
+- **Top-bar shift:** on framed pages the shell trail slot keeps its content but is invisible and
+  aria-hidden. Hub-page CLS is 0.00426 on main and 0.0000124 with the fix.
+- **Skill reliability:**
+  - The seed retries after a PostgREST schema-cache reload.
+  - `locked-run.sh` kills any listener left on its own ports 3110/3111 on exit. A leaked server had
+    been holding the DB lock.
+  - Playwright runs from the skill's own repo when probing another worktree.
+
+**Verification:**
+
+- `tsc` clean; `test:unit` 327 files / 3634 tests; architecture 152 tests; `verify.test.mjs` 23/23.
+- Hub run on the full change: scope PASS, payloads 14/14, repo PASS, Diverse City 8/8. Gates 3 and 4
+  are N/A on the hub page.
+- Probes of the Wave 1 builds with this skill:
+  - Shop: gate 3 PASS, all 7 steps.
+  - Gate 4 runs on all three builds at 390 and 1440, light and dark, plus reduced motion, with 0 new
+    axe violations.
+
+**Blockers or unresolved decisions:** none in 01c's scope. The remaining reds in the probes belong to
+the page packages and go back to their workers:
+- Homepage: footer-logo alt save is rejected.
+- Stadium: Save stays clean after "Retry same save" instead of showing saved, and a preview
+  `figcaption` shifts.
+- Shop and Homepage: CLS from the shell, which this package removes.
+
+**Exact next step:** bot review; Christian decides the merge. RC-ADMIN-02, 05 and 06 then rebase onto
+it and run their final verify.
+
 ## 2026-11-18 - RC-ADMIN-01b shared follow-ups (skill Save selector, single trail, hub icons)
 
 **Agent/package:** Claude Code (Sonnet worker W01b, orchestrated), RC-ADMIN-01b, branch

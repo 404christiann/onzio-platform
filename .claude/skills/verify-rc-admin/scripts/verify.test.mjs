@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkEnvText } from "./check-env-target.mjs";
+import { KIT_EDIT_SELECTOR, KIT_ENABLED_FIELD_SELECTOR, chooseOpenPath, firstMarkableIndex, isMarkable, isPhoneWidth, listProblems, retryLockCheck, sectionTryOrder, sheetBarProblems } from "./kit-path.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const verify = join(here, "verify.sh");
@@ -199,4 +200,102 @@ test("01b: not applicable needs a route outside EDITORS with no field and no Sav
   assert.match(spec, /if \(editorFor\(ROUTE\)\) return \{ applicable: true \}/, "a listed editor is always applicable");
   assert.match(spec, /if \(await saveLocator\(page\)\.count\(\)\) return \{ applicable: true \}/, "a Save button without a field is a broken editor, not N/A");
   assert.equal([...spec.matchAll(/record\([^\n]*applicable: false/g)].length, 3, "save behaviour, visual and reduced-motion each record it");
+});
+
+// --- RC-ADMIN-01c: kit editors have no text field on the page, so the spec opens them through their Edit control.
+const repoRoot = join(here, "..", "..", "..", "..");
+const kitFile = (name) => readFileSync(join(repoRoot, "components", "admin", "ui", "editor-kit", name), "utf8");
+const specSource = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+
+test("01c: a visible kit Edit control selects the kit path over any row; anything else keeps the row path", () => {
+  assert.equal(chooseOpenPath("kit"), "kit");
+  assert.equal(chooseOpenPath("row"), "row");
+  assert.equal(chooseOpenPath("none"), "row", "a timeout falls back to the row, so an old UI behaves as before");
+});
+
+test("01c: the retry step reads the form lock from the field on an old UI and from the Edit controls or the reopened dialog on a kit editor", () => {
+  assert.equal(retryLockCheck("row", { editControls: 0, editControlsDisabled: 0 }), "field");
+  assert.equal(retryLockCheck("row", { editControls: 3, editControlsDisabled: 3 }), "field");
+  assert.equal(retryLockCheck("kit", { editControls: 3, editControlsDisabled: 3 }), "edit-controls");
+  assert.equal(retryLockCheck("kit", { editControls: 3, editControlsDisabled: 2 }), "reopen-dialog-field", "one live Edit control means the dialog's field must be the locked thing");
+  assert.equal(retryLockCheck("kit", { editControls: 0, editControlsDisabled: 0 }), "reopen-dialog-field", "no controls found never counts as locked");
+});
+
+test("01c: a part with no text field moves on through the dialog's sections; the opened section goes first", () => {
+  assert.deepEqual(sectionTryOrder(4, 2), [2, 0, 1, 3]);
+  assert.deepEqual(sectionTryOrder(3, -1), [0, 1, 2], "the phone sheet does not say which section is open");
+  assert.deepEqual(sectionTryOrder(3, 9), [0, 1, 2]);
+  assert.deepEqual(sectionTryOrder(0, -1), [], "no sections means no field, which the spec reports as a failure, never a guess");
+});
+
+test("01c: only editable text counts as the field: never a switch, a crop slider, a number, a hidden, disabled or read-only input, or the inert preview", () => {
+  const parts = KIT_ENABLED_FIELD_SELECTOR.split(", ");
+  assert.equal(parts.length, 3);
+  for (const part of parts) {
+    assert.match(part, /:enabled:not\(\[readonly\]\)/);
+    assert.match(part, /:not\(\[data-editor-dialog-preview\] \*\)$/);
+  }
+  assert.ok(parts[0].startsWith("input:not([type])") && parts[1].startsWith("input[type=text]") && parts[2].startsWith("textarea"));
+  assert.doesNotMatch(KIT_ENABLED_FIELD_SELECTOR, /range|number|checkbox|switch|file|search/);
+});
+
+test("01c: desktop and phone are told apart at the dialog's own breakpoint", () => {
+  assert.equal(isPhoneWidth(390), true);
+  assert.equal(isPhoneWidth(767), true);
+  assert.equal(isPhoneWidth(768), false);
+  assert.equal(isPhoneWidth(1440), false);
+});
+
+test("01c: a list field edit keeps the item count and Add/Remove agree with the limit line", () => {
+  const ok = { items: 3, addDisabled: false, limit: "3 of 8 items.", removeDisabled: [false, false, false] };
+  assert.deepEqual(listProblems(ok, { items: 3 }), []);
+  assert.match(listProblems(ok, { items: 4 })[0], /changed the item count from 3 to 4/);
+  assert.deepEqual(listProblems({ ...ok, items: 8, addDisabled: true, limit: "Maximum of 8 items reached." }, { items: 8 }), []);
+  assert.match(listProblems({ ...ok, limit: "Maximum of 3 items reached." }, { items: 3 })[0], /Add is enabled at the maximum/);
+  assert.match(listProblems({ ...ok, addDisabled: true }, { items: 3 })[0], /Add is disabled below the maximum/);
+  assert.deepEqual(listProblems({ ...ok, removeDisabled: [true, true, true] }, { items: 3 }), [], "all at the minimum is fine");
+  assert.match(listProblems({ ...ok, removeDisabled: [true, false, true] }, { items: 3 })[0], /Remove buttons are disabled and others are not/);
+});
+
+test("01c: the phone Save bar must not cover the open sheet and must be back on top after Done", () => {
+  assert.deepEqual(sheetBarProblems({ openTopIsBar: false, closedBarVisible: true, closedTopIsBar: true }), []);
+  assert.deepEqual(sheetBarProblems({ openTopIsBar: true, closedBarVisible: true, closedTopIsBar: true }), ["the Save bar covers the sheet while it is open"]);
+  assert.deepEqual(sheetBarProblems({ openTopIsBar: false, closedBarVisible: false, closedTopIsBar: false }), ["the Save bar did not come back after Done"]);
+  assert.deepEqual(sheetBarProblems({ openTopIsBar: false, closedBarVisible: true, closedTopIsBar: false }), ["the Save bar did not come back after Done"]);
+});
+
+test("01c: the skill's selector is the kit's marker, and the kit puts it on every Edit control it renders", () => {
+  assert.equal(KIT_EDIT_SELECTOR, "[data-kit-edit]");
+  const marker = kitFile("kitEdit.ts");
+  assert.match(marker, /KIT_EDIT_ATTRIBUTE = "data-kit-edit"/);
+  assert.match(marker, /KIT_EDIT_SELECTOR = `\[\$\{KIT_EDIT_ATTRIBUTE\}\]`/);
+  assert.equal((kitFile("PreviewCards.tsx").match(/\{\.\.\.KIT_EDIT_PROPS\}/g) ?? []).length, 2, "PreviewCards: footer Edit and the preview overlay");
+  assert.equal((kitFile("SectionCards.tsx").match(/\{\.\.\.KIT_EDIT_PROPS\}/g) ?? []).length, 1, "SectionCards: its Edit");
+  assert.match(kitFile("index.ts"), /KIT_EDIT_ATTRIBUTE, KIT_EDIT_PROPS, KIT_EDIT_SELECTOR/);
+  assert.match(kitFile("PreviewCards.tsx"), /data-preview-edit=""/, "existing attributes stay");
+});
+
+test("01c: the spec routes every row through the kit-aware opener and closes the dialog before Save, Discard and the gate 2 save", () => {
+  assert.match(specSource, /chooseOpenPath\(winner === "row" && await kitEditLocator\(page\)\.isVisible\(\)/);
+  assert.match(specSource, /if \(!\(await commitKit\(page\)\)\) await editor\.beforeSave\?\.\(page\);/, "gate 2: Done on a kit editor, the row's beforeSave otherwise");
+  assert.match(specSource, /retryLockCheck\(/);
+  assert.match(specSource, /sectionTryOrder\(count, active\)/, "the field search walks the dialog's sections");
+  assert.match(specSource, /listProblems\(listBefore!/, "list fields are checked in gate 3");
+  assert.match(specSource, /sheetBarProblems\(/, "the phone sheet and Save bar are checked in gate 4");
+  const retry = specSource.slice(specSource.indexOf('step("retry"'), specSource.indexOf('step("conflict"'));
+  assert.match(retry, /expect\(field\)\.toBeDisabled\(\)/, "the lock assertion is still there");
+  assert.match(retry, /data-state", "retry"/, "and the retry state is still required for the page Save button");
+});
+
+test("01c: a field the test cannot append to (web address, email, phone, slug, path) is skipped", () => {
+  assert.equal(isMarkable({ value: "Rose City FC", label: "Club name" }), true);
+  assert.equal(isMarkable({ value: "", label: "Headline" }), true);
+  assert.equal(isMarkable({ value: "https://forms.gle/x", label: "Tryouts form" }), false, "a URL value");
+  assert.equal(isMarkable({ value: "", label: "Tryouts form URL" }), false, "a URL label");
+  assert.equal(isMarkable({ value: "/tickets", label: "Button destination" }), false, "a path");
+  assert.equal(isMarkable({ value: "RCFC", label: "Describe this image" }), true, "an image description is ordinary text: a failing save of it is the page's bug, not something to route around");
+  assert.equal(isMarkable({ value: "a@b.co", label: "Contact email" }), false);
+  assert.equal(isMarkable({ value: "", label: "Phone number" }), false);
+  assert.equal(firstMarkableIndex([{ value: "https://a.b", label: "Link" }, { value: "Hello", label: "Title" }]), 1);
+  assert.equal(firstMarkableIndex([{ value: "https://a.b", label: "Link" }]), -1);
 });

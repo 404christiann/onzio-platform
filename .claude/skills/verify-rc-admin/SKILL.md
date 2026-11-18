@@ -113,6 +113,68 @@ When a package changes how an editor opens (new section cards, dialogs, sheets),
 `EDITORS` in `rc-admin-verify.spec.ts` (`open`, `field`, `beforeSave`, `saveButton`) in the same
 package. Never loosen a gate to make a row pass.
 
+**Kit editors (anything built on `components/admin/ui/editor-kit`) need no row.** They have no text
+field on the page: the fields live in an EditorDialog opened from a part of the page. The kit marks
+every control that opens one with `data-kit-edit`: the Edit buttons of PreviewCards and SectionCards
+(`KIT_EDIT_SELECTOR` / `KIT_EDIT_PROPS` from the kit), and any clickable part a page adds itself (the
+Homepage Overview's numbered parts, the Shop's photo, words and photo-row parts and shared sections)
+by spreading `{...KIT_EDIT_PROPS}` onto it. Every `openEditor` call, for every row and on both builds,
+picks its path first (`scripts/kit-path.mjs` holds the decisions as pure functions, pinned by
+`verify.test.mjs`):
+
+- **Kit path** when a visible `main [data-kit-edit]` shows up (a row with no `open` races it against
+  its text field and the kit control wins a tie; a row with an `open` waits up to 5 s for it). Click
+  the first part, wait for the dialog (`[role=dialog]` containing `[data-editor-dialog]`, skeleton
+  gone). The field is the first editable text field of the section that part opened: `input` with no
+  type or `type=text`, or `textarea`, `:enabled` (a disabled fieldset counts), not read-only, visible,
+  and not in the inert live-preview column. Fields the test cannot safely append " ·tag" to are skipped
+  for the next one: a web address, email, phone, slug or path (by value or label); an image's "Describe this image" is ordinary text and is
+  NOT skipped (`isMarkable` in `kit-path.mjs`). A switch, a crop slider, a number or a file input is never
+  the field, so nothing is toggled and a Wave 2 editor's switches stay untouched (gate 2 stays
+  byte-identical). If that section has none (image-only, crop only), the dialog's own section list is
+  walked top to bottom (desktop: the section nav; phone sheet: Back, then the list) and the first
+  section with an editable text field wins; none at all fails with a clear message. The field is
+  remembered by position, so it is found again after the dialog was closed and reopened (also while a
+  locked form disables it). The dialog covers and inerts the page, so the spec closes it with its
+  Done (the sheet's Done is the same control) before every Save, Discard or gate 2 save, and reopens
+  it when it needs the value again. The row's `open`, `field` and `beforeSave` are ignored on this
+  path; `saveButton` still applies.
+- **Row path** otherwise: the row's `open` / `field` / `beforeSave`, or the default first text field.
+  Old UIs behave exactly as before, so every `EDITORS` row keeps working on origin/main's old UI and
+  on its kit rebuild. Page packages never need to touch their row for the move to the kit.
+
+Extra checks that only run on the kit path:
+
+- Gate 3 retry: the dialog is closed while a save is pending, so the lock is read from the page.
+  State `retry` and "Retry same save" are required as before; then every visible Edit control must be
+  disabled, or the reopened dialog's field must be disabled (what `RobinsonStadiumEditor` does).
+- Gate 3 `list` step: when the edited field is an item or cell of a kit list (`[data-string-list]`,
+  `[data-object-list]`, `[data-table-editor]`), editing it must not change the item count, Add must be
+  disabled exactly at "Maximum of N … reached." and Remove buttons must all share one disabled state.
+- Gate 4 at 390: the full-screen sheet opened straight into a section (screenshot
+  `<slug>-sheet-section.png`); Back shows the Sections list (`<slug>-sheet-list.png`); while the sheet is
+  open the Save bar must not be painted over it, and after Done it must be back on top. Desktop gets
+  `<slug>-edit-dialog.png`. The dialog is axe-scanned open (`kitDialogViolations`, informational), then
+  closed so the full-page screenshot, CLS, overflow, `main` axe and the phone Save bar are all taken on
+  the page itself.
+- Gate 4 reduced motion also samples the edit dialog opening and closing.
+- Discard: the control is found by label either way ("Reload saved page" or PageFrame's "Discard
+  changes", which shows only while edits are unsaved), then the confirm dialog ("Discard and reload" or "Discard changes",
+  Cancel).
+
+Gate 4's origin/main comparison needs the old page's discard dialog for the axe ratchet; an old editor
+with no discard control at all (the old Shop) has no baseline, so every violation in the package's
+discard dialog counts as new.
+
+On a route outside `EDITORS` with no text field, no kit control and no Save button, gates 3 and 4 stay
+`N/A`; the N/A visual samples also record `cls` and `baseCls` (the same route on origin/main), for
+information only.
+
+Cross-worktree probes: `verify.sh run --worktree <other-worktree> ...` run from a worktree that has this
+skill uses THIS skill's spec and runs Playwright from the repo that holds the skill (never from the
+probed worktree, so there is one copy of `@playwright/test`). It builds the probed worktree's `.next`
+and writes its gitignored `test-results/`; nothing else there changes.
+
 - **Gate 2 (payload identity).** Fresh context per build, `crypto.randomUUID` replaced by a counter
   and the clock pinned to the run's start, apply the same edit (append ` ·rcv`, trimmed to
   maxlength), click Save, capture every mutating `/api/*` or `:54321/rest|storage` request and
@@ -130,7 +192,8 @@ package. Never loosen a gate to make a row pass.
   `[data-page-save-check]` visible, background
   rgb(52,199,89) or rgb(48,209,88), and the page never contains "All changes saved", then clean);
   retry (first POST and the `?operationId=` receipt lookup aborted → "Retry same save", field
-  disabled → retry resends the identical body → saved); conflict (a second signed-in context
+  disabled, or on a kit editor every Edit control disabled or the reopened dialog's field disabled →
+  retry resends the identical body → saved); conflict (a second signed-in context
   saves first → this save gets an alert → "Load latest and keep my edits" → draft kept, dirty →
   saved); discard ("Reload saved page", or PageFrame's "Discard changes", → dialog "Discard and
   reload" → saved value back, clean). With PageSaveButton the retry step also requires state `retry`
@@ -150,9 +213,12 @@ package. Never loosen a gate to make a row pass.
   editable field the four visual samples and the reduced-motion sample are all "not applicable"
   (a screenshot per size and scheme is still saved); a mix of ran and not-run samples fails. Axe is a
   ratchet: a violation also present on origin/main for the same route is reported as existing
-  debt; only new ones fail. Reduced motion (`reducedMotion: reduce`): no running animation or
+  debt; only new ones fail. On a kit editor the dialog is screenshotted and axe-scanned open
+  (`<slug>-edit-dialog.png`, `kitDialogViolations` in the result, informational) and then closed, so the
+  full-page screenshot, CLS, overflow, `main` axe and the phone Save bar are all taken on the page itself.
+  Reduced motion (`reducedMotion: reduce`): no running animation or
   transition over 50 ms on transform/translate/scale/rotate/position/size/margin at load, dirty,
-  dialog open/close, saving, saved. (Probe proven: with motion allowed it reports the dialog's
+  dialog open/close (on a kit editor also the edit dialog opening and closing), saving, saved. (Probe proven: with motion allowed it reports the dialog's
   140 ms transform.)
 - **Gate 6 (Diverse City).** `/admin`, `/homepage`, `/programs`, `/contact`, `/shop`, `/about`,
   `/schedule`, `/sponsors` on both builds: status < 400, an h1, no console error that origin/main

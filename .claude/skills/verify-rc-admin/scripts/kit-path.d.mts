@@ -1,0 +1,17 @@
+export const KIT_EDIT_SELECTOR: string;
+export const KIT_DIALOG_SELECTOR: string;
+export const KIT_DONE_SELECTOR: string;
+export const KIT_FIELD_SELECTOR: string;
+export const KIT_WAIT_MS: number;
+export function chooseOpenPath(winner: "kit" | "row" | "none"): "kit" | "row";
+export function retryLockCheck(path: "kit" | "row", seen: { editControls: number; editControlsDisabled: number }): "field" | "edit-controls" | "reopen-dialog-field";
+export const KIT_ENABLED_FIELD_SELECTOR: string;
+export const KIT_ANY_FIELD_SELECTOR: string;
+export const KIT_LIST_SELECTOR: string;
+export const KIT_PHONE_MAX_WIDTH: number;
+export function isPhoneWidth(width: number): boolean;
+export function sectionTryOrder(count: number, activeIndex: number): number[];
+export function listProblems(before: { items: number; addDisabled: boolean; limit: string; removeDisabled: boolean[] }, after: { items: number }): string[];
+export function sheetBarProblems(seen: { openTopIsBar: boolean; closedBarVisible: boolean; closedTopIsBar: boolean }): string[];
+export function isMarkable(field: { value: string; label: string }): boolean;
+export function firstMarkableIndex(fields: { value: string; label: string }[]): number;
