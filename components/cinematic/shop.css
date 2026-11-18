@@ -1,0 +1,202 @@
+html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
+.cinematic-site .shop-2027{--shop-red:#ff0018;color:#141414;background:#fff}
+.cinematic-site .shop-feature{width:84%;max-width:1200px;margin:0 2.7% 0 13.3%;padding:64px 0 62px;display:grid;grid-template-columns:.92fr 1.08fr;gap:6%;align-items:center}
+.cinematic-site .shop-portrait{position:relative;aspect-ratio:.92;box-shadow:0 0 15px #0004;overflow:hidden;background:white}
+.cinematic-site .shop-portrait img{position:absolute;top:var(--lead-top,5%);left:var(--lead-left,10%);display:block;width:var(--lead-scale,80%);height:auto;max-width:none}
+.cinematic-site .shop-eyebrow{font:400 clamp(16px,1.9vw,26px)/1.3 var(--body);text-transform:uppercase;color:var(--shop-red)}
+.cinematic-site .shop-copy h1{font:900 clamp(34px,4.55vw,65px)/1.03 var(--display);letter-spacing:-.055em;text-transform:uppercase;margin-top:3px;white-space:normal;overflow-wrap:anywhere}
+.cinematic-site .shop-rule{width:40px;height:3px;background:var(--shop-red);margin:18px 0 27px}
+.cinematic-site .shop-variants{display:inline-flex;align-items:center;padding:4px;border-radius:24px;background:#f0f0f0;gap:2px}
+.cinematic-site .shop-variants button{border:0;background:transparent;border-radius:20px;padding:5px 14px;text-transform:uppercase;font:400 14px/1.25 var(--body);color:#141414;min-height:30px}
+.cinematic-site .shop-variants button[aria-pressed=true]{background:#141414;color:white;box-shadow:0 2px 5px #0002}
+.cinematic-site .shop-variants button:disabled{opacity:.5;cursor:default}
+.cinematic-site .shop-description{font:400 14px/1.6 var(--body);color:#777;margin-top:27px;max-width:570px}
+.cinematic-site .shop-bullets{list-style:none;padding:0;margin:25px 0;font:400 13px/1.55 var(--body);color:#777;display:grid;gap:8px}
+.cinematic-site .shop-bullets li{position:relative;padding-left:17px}.cinematic-site .shop-bullets li:before{content:'';position:absolute;width:4px;height:4px;top:.62em;left:2px;background:var(--shop-red);border-radius:50%}
+.cinematic-site .shop-store{white-space:pre-line;font:400 11px/1.5 var(--body);color:#888;margin-bottom:20px}
+.cinematic-site .shop-buy{display:flex;align-items:center;justify-content:center;text-decoration:none;width:100%;min-height:46px;border:0;border-radius:0;background:var(--shop-red);color:white;text-transform:uppercase;font:500 12px/1.3 var(--body);letter-spacing:.08em;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent}
+.cinematic-site .shop-variants button{cursor:pointer}.cinematic-site .shop-variants button:focus-visible,.cinematic-site .shop-buy:focus-visible{outline:3px solid #141414;outline-offset:4px}.cinematic-site .shop-buy:active{opacity:.8}
+.cinematic-site .shop-2027 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:normal;overflow-wrap:anywhere;border:0}
+.cinematic-site .shop-buy:disabled{cursor:default}
+.cinematic-site .shop-photo-row{--player-height:clamp(180px,27vw,385px);box-shadow:0 4px 8px #0002}
+.cinematic-site .shop-photo-row>div{display:grid;grid-template-columns:repeat(var(--gallery-columns,6),minmax(0,1fr));width:75%;max-width:1100px;margin:0 auto;align-items:end;gap:0}
+.cinematic-site .shop-photo-row img{display:block;justify-self:center;width:calc(var(--player-height) * 2 / 3);min-width:0;max-width:none;height:var(--player-height);object-fit:contain;object-position:center bottom}
+.cinematic-site .shop-details{width:78%;max-width:1100px;margin:0 auto;padding:72px 0 80px}
+.cinematic-site .shop-details-heading{display:flex;align-items:center;gap:20px;margin-bottom:20px}
+.cinematic-site .shop-details h2{font:900 clamp(30px,3.65vw,48px)/1.12 var(--display);letter-spacing:-.045em;text-transform:uppercase;white-space:normal;overflow-wrap:anywhere}
+.cinematic-site .shop-details-heading span{height:1px;background:#d1d1d1;flex:1}
+.cinematic-site .shop-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px 20px}
+.cinematic-site .shop-detail-grid article{box-shadow:0 0 13px #0004;min-height:155px;padding:32px 26px}
+.cinematic-site .shop-detail-grid article>p{font:400 13px/1.4 var(--body);color:var(--shop-red);text-transform:uppercase;margin-bottom:5px}
+.cinematic-site .shop-detail-grid h3{font:400 clamp(18px,2vw,27px)/1.2 var(--body);text-transform:uppercase;color:#555;margin-bottom:7px}
+.cinematic-site .shop-detail-grid article>div{white-space:pre-line;font:400 12px/1.45 var(--body);color:#888}
+.cinematic-site .shop-order{border-top:1px solid #d1d1d1;margin-top:30px;padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.cinematic-site .shop-order h3{font:500 12px/1.4 var(--body);text-transform:uppercase}.cinematic-site .shop-order p{font:400 12px/1.4 var(--body);color:#888}
+.cinematic-site .shop-buy-small{width:165px;flex-shrink:0}
+.cinematic-site .shop-map{box-shadow:0 -3px 8px #0002,0 3px 8px #0002}.cinematic-site .shop-map-whole img{display:block;width:100%;height:auto}.cinematic-site .shop-map-frame{position:relative;overflow:hidden}.cinematic-site .shop-map-frame img{position:absolute;display:block;max-width:none;height:auto}
+.cinematic-site .shop-2027 .partners{padding:60px 0 74px;background:white}
+.cinematic-site .shop-2027 .partners h2{font:400 14px/1.4 var(--body);letter-spacing:.035em;text-transform:uppercase;color:#888;text-align:center;margin-bottom:30px}
+@media(max-width:1024px){.cinematic-site .shop-feature{width:88%;margin:0 auto;gap:5%;padding:45px 0}.cinematic-site .shop-description{font-size:13px}.cinematic-site .shop-bullets{font-size:12px;gap:5px}.cinematic-site .shop-copy h1{font-size:4.55vw}.cinematic-site .shop-detail-grid article{padding:25px 20px}.cinematic-site .shop-details{width:86%}}
+@media(max-width:700px){
+.cinematic-site .shop-feature{width:auto;margin:0;padding:32px max(22px,env(safe-area-inset-left,0px)) 32px max(22px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:30px;align-items:stretch}
+.cinematic-site .shop-portrait{width:100%;max-width:420px;align-self:center}
+.cinematic-site .shop-eyebrow{font-size:clamp(13px,3.7vw,19px)}.cinematic-site .shop-copy h1{font-size:clamp(32px,9.3vw,56px);white-space:normal}.cinematic-site .shop-rule{margin:14px 0 18px;width:32px;height:2px}
+.cinematic-site .shop-variants button{min-height:36px;padding:7px 16px;font-size:13px}.cinematic-site .shop-description{font-size:14px;line-height:1.65;margin-top:22px}.cinematic-site .shop-bullets{font-size:13px;gap:8px;margin:22px 0}.cinematic-site .shop-store{font-size:11px}.cinematic-site .shop-buy{min-height:48px;font-size:12px}
+.cinematic-site .shop-photo-row{--player-height:clamp(160px,54vw,240px);padding:0 18px}.cinematic-site .shop-photo-row>div{width:100%;grid-template-columns:repeat(var(--gallery-phone-columns,3),minmax(0,1fr));gap:0}
+.cinematic-site .shop-details{width:auto;margin:0;padding:42px max(22px,env(safe-area-inset-left,0px)) 42px max(22px,env(safe-area-inset-right,0px))}.cinematic-site .shop-details h2{font-size:clamp(26px,7.5vw,36px)}.cinematic-site .shop-details-heading{gap:12px;margin-bottom:20px}
+.cinematic-site .shop-detail-grid{grid-template-columns:1fr;gap:18px}.cinematic-site .shop-detail-grid article{min-height:125px;padding:23px 21px}.cinematic-site .shop-detail-grid article>p{font-size:11px}.cinematic-site .shop-detail-grid h3{font-size:21px}.cinematic-site .shop-detail-grid article>div{font-size:13px;line-height:1.5}
+.cinematic-site .shop-order{padding:22px 0 0;flex-direction:column;align-items:stretch;gap:20px}.cinematic-site .shop-order p{margin-top:5px;font-size:12px}.cinematic-site .shop-buy-small{width:100%}
+.cinematic-site .shop-2027 .partners{padding:35px 0 40px}.cinematic-site .shop-2027 .partners h2{font-size:12px;margin-bottom:12px}
+}
+@media(max-width:360px){.cinematic-site .shop-feature{padding-left:18px;padding-right:18px}.cinematic-site .shop-details{padding-left:18px;padding-right:18px}.cinematic-site .shop-detail-grid h3{font-size:19px}}
+
+.cinematic-site .shop-description{white-space:pre-line}.cinematic-site .shop-empty-message{padding:80px 24px;text-align:center;font:400 16px/1.5 var(--body)}.cinematic-site .shop-empty-slot{display:flex;align-items:center;justify-content:center;min-height:140px;padding:24px;font:400 16px/1.5 var(--body);color:#666;background:#f8f8f8;border:1px dashed #bbb}.cinematic-site .shop-portrait>.shop-empty-slot{height:100%}.cinematic-site .shop-section-hidden{position:relative;opacity:.65}.cinematic-site .shop-hidden-label{display:block;padding:12px;text-align:center;color:#555;background:#f5f5f5;font:400 14px/1.4 var(--body)}.cinematic-site .shop-buy-unavailable{opacity:.55}.cinematic-site .shop-photo-controls{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 16px);z-index:2;gap:3px;background:#ffffffe6;border-radius:24px;padding:2px}.cinematic-site .shop-photo-controls button{min-width:44px;min-height:44px;font:400 12px/1.3 var(--body);border:0;border-radius:50%;background:transparent;color:#141414}.cinematic-site .shop-photo-controls button[aria-pressed=true]{background:#141414;color:white}.cinematic-site .shop-photo-controls button:focus-visible{outline:3px solid #141414;outline-offset:3px}
+
+
+/* RC2027-SHOP-UPDATE: Sam's Oct 28 Shop layout (approved preview: outer design-explorations/shop-update-2027).
+   Desktop sizes follow his 2484px-wide file. */
+
+/* Lead: title sits above the copy column; the portrait starts lower, as in Sam's file. */
+.cinematic-site .shop-update .shop-feature{align-items:start;padding-top:20px}
+.cinematic-site .shop-update .shop-portrait{margin-top:9.2vw}
+.cinematic-site .shop-update .shop-copy h1{margin-top:0;white-space:nowrap}
+.cinematic-site .shop-update .shop-eyebrow{margin-top:.6vw}
+.cinematic-site .shop-edition-line{font:400 13px/1.4 var(--body);color:#777;margin-top:4px}
+.cinematic-site .shop-update .shop-rule{width:36px;height:2px;margin:26px 0 38px}
+.cinematic-site .shop-update .shop-variants button{font-weight:500;font-size:12.5px}
+.cinematic-site .shop-update .shop-description{line-height:1.95;margin-top:18px;max-width:600px}
+.cinematic-site .shop-includes{font:400 17px/1.2 var(--body);text-transform:uppercase;margin:26px 0 0 26px}
+.cinematic-site .shop-update .shop-bullets{margin:14px 0 34px 44px;gap:7px;font-size:11.5px}
+.cinematic-site .shop-update .shop-bullets li:before{width:5px;height:5px}
+
+/* Section headings with a rule beside them (Jersey details, Size chart, Map view). */
+.cinematic-site .shop-rule-heading{display:flex;align-items:center;gap:2.2vw}
+.cinematic-site .shop-rule-heading.right{flex-direction:row-reverse}
+.cinematic-site .shop-rule-heading h2,.cinematic-site .shop-information>h2{font:900 clamp(30px,3.45vw,50px)/1.1 var(--display);letter-spacing:-.045em;text-transform:uppercase}
+.cinematic-site .shop-rule-heading span{flex:1;height:1px;background:#c9c9c9}
+
+/* NEW: Jersey details, six photo tiles. Photos stay white until Sam supplies them. */
+.cinematic-site .shop-jersey-details{width:83.4%;margin:0 auto;padding:12px 0 64px;position:relative;z-index:1}
+.cinematic-site .shop-jersey-details .shop-rule-heading{margin:0 0 3.4vw .9vw}
+.cinematic-site .shop-detail-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3.7vw 4.3vw}
+.cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{display:block;aspect-ratio:349/334;width:85%;height:auto;object-fit:cover;background:#fff;border-radius:0 0 16px 16px;box-shadow:0 0 12px #0000002e}
+.cinematic-site .shop-detail-tiles h3{font:500 13px/1.3 var(--body);color:var(--shop-red);text-transform:uppercase;margin:38px 0 4px}
+.cinematic-site .shop-detail-tiles p{font:400 12.5px/1.35 var(--body);color:#141414}
+.cinematic-site .shop-jersey-details:after{content:'';position:absolute;left:calc(50% - 50vw);bottom:0;width:100vw;height:1px;box-shadow:0 4px 8px #0002}
+
+/* Jersey information: centered heading, the existing four cards with icons, then the attribute line. */
+.cinematic-site .shop-information{padding-top:46px}
+.cinematic-site .shop-information>h2{text-align:center;margin-bottom:46px}
+.cinematic-site .shop-information .shop-detail-grid{width:89%;margin:0 auto;gap:32px 19px}
+.cinematic-site .shop-information .shop-detail-grid article{min-height:170px;padding:26px 28px 24px}
+.cinematic-site .shop-information .shop-detail-grid h3{display:flex;align-items:center;gap:9px;color:#333;font-weight:300;font-size:clamp(19px,2.05vw,29px);margin-bottom:12px}
+.cinematic-site .shop-information .shop-info-icon{flex:none;display:block;width:auto;max-width:none;height:.9em}
+.cinematic-site .shop-information svg.shop-info-icon.video{width:1.1em;height:1.1em;color:#e93c2f}
+.cinematic-site .shop-information .shop-info-icon.box{height:.82em}
+.cinematic-site .shop-information .shop-info-icon.no-access{height:.8em}
+.cinematic-site .shop-information .shop-detail-grid article>div{color:#333;font-size:12.5px;line-height:1.3}
+.cinematic-site .shop-information .shop-detail-grid strong{font-weight:600;text-transform:uppercase}
+.cinematic-site .shop-attributes{list-style:none;padding:0;margin:44px 0 0;display:flex;flex-wrap:wrap;justify-content:center;font:400 clamp(14px,1.4vw,19.5px)/1.4 var(--body)}
+.cinematic-site .shop-attributes li+li:before{content:'|';color:var(--shop-red);margin:0 1.6vw}
+.cinematic-site .shop-information .shop-order{margin-top:40px;padding-top:30px}
+.cinematic-site .shop-information .shop-order h3{font-weight:600}
+
+/* NEW: Size chart. */
+.cinematic-site .shop-size{width:85.7%;margin:0 auto;padding:70px 0 40px}
+.cinematic-site .shop-size .shop-rule-heading{margin-bottom:56px}
+.cinematic-site .shop-size-scroll{width:64.5%;margin:0 auto;overflow-x:auto}
+.cinematic-site .shop-size table{width:100%;border-collapse:collapse;border:3px solid #cbcbcb;font:400 clamp(13px,1.1vw,15.5px)/1.3 var(--body);color:#141414}
+.cinematic-site .shop-size th,.cinematic-site .shop-size td{text-align:left;font-weight:400;padding:clamp(14px,1.45vw,20px) clamp(10px,1vw,14px);border-bottom:1px solid #e3e3e3;white-space:nowrap}
+.cinematic-site .shop-size tbody tr:last-child>*{border-bottom:0}
+.cinematic-site .shop-size-wide thead th:nth-child(3),.cinematic-site .shop-size-wide thead th:nth-child(5),.cinematic-site .shop-size-wide td:nth-child(3),.cinematic-site .shop-size-wide td:nth-child(5){background:#f5f5f5}
+.cinematic-site .shop-size-narrow{display:none}
+.cinematic-site .shop-size-unit{width:64.5%;margin:8px auto 0;font:500 clamp(16px,1.6vw,22px)/1.2 var(--body);color:var(--shop-red);text-transform:uppercase}
+
+/* Map view: heading on the right, rule to its left, then Sam's Chick-fil-A route map, whole. */
+.cinematic-site .shop-map-full{display:block;width:100%;height:auto}
+.cinematic-site .shop-map-view .shop-rule-heading{width:85.7%;margin:20px auto 48px}
+
+@media(max-width:1024px){
+ .cinematic-site .shop-update .shop-portrait{margin-top:70px}
+ .cinematic-site .shop-update .shop-copy h1{white-space:normal}
+ .cinematic-site .shop-detail-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 28px}
+ .cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{width:100%}
+ .cinematic-site .shop-detail-tiles h3{margin-top:20px}
+ .cinematic-site .shop-size-scroll,.cinematic-site .shop-size-unit{width:100%}
+ .cinematic-site .shop-rule-heading{gap:16px}
+}
+@media(max-width:700px){
+ .cinematic-site .shop-update .shop-feature{padding-top:28px}
+ .cinematic-site .shop-update .shop-portrait{margin-top:0;order:2}
+ .cinematic-site .shop-update .shop-copy{display:contents}
+ .cinematic-site .shop-update .shop-copy>*{order:3}
+ .cinematic-site .shop-update .shop-copy>.shop-copy-top{order:1}
+ .cinematic-site .shop-update .shop-copy-top .shop-rule{margin:14px 0 0}
+ .cinematic-site .shop-update .shop-feature{gap:0}
+ .cinematic-site .shop-update .shop-portrait{margin:22px 0 26px}
+ .cinematic-site .shop-update .shop-variants{align-self:flex-start}
+ .cinematic-site .shop-update .shop-description{line-height:1.7}
+ .cinematic-site .shop-includes{margin:22px 0 0 0;font-size:15px}
+ .cinematic-site .shop-update .shop-bullets{margin:12px 0 26px 4px;font-size:13px}
+ .cinematic-site .shop-jersey-details{width:auto;padding:28px 22px 44px}
+ .cinematic-site .shop-jersey-details .shop-rule-heading{margin:0 0 24px}
+ .cinematic-site .shop-detail-tiles{grid-template-columns:1fr;gap:22px}
+ .cinematic-site .shop-detail-tiles article{display:grid;grid-template-columns:38% 1fr;grid-template-rows:auto 1fr;column-gap:16px;align-items:start}
+ .cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{grid-row:span 2;border-radius:0 0 12px 12px}
+ .cinematic-site .shop-detail-tiles h3{margin:2px 0 4px}
+ .cinematic-site .shop-detail-tiles p{font-size:13px;line-height:1.45}
+ .cinematic-site .shop-information{padding-top:36px}
+ .cinematic-site .shop-information>h2{margin-bottom:24px}
+ .cinematic-site .shop-information .shop-detail-grid{width:100%}
+ .cinematic-site .shop-information .shop-detail-grid article>div{font-size:13px;line-height:1.5}
+ .cinematic-site .shop-attributes{display:grid;gap:6px;justify-items:center;margin-top:30px;font-size:15px}
+ .cinematic-site .shop-attributes li+li:before{display:none}
+ .cinematic-site .shop-size{width:auto;padding:44px 22px 24px}
+ .cinematic-site .shop-size .shop-rule-heading{margin-bottom:24px}
+ .cinematic-site .shop-size-wide{display:none}
+ .cinematic-site .shop-size-narrow{display:table}
+ .cinematic-site .shop-size th,.cinematic-site .shop-size td{padding:13px 8px;font-size:13px}
+ .cinematic-site .shop-size-narrow tbody tr:nth-child(even)>*{background:#f5f5f5}
+ .cinematic-site .shop-map-view .shop-rule-heading{width:auto;margin:12px 22px 28px}
+}
+@media(max-width:360px){
+ .cinematic-site .shop-jersey-details,.cinematic-site .shop-size{padding-left:18px;padding-right:18px}
+ .cinematic-site .shop-size th,.cinematic-site .shop-size td{padding:12px 5px;font-size:12px}
+}
+
+/* Editor-only prompts for empty RC2027 sections. */
+.cinematic-site .shop-empty-inline{width:100%;min-height:56px;margin:16px 0;cursor:pointer}
+.cinematic-site .shop-jersey-details-empty{width:83.4%;margin:24px auto}
+
+/* Rose City jersey options (Sam's Nov 17 lead): "Select your jersey" over three solid pills, each a whole kit.
+   Every pill keeps its color; the selected one gets a ring in its own color. */
+.cinematic-site .shop-jersey-options{display:flex;flex-direction:column;align-items:center;text-align:center;margin:0 0 12px}
+.cinematic-site .shop-options-heading{font:400 clamp(18px,1.68vw,26px)/1.2 var(--body);text-transform:uppercase;color:#141414;margin:0 0 18px}
+.cinematic-site .shop-options{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 20px}
+.cinematic-site .shop-option{--option:#e93c2f;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:6px clamp(12px,1.03vw,16px);border:0;border-radius:999px;background:var(--option);color:#fff;font:500 clamp(12px,.9vw,14px)/1.2 var(--body);text-transform:uppercase;text-align:center;flex:0 0 auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s ease}
+.cinematic-site .shop-option-2{--option:#141414}
+.cinematic-site .shop-option-3{--option:#223c85}
+.cinematic-site .shop-option[aria-pressed=true]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--option)}
+.cinematic-site .shop-option:focus-visible{outline:3px solid #141414;outline-offset:6px}
+.cinematic-site .shop-option:active{opacity:.85}
+@media(max-width:700px){
+ .cinematic-site .shop-jersey-options{align-self:stretch;margin:4px 0 6px}
+ .cinematic-site .shop-options-heading{font-size:clamp(17px,5vw,22px);margin-bottom:14px}
+ .cinematic-site .shop-options{gap:12px 14px}
+ .cinematic-site .shop-option{min-height:44px;padding:8px 16px;font-size:13px}
+}
+/* Desktop lead at Sam's Nov 17 proportions (his 1550px file): wider lead, the title filling the copy column,
+   and the heading centred over a pill row that sits flush with the copy column. */
+@media(min-width:1025px){
+ .cinematic-site .shop-update .shop-feature{width:89.2%;max-width:1712px;margin:0 3.2% 0 7.6%;gap:5%}
+ .cinematic-site .shop-update .shop-portrait{margin-top:9.8vw}
+ .cinematic-site .shop-update .shop-copy h1{font-size:min(5.15vw,99px);line-height:.8;white-space:normal}
+ .cinematic-site .shop-update .shop-eyebrow{margin-top:0}
+ .cinematic-site .shop-update .shop-edition-line{font-size:15px;margin-top:0}
+ .cinematic-site .shop-update .shop-rule{margin:35px 0 20px}
+ .cinematic-site .shop-update .shop-jersey-options{width:fit-content;max-width:100%;margin:0}
+ .cinematic-site .shop-update .shop-options-heading{margin-bottom:22px}
+ .cinematic-site .shop-update .shop-options{justify-content:flex-start;gap:12px 22px}
+ .cinematic-site .shop-update .shop-option{min-height:34px}
+ .cinematic-site .shop-update .shop-description{font-size:15px;line-height:32px;max-width:none}
+}

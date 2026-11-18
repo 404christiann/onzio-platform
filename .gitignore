@@ -18,4 +18,13 @@ supabase/.branches/
 .vercel
 .codex-work/
 
+# Local rehearsal receipt contains destination-specific object URLs.
+assets/rose-city-2027/local-import-receipt.json
+assets/rose-city-tickets-2027/local-import-receipt.json
+assets/rose-city-shop-2027/local-import-receipt.json
+
+# Local supplied font; webfont license remains unverified.
+public/fonts/avenir-local/
+# Licensed Avenir Heavy is served from NEXT_PUBLIC_FONT_BASE_URL; a local copy stays untracked.
+public/fonts/avenir-heavy/*.ttf
 .onzio-pilot-build.lock

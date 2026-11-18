@@ -1,0 +1,27 @@
+{
+  "localOnly": true,
+  "clubId": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7",
+  "media": {
+    "patch7": {
+      "assetId": "6d4e52ee-ac2a-55f4-af77-f9334daca7b3",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/6d4e52ee-ac2a-55f4-af77-f9334daca7b3.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/6d4e52ee-ac2a-55f4-af77-f9334daca7b3.webp"
+    },
+    "icon7": {
+      "assetId": "ba030eb6-c1c3-508c-a05b-ee82141d6ac1",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/ba030eb6-c1c3-508c-a05b-ee82141d6ac1.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/ba030eb6-c1c3-508c-a05b-ee82141d6ac1.webp"
+    }
+  },
+  "appended": {
+    "title": "Sub-Mark",
+    "description": "RCFC is Rose City Futbol Club abbreviated. Rose City FC’s red Rose outline.",
+    "icon_size": 56,
+    "icon_scale": 1,
+    "position": 7
+  },
+  "featuresBefore": 6,
+  "featuresAfter": 7,
+  "otherContentPreserved": true,
+  "hostedWrites": false
+}

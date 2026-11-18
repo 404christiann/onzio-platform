@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { isAllowedPublicHref } from "@/lib/public-link";
 import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
+import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
+import { matchSummarySchema } from "@/lib/match-summary";
 import {
   isValidPublicEmail,
   isValidPublicPhone,
@@ -363,6 +365,12 @@ export const matchesMutation = z
     opponent_logo_url: nullableString,
     opponent_logo_asset_id: nullableUuid.optional(),
     competition: limitedNullableText(MATCH_TEXT_LIMITS.competition),
+    // cinematic@2 (Rose City) Schedule fields; replay_video_url and summary are
+    // checked in adminDataRequestSchema's superRefine below.
+    league_logo_url: nullableString,
+    league_logo_asset_id: nullableUuid.optional(),
+    replay_video_url: nullableString,
+    summary: z.unknown().optional(),
     sponsor_name: nullableString,
     sponsor_logo_url: nullableString,
     sponsor_logo_asset_id: nullableUuid.optional(),
@@ -532,6 +540,20 @@ export const adminDataRequestSchema = z
       });
       return;
     }
+    // A match replay is stored only as the canonical YouTube embed link the
+    // Schedule editor produces; the database CHECK mirrors this.
+    if (request.table === "matches" && request.payload && ["insert", "update", "upsert"].includes(request.operation)) {
+      for (const [index, item] of (Array.isArray(request.payload) ? request.payload : [request.payload]).entries()) {
+        const value = item.replay_video_url;
+        if (value !== undefined && value !== null && !(typeof value === "string" && (value === "" || MATCH_REPLAY_EMBED_PATTERN.test(value)))) {
+          context.addIssue({ code: "custom", path: ["payload", ...(Array.isArray(request.payload) ? [index] : []), "replay_video_url"], message: "Replay video must be a YouTube video link" });
+        }
+        // The Match Summary (lib/match-summary.ts); the database CHECK mirrors this.
+        if (item.summary !== undefined && item.summary !== null && !matchSummarySchema.safeParse(item.summary).success) {
+          context.addIssue({ code: "custom", path: ["payload", ...(Array.isArray(request.payload) ? [index] : []), "summary"], message: "Check the match summary fields" });
+        }
+      }
+    }
     const schema = NEW_DOMAIN_MUTATION_SCHEMAS[
       request.table as keyof typeof NEW_DOMAIN_MUTATION_SCHEMAS
     ];
@@ -663,6 +685,11 @@ export type AdminDataRequest = z.infer<typeof adminDataRequestSchema>;
 export const ADMIN_SELECT_MEDIA_REFERENCES: Partial<
   Record<AdminTable, ReadonlyArray<{ assetId: string; url: string }>>
 > = {
+  matches: [
+    { assetId: "opponent_logo_asset_id", url: "opponent_logo_url" },
+    { assetId: "sponsor_logo_asset_id", url: "sponsor_logo_url" },
+    { assetId: "league_logo_asset_id", url: "league_logo_url" },
+  ],
   programs: [
     { assetId: "hero_media_asset_id", url: "hero_media_url" },
     { assetId: "detail_media_asset_id", url: "detail_media_url" },

@@ -1,0 +1,36 @@
+/* Sam's Stadium Guidelines / Fan Code of Conduct accordion (RC2027-POLICIES). The title band matches the Contact page. */
+.cinematic-site .policy-page{--policy-red:#f22c22;--policy-grey:#818181;--policy-rule:#8c8c8c;background:#fff;padding-bottom:72px}
+.cinematic-site .policy-heading{min-height:clamp(112px,13.9vw,200px);display:flex;align-items:center;justify-content:flex-end;padding:28px 5%;box-shadow:inset 0 9px 9px -8px #0003,0 5px 12px #0002}
+.cinematic-site .policy-heading>div{text-align:right}
+.cinematic-site .policy-heading h1{font:900 clamp(36px,4vw,64px)/1 var(--display);text-transform:uppercase;letter-spacing:-.035em;margin:0}
+.cinematic-site .policy-heading p{font:400 clamp(17px,1.5vw,23px)/1.2 var(--body);color:var(--policy-red);text-transform:uppercase;margin:4px 0 0}
+.cinematic-site .policy-body{width:min(1076px,70vw);margin:42px auto 0}
+.cinematic-site .policy-body>h2{font:900 clamp(30px,3vw,46px)/1 var(--display);text-transform:uppercase;letter-spacing:-.035em;padding-bottom:14px;border-bottom:1.5px solid var(--policy-rule)}
+.cinematic-site .policy-row{border-bottom:1.5px solid var(--policy-rule)}
+.cinematic-site .policy-row:last-child{border-bottom:0}
+.cinematic-site .policy-row summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:48px;padding:10px 0;cursor:pointer}
+.cinematic-site .policy-row summary::-webkit-details-marker{display:none}
+.cinematic-site .policy-row summary:focus-visible{outline:3px solid #4F8DC3;outline-offset:4px}
+.cinematic-site .policy-row h3{font:400 clamp(17px,1.55vw,24px)/1.2 var(--body);color:var(--policy-red);text-transform:uppercase;letter-spacing:normal;margin:0}
+.cinematic-site .policy-caret{width:26px;height:26px;flex:0 0 26px;color:var(--policy-red);transition:transform 200ms var(--ease-out)}
+.cinematic-site .policy-row[open] .policy-caret{transform:rotate(180deg)}
+.cinematic-site .policy-answer{padding:0 0 20px;display:grid;gap:9px}
+.cinematic-site .policy-answer h4,.cinematic-site .policy-answer p{font:400 clamp(14px,1.12vw,16px)/1.55 var(--body);color:var(--policy-grey);margin:0}
+.cinematic-site .policy-answer h4{text-transform:none;letter-spacing:normal}
+.cinematic-site .policy-pending{font-style:italic}
+.cinematic-site .policy-empty{font:400 16px/1.5 var(--body);color:var(--policy-grey);padding-top:18px}
+@media(prefers-reduced-motion:reduce){.cinematic-site .policy-caret{transition:none}}
+@media(max-width:900px){.cinematic-site .policy-body{width:calc(100% - 64px)}}
+@media(max-width:700px){
+ .cinematic-site .policy-page{padding-bottom:48px}
+ .cinematic-site .policy-heading{min-height:112px;padding:22px 20px}
+ .cinematic-site .policy-heading h1{font-size:clamp(28px,9.6vw,38px)}
+ .cinematic-site .policy-heading p{font-size:16px;margin-top:6px}
+ .cinematic-site .policy-body{width:calc(100% - 32px);margin-top:30px}
+ .cinematic-site .policy-body>h2{font-size:28px;padding-bottom:10px}
+ .cinematic-site .policy-row summary{min-height:48px;padding:10px 0}
+ .cinematic-site .policy-row h3{font-size:16px}
+ .cinematic-site .policy-caret{width:22px;height:22px;flex-basis:22px}
+ .cinematic-site .policy-answer{gap:9px;padding-bottom:18px}
+ .cinematic-site .policy-answer h4,.cinematic-site .policy-answer p{font-size:14px}
+}

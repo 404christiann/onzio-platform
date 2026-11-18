@@ -1,6 +1,10 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// TemplateFontScope hands cinematic@2 (Rose City) to CinematicShell, whose data
+// layer builds a Supabase client on import. This test covers the other designs.
+vi.mock("@/components/cinematic/CinematicShell", () => ({ default: () => null }));
 import TemplateFontScope from "@/components/TemplateFontScope";
 import { codeSiteFor } from "@/lib/code-site";
 

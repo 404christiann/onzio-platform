@@ -3,11 +3,12 @@ import { z } from "zod";
 export type PresentationSurface = "mockup" | "operator_preview" | "production";
 export type TemplateKey =
   | "cinematic@1"
+  | "cinematic@2"
   | "heritage@1"
   | "clubhouse@1"
   | "academy@1"
   | "editorial@1";
-export type ActiveTemplateKey = "clubhouse@1" | "academy@1";
+export type ActiveTemplateKey = "cinematic@2" | "clubhouse@1" | "academy@1";
 export type RetiredTemplateKey = Exclude<TemplateKey, ActiveTemplateKey>;
 export type TemplateId =
   | "cinematic"
@@ -78,7 +79,7 @@ const documentSchema = z.object({
   schemaVersion: z.literal(1),
   template: z.object({
     id: z.enum(["cinematic", "heritage", "clubhouse", "academy", "editorial"]),
-    version: z.literal(1),
+    version: z.union([z.literal(1), z.literal(2)]),
   }),
   fontPack: z.string(),
   theme: z.object({
@@ -164,7 +165,7 @@ export type SectionRegistration = {
 
 export type TemplateRegistration = {
   id: TemplateId;
-  version: 1;
+  version: 1 | 2;
   key: TemplateKey;
   displayName: string;
   originNote: string;
@@ -192,6 +193,11 @@ export type FontPackRegistration = {
 };
 
 export const fontPacks: Record<string, FontPackRegistration> = {
+  "museomoderno-avenir": {
+    key: "museomoderno-avenir",
+    displayName: "MuseoModerno + Avenir + LEMON MILK",
+    compatibleTemplates: ["cinematic@2"],
+  },
   "bebas-inter": {
     key: "bebas-inter",
     displayName: "Bebas Neue + Inter",
@@ -229,6 +235,20 @@ const historicalFontPacks: Record<string, FontPackRegistration> = {
 };
 
 export const routeRegistry = {
+  tickets: { path: "/tickets" },
+  stadium: { path: "/stadium" },
+  "stadium-parking": { path: "/stadium/parking" },
+  "stadium-guidelines": { path: "/stadium/guidelines" },
+  "chick-fil-a": { path: "/stadium/chick-fil-a" },
+  "know-before-you": { path: "/tickets/know-before-you-go" },
+  "season-membership": { path: "/tickets/season-membership" },
+  "fan-code": { path: "/stadium/fan-code" },
+  "foothill-transit": { path: "/stadium/foothill-transit" },
+  "media-credentials": { path: "/stadium/media-credentials" },
+  "injury-report": { path: "/news/injury-report" },
+  "news-page": { path: "/news" },
+  partnership: { path: "/community/partnership" },
+  "national-anthem": { path: "/community/national-anthem" },
   home: { path: "/" },
   roster: { path: "/roster" },
   schedule: { path: "/schedule" },
@@ -266,12 +286,18 @@ export const moduleRegistry = {
 } as const;
 
 export const sectionRegistry: Record<string, SectionRegistration> = {
+  "cinematic.matchday": {
+    type: "cinematic.matchday", version: 1, scope: "cinematic",
+    contentDomain: "homepage_revamp_content", compatibleTemplates: ["cinematic@2"],
+    requiredModule: null, requiredEntitlement: null, cardinality: "single",
+    emptyBehavior: "hide", productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
   "shared.next-match": {
     type: "shared.next-match",
     version: 1,
     scope: "shared",
     contentDomain: "matches",
-    compatibleTemplates: ["clubhouse@1", "academy@1"],
+    compatibleTemplates: ["cinematic@2", "clubhouse@1", "academy@1"],
     requiredModule: "schedule",
     requiredEntitlement: "starter",
     cardinality: "single",
@@ -295,7 +321,7 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "cinematic",
     contentDomain: "homepage",
-    compatibleTemplates: [],
+    compatibleTemplates: ["cinematic@2"],
     requiredModule: null,
     requiredEntitlement: null,
     cardinality: "single",
@@ -307,7 +333,7 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "cinematic",
     contentDomain: "media_assets",
-    compatibleTemplates: [],
+    compatibleTemplates: ["cinematic@2"],
     requiredModule: null,
     requiredEntitlement: null,
     cardinality: "single",
@@ -434,15 +460,15 @@ const historicalSectionRegistry: Record<string, SectionRegistration> = {
   ...sectionRegistry,
   "cinematic.hero": {
     ...sectionRegistry["cinematic.hero"],
-    compatibleTemplates: ["cinematic@1"],
+    compatibleTemplates: ["cinematic@1", "cinematic@2"],
   },
   "cinematic.gallery": {
     ...sectionRegistry["cinematic.gallery"],
-    compatibleTemplates: ["cinematic@1"],
+    compatibleTemplates: ["cinematic@1", "cinematic@2"],
   },
   "shared.next-match": {
     ...sectionRegistry["shared.next-match"],
-    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1", "academy@1", "editorial@1"],
+    compatibleTemplates: ["cinematic@2", "cinematic@1", "heritage@1", "clubhouse@1", "academy@1", "editorial@1"],
   },
   "shared.history": {
     ...sectionRegistry["shared.history"],
@@ -561,6 +587,16 @@ const retiredTemplateRegistry: Record<RetiredTemplateKey, TemplateRegistration> 
 };
 
 export const templateRegistry: Record<ActiveTemplateKey, TemplateRegistration> = {
+  "cinematic@2": {
+    id: "cinematic",
+    version: 2,
+    key: "cinematic@2",
+    displayName: "Cinematic 2027",
+    originNote: "Approved image-led club homepage with editable matchday content.",
+    defaultRoutes: ["home", "club", "roster", "club-logo", "sponsors", "tryouts", "store", "schedule", "tickets", "season-membership", "stadium", "stadium-parking", "stadium-guidelines", "chick-fil-a", "know-before-you", "fan-code", "foothill-transit", "media-credentials", "injury-report", "news-page", "partnership", "national-anthem", "contact"],
+    supportedRoutes: ["home", "club", "roster", "club-logo", "sponsors", "tryouts", "store", "schedule", "tickets", "season-membership", "stadium", "stadium-parking", "stadium-guidelines", "chick-fil-a", "know-before-you", "fan-code", "foothill-transit", "media-credentials", "injury-report", "news-page", "partnership", "national-anthem", "contact"],
+    supportedModules: ["roster", "schedule", "store", "sponsors", "tryouts", "contact", "affiliations"],
+  },
   "clubhouse@1": {
     id: "clubhouse",
     version: 1,

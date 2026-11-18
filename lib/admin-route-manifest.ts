@@ -44,6 +44,7 @@ export type AdminRouteId =
   | "about"
   | "sponsors"
   | "contact"
+  | "news"
   | "seasons"
   | "roster"
   | "schedule"
@@ -69,6 +70,7 @@ export type AdminRouteIconKey =
   | "about"
   | "sponsors"
   | "contact"
+  | "news"
   | "seasons"
   | "roster"
   | "schedule"
@@ -216,6 +218,13 @@ export const ADMIN_ROUTE_MANIFEST = [
     feature: "contact",
   },
   {
+    id: "news",
+    label: "News",
+    href: "/admin/news",
+    iconKey: "news",
+    groupId: "website",
+  },
+  {
     id: "seasons",
     label: "Seasons",
     href: "/admin/seasons",
@@ -350,6 +359,7 @@ export const ADMIN_NAVIGATION_MANIFEST = [
       "about",
       "sponsors",
       "contact",
+      "news",
     ],
   },
   {
@@ -417,6 +427,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   about: ["website", "about", "club story"],
   sponsors: ["website", "sponsors", "partners"],
   contact: ["website", "contact", "email", "phone"],
+  news: ["website", "news", "articles", "announcements"],
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
@@ -463,9 +474,11 @@ export function isAdminRouteVisible(
   if (route.id === "programs-and-tryouts" && !siteAdmin?.programs.routeVisible && !siteAdmin?.tryouts.routeVisible) {
     return false;
   }
-  // Only designs that publish a Contact page get the Contact editor; its
-  // details are used nowhere else on other designs.
-  if (route.id === "contact" && !siteAdmin?.contact.routeVisible) return false;
+  // Only designs that publish a Contact page get the Contact editor (cinematic@2
+  // has its own Contact editor); its details are used nowhere else on other designs.
+  if (route.id === "contact" && !siteAdmin?.contact.routeVisible && context.presentationTemplateKey !== "cinematic@2") return false;
+  // News is the cinematic@2 (Rose City) News editor (RC2027-NEWS).
+  if (route.id === "news" && context.presentationTemplateKey !== "cinematic@2") return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (
     route.billingRequired &&

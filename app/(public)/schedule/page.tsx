@@ -15,6 +15,7 @@ import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { clubKickoffInstant } from "@/lib/club-time";
 import AcademySchedulePage from "@/components/sites/diverse-city/AcademySchedulePage";
 import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
+import CinematicSchedulePage from "@/components/cinematic/CinematicSchedulePage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,6 +31,7 @@ function getNextMatchIndex(fixtures: Fixture[], now: Date, timeZone: string): nu
 
 export default function SchedulePage() {
   const club = useClubContext();
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicSchedulePage />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseSchedulePage />;
   if (codeSiteFor(club) === "diverse-city") return <AcademySchedulePage />;
   return <LegacySchedulePage />;

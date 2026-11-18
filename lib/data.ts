@@ -63,6 +63,7 @@ export type Fixture = {
   opponentShortName?: string | null;
   opponentLogoUrl?: string | null;
   competition?: string | null;
+  leagueLogoUrl?: string | null;
   sponsorName?: string | null;
   sponsorLogoUrl?: string | null;
   sponsorLink?: string | null;
@@ -80,6 +81,10 @@ export type Fixture = {
   // Stored as onzio.matches.scorers (jsonb, defaults to `[]`); mapFixture
   // narrows the raw jsonb value to a string[] defensively.
   scorers?: string[];
+  // Canonical YouTube embed link (lib/youtube-embed.ts) for a played match.
+  replayVideoUrl?: string | null;
+  // RC2027-MATCH-SUMMARY: timeline, statistics, officials, kit colors and lineups.
+  summary?: import("@/lib/match-summary").MatchSummary | null;
 };
 
 export type ShopProduct = {

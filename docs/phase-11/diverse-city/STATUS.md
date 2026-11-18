@@ -2500,6 +2500,24 @@ length query; then either the CHECK migration PR (seven text limits plus
 0-99 scores on `onzio.matches`, Zod limits extended to edits) or the
 date-and-field list for him to shorten.
 
+## 2026-11-09 - Rose City ticket pages committed and Schedule links merged (local only)
+
+**Agent/package:** Claude Code (main session), integration of `RC2027-TICKET-PAGES` and
+`RC2027-SCHEDULE-LINKS`. **Status:** both are on `codex/rose-city-homepage-2027`. Ticket pages:
+`99544db`. Schedule merge: `b8a3e7d`. Nothing is pushed or deployed.
+
+**Verification:**
+- tsc is clean.
+- Contracts and architecture: 1475 tests pass. Unit (`lib/__tests__`): 423 pass. Database: 459 pass.
+- The three pages return 200 on port 3197.
+- Directions link to Google Maps directions.
+
+**Blockers:** none for local work. Still waiting on Sam: MVMNT CULTR logo, Shop detail photos and
+camera icon, original News photo, and a white-text "Watch on YouTube" image (if one exists).
+**Before production:** the migration gate in `CLAUDE.md` for 9 local-only migrations.
+
+**Exact next step:** Christian decides when to push, merge into `main` and go live.
+
 ## 2026-11-08 - ADMIN-RE-07: Add a game
 
 **Agent/package:** Claude Code, `ADMIN-RE-07`, started by the orchestration
@@ -3927,6 +3945,214 @@ package's gates.
 **Exact next step:** merge PR #93, then start `ADMIN-RE-01`, the
 foundation migration, on a fresh branch from `main`.
 
+## 2026-11-08 - Rose City RC2027-SCHEDULE-LINKS (local only)
+
+**Agent/package:** Claude Code, `RC2027-SCHEDULE-LINKS`. **Status:** `in_progress`: implemented and
+verified locally, waiting for Christian's review. Uncommitted on `codex/rose-city-schedule-2027`
+(worktree `implementation/onzio-platform-schedule`). Not pushed, merged or deployed.
+
+**Completed work:**
+
+- Schedule Directions open Google Maps directions to the owner's "Address for directions" in a new
+  tab; none when blank.
+- The "Watch on YouTube" logo opens the owner's existing per-match YouTube link in a new tab; it is
+  not clickable when blank. No new field or migration.
+- The Schedule matches Sam's final design: NEXT beside the date, name on the row's middle line,
+  stadium line just below, grey Directions. The stadium line and Directions stay on one line.
+- Directions uses Sam's green location pin from Dropbox instead of the pin drawn in code.
+- A local dummy YouTube link is applied to two matches for review (removable with
+  `scripts/sample-rose-city-schedule-links-local.ts --remove`).
+
+**Files changed:** `lib/google-maps-directions.ts` (new), `components/cinematic/CinematicSchedule.tsx`,
+`components/cinematic/schedule.css`, `app/admin/(protected)/schedule/page.tsx`,
+`scripts/sample-rose-city-schedule-links-local.ts` (new), `public/rose-city/icons/green-location-pin.png` (new, Sam's pin), `tests/contracts/schedule-directions.test.ts`
+(new), `tests/contracts/match-summary-pages.test.ts`, `HANDOFF.md`, this file.
+
+**Verification:**
+
+- Contract, architecture and unit tests: 227 files, 1,868 tests pass (after the pin swap). Database: 48 files, 432 tests pass (local rehearsal; this branch adds no migration).
+- `tsc` passes; ESLint clean on touched files.
+- Browser checks at eight widths, link clicks and an editor save round trip (see the HANDOFF entry).
+
+**Blockers / decisions:** none blocking. Christian confirmed "EST" in Sam's file is a typo (site
+keeps PT). Question for Sam: a white-text "Watch on" image for the dark row (Dropbox searched; none
+exists, both versions have grey text).
+
+**Exact next step:** Christian reviews `http://rose-city.localhost:3199/schedule` and decides whether
+to commit, keep or remove the dummy YouTube link, and when to merge into
+`codex/rose-city-homepage-2027`.
+
+## 2026-11-08 - Rose City RC2027-TICKET-PAGES (local only)
+
+**Agent/package:** Claude Code, `RC2027-TICKET-PAGES` (Season Ticket Membership and Know Before You
+Go). **Status:** `in_progress`: implemented and verified locally in the shared checkout on
+`codex/rose-city-homepage-2027`, **uncommitted** (Christian decides about commits). Not pushed,
+merged or deployed.
+
+**Completed work:**
+
+- Christian approved both previews on 2026-11-08 (outer `design-explorations/ticket-pages-2027/`,
+  port 3216), asking for Member Benefits to stay 3 × 3 on phones as well as desktop. Sam's designs:
+  "Rose City FC Season Ticket Membership page Drop Down Menu 2027 Final Master.jpg" and "Rose City
+  FC KBYG page Drop Down Menu 2027 Final Master.jpg" (Dropbox).
+- `/tickets/season-membership` and `/tickets/know-before-you-go` for cinematic@2, with all of Sam's
+  text. Tickets is now a drop-down menu: Tickets, Season ticket membership, Know before you go. The
+  Stadium menu's "Know before you" item opens the same page. The old empty `/stadium/know-before-you`
+  placeholder is gone (404).
+- Owner editors at `/admin/season-membership` and `/admin/know-before-you-go`, linked from the
+  Homepage editor shortcuts. Sam can edit every line of text, the prices, the Buy and Donate links,
+  add, remove and reorder bullets, price rows, benefits and match-day tiles, switch sections off, and
+  upload every icon, logo and photo. The editor preview shows a labelled dashed box for each image
+  still to add; the public page hides empty image slots.
+- The Know Before You Go match box fills in by itself from Schedule's next home match (date, venue,
+  both crests, the club's short name and the opponent's short name). The competition line falls
+  back to the owner's text when the match has none.
+- Christian approved without picking among three proposed choices, so the recommended defaults are
+  used (he can change them): Stadium's "Know before you" opens the new page, the match box is
+  automatic, and every image slot stays empty until Sam sends his files (Sam's 2027 icon folder
+  already has a few matching icons; they were not used).
+- Sam's copy is seeded locally (`scripts/seed-rose-city-ticket-pages-2027-local.ts`), with no images.
+
+**Sam's files added (2026-11-08, local rehearsal only, uploaded through the two editors as the local owner):**
+
+- Sam's Dropbox icon folder ("KBYG x Ticket icons", 22 PNGs, each a 752 × 350 canvas drawn at the
+  design's scale), the "RCFC YouTube website icon black 2027" PNG and "Playstation photo.jpg"
+  (converted to WebP; the upload pipeline takes PNG or WebP only).
+- Season Ticket Membership: all nine Member Benefit icons (Loyalty, Customer Service, Raffle Ticket,
+  Merch %, VIP, Playoff, %, Lamar Hunt U.S. Open Cup, Gift, in the design's order).
+- Know Before You Go: all 15 tile icons and logos (tile 14, "Blank", shows the UPSL logo as in the
+  design), the YouTube logo and the PlayStation 5 photo.
+- YouTube, per Christian ("match his reference"): Sam's file has "Watch on" built in, so it was
+  cropped to the logo alone (his artwork otherwise unchanged; same height, so the size still
+  matches), and the line reads "Watch every game live" + logo as in the design.
+- Watch link, per Christian: it opens the game-day live stream, in a new tab. Schedule matches
+  have no stream field (only a replay link after the game), so the stream link stays in the Know
+  Before You Go editor, renamed "Game-day live stream link", updated each game like the raffle.
+  When it is empty, the line falls back to the club's YouTube link from Branding social links
+  (`https://www.youtube.com/@RoseCityFC` locally, the footer's link, https only); with neither, it
+  shows as plain text with no link. Placeholder for now, as Christian asked:
+  `https://www.youtube.com/@RoseCityFC/live` (YouTube opens the channel's live stream there when
+  one is running), set in the editor and in `lib/ticket-pages-reference-content.ts`.
+- Because Sam's icons share one canvas at the design's scale, the tile art box is now that canvas at
+  one column wide (`aspect-ratio: 752/350`, `object-fit: contain`); a check against the design shows
+  his phone and gate icons at their exact design pixel sizes. Row gaps were tightened to keep the
+  design's spacing. The YouTube logo renders 5.15vw tall (40px minimum) so its play button matches
+  the design. The icon slots in both editors now say to use the 752 × 350 canvas.
+
+- Round 3 (2026-11-08, Christian's links; Sam also added the Chronic Tacos logo to his icon folder):
+  "Rose City FC Tickets Banner 2027.jpg" (converted to WebP) is the Season ticket graphic, and
+  "Chronic Tacos Logo.PNG" is the donor logo. The logo file had wide empty margins (a 225 px circle
+  on a 500 × 300 canvas), so its empty space was trimmed (artwork unchanged) and it now shows at the
+  design's 12.7vw width. Both match Sam's designs side by side at 1440 and 390px.
+
+- Round 4 (2026-11-08): Sam added "General Seating", "$5 Green", "$7 Blue" and "$12 Tour" to the
+  folder: finished images of the price table cells. The table stays live text so Sam can edit it
+  (and it shows the agreed $14, not the image's $12). The G badge was cropped from "General Seating"
+  (109 × 109 px, artwork unchanged) into the General Seating badge slot; the badge is 30px on
+  phones so it stays in proportion with the label. The three price colors now use Sam's source
+  files (#3dcb57, #3450c8, #32b8a9) instead of values sampled from the JPG design. The table matches
+  the design side by side at 1440 and 390px.
+
+**No image slots are empty now:** Season has 11 images (9 benefits, G badge, ticket banner) and Know
+Before You Go 18 (15 tiles, YouTube, prize photo, donor logo).
+
+**Christian's answers (2026-11-08):**
+
+- Buy and Donate buttons: each is a link Sam sets in the editor (already the case: "Button link"
+  fields); an empty link shows the button without a destination.
+- The red star is decorative only; no footnote.
+- 7 regular season home games: the bullet now reads "7 regular season home games" and the savings
+  "$14" (7 games × the $2 saved per game; Sam's $12 was 6 × $2), in the editor and in
+  `lib/ticket-pages-reference-content.ts`, with the tests updated first.
+- General Seating is the only price row, as in the design.
+- The "RCFC vs OCFC" match in the design is a sample; the live box follows Schedule.
+- "Jackie Portman", "Gates Open 7PM", "$2 On-Site Parking" and the Chronic Tacos text with "[3]"
+  stay exactly as in the design; Sam can edit them in the editor.
+
+**Still open (Christian asked for more detail or did not answer):**
+
+- "Blank" tile: Sam's design has a tile whose label is literally "Blank" with a second UPSL logo,
+  which looks like an unfilled spot. It shows as designed; Sam can rename it or remove it in the
+  editor.
+- Tile links: the design shows tiles as pictures with text, not links, so they stay unlinked.
+- Live stream link: Sam pastes each game's YouTube live link in the editor; until then the
+  placeholder `https://www.youtube.com/@RoseCityFC/live` is used.
+- "4,599 Capcity" in the design is shown as "Capacity".
+- Local data note: the match box shows "Rose City FC" because the local club identity has no short
+  name; setting the short name to "RCFC" in Branding makes it match Sam's design.
+
+**Files changed:** shared checkout `implementation/onzio-platform`:
+
+- migrations `20261105060000_cinematic_ticket_pages.sql` (tables `onzio.cinematic_ticket_pages`
+  and `onzio.cinematic_ticket_page_images`, receipts, `onzio_private.*ticket_page*` functions, RPCs
+  `load_/save_season_membership_editor` and `load_/save_know_before_you_go_editor`, advisory lock
+  **734901340**) and `20261105070000_cinematic_tickets_menu_labels.sql` (re-declares
+  `onzio_private.check_cinematic_homepage` with the `tickets-page` and `season-membership` labels
+  added), both applied to the local rehearsal only through
+  `scripts/apply-rose-city-ticket-pages-migrations-local.ts`;
+- `lib/cinematic-ticket-pages-{content,editor,query}.ts`, `lib/ticket-pages-reference-content.ts`;
+- `components/cinematic/CinematicSeasonMembership.tsx`, `CinematicKnowBeforeYouGo.tsx`,
+  `CinematicTicketPageParts.tsx`, `ticket-pages.css`;
+- `components/admin/ticket-pages/{TicketPageEditor,SeasonMembershipEditor,KnowBeforeYouGoEditor}.tsx`;
+- routes `app/%5Fclubs/[slug]/tickets/{season-membership,know-before-you-go}/page.tsx` and
+  `app/admin/(protected)/{season-membership,know-before-you-go}/page.tsx`;
+- shared: `lib/cinematic-homepage-content.ts` (Tickets drop-down), `lib/cinematic-routes.ts`,
+  `packages/presentation/index.ts` (route `season-membership`; `know-before-you` now points at
+  `/tickets/know-before-you-go`), `lib/about-editor/destinations.ts`,
+  `lib/cinematic-editor-shortcuts.ts`, `lib/visitor-page-route.ts`, `lib/visitor-page-editor.ts`,
+  `lib/database.generated.ts` (two tables and four RPCs added, identical to a fresh regeneration);
+- tests: `tests/contracts/cinematic-ticket-pages-{content,editor,renderer,admin-routes}.test.ts`,
+  `tests/database/cinematic-ticket-pages-save.test.ts`, plus additions to `visitor-page-api`,
+  `cinematic-navigation`, `cinematic-robinson-admin-routes` (exact shortcut list) and
+  `cinematic-homepage-atomic-save`; `tests/README.md` section;
+- untracked helper `.claude/launch.json` (preview and dev server definitions).
+
+**Verification:**
+
+- Test-first at Christian's four agreed checkpoints (save rules, public pages, editor buttons,
+  database saves).
+- `tsc --noEmit` passes; ESLint is clean on every new file.
+- Contract, architecture and unit: 230 files, 1,886 tests pass.
+- Database: 49 files, 459 tests pass (with all local migrations through `20261105070000`).
+- Dev server `http://rose-city.localhost:3197`: both routes return 200; `/tickets` 200;
+  `/stadium/know-before-you` 404. Headless Chromium at 1440 and 390px: no horizontal overflow, no
+  broken images, no page errors; Member Benefits is 3 × 3 on the phone.
+- Sam's files: 9 image rows (Season) and 17 (Know Before You Go), all published media in the
+  local rehearsal; both public pages return 200 with no overflow, broken images or page errors at
+  1440 and 390px, and sit closely on Sam's designs side by side. Ticket page contract and
+  architecture tests (47) pass; `tsc --noEmit` passes; ESLint clean.
+- YouTube follow-up, test first: a new renderer test (stream link wins, channel fallback, plain
+  text with neither) failed, then passed; ticket page contract tests 27/27 and database tests 26/26
+  pass; `tsc` and ESLint clean. In a real browser the page opens the placeholder live link, and with
+  the link cleared it opened the channel; the placeholder was then restored. The logo matches the
+  design at 1440 and 390px.
+- Editors, as the local fixture owner (code from the rehearsal's Mailpit): a Season subtitle edit
+  saved, survived reload and showed publicly; a test PNG uploaded to the ticket slot showed publicly
+  and was removed (both test uploads retired); a Know Before You Go donor edit plus an added tile
+  saved and showed publicly, then were removed. Both pages match the seed exactly again. Both editors
+  fit 390px with no overflow.
+
+**Blockers/unresolved:** Sam's files and answers above. Physical-phone/VoiceOver checks are open.
+Migrations `20261105060000` and `20261105070000` need the CLAUDE.md production migration gate before
+any hosted deploy.
+
+**Merge-time note (main's test speed work, PRs #97 and #98):** this branch is 146 commits behind
+`origin/main` and has none of that work yet; nothing in it changes the ticket pages work (this
+branch's database suite already runs in about 110s, and its files pass main's new
+`tests/architecture/database-test-audit-snapshots.test.ts` rule). When this branch takes in main:
+`HANDOFF.md`, this file and `tests/README.md` will conflict as text. Main's new
+`tests/global-setup/local-audit-cleanup.ts` connects to a hard-coded `127.0.0.1:54322` and ignores
+`SUPABASE_DB_URL`, but this branch's database tests use the Rose City rehearsal on `55322` through
+`tests/helpers/local-postgres.ts`. Left as is, a Rose City run would clean the wrong local database:
+it would miss its own leftovers and could delete audit rows other runs wrote to `54322` during the
+run. Fix it in the merge by building the cleanup's client from `localPostgresConfig()`.
+
+**Christian's review:** on 2026-11-08 he checked both finished pages on the local dev server and
+approved them ("Looks good to me!").
+
+**Exact next step:** Christian decides about committing. Each game, Sam updates the
+live stream link, the raffle prize and the donor in the Know Before You Go editor.
+
 ## 2026-11-05 - MAIN-BROWSER-TEST-FIXES: three browser checks that failed on clean main
 
 **Agent/package:** Claude Code, `MAIN-BROWSER-TEST-FIXES` (Christian
@@ -4385,6 +4611,181 @@ should hide for clubs without a public Contact page is a product question.
 **Exact next step:** independent review of branch
 `claude/epic-haibt-c3f2bb`, then a PR. Run the read-only Diverse City
 `store_enabled` check before any release.
+
+## 2026-11-04 - Rose City RC2027-ROBINSON-EDITOR (local only)
+
+**Agent/package:** Claude Code, `RC2027-ROBINSON-EDITOR`. **Status:** `in_progress`: implemented
+and verified locally, and committed on `codex/rose-city-robinson-editor-2027` with Christian's OK.
+Not pushed, merged or deployed.
+
+**Completed work:**
+
+- Owner editing of the Robinson Stadium page (`/stadium`, cinematic@2) from `/admin/stadium`: the
+  story, the Stadium Info rows (Yes/No), Food & Beverage, the directions (with stable anchors), the
+  seating map and the other images, and a "Show on page" switch per section.
+- The public page is unchanged.
+- The Bus Route editor moved to `/admin/foothill-transit`, with a new Homepage shortcut.
+- The confirmed copy is seeded locally, keeping both the 2001 and the 1999 dates.
+
+**Files changed:** worktree `implementation/onzio-platform-robinson`, branch
+`codex/rose-city-robinson-editor-2027`:
+
+- migration `20261105050000_cinematic_robinson_page.sql`, with
+  `scripts/apply-rose-city-robinson-migration-local.ts` and
+  `scripts/seed-rose-city-robinson-2027-local.ts`;
+- `lib/cinematic-robinson-{content,query,editor}.ts`, `lib/robinson-reference-content.ts` and
+  `lib/cinematic-editor-shortcuts.ts`;
+- `lib/visitor-page-route.ts` and `lib/visitor-page-editor.ts`;
+- `components/cinematic/CinematicRobinson.tsx`;
+- `components/admin/stadium/RobinsonStadiumEditor.tsx`, and the labels in `StadiumEditor.tsx`;
+- `HomepageEditor.tsx`;
+- the routes `app/%5Fclubs/[slug]/stadium/page.tsx`, `app/admin/(protected)/stadium/page.tsx` and
+  `app/admin/(protected)/foothill-transit/page.tsx`;
+- `lib/database.generated.ts`;
+- tests: `cinematic-robinson-*` (contracts and database), `visitor-page-api` and
+  `cinematic-partners-editor`, plus the fixture `tests/fixtures/robinson/reference-2027.html`;
+- the doc `docs/rose-city-robinson-editor-2027-implementation.md`.
+
+**Verification:**
+
+- 223 contract, architecture and unit files (1,827 tests) and 47 database files (423 tests) pass.
+- `tsc` and ESLint pass.
+- Real Chrome at 320, 390, 768, 1280 and 1440px: the old and new pages have identical layout
+  geometry.
+- An owner edit saved, survived a reload, appeared publicly and was undone. The stored content
+  matches the confirmed copy exactly.
+
+**Blockers/unresolved:** none for local work. Physical-phone/VoiceOver checks are open. Migration
+`20261105050000` needs the CLAUDE.md production migration gate before any hosted deploy.
+
+**Exact next step:** merged into `codex/rose-city-homepage-2027` as `5156238` (see HANDOFF). Next:
+physical-phone/VoiceOver checks and, only with release approval, the CLAUDE.md migration gate for
+`20261105050000`.
+
+## 2026-11-04 - Rose City RC2027-INJURY-REPORT (local only)
+
+**Agent/package:** Claude, `RC2027-INJURY-REPORT`. **Status:** `in_progress`: implemented and
+verified locally, and committed as `2e5f074` on its branch with Christian's OK (not pushed or merged).
+
+**Completed work:** Sam's Injury Report at `/news/injury-report` for cinematic@2, with cards taken
+from Roster players. The owner editor is `/admin/injury-report`. The tables
+`onzio.cinematic_injury_report_content` and `onzio.cinematic_injury_entries` have RPCs and
+receipts. Three made-up sample entries are local seed data only. Diverse City FC (academy@1) is
+unaffected.
+
+**Files changed:**
+
+- migration `20261105040000_cinematic_injury_report.sql`, plus its local apply and seed scripts;
+- `lib/cinematic-injury-report-{content,editor,query}.ts`;
+- `CinematicInjuryReport`, `CinematicInjuryVideo` and `injury-report.css`;
+- the `/news/[articleSlug]` route, `/api/admin/cinematic-injury-report`, and the admin page and
+  editor;
+- the Homepage shortcut and `lib/database.generated.ts`;
+- four new test files, plus one updated News test.
+
+All of it is on branch `codex/rose-city-injury-report-2027`, in worktree
+`implementation/onzio-platform-injury`.
+
+**Verification:**
+
+- Contract, unit and architecture: 221 files, 1,831 tests pass.
+- Database: 47 files, 418 tests pass.
+- `tsc` and lint pass.
+- Real Chrome passed at five widths.
+- The editor passed in headless Chromium as the local fixture owner.
+
+Full detail is in `docs/rose-city-injury-report-2027-implementation.md`.
+
+**Blockers/exact next step:**
+
+- Merge `codex/rose-city-injury-report-2027` when Christian says so.
+- Migration `20261105040000` needs the CLAUDE.md production migration gate before any hosted
+  deploy.
+- Sam owes the MVMNT CULTR logo and real report content.
+
+## 2026-11-04 - Rose City RC2027-NEWS (local only)
+
+**Agent/package:** Claude, `RC2027-NEWS`. **Status:** `in_progress`. Built and verified
+locally and committed on branch `codex/rose-city-news-2027` with Christian's OK (not pushed or
+merged).
+
+**Completed work:** Sam's News list and article pages for cinematic@2, an owner News editor, the
+`onzio.cinematic_news_articles` table and RPCs, a `news` media surface, and the seeded Foothill
+Transit article. Diverse City FC (academy@1) is unaffected: its admin sidebar is unchanged.
+Four local placeholder articles (Community, Partner, News, New Player) were added so `/news` shows
+all five of Sam's reference cards, per Christian. Their text is placeholder copy for the owner to
+replace in Admin → News.
+
+**Files changed:** see `docs/rose-city-news-2027-implementation.md` (branch
+`codex/rose-city-news-2027`, worktree `implementation/onzio-platform-news`).
+
+**Verification:** all contract tests pass (160 files, 1,310 tests); News database tests pass (6);
+TypeScript and lint pass. Real Chrome passed at five widths. The editor passed in headless Chromium
+as the local fixture owner. Full detail is in the HANDOFF entry.
+
+**Blockers/exact next step:** merge `codex/rose-city-news-2027` with the Policies and Partners
+work when Christian says so. Migration `20261105010000` needs the CLAUDE.md production migration gate before
+any hosted deploy. Sam still owes the original cover photo.
+
+## 2026-11-04 - RC2027-PARTNERS (Rose City Club Partners and Partnership Opportunities)
+
+**Agent/package:** Claude Code, `RC2027-PARTNERS`. **Status:** `in_progress`: implemented and
+verified locally, and committed as `2e5f074` on its branch with Christian's OK (not pushed or merged).
+
+**Completed work:** `/sponsors` and `/community/partnership` for cinematic@2, built from the
+approved previews, plus the new `/admin/partners` editor. The editor covers each page's copy and a
+shared, ordered partner list (name, role, logo, logo colour). Logos are shared with the Sponsors
+editor. The work is in worktree `implementation/onzio-platform-partners` on branch
+`codex/rose-city-partners-2027`.
+
+**Files changed:**
+
+- migration `20261105030000_cinematic_partners.sql`, plus its local apply script and seed script;
+- `lib/cinematic-partners-{content,query,editor}.ts`;
+- `CinematicPartners` and `partners.css`;
+- the two public routes, the `/api/admin/cinematic-partners` route and the admin page and editor;
+- the Homepage shortcut and the Sponsors link;
+- the two new tables in `lib/database.generated.ts`;
+- four test files, `tests/README.md`, the implementation doc, the reference review, `HANDOFF.md`
+  and this ledger.
+
+**Verification:**
+
+- Contracts pass (1317 tests) and the database suite passes (397 tests). Architecture passes 20 of
+  21; the one failure predates this package (`<img>` in four files from `e8cdf22`).
+- TypeScript and lint pass.
+- Browser checks at 320, 390, 768, 1280 and 1440px passed. A real owner edit saved, reloaded,
+  showed publicly and was then restored.
+
+**Blockers and unresolved decisions:**
+
+- The MVMNT CULTR logo and Sam's stacked logo versions.
+- The Partnership Opportunities button destination (owner-editable; hidden until set).
+- Nothing is committed, pushed or deployed. The migration gate applies before any hosted release.
+
+**Exact next step:** Christian reviews `http://rose-city.localhost:3196/sponsors`,
+`/community/partnership` and `/admin/partners`, then decides whether to commit.
+
+## 2026-11-04 - RC2027 resilient icon images
+
+**Agent/package:** Claude Code, ad hoc fix for the RC2027 architecture test (follows
+RC2027-MATCH-SUMMARY and the Shop redesign, `e8cdf22`). **Status:** `implemented locally,
+uncommitted`, on branch `codex/rose-city-resilient-images` (worktree
+`implementation/onzio-platform-images`).
+
+**Completed work:** eight direct `<img>` icon tags now render through `ResilientNativeImage`, so
+"routes application images through resilient components" passes again. Visuals are unchanged.
+
+**Files changed:** `components/cinematic/CinematicMatchResult.tsx`, `CinematicMatchSummary.tsx`,
+`CinematicSchedule.tsx`, `CinematicShop.tsx`, `HANDOFF.md` and this ledger.
+
+**Verification:** architecture 21/21, contracts 1287/1287, `tsc --noEmit` clean. Headless Chromium
+at 390/1440px on Home, Shop, Schedule and a Match Summary page shows no broken images, with icon
+sizes identical to the unchanged 3198 baseline. A temporary before/after server-render diff covered
+the summary/replay-only icons and was then deleted. No database changes.
+
+**Blockers/exact next step:** Christian's OK to commit, then merge into
+`codex/rose-city-homepage-2027`. No push or deploy.
 
 ## 2026-10-12 - Subscription payment-state correction
 

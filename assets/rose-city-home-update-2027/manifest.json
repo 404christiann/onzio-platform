@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "assets": {
+    "footerLogo": {
+      "inputPath": "assets/rose-city-home-update-2027/inputs/footer-submark.png",
+      "sha256": "d925d2d45b051e33fccf4eced8fd757c7dcc1c201868f6e3f3ab0ca6ba3e9fb2",
+      "width": 800,
+      "height": 727,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "assets/rose-city-crest-2027/submark/inputs/patch7.png (Dropbox Our Identity/Rose City FC Sub-mark.png)",
+      "processing": "Lanczos downscale to 800px wide for the footer"
+    }
+  }
+}

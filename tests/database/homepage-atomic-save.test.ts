@@ -1,3 +1,4 @@
+import { localPostgresConfig } from "../helpers/local-postgres";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -63,7 +64,7 @@ const story = { visible: true, heading: "New story", bodyPrimary: "First paragra
 
 beforeEach(async () => {
   assertSafeTestEnvironment();
-  db = new Client({ host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" });
+  db = new Client(localPostgresConfig());
   await db.connect();
   await db.query("begin");
   operation = randomUUID();

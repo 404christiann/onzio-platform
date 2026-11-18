@@ -14,6 +14,7 @@ import type { ShopKitVariant } from "@/lib/db-types";
 import { useClubContext } from "@/components/ClubContextProvider";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
 import AcademyShopPage from "@/components/sites/diverse-city/AcademyShopPage";
+import CinematicShopPage from "@/components/cinematic/CinematicShopPage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,6 +22,8 @@ export default function ShopPage() {
   const club = useClubContext();
   const [selectedKitVariant, setSelectedKitVariant] =
     useState<ShopKitVariant>("home");
+
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicShopPage />;
 
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseShopPage />;
   // Diverse City uses the mockup's compact split layout (Front/Back pill

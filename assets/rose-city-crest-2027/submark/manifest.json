@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "sourceFolder": "/Rose City FC x Onzio 2027/Our Identity",
+  "assets": {
+    "patch7": {
+      "inputPath": "assets/rose-city-crest-2027/submark/inputs/patch7.png",
+      "sha256": "ed1375dde4a2f10d12ec5ceeac93f9dc9e3ab1e317effed6f1b17b29012b51cd",
+      "width": 2700,
+      "height": 2452,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Sub-mark.png",
+      "sourceSha256": "b8df3a2927e0eb968c3133b084d35b4ffe71dc204d7ee6ead267003c50235d25",
+      "processing": "PNG, transparent-margin trim, then Lanczos downscale to 2700px wide (graphic uploads are capped at 3000px)"
+    },
+    "icon7": {
+      "inputPath": "assets/rose-city-crest-2027/submark/inputs/icon7.png",
+      "sha256": "9ec106bf1edc53241d54da62e89c58091f2ea169e6524adf5a9b9428aca0f7f4",
+      "width": 154,
+      "height": 183,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Red Rose Outline.png",
+      "sourceSha256": "6538406944d9c0d52e63f8ababff50ba1e779ab5d731de51011fa7e9b6584a00",
+      "processing": "PNG, transparent-margin trim only"
+    }
+  }
+}

@@ -7,6 +7,7 @@ import type { DBHomepageHeroContent } from "@/lib/db-types";
 import type { HomepageStoryContent } from "@/lib/homepage-story-content";
 import { codeSiteFor } from "@/lib/code-site";
 
+const CinematicHome = nextDynamic(() => import("@/components/cinematic/CinematicHome"), { ssr: false });
 const Hero = nextDynamic(() => import("@/components/Hero"), { ssr: false });
 const NextMatchCard = nextDynamic(() => import("@/components/NextMatchCard"), { ssr: false });
 const ChampionsBadge = nextDynamic(() => import("@/components/ChampionsBadge"), { ssr: false });
@@ -25,6 +26,7 @@ export default function HomePageClient({
   initialStoryContent?: HomepageStoryContent | null;
 }) {
   const club = useClubContext();
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicHome initialHeroContent={initialHeroContent} />;
   if (club.presentationTemplateKey === "clubhouse@1") {
     return <ClubhouseHomePage initialHeroContent={initialHeroContent} />;
   }

@@ -1,10 +1,11 @@
+import { localPostgresConfig } from "../helpers/local-postgres";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, it } from "vitest";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 
-const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
+const config = localPostgresConfig();
 
 async function authenticate(client: Client, userId: string = USER_IDS.ownerAal2) {
   await client.query("begin");

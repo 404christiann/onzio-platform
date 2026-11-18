@@ -1,0 +1,90 @@
+{
+  "title": "Road to the Match",
+  "subtitle": "Watch Rose City FC live and save on gas",
+  "showHeading": true,
+  "showMap": true,
+  "showSections": true,
+  "showMatch": true,
+  "showBenefits": true,
+  "includesHeading": "Ticket Includes",
+  "benefits": [
+    {
+      "title": "Raffle Ticket",
+      "detail": "Chance to win cool prizes"
+    },
+    {
+      "title": "Enjoy 10% off Niky’s Sports",
+      "detail": "Pasadena location only"
+    },
+    {
+      "title": "Enjoy 10% off Tepito Coffee",
+      "detail": "E Colorado Blvd location only"
+    }
+  ],
+  "benefitsNote": "Must present physical game ticket",
+  "sections": [
+    {
+      "id": "directions",
+      "heading": "Directions By Foothill Transit",
+      "body": "Watching Rose City FC games at Robinson Stadium is easy to reach by Foothill Transit.\nTake Line 187 to Colorado Blvd and Sierra Bonita Ave E\nLine 187 to Colorado Blvd and Sierra Bonita Ave E drops you off in front of Pasadena City College.\nThe stadium is about a 5-minute walk from the bus stop.",
+      "note": "",
+      "bullets": [],
+      "visible": true
+    },
+    {
+      "id": "parking",
+      "heading": "Parking Lot No 5",
+      "body": "You may purchase daily parking permits for $2.00 a day from the yellow parking permit machines located on every level of the parking lots throughout the main and CEC campuses. All daily parking permit machines accept $1 bills.",
+      "note": "*Parking Lot No 5 is on S Bonnie Ave",
+      "bullets": [],
+      "visible": true
+    },
+    {
+      "id": "line-187",
+      "heading": "Line 187: Azusa – Arcadia – Pasadena",
+      "body": "Line 187 serves Pasadena, East Pasadena, East San Gabriel, Arcadia, Monrovia, Duarte, Irwindale, and Azusa.\nVisit one of the many popular destinations located along line 187 such as Old Town Pasadena, Pacific Asia Museum, California School Of Culinary Arts, Target, Paul Mitchell the School, North-West College-Pasadena, Pasadena City College, Pasadena YMCA, Pasadena City College - Community Education Center, Vons, Michillinda Park, Ralphs, Sprouts Farmers Market, Grocery Outlet, H Mart, The Shops at Santa Anita, Methodist Hospital of Southern California, Santa Anita Golf Course, Arcadia Community Regional Park, Santa Anita Race Track, Girl Scouts of Greater Los Angeles Region - Central And Arcadia Service Center, Arcadia Adult School, Baja Ranch, Mt Sierra College, Old Town Monrovia, Monrovia Community Adult School, Opportunities for Learning, Smart & Final, Tropicana Market, City of Duarte Parks And Recreation Department, Costco, and the Santa Fe Dam Recreational Area.",
+      "note": "",
+      "bullets": [],
+      "visible": true
+    },
+    {
+      "id": "service-areas",
+      "heading": "Foothill Transit Service Areas",
+      "body": "",
+      "note": "",
+      "bullets": [
+        "San Gabriel Valley: Local routes run through cities like El Monte, West Covina, Azusa, Glendora, and Pomona.",
+        "Downtown Los Angeles: Express and rapid commuter buses travel from the El Monte Busway directly into DTLA.",
+        "Neighboring Counties: Select local routes reach edge cities in San Bernardino County (like Montclair) and Orange County.\nYou can check routes and plan trips using the Foothill Transit Trip Planner."
+      ],
+      "visible": true
+    }
+  ],
+  "phoneMapLayout": "split",
+  "phoneCardCrop": {
+    "x": 0.040336134453781515,
+    "y": 0.044407894736842105,
+    "width": 0.2739495798319328,
+    "height": 0.9078947368421053
+  },
+  "phoneMapCrop": {
+    "x": 0.3168067226890756,
+    "y": 0,
+    "width": 0.6831932773109244,
+    "height": 1
+  },
+  "artwork": {
+    "bus": {
+      "assetId": null,
+      "alt": "Foothill Transit bus"
+    },
+    "map": {
+      "assetId": null,
+      "alt": "Line 187 bus stop and walking route to Robinson Stadium and Parking Lot No. 5"
+    },
+    "partner": {
+      "assetId": null,
+      "alt": "Chick-fil-A · E. Colorado Blvd / Lake & Boylston"
+    }
+  }
+}

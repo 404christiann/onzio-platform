@@ -1,4 +1,5 @@
 import type { ShopSnapshot } from "@/lib/shop-editor/contract";
+import { withShopDefaults } from "@/lib/cinematic-shop-content";
 
 /** Resolve only published, tenant-scoped assets included in the page snapshot. */
 export function hydrateShopSnapshot(snapshot: ShopSnapshot): ShopSnapshot {
@@ -14,6 +15,18 @@ export function hydrateShopSnapshot(snapshot: ShopSnapshot): ShopSnapshot {
     ...snapshot,
     photos: snapshot.photos.map(hydrate),
     photoRows: snapshot.photoRows.map(hydrate),
+    ...(snapshot.presentation ? { presentation: (presentation => ({
+      ...presentation,
+      mapUrl: hydrate({ assetId: presentation.mapAssetId, url: "" }).url,
+      mapWidth: presentation.mapAssetId ? assets.get(presentation.mapAssetId)?.width : undefined,
+      mapHeight: presentation.mapAssetId ? assets.get(presentation.mapAssetId)?.height : undefined,
+      details: presentation.details.map(({ url: _url, width: _width, height: _height, ...detail }) => ({
+        ...detail,
+        url: hydrate({ assetId: detail.assetId, url: "" }).url,
+        width: detail.assetId ? assets.get(detail.assetId)?.width : undefined,
+        height: detail.assetId ? assets.get(detail.assetId)?.height : undefined,
+      })),
+    }))(withShopDefaults(snapshot.presentation)) } : {}),
     ...(snapshot.operation?.status === "committed"
       ? { operation: { status: "committed" as const, receipt: hydrateShopSnapshot(snapshot.operation.receipt) } }
       : {}),

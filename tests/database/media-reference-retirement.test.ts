@@ -1,3 +1,4 @@
+import { localPostgresConfig } from "../helpers/local-postgres";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, it } from "vitest";
@@ -5,7 +6,7 @@ import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 import { createLocalClients } from "../helpers/supabase";
 
-const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
+const config = localPostgresConfig();
 
 it("keeps shared FK and URL media, serializes direct links, and rejects relinks after retirement", async () => {
   assertSafeTestEnvironment();

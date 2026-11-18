@@ -43,13 +43,14 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    // ADMIN-RE-12c (deliberate): Programs and tryouts is the 23rd.
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(23);
+    // ADMIN-RE-12c (deliberate): Programs and tryouts is the 23rd; the
+    // cinematic@2-only News editor (RC2027-NEWS) is the 24th.
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(24);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      23,
+      24,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      23,
+      24,
     );
   });
 
@@ -69,6 +70,7 @@ describe("strict admin route manifest", () => {
           "about",
           "sponsors",
           "contact",
+          "news",
         ],
       },
       {
@@ -151,6 +153,13 @@ describe("strict admin route manifest", () => {
     for (const presentationTemplateKey of ["academy@1", "clubhouse@1"] as const) {
       const ids = visibleIds({ ...OWNER_ACCESS, presentationTemplateKey });
       expect(ids).toEqual(expect.arrayContaining(["match-stats", "analytics", "registrations"]));
+    }
+  });
+
+  it("shows the News editor only for cinematic@2 (RC2027-NEWS)", () => {
+    expect(visibleIds({ ...OWNER_ACCESS, presentationTemplateKey: "cinematic@2" })).toContain("news");
+    for (const presentationTemplateKey of ["academy@1", "clubhouse@1", null] as const) {
+      expect(visibleIds({ ...OWNER_ACCESS, presentationTemplateKey })).not.toContain("news");
     }
   });
 

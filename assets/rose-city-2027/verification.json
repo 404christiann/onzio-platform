@@ -1,0 +1,280 @@
+{
+  "validatedAt": "2026-10-13T20:25:56.114Z",
+  "validator": "lib/media-validation.ts",
+  "validatorSha256": "b478b2f00a10191c2920b16d97ae74d3514e5fb89a03160fb932e12e0ca2d383",
+  "manifestSha256": "95f4141bba84629d1418adcb8df85300b5c6739b62eae5267527f4a1b9fc0d3f",
+  "count": 30,
+  "hostedOrDatabaseWrites": false,
+  "validated": [
+    {
+      "logicalName": "crest",
+      "safe": true,
+      "format": "webp",
+      "width": 600,
+      "height": 600,
+      "bytes": 44890,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "raffle",
+      "safe": true,
+      "format": "webp",
+      "width": 2264,
+      "height": 3000,
+      "bytes": 395694,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "ticketMap",
+      "safe": true,
+      "format": "webp",
+      "width": 1800,
+      "height": 791,
+      "bytes": 103736,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "trophies",
+      "safe": true,
+      "format": "webp",
+      "width": 1500,
+      "height": 1309,
+      "bytes": 283470,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "seats",
+      "safe": true,
+      "format": "webp",
+      "width": 1600,
+      "height": 876,
+      "bytes": 14562,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "slideshow1",
+      "safe": true,
+      "format": "webp",
+      "width": 1500,
+      "height": 837,
+      "bytes": 528204,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "slideshow2",
+      "safe": true,
+      "format": "webp",
+      "width": 1200,
+      "height": 670,
+      "bytes": 318544,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "slideshow3",
+      "safe": true,
+      "format": "webp",
+      "width": 1200,
+      "height": 670,
+      "bytes": 279808,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "slideshow4",
+      "safe": true,
+      "format": "webp",
+      "width": 1200,
+      "height": 670,
+      "bytes": 310740,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "slideshow5",
+      "safe": true,
+      "format": "webp",
+      "width": 1200,
+      "height": 670,
+      "bytes": 246902,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "slideshow6",
+      "safe": true,
+      "format": "webp",
+      "width": 1200,
+      "height": 670,
+      "bytes": 319058,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "slideshow7",
+      "safe": true,
+      "format": "webp",
+      "width": 1200,
+      "height": 670,
+      "bytes": 304194,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "player2027",
+      "safe": true,
+      "format": "webp",
+      "width": 1500,
+      "height": 2068,
+      "bytes": 436994,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "foothillHeader",
+      "safe": true,
+      "format": "png",
+      "width": 500,
+      "height": 82,
+      "bytes": 9331,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "heroPoster",
+      "safe": true,
+      "format": "jpeg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 125900,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "episodePoster",
+      "safe": true,
+      "format": "jpeg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 119139,
+      "hasAlpha": false
+    },
+    {
+      "logicalName": "matchSponsor",
+      "safe": true,
+      "format": "webp",
+      "width": 786,
+      "height": 164,
+      "bytes": 30748,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "sponsorChronic",
+      "safe": true,
+      "format": "webp",
+      "width": 1968,
+      "height": 825,
+      "bytes": 37478,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "sponsorModern",
+      "safe": true,
+      "format": "webp",
+      "width": 1968,
+      "height": 825,
+      "bytes": 63252,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "sponsorNikys",
+      "safe": true,
+      "format": "webp",
+      "width": 2423,
+      "height": 485,
+      "bytes": 44254,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "sponsorPlanted",
+      "safe": true,
+      "format": "webp",
+      "width": 2423,
+      "height": 485,
+      "bytes": 28574,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "sponsorTepitoPrevious",
+      "safe": true,
+      "format": "webp",
+      "width": 2423,
+      "height": 485,
+      "bytes": 18532,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "sponsorPackshot",
+      "safe": true,
+      "format": "webp",
+      "width": 1968,
+      "height": 825,
+      "bytes": 39484,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "sponsorTepitoSelected",
+      "safe": true,
+      "format": "webp",
+      "width": 1200,
+      "height": 240,
+      "bytes": 27028,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "onzioWordmark",
+      "safe": true,
+      "format": "png",
+      "width": 500,
+      "height": 500,
+      "bytes": 29071,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "socialInstagram",
+      "safe": true,
+      "format": "png",
+      "width": 192,
+      "height": 192,
+      "bytes": 4456,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "socialFacebook",
+      "safe": true,
+      "format": "png",
+      "width": 192,
+      "height": 192,
+      "bytes": 2906,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "socialTiktok",
+      "safe": true,
+      "format": "png",
+      "width": 192,
+      "height": 192,
+      "bytes": 3463,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "socialYoutube",
+      "safe": true,
+      "format": "png",
+      "width": 192,
+      "height": 192,
+      "bytes": 3184,
+      "hasAlpha": true
+    },
+    {
+      "logicalName": "socialX",
+      "safe": true,
+      "format": "png",
+      "width": 192,
+      "height": 192,
+      "bytes": 4185,
+      "hasAlpha": true
+    }
+  ]
+}

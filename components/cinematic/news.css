@@ -1,0 +1,60 @@
+/* RC2027-NEWS: Sam's News list and article (preview: outer design-explorations/news-2027). */
+.cinematic-site :is(.cinematic-news,.cinematic-news-article){--news-red:#fc1618;--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;color:#0b0b0b;background:#fff}
+
+/* ───── List ───── */
+.cinematic-site .cinematic-news{position:relative;isolation:isolate}
+.cinematic-site .news-heading{text-align:right;padding:66px 5.4% 34px;box-shadow:inset 0 14px 14px -14px #0003,0 6px 10px -6px #0003;position:relative;z-index:1}
+.cinematic-site .news-heading h1{font:900 clamp(36px,3.9vw,62px)/1.1 var(--display);letter-spacing:-.045em;text-transform:uppercase}
+.cinematic-site .news-heading p{font:400 clamp(15px,1.4vw,20px)/1.4 var(--body);text-transform:uppercase;color:var(--news-red);margin-top:2px}
+.cinematic-site .news-body{max-width:1600px;margin:0 auto;padding:clamp(30px,3.4vw,52px) 5.4% clamp(50px,5.5vw,84px)}
+.cinematic-site .news-legend{list-style:none;margin:0 0 clamp(22px,2.6vw,40px);padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:12px clamp(20px,3vw,46px)}
+.cinematic-site .news-legend li{display:flex;align-items:center;gap:.62em;font:400 clamp(15px,2.05vw,31px)/1.2 var(--body);letter-spacing:-.01em}
+.cinematic-site .news-legend i{width:1.08em;height:1.08em;border-radius:50%;flex:none}
+.cinematic-site .news-list{list-style:none;margin:0;padding:0;display:grid;gap:clamp(30px,3.6vw,54px)}
+.cinematic-site .news-item h2{text-align:center;font:900 clamp(22px,2.75vw,41px)/1.1 var(--display);letter-spacing:-.035em;text-transform:uppercase;margin-bottom:clamp(14px,2.1vw,31px)}
+.cinematic-site .news-card{display:block;background:#fff;box-shadow:0 0 14px #0004;color:inherit;text-decoration:none;transition:box-shadow 160ms ease}
+.cinematic-site .news-card:hover{box-shadow:0 0 22px #0006}
+.cinematic-site .news-card-main{display:grid;grid-template-columns:minmax(0,1fr) 33% 15%;align-items:center;gap:0;padding:clamp(16px,2.65vw,40px) 0 clamp(18px,2.9vw,44px)}
+.cinematic-site .news-card-title{text-align:right;padding:0 clamp(24px,4.4vw,64px) 0 clamp(24px,4vw,60px);font:400 clamp(18px,1.95vw,29px)/1.2 var(--body);letter-spacing:-.015em}
+.cinematic-site .news-card-cover{width:100%;aspect-ratio:323/173;object-fit:cover;background:#141414}
+.cinematic-site .news-card-number{padding-left:clamp(20px,4vw,59px);font:900 clamp(13px,1.15vw,17px)/1 var(--display)}
+.cinematic-site .news-card-band{display:block;background:var(--news-color);color:#fff;text-align:center;text-transform:uppercase;font:400 clamp(14px,2vw,30px)/1.45 var(--body);letter-spacing:.01em;padding:0 12px}
+.cinematic-site .news-card:hover .news-card-title{text-decoration:underline;text-underline-offset:.18em;text-decoration-thickness:1px}
+.cinematic-site .news-empty{text-align:center;color:#777;font:400 18px/1.5 var(--body);padding:40px 0}
+
+/* ───── Article ───── */
+.cinematic-site .article-head{background:#111;color:#fff;padding:clamp(34px,5.6vw,81px) 3.7% clamp(28px,4.3vw,62px)}
+.cinematic-site .article-head>*{max-width:62rem}.cinematic-site .article-head h1{max-width:16em}
+.cinematic-site .article-eyebrow{font:400 clamp(15px,1.75vw,25px)/1.2 var(--body);color:#bdbdbd}
+.cinematic-site .article-head h1{font:800 clamp(30px,3.95vw,57px)/1.04 var(--heavy);text-transform:none;letter-spacing:-.035em;margin:.12em 0 .14em}
+.cinematic-site .article-subtitle{font:400 clamp(16px,1.8vw,26px)/1.25 var(--body);letter-spacing:-.02em;color:#d9d9d9}
+/* The dark header runs a third of the way down the cover, then a red line, then white (Sam's art). */
+.cinematic-site .article-cover{padding:0 3.7%;background:linear-gradient(#111 0 34.4%,var(--news-red) 34.4% calc(34.4% + clamp(4px,.77vw,11px)),#fff calc(34.4% + clamp(4px,.77vw,11px)))}
+.cinematic-site .article-cover img{width:100%;height:auto;aspect-ratio:2287/1237;object-fit:cover;background:#1b1b1b}
+.cinematic-site .article-body{margin:0 3.7%;padding:clamp(34px,4.1vw,60px) 0 clamp(36px,3.3vw,48px);border-top:1px solid #c5c5c5;margin-top:clamp(20px,3.2vw,46px);font:400 clamp(16px,1.65vw,24px)/1.46 var(--body)}
+.cinematic-site .article-category{display:flex;align-items:center;gap:.5em;font:800 clamp(18px,1.95vw,28px)/1.2 var(--heavy)}
+.cinematic-site .article-category i{width:.82em;height:.82em;border-radius:50%;flex:none}
+.cinematic-site .article-date{font-style:italic;color:#6b6b6b;margin:clamp(14px,1.9vw,28px) 0 clamp(16px,1.9vw,28px)}
+.cinematic-site .article-paragraph{max-width:96rem;margin-bottom:1.46em;color:#111}
+.cinematic-site .article-action{text-align:center;margin-top:-.2em}
+.cinematic-site .article-action a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.38em .48em;background:var(--news-red);color:#fff;font:400 clamp(16px,1.65vw,24px)/1.3 var(--body);text-decoration:none}
+.cinematic-site .article-action a:hover{filter:brightness(.92)}
+
+@media(max-width:700px){
+ .cinematic-site .news-heading{padding:38px max(22px,env(safe-area-inset-left,0px)) 24px}
+ .cinematic-site .news-body{padding:26px 16px 46px}
+ .cinematic-site .news-legend{justify-content:flex-start;gap:10px 18px;margin-bottom:28px}
+ .cinematic-site .news-legend li{font-size:15px}
+ .cinematic-site .news-item h2{font-size:clamp(21px,6.2vw,26px);margin-bottom:12px}
+ .cinematic-site .news-card-main{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"cover cover" "title number";padding:0;gap:0}
+ .cinematic-site .news-card-cover{grid-area:cover}
+ .cinematic-site .news-card-title{grid-area:title;text-align:left;padding:14px 10px 16px 16px;font-size:18px;line-height:1.3}
+ .cinematic-site .news-card-number{grid-area:number;align-self:start;padding:17px 16px 0 6px;font-size:13px}
+ .cinematic-site .news-card-band{font-size:15px;line-height:2}
+ .cinematic-site .article-head{padding:30px 20px 24px}
+ .cinematic-site .article-cover{padding:0 16px}
+ .cinematic-site .article-body{margin:22px 16px 0;padding:26px 0 36px}
+}
+@media(prefers-reduced-motion:reduce){.cinematic-site .news-card{transition:none}}
+.cinematic-site .news-cover-empty{display:block;background:#1b1b1b}
+.cinematic-site .article-cover .news-cover-empty{aspect-ratio:2287/1237}

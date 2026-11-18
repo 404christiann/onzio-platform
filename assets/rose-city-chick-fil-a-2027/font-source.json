@@ -1,0 +1,42 @@
+{
+  "suppliedOn": "2026-10-13",
+  "archive": "/Users/christianalcala/Downloads/OnlineWebFonts_COM_599a27c4bba399ca288a5770c37275d4.zip",
+  "archiveSha256": "7950e4e1f63c93d9cc9f69e6fe19bfc9650947f7b0ae1f32745e59db501016e5",
+  "names": [
+    [
+      1,
+      "PhosphorW00"
+    ],
+    [
+      2,
+      "Regular"
+    ],
+    [
+      4,
+      "Phosphor W00"
+    ],
+    [
+      6,
+      "PhosphorW00"
+    ]
+  ],
+  "weight": 400,
+  "fsType": 8,
+  "members": [
+    {
+      "name": "Phosphor W00/Phosphor W00.ttf",
+      "bytes": 47864,
+      "sha256": "4a267772cc30cbcb1c436d577010382db2de0d3e1a984a0880f7acf885988b95",
+      "local": "font-sources/phosphor-w00/Phosphor W00.ttf"
+    },
+    {
+      "name": "Phosphor W00/Web Fonts/99b7b7dc18c2d3390efc3bc05a0467cb.woff2",
+      "bytes": 19936,
+      "sha256": "4ae4ada359b2db1107a8037e0af2de5c08c712c814cf9ee5821588cc4bb86a7a",
+      "local": "public/fonts/phosphor-w00/Phosphor W00.woff2"
+    }
+  ],
+  "nameTablesMatch": true,
+  "scope": "Local isolated Chick-fil-A Details preview only; old supplied font/source retained; no application or global font packaging change.",
+  "licenseNote": "Embedded Monotype font notice differs from generic archive attribution notice; no public redistribution or deployment rights inferred."
+}

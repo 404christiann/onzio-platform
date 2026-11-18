@@ -1,3 +1,4 @@
+import CinematicShell from "@/components/cinematic/CinematicShell";
 import type { TemplateKey } from "@/packages/presentation";
 import { codeSiteForTemplateKey } from "@/lib/code-site";
 
@@ -18,6 +19,7 @@ export default function TemplateFontScope({
   templateKey: TemplateKey | null;
   children: React.ReactNode;
 }) {
+  if (templateKey === "cinematic@2") return <CinematicShell contentOnly>{children}</CinematicShell>;
   const fontPack = codeSiteForTemplateKey(templateKey) === "diverse-city" ? "academy" : undefined;
   return (
     <div data-font-pack={fontPack} className="contents">

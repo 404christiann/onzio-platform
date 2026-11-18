@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { cinematicShopContentSchema, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
+import { CINEMATIC_KIT_BULLET_POINTS } from "@/lib/shop-kit";
 
 export const shopSurfaceSchema = z.enum(["home", "shop"]);
 export const shopVariantSchema = z.enum(["home", "third", "away"]);
@@ -43,7 +45,8 @@ export const shopSectionSchema = z.object({
   eyebrow: z.string().max(160),
   title: z.string().max(240),
   description: z.string().max(3000),
-  bullet_points: z.array(z.string().max(80)).max(8),
+  // The highest per-template limit; shopSaveRequestSchemaFor applies the club's own (8 except cinematic@2).
+  bullet_points: z.array(z.string().max(80)).max(CINEMATIC_KIT_BULLET_POINTS),
   store_note: z.string().max(180),
   cta_label: z.string().max(100),
   cta_link: safePageOrExternalUrl,
@@ -89,14 +92,29 @@ export const shopSaveRequestSchema = z.object({
     away: z.array(shopPhotoSchema).max(6).optional(),
   }).strict().optional(),
   purchase: shopPurchaseSchema.optional(),
+  presentation: cinematicShopContentSchema.optional(),
 }).strict().superRefine((request, context) => {
-  if (Object.keys(request.variants).length === 0 && !request.photoRows && !request.purchase) {
+  if (Object.keys(request.variants).length === 0 && !request.photoRows && !request.purchase && !request.presentation) {
     context.addIssue({ code: "custom", message: "No Shop changes to save." });
   }
-  if (request.surface === "home" && (request.photoRows || request.purchase || Object.keys(request.variants).some((variant) => variant !== "home"))) {
+  if (request.surface === "home" && (request.photoRows || request.purchase || request.presentation || Object.keys(request.variants).some((variant) => variant !== "home"))) {
     context.addIssue({ code: "custom", message: "Homepage shop feature accepts its home kit only." });
   }
 });
+
+/**
+ * The save request for a club whose design allows `maxBulletPoints` per kit (10 for cinematic@2, 8 otherwise; the Shop editor picks it).
+ * The database applies the same limit in save_shop_page.
+ */
+export function shopSaveRequestSchemaFor(maxBulletPoints: number) {
+  return shopSaveRequestSchema.superRefine((request, context) => {
+    for (const variant of shopVariantSchema.options) {
+      if ((request.variants[variant]?.section.bullet_points.length ?? 0) > maxBulletPoints) {
+        context.addIssue({ code: "custom", path: ["variants", variant, "section", "bullet_points"], message: `Each kit can have up to ${maxBulletPoints} bullet points.` });
+      }
+    }
+  });
+}
 
 export type ShopSaveRequest = z.infer<typeof shopSaveRequestSchema>;
 export type ShopSection = z.infer<typeof shopSectionSchema>;
@@ -112,6 +130,7 @@ export type ShopSnapshot = {
   photos: Array<ShopPhoto & { kit_variant: ShopVariant }>;
   photoRows: Array<ShopPhoto & { kit_variant: ShopVariant }>;
   purchase: z.infer<typeof shopPurchaseSchema> | null;
-  media: Array<{ id: string; storage_bucket: string; storage_path: string }>;
+  presentation?: CinematicShopPresentation | null;
+  media: Array<{ id: string; storage_bucket: string; storage_path: string; width?: number; height?: number }>;
   operation?: { status: "not-committed" } | { status: "committed"; receipt: ShopSnapshot };
 };

@@ -1,5 +1,6 @@
 "use client";
 
+import CinematicFooter from "@/components/cinematic/CinematicFooter";
 import Image from "@/components/ResilientImage";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -23,9 +24,13 @@ const footerLinks = [
   { label: "Shop", href: "/shop" },
 ];
 
+// CinematicFooter (cinematic@2) imports this type from here.
+export type { FooterOverrides };
+
 /** The Academy footer lives in its site module; every other template renders here. */
 export default function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
   const club = useClubContext();
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicFooter overrides={overrides} />;
   if (codeSiteFor(club) === "diverse-city") return <AcademyFooter overrides={overrides} />;
   return <TemplateFooter overrides={overrides} />;
 }

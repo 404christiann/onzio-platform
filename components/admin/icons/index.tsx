@@ -553,6 +553,14 @@ export const IconShop = Drawing4;
 export const IconAbout = Drawing5;
 export const IconSponsors = Handshake;
 export const IconContact = Drawing6;
+/** icons.download medium/outline/round book-open (RC2027-NEWS). */
+export function IconNews({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 5.35418C11.2671 4.52376 10.1947 4 9 4H3.5C2.39543 4 1.5 4.89543 1.5 6V18C1.5 19.1046 2.39543 20 3.5 20H9C9.7571 20 10.4159 20.4207 10.7555 21.041C11.0207 21.5255 11.4477 22 12 22C12.5523 22 12.9793 21.5255 13.2445 21.041C13.5841 20.4207 14.2429 20 15 20H20.5C21.6046 20 22.5 19.1046 22.5 18V6C22.5 4.89543 21.6046 4 20.5 4H15C13.8053 4 12.7329 4.52376 12 5.35418ZM15 6C13.8954 6 13 6.89543 13 8V18.5351C13.5883 18.1948 14.2714 18 15 18H20.5V6H15ZM9 18C9.72858 18 10.4117 18.1948 11 18.5351V8C11 6.89543 10.1046 6 9 6L3.5 6V18H9Z" fill="currentColor" />
+    </svg>
+  );
+}
 export const IconSeasons = Drawing7;
 export const IconRoster = Drawing8;
 export const IconSchedule = Drawing7;

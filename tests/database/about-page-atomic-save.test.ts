@@ -1,3 +1,4 @@
+import { localPostgresConfig } from "../helpers/local-postgres";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -25,7 +26,7 @@ async function rejects(action:()=>Promise<unknown>,message:string){await db.quer
 async function media(){await db.query("reset role");const id=randomUUID(),path=`${clubId}/about/${id}.png`;
  await db.query(`insert into onzio.media_assets(id,club_id,storage_bucket,storage_path,surface,media_kind,mime_type,byte_size,width,height,checksum_sha256,status,created_by,published_at)
  values($1,$2,'onzio-media',$3,'about','graphic','image/png',100,50,50,$4,'published',$5,now())`,[id,clubId,path,"a".repeat(64),USER_IDS.ownerAal2]);await actor();return {id,path,url:`https://attacker.test/storage/v1/object/public/onzio-media/${path}`};}
-beforeEach(async()=>{assertSafeTestEnvironment();db=new Client({host:"127.0.0.1",port:54322,user:"postgres",password:"postgres",database:"postgres"});await db.connect();await db.query("begin");await design();});
+beforeEach(async()=>{assertSafeTestEnvironment();db=new Client(localPostgresConfig());await db.connect();await db.query("begin");await design();});
 afterEach(async()=>{if(db){await db.query("rollback");await db.end();}});
 describe("independent About/Logo atomic save",()=>{
  it("saves only selected page, independently advances revision and records/replays exact actor receipt",async()=>{

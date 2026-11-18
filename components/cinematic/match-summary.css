@@ -1,0 +1,109 @@
+/* Sam's bold labels use Avenir Heavy (CinematicAvenirHeavy, loaded by CinematicAvenirFonts); the site's body face is Avenir Medium only. */
+.cinematic-site .match-summary{--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif}
+/* RC2027-MATCH-SUMMARY: Sam's Match Summary (approved preview: outer design-explorations/match-summary-2027). */
+.cinematic-site .match-summary{--summary-red:#ff0018;background:#fff;color:#141414}
+.cinematic-site .summary-heading{text-align:right;padding:66px 5.4% 46px;box-shadow:inset 0 14px 14px -14px #0003}
+.cinematic-site .summary-heading h1{font:900 clamp(36px,3.9vw,62px)/1.1 var(--display);letter-spacing:-.045em;text-transform:uppercase}
+.cinematic-site .summary-heading p{font:400 clamp(15px,1.4vw,20px)/1.4 var(--body);text-transform:uppercase;color:var(--summary-red);margin-top:4px}
+.cinematic-site .summary-score{position:relative;z-index:1;background:#fff;box-shadow:0 4px 12px #0002,0 -4px 12px #0001}
+.cinematic-site .summary-score .result-strip{box-shadow:none;padding-bottom:2.2vw}
+.cinematic-site .summary-youtube{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 0 2.4vw;color:#141414;text-decoration:none;font:400 clamp(13px,1.1vw,16px)/1.3 var(--body)}
+.cinematic-site .summary-youtube img{height:clamp(24px,2.3vw,34px);width:auto}
+.cinematic-site .summary-body{width:63%;max-width:900px;margin:0 auto;padding:3vw 0 1vw}
+.cinematic-site .summary-section{margin-bottom:5vw}
+.cinematic-site .summary-section>h2{font:800 clamp(20px,1.95vw,28px)/1.2 var(--heavy);margin-bottom:28px}
+
+/* Timeline: Rose City events on the left, the opponent's on the right, the running score in the middle. */
+.cinematic-site .summary-timeline{list-style:none;margin:0;padding:0}
+.cinematic-site .summary-event{display:grid;grid-template-columns:minmax(0,1fr) 84px minmax(0,1fr);align-items:center;min-height:60px}
+.cinematic-site .event-half{display:flex;align-items:center;gap:10px;align-self:stretch;padding:6px 0}
+.cinematic-site .event-half.club{justify-content:flex-end;text-align:right}
+.cinematic-site .summary-event.club .event-half.club,.cinematic-site .summary-event.opponent .event-half.opponent{border-bottom:1px solid #e3e3e3}
+.cinematic-site .event-text{display:flex;flex-direction:column;font:400 clamp(14px,1.25vw,18px)/1.3 var(--body)}
+.cinematic-site .event-detail,.cinematic-site .sub-off{color:#9b9b9b}
+.cinematic-site .sub-on,.cinematic-site .sub-off{display:inline-flex;align-items:center;gap:7px}
+.cinematic-site .event-half.club .sub-on,.cinematic-site .event-half.club .sub-off{flex-direction:row-reverse}
+.cinematic-site .arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent}
+.cinematic-site .arrow.up{border-bottom:9px solid #2fd35a}
+.cinematic-site .arrow.down{border-top:9px solid #ff2a2a}
+.cinematic-site .event-crest{flex:none;width:44px;height:44px;display:grid;place-items:center;--opponent-crest-size:44px}
+.cinematic-site .event-crest img{width:100%;height:100%;object-fit:contain}
+.cinematic-site .event-minute{flex:none;font:800 clamp(14px,1.25vw,18px)/1.1 var(--heavy);white-space:nowrap}
+.cinematic-site .event-mark{display:grid;place-items:center}
+.cinematic-site .event-score{background:#0c0c0c;color:#fff;border-radius:3px;padding:6px 14px;font:800 clamp(13px,1.15vw,16px)/1 var(--heavy);white-space:nowrap}
+.cinematic-site .event-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#fff;box-shadow:0 1px 6px #0003}
+.cinematic-site .event-icon img{height:17px;width:auto}
+
+/* Statistics: Rose City's share in black, the opponent's in red; the higher number is bold. */
+.cinematic-site .stats-teams{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font:800 clamp(15px,1.3vw,19px)/1 var(--heavy)}
+.cinematic-site .stats-teams span{display:flex;align-items:center;gap:10px;--opponent-crest-size:40px}
+.cinematic-site .stats-teams img{width:40px;height:40px;object-fit:contain}
+.cinematic-site .summary-stats{margin:0}
+.cinematic-site .stat-row{display:grid;grid-template-columns:54px minmax(0,1fr) 54px;grid-template-areas:"label label label" "club bar opponent";align-items:center;column-gap:16px;padding:12px 0 14px;border-bottom:1px solid #e3e3e3}
+.cinematic-site .stat-row dt{grid-area:label;text-align:center;font:400 clamp(13px,1.1vw,16px)/1.3 var(--body);margin-bottom:4px}
+.cinematic-site .stat-row dd{margin:0}
+.cinematic-site .stat-value{font:400 clamp(15px,1.3vw,19px)/1 var(--body);font-variant-numeric:tabular-nums}
+.cinematic-site .stat-value.club{grid-area:club}
+.cinematic-site .stat-value.opponent{grid-area:opponent;text-align:right}
+.cinematic-site .stat-value[data-lead=true]{font-family:var(--heavy);font-weight:800}
+.cinematic-site .stat-bar{grid-area:bar;height:7px;border-radius:4px;background:var(--summary-red);overflow:hidden}
+.cinematic-site .stat-bar span{display:block;height:100%;background:#262626}
+
+/* Match information */
+.cinematic-site .summary-info{display:grid;grid-template-columns:1fr 1fr;gap:0 6%}
+.cinematic-site .summary-info dl{margin:0}
+.cinematic-site .info-list>div{display:flex;gap:6px;align-items:center;padding:11px 0;border-bottom:1px solid #ececec;font:400 clamp(14px,1.25vw,18px)/1.3 var(--body)}
+.cinematic-site .info-list dt{display:flex;align-items:center;gap:12px;font-family:var(--heavy);font-weight:800;white-space:nowrap}
+.cinematic-site .info-list dt img{width:20px;height:20px;object-fit:contain}
+.cinematic-site .info-list dd{margin:0}
+.cinematic-site .info-groups dl{position:relative;padding:12px 0 14px 40px;border-bottom:1px solid #ececec}
+.cinematic-site .info-groups dl>div{display:flex;gap:6px;font:400 clamp(14px,1.25vw,18px)/1.35 var(--body)}
+.cinematic-site .info-groups dt{font-family:var(--heavy);font-weight:800}
+.cinematic-site .info-groups dd{margin:0}
+.cinematic-site .group-icon{position:absolute;left:0;top:50%;transform:translateY(-50%);width:24px;height:24px;object-fit:contain}
+
+/* Lineups */
+.cinematic-site .summary-lineups{width:72%;max-width:1040px;margin:0 auto;padding:2vw 0 6vw;display:flex;justify-content:space-between;gap:6%}
+.cinematic-site .lineup-column{flex:1;max-width:420px}
+.cinematic-site .lineup-column.opponent{text-align:right}
+.cinematic-site .lineup{margin-bottom:3.2vw}
+.cinematic-site .lineup h3{font:800 clamp(19px,1.95vw,28px)/1.2 var(--heavy);margin-bottom:16px}
+.cinematic-site .lineup ul{list-style:none;margin:0;padding:0 0 0 12%}
+.cinematic-site .lineup.opponent ul{padding:0 12% 0 0}
+.cinematic-site .lineup li{font:400 clamp(15px,1.3vw,19px)/1.3 var(--body);padding:9px 0}
+.cinematic-site .lineup ul[data-rules=true] li{border-bottom:1px solid #e3e3e3}
+.cinematic-site .lineup li.staff{display:flex;flex-direction:column}
+.cinematic-site .lineup.opponent li.staff{align-items:flex-end}
+.cinematic-site .lineup li.staff small{color:#9b9b9b;font-size:.95em}
+
+@media(max-width:900px){
+ .cinematic-site .summary-heading{padding:38px 22px 30px}
+ .cinematic-site .summary-youtube{padding-bottom:22px}
+ .cinematic-site .summary-body{width:auto;padding:28px 18px 8px}
+ .cinematic-site .summary-section{margin-bottom:40px}
+ .cinematic-site .summary-section>h2{margin-bottom:16px}
+ .cinematic-site .summary-event{grid-template-columns:minmax(0,1fr) 54px minmax(0,1fr);min-height:52px}
+ .cinematic-site .event-half{gap:6px}
+ .cinematic-site .event-crest{display:none}
+ .cinematic-site .event-text{font-size:12.5px}
+ .cinematic-site .event-minute{font-size:12.5px}
+ .cinematic-site .event-score{padding:5px 8px;font-size:12px}
+ .cinematic-site .event-icon{width:30px;height:30px}
+ .cinematic-site .event-icon img{height:14px}
+ .cinematic-site .stat-row{grid-template-columns:44px minmax(0,1fr) 44px;column-gap:10px}
+ .cinematic-site .summary-info{grid-template-columns:1fr}
+ .cinematic-site .summary-lineups{width:auto;padding:16px 22px 40px;flex-direction:column;gap:0}
+ .cinematic-site .lineup-column,.cinematic-site .lineup-column.opponent{max-width:none;text-align:left}
+ .cinematic-site .lineup ul,.cinematic-site .lineup.opponent ul{padding:0}
+ .cinematic-site .lineup{margin-bottom:28px}
+}
+
+.cinematic-site .lineup li b{font-family:var(--heavy);font-weight:800}
+.cinematic-site .summary-score .result-name{font-family:var(--heavy);font-weight:800}
+@media(max-width:900px){.cinematic-site .lineup.opponent li.staff{align-items:flex-start}}
+@media(max-width:900px){.cinematic-site .lineup.opponent li:not(.staff){display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:.3em}}
+
+.cinematic-site .summary-pending{text-align:center;padding:60px 24px 100px;font:400 18px/1.5 var(--body);color:#555}
+.cinematic-site .summary-pending a{display:inline-flex;align-items:center;min-height:44px;margin-top:16px;padding:0 24px;border:1px solid #bdbdbd;border-radius:999px;color:#141414}
+/* Other page styles uppercase h2/h3 site-wide; Sam sets these headings in normal case. */
+.cinematic-site .match-summary .summary-section>h2,.cinematic-site .match-summary .lineup h3,.cinematic-site .match-summary .stats-teams{text-transform:none}

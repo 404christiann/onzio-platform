@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cinematicHomepageContentSchema, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { resolveHomepageBindings, resolveHomepageCapabilities, sameHomepageBindingMeaning, type HomepageBindingIdentity, type HomepageBindings, type HomepageRenderer } from "./capabilities";
 import { homepageHeroSchema, homepageStorySchema, homepageVideoSchema } from "./contract";
 
@@ -18,6 +19,7 @@ const recoveryPhotoSchema = z.object({
 }).strict();
 
 const recoveryDraftSchema = z.object({
+  revamp: cinematicHomepageContentSchema.optional(),
   hero: homepageHeroSchema,
   photos: z.object({
     seasonLabel: z.string(),
@@ -107,6 +109,11 @@ export function overlayHomepageRecovery(input: {
     if (field === "items") draft.photos.items = structuredClone(record.draft.photos.items);
     else draft.photos.seasonLabel = record.draft.photos.seasonLabel;
   }
+  // cinematic@2: revamp content is one section outside the legacy bindings.
+  if (JSON.stringify(record.baseline.revamp) !== JSON.stringify(record.draft.revamp)) {
+    if (!record.draft.revamp || !draft.revamp) return null;
+    draft.revamp = mergeCinematicHomepageRecovery(record.baseline.revamp, record.draft.revamp, draft.revamp);
+  }
   return draft;
 }
 
@@ -163,4 +170,32 @@ export function resolveHomepageRecovery(input: {
 
 export function homepageSaveFailureSettlesOperation(code: string): boolean {
   return ["CONTENT_CHANGED", "DESIGN_CHANGED", "INVALID_HOMEPAGE_PAYLOAD", "SECTION_UNAVAILABLE", "FIELD_UNAVAILABLE", "INVALID_PHOTO", "VIDEO_SOURCE_REQUIRED"].includes(code);
+}
+
+/** Restore only fields changed by this draft. Concurrently saved words stay
+ * current, and operator-owned presentation inputs always come from the server.
+ * An edited ordered ticket-option list replaces that list, like photo order. */
+export function mergeCinematicHomepageRecovery(
+  baseline: CinematicHomepageContent | undefined,
+  recovered: CinematicHomepageContent,
+  current: CinematicHomepageContent,
+): CinematicHomepageContent {
+  function merge(before: unknown, after: unknown, latest: unknown): unknown {
+    if (JSON.stringify(before) === JSON.stringify(after)) return structuredClone(latest);
+    if (after && typeof after === "object" && !Array.isArray(after)) {
+      const prior = before && typeof before === "object" && !Array.isArray(before) ? before as Record<string, unknown> : {};
+      const edited = after as Record<string, unknown>;
+      const output = latest && typeof latest === "object" && !Array.isArray(latest) ? structuredClone(latest) as Record<string, unknown> : {};
+      for (const key of new Set([...Object.keys(prior), ...Object.keys(edited)])) {
+        if (JSON.stringify(prior[key]) === JSON.stringify(edited[key])) continue;
+        if (!Object.hasOwn(edited, key)) delete output[key];
+        else output[key] = merge(prior[key], edited[key], output[key]);
+      }
+      return output;
+    }
+    return structuredClone(after);
+  }
+  const result = merge(baseline, recovered, current) as CinematicHomepageContent;
+  result.presentation = structuredClone(current.presentation);
+  return result;
 }

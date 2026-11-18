@@ -11,8 +11,9 @@ const isDecoration = (node: Node) => node.nodeType === 1 && DECORATIONS.some(nam
  * A real CSS viewport with a React portal; never loads or navigates the live URL.
  * `tags` (the reimagined admin, ADMIN-RE-09) adds a "Click to change" tag on
  * hover and a "Changed" tag on the pieces listed in `tags.changed`.
+ * `label` names the previewed page (cinematic@2 editors reuse this frame).
  */
-export default function HomepagePreviewFrame({ children, host, playback = false, tags, classic = false, loading = false, theme = "light" }: { children: ReactNode; host: string; playback?: boolean; tags?: { changed: readonly string[] }; classic?: boolean; loading?: boolean; theme?: "light" | "dark" }) {
+export default function HomepagePreviewFrame({ children, host, playback = false, label = "Homepage", tags, classic = false, loading = false, theme = "light" }: { children: ReactNode; host: string; playback?: boolean; label?: string; tags?: { changed: readonly string[] }; classic?: boolean; loading?: boolean; theme?: "light" | "dark" }) {
   const iframe = useRef<HTMLIFrameElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const tagsOn = !!tags;
@@ -109,7 +110,9 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
     const mount = () => {
       observer?.disconnect();
       const doc = frame.contentDocument;
-      if (!doc) return;
+      // A hidden iframe can expose its document before Chrome creates the
+      // srcDoc roots. Its load event retries mounting once they are available.
+      if (!doc?.documentElement || !doc.head || !doc.body) return;
       doc.documentElement.lang = "en";
       // Only root font classes; admin theme attributes never cross the frame.
       doc.documentElement.className = document.documentElement.className.replace(/\bdark\b/g, "");
@@ -144,8 +147,8 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
     return () => { active = false; observer?.disconnect(); frame.removeEventListener("load", mount); };
   }, []);
   return <div className="hp-browser" data-classic={classic || undefined} aria-busy={classic ? loading || !delayed.showContent : undefined}>
-    <div className="hp-browser-chrome"><span aria-hidden="true">● ● ●</span><span>{host} · Homepage preview</span></div>
-    <iframe ref={iframe} title="Homepage preview" className="hp-preview-frame" srcDoc={initialDocument.current} />
+    <div className="hp-browser-chrome"><span aria-hidden="true">● ● ●</span><span>{host} · {label} preview</span></div>
+    <iframe ref={iframe} title={label + " preview"} className="hp-preview-frame" srcDoc={initialDocument.current} />
     {body && createPortal(<div style={classic && !delayed.showContent ? { display: "none" } : undefined} data-homepage-preview="true" data-playback={playback} data-homepage-tags={tagsOn || undefined} onClickCapture={event => {
       const target = event.target as HTMLElement;
       const blocked = target.closest(playback ? "a,form" : "a,button,iframe");

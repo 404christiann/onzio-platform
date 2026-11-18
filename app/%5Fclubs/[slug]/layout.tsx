@@ -1,6 +1,9 @@
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import CinematicShell from "@/components/cinematic/CinematicShell";
+import { fetchCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { createClient } from "@/lib/supabase-server";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
@@ -14,8 +17,14 @@ import { readPublicClubTimeZone } from "@/lib/public-club-time-zone";
 import AcademyRouteLoadingSkeleton from "@/components/sites/diverse-city/RouteLoadingSkeleton";
 import AcademyShell from "@/components/sites/diverse-city/Shell";
 import type { ClubContext } from "@/lib/club-context";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { codeSiteFor } from "@/lib/code-site";
+
+export async function generateViewport({ params }: { params: Promise<{ slug: string }> }): Promise<Viewport> {
+  const club = await getClubContextBySlug((await params).slug);
+  // Safe-area CSS needs cover in the actual app as well as the phone-review bundle.
+  return club.presentationTemplateKey === "cinematic@2" ? { viewportFit: "cover", themeColor: "#ffffff" } : {};
+}
 
 export async function generateMetadata({
   params,
@@ -83,6 +92,11 @@ export default async function TenantLayout({
 
   // ADMIN-RE-03: fail-safe and time-boxed; Los Angeles if the read fails.
   const timeZone = await readPublicClubTimeZone(club.id);
+
+  if (club.presentationTemplateKey === "cinematic@2") {
+    const initialContent = await fetchCinematicHomepageContent(club.id, (await createClient()).schema("onzio")).catch(() => null);
+    return <ClubContextProvider club={club}><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></ClubContextProvider>;
+  }
 
   // The header remains usable while branding or page content is pending.
   // Programs load independently inside Nav, so they never hold the page.

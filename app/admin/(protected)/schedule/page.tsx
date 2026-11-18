@@ -12,6 +12,8 @@ import { createClient } from "@/lib/admin-client";
 import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { cn } from "@/lib/utils";
+import { matchReplayEmbedUrl } from "@/lib/youtube-embed";
+import { EMPTY_MATCH_SUMMARY, matchSummaryColumns, readMatchSummary } from "@/lib/match-summary";
 import { Button } from "@/components/ui/button";
 import { AdminDialog, AdminDialogFooter } from "@/components/admin/ui/AdminDialog";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
@@ -35,6 +37,13 @@ function ClassicSchedulePage() {
   // hidden and nothing is copied forward into a new match for that template.
   const schedulePolicy = codeSiteAdminFor(club)?.schedule;
   const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false;
+  const isCinematic = club.presentationTemplateKey === "cinematic@2";
+  // Attendance and the Match Summary are edited only for cinematic@2 clubs, so other designs never
+  // overwrite those columns. Scorers follow the timeline's goals (lib/match-summary.ts).
+  function summaryColumnsFor(form: FormState) {
+    const { summary, attendance, ...rest } = form;
+    return isCinematic ? { ...rest, attendance, ...matchSummaryColumns(summary) } : rest;
+  }
   const carrySponsor = useCallback(
     (list: Match[], seasonId: string) =>
       hidesMatchSponsorFields ? {} : carrySponsorFromLatestMatch(list, seasonId),
@@ -92,7 +101,7 @@ function ClassicSchedulePage() {
       const supabase = createClient();
       const { data, error: loadError } = await supabase
         .from("matches")
-        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, competition, sponsor_name, sponsor_logo_url, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, season_id")
+        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, opponent_logo_asset_id, competition, league_logo_url, league_logo_asset_id, sponsor_name, sponsor_logo_url, sponsor_logo_asset_id, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, replay_video_url, attendance, summary, season_id")
         .order("date")
         .order("time");
       if (loadError) setError(loadError.message);
@@ -161,6 +170,12 @@ function ClassicSchedulePage() {
         return "Sponsor website link must be a valid http or https address.";
       }
     }
+    if (matchReplayEmbedUrl(form.replay_video_url ?? "") === null) {
+      return "The stream or replay video must be a YouTube video link, like https://youtu.be/…";
+    }
+    if (form.attendance !== null && (!Number.isInteger(form.attendance) || form.attendance < 0)) {
+      return "Attendance must be a whole number of 0 or higher.";
+    }
     return null;
   }
 
@@ -171,7 +186,7 @@ function ClassicSchedulePage() {
     setError(null);
     const supabase = createClient();
     const { data: inserted, error: e } = await supabase.from("matches").insert([{
-      ...addForm,
+      ...summaryColumnsFor(addForm),
       address: addForm.address?.trim() || null,
       city: addForm.city?.trim() || null,
       state: addForm.state?.trim() || null,
@@ -182,6 +197,7 @@ function ClassicSchedulePage() {
       sponsor_name: addForm.sponsor_name?.trim() || null,
       sponsor_logo_url: addForm.sponsor_logo_url?.trim() || null,
       sponsor_link: addForm.sponsor_link?.trim() || null,
+      replay_video_url: matchReplayEmbedUrl(addForm.replay_video_url ?? "") || null,
     }]);
     if (e) { setError(e.message); setSaving(false); return false; }
     const createdId = Array.isArray(inserted) ? inserted[0]?.id : undefined;
@@ -202,11 +218,15 @@ function ClassicSchedulePage() {
       date: m.date, time: m.time, opponent: m.opponent,
       opponent_short_name: m.opponent_short_name,
       opponent_logo_url: m.opponent_logo_url, competition: m.competition ?? "",
+      league_logo_url: m.league_logo_url ?? null,
       sponsor_name: m.sponsor_name, sponsor_logo_url: m.sponsor_logo_url,
       sponsor_link: m.sponsor_link,
       home: m.home, venue: m.venue, address: m.address ?? "",
       city: m.city ?? "", state: m.state ?? "",
       rose_city_score: m.rose_city_score, opponent_score: m.opponent_score,
+      replay_video_url: m.replay_video_url ?? null,
+      attendance: m.attendance ?? null,
+      summary: readMatchSummary(m.summary) ?? structuredClone(EMPTY_MATCH_SUMMARY),
       season_id: m.season_id,
     });
   }
@@ -234,9 +254,14 @@ function ClassicSchedulePage() {
       date: m.date, time: m.time, opponent: m.opponent,
       opponent_short_name: m.opponent_short_name,
       opponent_logo_url: m.opponent_logo_url, competition: m.competition ?? "",
+      league_logo_url: m.league_logo_url ?? null,
       sponsor_name: m.sponsor_name, sponsor_logo_url: m.sponsor_logo_url, sponsor_link: m.sponsor_link,
       home: m.home, venue: m.venue, address: m.address ?? "", city: m.city ?? "", state: m.state ?? "",
-      rose_city_score: m.rose_city_score, opponent_score: m.opponent_score, season_id: m.season_id,
+      rose_city_score: m.rose_city_score, opponent_score: m.opponent_score,
+      replay_video_url: m.replay_video_url ?? null,
+      attendance: m.attendance ?? null,
+      summary: readMatchSummary(m.summary) ?? structuredClone(EMPTY_MATCH_SUMMARY),
+      season_id: m.season_id,
     });
   }
 
@@ -255,7 +280,7 @@ function ClassicSchedulePage() {
     const supabase = createClient();
     const originalMatch = matches.find((match) => match.id === editingId);
     const { error: e } = await supabase.from("matches").update({
-      ...editForm,
+      ...summaryColumnsFor(editForm),
       address: editForm.address?.trim() || null,
       city: editForm.city?.trim() || null,
       state: editForm.state?.trim() || null,
@@ -266,6 +291,7 @@ function ClassicSchedulePage() {
       sponsor_name: editForm.sponsor_name?.trim() || null,
       sponsor_logo_url: editForm.sponsor_logo_url?.trim() || null,
       sponsor_link: editForm.sponsor_link?.trim() || null,
+      replay_video_url: matchReplayEmbedUrl(editForm.replay_video_url ?? "") || null,
     }).eq("id", editingId);
     if (e) { setError(e.message); setSaving(false); return false; }
     await deleteUnusedMatchImageUrls({
@@ -287,6 +313,12 @@ function ClassicSchedulePage() {
       ],
       column: "sponsor_logo_url",
       allowedPrefixes: ["match-sponsors/"],
+    });
+    await deleteUnusedMatchImageUrls({
+      bucket: "league-logos",
+      urls: [originalMatch?.league_logo_url !== editForm.league_logo_url ? originalMatch?.league_logo_url : null],
+      column: "league_logo_url",
+      allowedPrefixes: ["match-leagues/"],
     });
     const savedId = editingId;
     initialFormRef.current = editForm;

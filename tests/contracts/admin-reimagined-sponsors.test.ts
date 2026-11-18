@@ -111,7 +111,9 @@ describe("the migration", () => {
     expect(FILE.slice(0, 14) > "20261110090000").toBe(true);
     expect(FILE.slice(0, 14) > "20261109210000").toBe(true);
     // Later packages' migrations sort after it (ADMIN-RE-12b, ADMIN-RE-11c, then the operator purge).
-    expect(names.filter((name) => name > FILE)).toEqual([
+    // The Rose City 2027 branch's migrations (20261112*, then the *_cinematic_* reconcilers) sort after
+    // these, so only main's packages are compared here.
+    expect(names.filter((name) => name > FILE && !name.startsWith("20261112") && !name.includes("_cinematic_"))).toEqual([
       "20261110180000_programs_tryouts_sign_up_state.sql",
       "20261110220000_season_totals_add_up.sql",
       "20261111080000_purge_archived_club.sql",

@@ -1,0 +1,36 @@
+{
+  "localOnly": true,
+  "reference": "design-explorations/robinson-stadium-2027/reference.jpg",
+  "assets": {
+    "bus": {
+      "inputPath": "assets/rose-city-stadium-2027/inputs/bus.png",
+      "sourcePath": "assets/originals/tickets/Foothill Transit Bus graphic.png",
+      "sourceSha256": "a726a8e36bb757d82232ea043c0107fe49cbdf1d53fa829646910d5d5d79049d",
+      "sha256": "1af70e9fd4a68946075691f331ac5485397c2941a3f6ff91ccc23ed0b283ddfa",
+      "width": 1339,
+      "height": 430,
+      "processing": "Lossless PNG preparation; original dimensions preserved",
+      "reuseTicketsSlot": "bus"
+    },
+    "map": {
+      "inputPath": "assets/rose-city-stadium-2027/inputs/map.png",
+      "sourcePath": "assets/originals/tickets/Rose City FC Bus Route Zoom Map graphic.png",
+      "sourceSha256": "ebf2c31a6b3c852c22300b1dc91f6ea796618029e440daecc70621d2e6b45524",
+      "sha256": "d261039b64d7cfc41edcc055121615a42f02c3cdf92847f16e6dd3f5cbdadadf",
+      "width": 2380,
+      "height": 1216,
+      "processing": "Lossless PNG preparation; original dimensions preserved",
+      "reuseTicketsSlot": "map"
+    },
+    "partner": {
+      "inputPath": "assets/rose-city-stadium-2027/inputs/partner.png",
+      "sourcePath": "assets/originals/Chick-fil-A_Pasadena_Logo_Red_png.png",
+      "sourceSha256": "a483c755c8e2b0133856a2015e9d19def11021b4872918c5ab0fcf6ac3965c6e",
+      "sha256": "9a56d557cc0999051fa24ea878afbf58b741867212445187ab017d450315e118",
+      "width": 805,
+      "height": 181,
+      "processing": "Exact source rectangle, excluding empty canvas",
+      "reuseTicketsSlot": "partner"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import CinematicNav from "@/components/cinematic/CinematicNav";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
@@ -105,6 +106,11 @@ function isNavItemActive(pathname: string, link: NavLink) {
 }
 
 export default function Nav() {
+  const club = useClubContext();
+  return club.presentationTemplateKey === "cinematic@2" ? <CinematicNav /> : <TemplateNav />;
+}
+
+function TemplateNav() {
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
   const preview = useHomepagePreview();

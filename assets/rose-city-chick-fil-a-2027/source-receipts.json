@@ -1,0 +1,204 @@
+{
+  "retrievedOn": "2026-10-13",
+  "sources": [
+    {
+      "id": "id:jetk1g_lbVIAAAAAAAW6Ew",
+      "name": "Chick-fil-A Meal Pass graphic.png",
+      "path_display": "/Rose City FC x Onzio 2027/Chick-fil-A Meal Pass graphic.png",
+      "rev": "0165daf494bef9900000003963301b3",
+      "size": 60354,
+      "mime_type": "image/png",
+      "server_modified": "2026-10-13T02:08:10Z",
+      "ns_path": "ns:15404827059//Chick-fil-A Meal Pass graphic.png",
+      "dropbox_content_hash": "ebadfc5cf81e1006f381f8ee62c9f1ed719ccb6887aa5738f5c1d9cf8180fb61",
+      "original": "assets/originals/chick-fil-a/Chick-fil-A Meal Pass graphic.png",
+      "downloadedBytes": 60354,
+      "sha256": "f364ca694ff24d4bd8e6df061114fa9d2aa2b27dc8d11d09e3f83a97b9913431",
+      "dimensions": {
+        "width": 774,
+        "height": 1066,
+        "hasAlpha": true
+      },
+      "actualFormat": "png",
+      "proportionalDisplay": {
+        "path": "design-explorations/chick-fil-a-2027/public/artwork/chick-fil-a-meal-pass-graphic.png.webp",
+        "width": 774,
+        "height": 1066,
+        "bytes": 22492,
+        "sha256": "4b7260f817834480a3f3068e23352ad8443aefa676a54dfb5df5eeb5e927ef68",
+        "operation": "Proportional resize and lossless WebP; original bytes unchanged"
+      },
+      "dropboxContentHashVerified": true
+    },
+    {
+      "id": "id:jetk1g_lbVIAAAAAAAW6CQ",
+      "name": "Chick-fil-A Drive-Thru graphic.png",
+      "path_display": "/Rose City FC x Onzio 2027/Chick-fil-A Drive-Thru graphic.png",
+      "rev": "0165daf494bef9000000003963301b3",
+      "size": 387971,
+      "mime_type": "image/png",
+      "server_modified": "2026-10-13T02:08:10Z",
+      "ns_path": "ns:15404827059//Chick-fil-A Drive-Thru graphic.png",
+      "dropbox_content_hash": "1ab69fffa5a674ce7a75395d208f0492cd117647bf7c2d339371c2bde1062224",
+      "original": "assets/originals/chick-fil-a/Chick-fil-A Drive-Thru graphic.png",
+      "downloadedBytes": 387971,
+      "sha256": "258a8a38ff0f5c9102b43838d9f0d2992720d55ab3e861e1243db17de404c604",
+      "dimensions": {
+        "width": 5973,
+        "height": 5184,
+        "hasAlpha": true
+      },
+      "actualFormat": "png",
+      "iconDisplay": {
+        "path": "design-explorations/chick-fil-a-2027/public/artwork/step-drive-thru.webp",
+        "cropOriginalPixels": {
+          "left": 905,
+          "top": 884,
+          "width": 4149,
+          "height": 2629
+        },
+        "operation": "Crop around original red icon pixels, omit embedded caption, resize proportionally, encode lossless WebP. No redraw/recolor.",
+        "sha256": "967c23f186cf04efbbc912c60ca36d4b165788fb5ea4f6698638863288dd9fa9"
+      },
+      "proportionalDisplay": {
+        "path": "design-explorations/chick-fil-a-2027/public/artwork/chick-fil-a-drive-thru-graphic.png.webp",
+        "width": 1600,
+        "height": 1389,
+        "bytes": 80466,
+        "sha256": "b72e60da94ea7c7d6a5bf316f76b09722924e4a136c0e0509fc3630056eca8e5",
+        "operation": "Proportional resize and lossless WebP; original bytes unchanged"
+      },
+      "dropboxContentHashVerified": true
+    },
+    {
+      "id": "id:jetk1g_lbVIAAAAAAAW6BA",
+      "name": "Chick-fil-A Free Game Ticket graphic.png",
+      "path_display": "/Rose City FC x Onzio 2027/Chick-fil-A Free Game Ticket graphic.png",
+      "rev": "0165daf494bef8f00000003963301b3",
+      "size": 119943632,
+      "mime_type": "image/png",
+      "server_modified": "2026-10-13T02:08:10Z",
+      "ns_path": "ns:15404827059//Chick-fil-A Free Game Ticket graphic.png",
+      "dropbox_content_hash": "ab12a48d4dab8334019e3c7d7ad9e70e46bef42134fcc8d2b6a0b1297d1fa837",
+      "original": "assets/originals/chick-fil-a/Chick-fil-A Free Game Ticket graphic.png",
+      "downloadedBytes": 119943632,
+      "sha256": "1d84de4c1c2b3f0eeef39e84c689fffbd9b4c0b1356124765d83419f7ac5eae8",
+      "dimensions": {
+        "width": 6300,
+        "height": 5184,
+        "hasAlpha": true
+      },
+      "actualFormat": "Adobe Photoshop PSB v2 (misnamed .png)",
+      "iconDisplay": {
+        "path": "design-explorations/chick-fil-a-2027/public/artwork/step-free-ticket.webp",
+        "cropOriginalPixels": {
+          "left": 2300,
+          "top": 1731,
+          "width": 1722,
+          "height": 1722
+        },
+        "operation": "Crop around original red icon pixels, omit embedded caption, resize proportionally, encode lossless WebP. No redraw/recolor.",
+        "sha256": "300637da3ed4c4475777e78279f341605ded8b0a1cb98c88ca578f07f8f7c47b"
+      },
+      "dropboxContentHashVerified": true
+    },
+    {
+      "id": "id:jetk1g_lbVIAAAAAAAW6Aw",
+      "name": "Chick-fil-A Enjoy the game graphic.png",
+      "path_display": "/Rose City FC x Onzio 2027/Chick-fil-A Enjoy the game graphic.png",
+      "rev": "0165daf494bef8e00000003963301b3",
+      "size": 392123,
+      "mime_type": "image/png",
+      "server_modified": "2026-10-13T02:08:10Z",
+      "ns_path": "ns:15404827059//Chick-fil-A Enjoy the game graphic.png",
+      "dropbox_content_hash": "bf3ee9260be821138d92e2d108ca8a4f696071d88639ccccbdc6a14514c1ea37",
+      "original": "assets/originals/chick-fil-a/Chick-fil-A Enjoy the game graphic.png",
+      "downloadedBytes": 392123,
+      "sha256": "8b0e05c4f4a8ec8c0b1e7c17d98bc6485078939a329a1e6ab2e5a83a0329787f",
+      "dimensions": {
+        "width": 6873,
+        "height": 5184,
+        "hasAlpha": true
+      },
+      "actualFormat": "png",
+      "iconDisplay": {
+        "path": "design-explorations/chick-fil-a-2027/public/artwork/step-enjoy-game.webp",
+        "cropOriginalPixels": {
+          "left": 2071,
+          "top": 1731,
+          "width": 2647,
+          "height": 1717
+        },
+        "operation": "Crop around original red icon pixels, omit embedded caption, resize proportionally, encode lossless WebP. No redraw/recolor.",
+        "sha256": "5ba475850711ead04a03fd74b45950bddf5e8e35209e88d5fed3bce27f720e2e"
+      },
+      "proportionalDisplay": {
+        "path": "design-explorations/chick-fil-a-2027/public/artwork/chick-fil-a-enjoy-the-game-graphic.png.webp",
+        "width": 1600,
+        "height": 1207,
+        "bytes": 67528,
+        "sha256": "536448f11e8bfc9e5eb0322382688c6959be0e5c30cb19c852ee6c24296900b4",
+        "operation": "Proportional resize and lossless WebP; original bytes unchanged"
+      },
+      "dropboxContentHashVerified": true
+    },
+    {
+      "id": "id:jetk1g_lbVIAAAAAAAW6FA",
+      "name": "Chick-fil-A Drive-photo.png",
+      "path_display": "/Rose City FC x Onzio 2027/Chick-fil-A Drive-photo.png",
+      "rev": "0165daf494bef9a00000003963301b3",
+      "size": 2313985,
+      "mime_type": "image/png",
+      "server_modified": "2026-10-13T02:08:10Z",
+      "ns_path": "ns:15404827059//Chick-fil-A Drive-photo.png",
+      "dropbox_content_hash": "5c0c2ebd4d451797ebd55a995c52554ecc135493bf85b9125f01139c9913c9c5",
+      "original": "assets/originals/chick-fil-a/Chick-fil-A Drive-photo.png",
+      "downloadedBytes": 2313985,
+      "sha256": "981abfc23bfd318c29f474b6cd29c026a3ced2f46e6c3ad1d9c95c3898b2f1cd",
+      "dimensions": {
+        "width": 2484,
+        "height": 1422,
+        "hasAlpha": true
+      },
+      "actualFormat": "png",
+      "proportionalDisplay": {
+        "path": "design-explorations/chick-fil-a-2027/public/artwork/chick-fil-a-drive-photo.png.webp",
+        "width": 1600,
+        "height": 916,
+        "bytes": 789032,
+        "sha256": "d0c09229b0e4947006c6eb00128631ddfea2dea90a7769d31d2de05e217b55c5",
+        "operation": "Proportional resize and lossless WebP; original bytes unchanged"
+      },
+      "dropboxContentHashVerified": true
+    },
+    {
+      "id": "id:jetk1g_lbVIAAAAAAAW6FQ",
+      "name": "Rose City FC Chick-fil-A Route Zoom Map graphic.jpg",
+      "path_display": "/Rose City FC x Onzio 2027/Rose City FC Chick-fil-A Route Zoom Map graphic.jpg",
+      "rev": "0165daf494bef9b00000003963301b3",
+      "size": 600023,
+      "mime_type": "image/jpeg",
+      "server_modified": "2026-10-13T02:08:10Z",
+      "ns_path": "ns:15404827059//Rose City FC Chick-fil-A Route Zoom Map graphic.jpg",
+      "dropbox_content_hash": "8830ae51b5bbd655a52f998b2d68cacdc9e664f45a2e832f45a4f87fa11bf899",
+      "original": "assets/originals/chick-fil-a/Rose City FC Chick-fil-A Route Zoom Map graphic.jpg",
+      "downloadedBytes": 600023,
+      "sha256": "24d540e13c36b0a40e05ec4b3bf2cdce27c91bd143e49124f22e21b90a2cfb12",
+      "dimensions": {
+        "width": 2484,
+        "height": 1156,
+        "hasAlpha": false
+      },
+      "actualFormat": "jpeg",
+      "proportionalDisplay": {
+        "path": "design-explorations/chick-fil-a-2027/public/artwork/rose-city-fc-chick-fil-a-route-zoom-map-graphic.jpg.webp",
+        "width": 1600,
+        "height": 745,
+        "bytes": 191264,
+        "sha256": "5075939eccf1f70113f3de4cafc6ac477909340bdc57fb121b5d584abc39b563",
+        "operation": "Proportional resize and lossless WebP; original bytes unchanged"
+      },
+      "dropboxContentHashVerified": true
+    }
+  ]
+}

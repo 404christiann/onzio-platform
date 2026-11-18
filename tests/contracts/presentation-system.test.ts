@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { expectContractError, loadContract } from "../helpers/contract";
 import { presentationDocumentForTemplate } from "../helpers/presentation-fixture";
+import type { PresentationDocument } from "@/packages/presentation";
 
 type PresentationExports = typeof import("@/packages/presentation");
 
@@ -537,12 +538,21 @@ describe("Phase 9.2 presentation schema and registries", () => {
     const accepted: Record<string, string[]> = {
       "clubhouse@1": ["geist", "bebas-inter"],
       "academy@1": ["montserrat-inter-dmsans", "bebas-inter"],
+      // Rose City's cinematic@2 owns its own font pack.
+      "cinematic@2": ["museomoderno-avenir"],
     };
     expect(Object.keys(templateRegistry).sort()).toEqual(Object.keys(accepted).sort());
     const source = parsePresentationDocument(validAcademyDocument(), { surface: "production" });
 
     for (const template of Object.values(templateRegistry)) {
-      const document = presentationDocumentForTemplate(source, template.key === "academy@1" ? "academy" : "clubhouse");
+      const document: PresentationDocument = template.key === "cinematic@2"
+        ? {
+            ...source,
+            template: { id: "cinematic", version: 2 },
+            homepage: { sections: [{ id: "cinematic-hero", type: "cinematic.hero", enabled: true, emptyBehavior: "error", config: {} }] },
+            navigation: { groups: [{ id: "main", label: null, routes: ["home"] }] },
+          }
+        : presentationDocumentForTemplate(source, template.key === "academy@1" ? "academy" : "clubhouse");
       for (const fontPack of new Set([...Object.keys(fontPacks), ...Object.values(accepted).flat(), "comic-sans"])) {
         const report = validatePresentationDocument(
           { ...document, fontPack },

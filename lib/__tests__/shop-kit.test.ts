@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   canAddKitPhoto,
+  CINEMATIC_KIT_BULLET_POINTS,
   cleanKitBulletPoints,
   diffShopKitPhotos,
   kitPhotoAlt,
   kitPhotoDisplayMode,
+  MAX_KIT_BULLET_POINTS,
   MAX_KIT_PHOTOS,
   normalizeKitBulletPoints,
   normalizeKitStoreNote,
@@ -57,31 +59,27 @@ describe("kit photo limit", () => {
   });
 });
 
-describe("editable shop details", () => {
-  it("trims bullet points, removes empty rows, and caps the layout at eight", () => {
-    expect(cleanKitBulletPoints([
-      " First ",
-      "",
-      "Second",
-      "Third",
-      "Fourth",
-      "Fifth",
-      "Sixth",
-      "Seventh",
-      "Eighth",
-      "Ninth",
-    ])).toEqual([
-      "First",
-      "Second",
-      "Third",
-      "Fourth",
-      "Fifth",
-      "Sixth",
-      "Seventh",
-      "Eighth",
-    ]);
+describe("kit bullet limit by template", () => {
+  const eleven = [" First ", "", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth", "Eleventh"];
+  const firstTen = ["First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth"];
+
+  it("keeps main's eight as the default and ten as the cinematic@2 limit (applied by the Shop editor's design branch)", () => {
+    expect(MAX_KIT_BULLET_POINTS).toBe(8);
+    expect(CINEMATIC_KIT_BULLET_POINTS).toBe(10);
   });
 
+  it("trims bullet points, removes empty rows, and caps at eight by default", () => {
+    expect(cleanKitBulletPoints(eleven)).toEqual(firstTen.slice(0, 8));
+    expect(normalizeKitBulletPoints([...eleven, 42])).toEqual(firstTen.slice(0, 8));
+  });
+
+  it("keeps ten when given the cinematic@2 limit", () => {
+    expect(cleanKitBulletPoints(eleven, CINEMATIC_KIT_BULLET_POINTS)).toEqual(firstTen);
+    expect(normalizeKitBulletPoints(eleven, CINEMATIC_KIT_BULLET_POINTS)).toEqual(firstTen);
+  });
+});
+
+describe("editable shop details", () => {
   it("shows no bullet points when a row has none saved", () => {
     expect(normalizeKitBulletPoints(undefined)).toEqual([]);
   });

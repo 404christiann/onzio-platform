@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "sourceFolder": "/Rose City FC x Onzio 2027/Our Identity",
+  "assets": {
+    "patch1": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/patch1.png",
+      "sha256": "2bf82cc9020da1cfffb342c001c935c6adc81135e93229b7217ef40cc1e1b2de",
+      "width": 2703,
+      "height": 2704,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Crest Rose City Futbol Club Grayscale.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "patch2": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/patch2.png",
+      "sha256": "8177408f0e1d484823066c5e16eec822fac46c151439066d356dc1315b4fa7e9",
+      "width": 2703,
+      "height": 2704,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Crest Rose Grayscale.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "patch3": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/patch3.png",
+      "sha256": "c30f8cd1f28055d850272ecc4b47d17cbfe63c31d63798ef25fa5e4b29129317",
+      "width": 2703,
+      "height": 2704,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Crest #23 Grayscale.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "patch4": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/patch4.png",
+      "sha256": "a3d418080d92146e76909cb52673fcd5a8a79b0b5c7db428a360c380e5f062a8",
+      "width": 2703,
+      "height": 2704,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Crest Crown Grayscale.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "patch5": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/patch5.png",
+      "sha256": "7ccf9564a276840c677ce70876efb0042e71bd35f4fb8b893c71946c44926b5c",
+      "width": 2703,
+      "height": 2704,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Crest Key Grayscale.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "patch6": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/patch6.png",
+      "sha256": "82f22ab8eeb4e88d8307f4ec6647345dbdb95ca57202e74a229f0f3d5ee27c8d",
+      "width": 2703,
+      "height": 2704,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Crest Stem.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "icon1": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/icon1.png",
+      "sha256": "f79b6e29091c4a8b4de86d0a1a14fca49f15da47d76eaa2c492db3fb77de3e37",
+      "width": 173,
+      "height": 183,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Logo Details black.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "icon2": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/icon2.png",
+      "sha256": "9b5db4bd54e65ab55d43899dff7ae905e30c84e24fad19057ac39ac8de05e69d",
+      "width": 155,
+      "height": 183,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Rose black.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "icon3": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/icon3.png",
+      "sha256": "223b6cc72f7c5c4f494683a64b42f96df38f9e1f89e8805be7803c7996bfec34",
+      "width": 335,
+      "height": 181,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC 23 black.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "icon4": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/icon4.png",
+      "sha256": "67a60f3b44914e957f7fe22031733bd3bdbae014aa5373487dc439a4ba9f44f1",
+      "width": 280,
+      "height": 181,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Crown black.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "icon5": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/icon5.png",
+      "sha256": "0b64c61c58eb4a9410f9a9be87bee57dfe8fd422dd1e4d94dfbb2553b643a038",
+      "width": 154,
+      "height": 182,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Key black.png",
+      "processing": "Lossless PNG, transparent-margin trim only"
+    },
+    "map": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/map.png",
+      "sha256": "f358a86ec50a40628cebd3cefae72a02b37eb36e0bc467a9c95e761ce96ea2f6",
+      "width": 991,
+      "height": 1281,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose City FC Official Pasadena Map 2027.png",
+      "processing": "Lossless PNG re-encoding; original geometry/colors retained"
+    },
+    "color1": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/color1.png",
+      "sha256": "47bcd205ad815095d5c0a030a43ec32a074104de6930d884547a7bf736de0c46",
+      "width": 1200,
+      "height": 821,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose CIty FC Brand Identity Rose Parade Red Color Black.png",
+      "processing": "Lossless PNG re-encoding; original geometry/colors retained"
+    },
+    "color2": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/color2.png",
+      "sha256": "c9714f7c3270545ec0af3d11999a3748f95e4c4409c77e839e308e888e34ec20",
+      "width": 1200,
+      "height": 821,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose CIty FC Brand Identity 12am at Midnight Color Black.png",
+      "processing": "Lossless PNG re-encoding; original geometry/colors retained"
+    },
+    "color3": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/color3.png",
+      "sha256": "7f48e6c467cebf59694453fa619cc2df4721d8aeb557d1882002f7bd2b7381d5",
+      "width": 1200,
+      "height": 821,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose CIty FC Brand Identity Faded White Color Black.png",
+      "processing": "Lossless PNG re-encoding; original geometry/colors retained"
+    },
+    "color4": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/color4.png",
+      "sha256": "08b63af4f2b87fe737ae0f48b642a9b692df857fac42b02a6ffff4b0b5aa5adb",
+      "width": 1200,
+      "height": 821,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose CIty FC Brand Identity Rose Stem Color Black.png",
+      "processing": "Lossless PNG re-encoding; original geometry/colors retained"
+    },
+    "color5": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/color5.png",
+      "sha256": "aac60c6f9a8fafdd8a6e02e46c84fef10c470c374c505b9618781fc162b6b355",
+      "width": 1200,
+      "height": 821,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose CIty FC Brand Identity Steel Color Black.png",
+      "processing": "Lossless PNG re-encoding; original geometry/colors retained"
+    },
+    "color6": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/color6.png",
+      "sha256": "cba0dc7fa0ad4fcf86483cf3c5d74818510a9e50f6ed0c709e37242ea28f732b",
+      "width": 1200,
+      "height": 821,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/identity/Rose CIty FC Brand Identity Parrot Colors Black.png",
+      "processing": "Lossless PNG re-encoding; original geometry/colors retained"
+    },
+    "icon6": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/icon6.png",
+      "sha256": "225f82c57b5d743d82187c596330d3953e73a9cc872451ac63c3b05272d00bee",
+      "width": 127,
+      "height": 163,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/Rose City FC Official Club Logo 7 16 2027 MASTER.png",
+      "processing": "Exact supplied stem pixels, same reversible green-to-alpha matrix as approved preview; black silhouette, alpha crop"
+    },
+    "diagram": {
+      "inputPath": "assets/rose-city-crest-2027/inputs/diagram.png",
+      "sha256": "cae25ecb2241b04ee626967c0741ee5a4078599f734828f19a103b0450e4062a",
+      "width": 2100,
+      "height": 1590,
+      "mimeType": "image/png",
+      "kind": "graphic",
+      "source": "../../assets/originals/Rose City FC Official Club Logo 7 16 2027 MASTER.png",
+      "processing": "Authored annotated graphic from untouched master and approved HTML diagram coordinates, 3x labels/leader lines, no generated logo geometry"
+    }
+  }
+}

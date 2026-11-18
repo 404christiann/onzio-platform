@@ -1,12 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { AdminDialog, AdminDialogFooter } from "@/components/admin/ui/AdminDialog";
+import { CINEMATIC_ARTWORK_SLOTS, cinematicArtwork, CINEMATIC_NAV_ITEMS } from "@/lib/cinematic-homepage-content";
 import type { HomepageDraft } from "@/lib/homepage-editor/model";
 import type { HomepageRecoveryResult } from "@/lib/homepage-editor/recovery";
 
-function rows(draft: HomepageDraft): [string, string][] {
+function rows(draft: HomepageDraft, includeRevamp = false): [string, string][] {
+  const revampRows: [string, string][] = [
+    ["Next home match heading", draft.revamp?.match.heading ?? ""],
+    ["Ticket button", draft.revamp?.match.buttonLabel ?? ""],
+    ["Ticket and map shown", draft.revamp ? draft.revamp.ticket.visible ? "Yes" : "No" : ""],
+    ["Ticket prices", draft.revamp ? [draft.revamp.prices.heading, ...draft.revamp.prices.rows.map(row => [row.label, row.price, row.description, row.note].filter(Boolean).join(" · ")), draft.revamp.prices.footnote].filter(Boolean).join("\n") : ""],
+    ["Championship", draft.revamp ? [draft.revamp.championship.league, draft.revamp.championship.year, draft.revamp.championship.title, draft.revamp.championship.body].filter(Boolean).join("\n") : ""],
+    ["Partner heading", draft.revamp?.sponsors.heading ?? ""],
+    ["Navigation names", draft.revamp ? CINEMATIC_NAV_ITEMS.flatMap(item => [item, ...("children" in item ? item.children ?? [] : [])]).map(item => `${item.label}: ${draft.revamp!.navigation.labels[item.id] ?? item.label}`).join("\n") : ""],
+  ];
   return [
+    ...(includeRevamp ? revampRows : []),
     ["Small heading", draft.hero.eyebrow], ["Main heading · Line one", draft.hero.headline_line_one],
     ["Main heading · Line two", draft.hero.headline_line_two], ["Short paragraph", draft.hero.intro],
     ["First button text", draft.hero.primary_cta_label], ["First button destination", draft.hero.primary_cta_href],
@@ -38,7 +50,8 @@ export default function HomepageRecoveryReview({ current, recovered, reason, all
     modal?.showModal();
     return () => { modal?.close(); if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus(); };
   }, [classic]);
-  const latest = rows(current);
+  const includeRevamp = !!(current.revamp || recovered.revamp);
+  const latest = rows(current, includeRevamp);
   const apply = async () => {
     setApplying(true); setApplyFailed(false);
     try { if (await restore()) close(); else setApplyFailed(true); }
@@ -50,7 +63,12 @@ export default function HomepageRecoveryReview({ current, recovered, reason, all
   const contents = <>
     {reason === "DESIGN_CHANGED" && allowedAction === "apply" && <p>The website design changed. Your edits can be reviewed for this design.</p>}
     <p>{allowedAction === "apply" ? "Compare your recovered work with the latest homepage. Use recovered changes to bring only your edits into the current draft. If you changed photos, the recovered photo list replaces the current list, including its order. Nothing goes live until you save." : reason === "DESIGN_CHANGED" ? "The website design changed. Copy the wording you want to keep before discarding this draft." : reason === "EXTRA_LOCAL_CHANGES" ? "Your last save was confirmed. This draft also has other changes. Copy the wording you want to keep before discarding it." : "This draft uses editing options that are not available in the current design. Copy the wording you want to keep before discarding it."}</p>
-    <div className="hp-recovery-comparison">{rows(recovered).map(([label, value], index) => <section key={label}><h3>{label}</h3><dl><div><dt>Latest homepage</dt><dd>{latest[index][1] || "Blank (uses website defaults)"}</dd></div><div><dt>Recovered draft</dt><dd>{value || "Blank (uses website defaults)"}</dd></div></dl></section>)}</div>
+    <div className="hp-recovery-comparison">{rows(recovered, includeRevamp).map(([label, value], index) => <section key={label}><h3>{label}</h3><dl><div><dt>Latest homepage</dt><dd>{latest[index][1] || "Blank (uses website defaults)"}</dd></div><div><dt>Recovered draft</dt><dd>{value || "Blank (uses website defaults)"}</dd></div></dl></section>)}</div>
+    {recovered.revamp && <div className="hp-recovery-comparison">{CINEMATIC_ARTWORK_SLOTS.map(slot => {
+      const before = current.revamp ? cinematicArtwork(current.revamp, slot) : null;
+      const after = cinematicArtwork(recovered.revamp!, slot);
+      return <section key={slot}><h3>{slot === "raffle" ? "Raffle artwork" : slot === "ticket" ? "Ticket and map artwork" : "Trophy image"}</h3><p>{before?.assetId === after.assetId ? "Image is unchanged." : "Recovered draft uses a different image."}</p><dl>{[["Latest homepage", before], ["Recovered draft", after]].map(([label, image]) => <div key={String(label)}><dt>{String(label)}</dt><dd>{image && typeof image !== "string" && image.url ? <ResilientNativeImage src={image.url} alt={image.alt} style={{ maxHeight: 180, maxWidth: "100%", objectFit: "contain" }} /> : "No image"}</dd></div>)}</dl></section>;
+    })}</div>}
     {applyFailed && <p ref={alertEl} role="alert">We could not use the recovered changes. The draft is still stored. Close this review and reload your homepage before trying again.</p>}
   </>;
   if (classic) return <AdminDialog open title="Recovered homepage draft" size="lg" busy={applying} onClose={close} finalFocus={finalFocus}

@@ -1,0 +1,29 @@
+{
+  "style": "medium/outline/round",
+  "icons": [
+    {
+      "name": "arrow-left",
+      "source": "/Users/christianalcala/Documents/Codex/2026-10-09/i-w/outputs/icons-download/icons/medium/outline/round/arrows/arrow-left.svg",
+      "sha256": "3bd32478f4e0379be12f2a6c138174ddc49800e2182a674fe9ed053a89bd621a",
+      "adaptation": "Unchanged geometry in sprite; black fill replaced with currentColor."
+    },
+    {
+      "name": "caret-right",
+      "source": "/Users/christianalcala/Documents/Codex/2026-10-09/i-w/outputs/icons-download/icons/medium/outline/round/arrows/caret-right.svg",
+      "sha256": "365bfd8314f3d174944009adc3062e79f6450c92e8573e869116cb7118bf9971",
+      "adaptation": "Unchanged geometry in sprite; black fill replaced with currentColor."
+    },
+    {
+      "name": "close",
+      "source": "/Users/christianalcala/Documents/Codex/2026-10-09/i-w/outputs/icons-download/icons/medium/outline/round/interface/close.svg",
+      "sha256": "9eb15094607a957879676ce5be3bad243d2b0ed2b9036857ea86836060f876eb",
+      "adaptation": "Unchanged geometry in sprite; black fill replaced with currentColor."
+    },
+    {
+      "name": "menu",
+      "source": "/Users/christianalcala/Documents/Codex/2026-10-09/i-w/outputs/icons-download/icons/medium/outline/round/interface/menu.svg",
+      "sha256": "277f5b38cda8bfef8861e20f37e33b841a3d91e68d90ad747188b40d9b4ab07d",
+      "adaptation": "Unchanged geometry in sprite; black fill replaced with currentColor."
+    }
+  ]
+}

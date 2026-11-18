@@ -25,7 +25,8 @@ import { useShopPresentation } from "./ShopPageEditor";
 import { submitPageSave } from "@/lib/page-editor-save";
 import { createClient } from "@/lib/admin-client";
 import { SHOP_OFF_BANNER } from "@/lib/store-visibility";
-import { shopSaveRequestSchema, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant, type ShopSaveRequest } from "@/lib/shop-editor/contract";
+import { MAX_KIT_BULLET_POINTS } from "@/lib/shop-kit";
+import { shopSaveRequestSchemaFor, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant, type ShopSaveRequest } from "@/lib/shop-editor/contract";
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
 import { confirmShopDraft, currentShopPhotos, kitNeedsPhoto, photoKey } from "./classic-shop-state";
 import styles from "./ClassicShopPageEditor.module.css";
@@ -200,7 +201,8 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
       return false;
     }
     const transaction = pending ?? { request: toShopSaveRequest(snapshot, page, crypto.randomUUID()), draft: structuredClone(page) };
-    const parsed = shopSaveRequestSchema.safeParse(transaction.request);
+    // Never used for cinematic@2 (see app/admin/(protected)/shop/page.tsx), so main's limit of 8 applies.
+    const parsed = shopSaveRequestSchemaFor(MAX_KIT_BULLET_POINTS).safeParse(transaction.request);
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check the fields on this page."); return false; }
     mutate((state) => ({ ...state, pending: { ...state.pending, [pageSurface]: transaction } }));
     const result = await submitPageSave<ShopSnapshot>(() => fetch("/api/admin/shop", {

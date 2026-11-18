@@ -297,7 +297,7 @@ describe("Diverse City admin punch list", () => {
 
     it("hides both Third and Away kit tabs for academy@1, keeping only Home", () => {
       const shop = source(SHOP_EDITOR);
-      expect(shop).toContain('const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants]');
+      expect(shop).toContain('= shopPolicy ? { variants: [...shopPolicy.variants], maxBulletPoints: MAX_KIT_BULLET_POINTS }');
       expect(source("components/sites/diverse-city/site-definition.ts")).toContain('shop: { variants: ["home"]');
       expect(source(SHOP_MIGRATION)).toContain("(page_surface='home' or template='academy@1') and (variants ? 'third' or variants ? 'away')");
     });

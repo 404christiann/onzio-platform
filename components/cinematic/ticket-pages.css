@@ -1,0 +1,140 @@
+/* RC2027-TICKET-PAGES: Season Ticket Membership + Know Before You Go (Sam's 2027 Final Masters, 2484px and 2342px wide).
+   Ported from the approved preview (outer design-explorations/ticket-pages-2027).
+   Desktop sizes are Sam's proportions in vw; phone sizes are fixed below 700px. */
+.cinematic-site .tp-page{--tp-red:#ff0000;--tp-heading-red:#f22c22;--tp-grey:#8f8f8f;--tp-ink:#141414;--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;background:#fff;color:var(--tp-ink);overflow:hidden}
+.cinematic-site .tp-page :is(h1,h2){text-transform:none}
+
+/* Title band: same as Stadium Guidelines and Contact. */
+.cinematic-site .tp-heading{min-height:clamp(112px,12.3vw,236px);display:flex;align-items:center;justify-content:flex-end;padding:28px 4.5%;box-shadow:inset 0 9px 9px -8px #0003,0 5px 12px #0002;position:relative;z-index:1}
+.cinematic-site .tp-heading>div{text-align:right}
+.cinematic-site .tp-heading h1{font:900 clamp(34px,4vw,76px)/1 var(--display);text-transform:uppercase;letter-spacing:-.035em;margin:0}
+.cinematic-site .tp-heading p{font:400 clamp(16px,1.5vw,28px)/1.2 var(--body);color:var(--tp-red);text-transform:uppercase;margin:6px 0 0}
+
+/* White bands separated by Sam's soft top shadow. */
+.cinematic-site .tp-band{position:relative;box-shadow:0 -6px 12px -4px #0003;background:#fff}
+.cinematic-site .tp-section{padding:0 7.7vw}
+
+/* ───── Season: copy ───── */
+.cinematic-site .tp-copy{padding-top:clamp(36px,5.6vw,108px);font:400 clamp(15px,1.67vw,32px)/1.45 var(--body)}
+.cinematic-site .tp-bullets{list-style:none;margin:1.6vw 0 0;padding:0 0 0 1vw;display:grid;gap:.6vw}
+.cinematic-site .tp-bullets li{position:relative;padding-left:2.8vw;line-height:1.55}
+.cinematic-site .tp-bullets li:before{content:'';position:absolute;left:0;top:.42em;width:1.2vw;height:1.2vw;min-width:10px;min-height:10px;border-radius:50%;background:var(--tp-red)}
+.cinematic-site .tp-includes{font:800 1em/1.2 var(--heavy);margin:3vw 0 2.4vw}
+.cinematic-site .tp-includes+.tp-bullets{margin-top:0}
+
+/* ───── Season: price table ───── */
+.cinematic-site .tp-pricing{padding:6.2vw 5.2vw 8vw;text-align:center}
+.cinematic-site .tp-pricing table{width:100%;border-collapse:separate;border-spacing:.2vw 0;table-layout:fixed;margin:0 -.2vw}
+.cinematic-site .tp-pricing thead th{font:400 clamp(11px,1.47vw,28px)/1.25 var(--body);text-transform:uppercase;text-align:left;vertical-align:bottom;padding:0 0 1.1vw 1vw}
+.cinematic-site .tp-pricing thead th.tp-section-label{width:44.5%;text-align:center;font-size:clamp(20px,3.2vw,62px);line-height:1;padding-left:0}
+.cinematic-site .tp-star{color:var(--tp-red)}
+.cinematic-site .tp-pricing tbody th{background:#000;color:#fff;height:6.4vw;padding:0 2vw}
+.cinematic-site .tp-seat{display:flex;align-items:center;justify-content:center;gap:1.3vw;font:900 clamp(18px,3vw,58px)/1 var(--display);letter-spacing:-.02em;text-transform:uppercase}
+.cinematic-site .tp-badge{width:4.1vw;height:4.1vw;flex:0 0 auto;object-fit:contain}
+.cinematic-site .tp-price{color:#fff;font:900 clamp(20px,2.8vw,54px)/1 var(--display);text-align:center;vertical-align:middle}
+/* Colors from Sam's source price files ($5 Green, $7 Blue, $12 Tour). */
+.cinematic-site .tp-price-0{background:#3dcb57}.cinematic-site .tp-price-1{background:#3450c8}.cinematic-site .tp-price-2{background:#32b8a9}
+.cinematic-site .tp-footnote{font:400 clamp(13px,1.1vw,20px)/1.4 var(--body);color:var(--tp-grey);text-align:left;margin-top:1.4vw}
+.cinematic-site .tp-buy{display:flex;align-items:center;justify-content:center;width:36.5vw;min-width:240px;min-height:max(48px,4.53vw);margin:4.8vw auto 0;background:var(--tp-red);color:#fff;font:400 clamp(15px,1.33vw,26px)/1.2 var(--body);padding:0 20px}
+.cinematic-site span.tp-buy[aria-disabled]{cursor:default}
+
+/* ───── Tiles (Member Benefits and match-day facts) ───── */
+.cinematic-site .tp-tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:2.5vw;column-gap:2vw}
+.cinematic-site .tp-tiles li{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+/* Sam's icons come on one 752 x 350 canvas, drawn at the design's scale, so a canvas spans one column. */
+.cinematic-site .tp-tile-art{width:100%;aspect-ratio:752/350;display:flex;align-items:center;justify-content:center}
+.cinematic-site .tp-tile-img{width:100%;height:100%;object-fit:contain}
+.cinematic-site .tp-tile-art+p{margin-top:.8vw}
+.cinematic-site .tp-tiles p{font:400 clamp(14px,2.2vw,42px)/1.25 var(--body);letter-spacing:.14em;color:var(--tp-grey);max-width:20em}
+.cinematic-site .tp-benefits{padding:4.2vw 3vw 6.5vw;text-align:center}
+.cinematic-site .tp-benefits>h2,.cinematic-site .tp-donor>h2{font:400 clamp(18px,2.3vw,44px)/1.2 var(--body);text-transform:uppercase;letter-spacing:.01em}
+.cinematic-site .tp-benefits>h2{color:var(--tp-heading-red);margin-bottom:3vw}
+.cinematic-site .tp-closing{padding:4.4vw 9.3vw 6vw;text-align:center}
+.cinematic-site .tp-closing>h2,.cinematic-site .tp-raffle>h2{font:900 clamp(26px,4vw,76px)/1.05 var(--display);text-transform:uppercase;letter-spacing:-.035em}
+.cinematic-site .tp-closing .tp-buy{margin-top:3.4vw}
+.cinematic-site .tp-ticket{display:block;width:100%;height:auto;margin-top:4.4vw;box-shadow:0 8px 24px #0003}
+.cinematic-site .tp-page span.tp-ticket{aspect-ratio:1800/791}
+
+/* Waiting slots (editor preview only): a labelled dashed box, no artwork drawn. The public page hides empty slots. */
+.cinematic-site .tp-page .tp-slot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed #c4c4c4;border-radius:8px;background:#fafafa;color:#777;font:600 clamp(10px,.9vw,15px)/1.25 var(--body);text-align:center;padding:6px;letter-spacing:0;text-transform:none}
+.cinematic-site .tp-page .tp-slot small{font:700 clamp(9px,.7vw,12px)/1 var(--body);text-transform:uppercase;letter-spacing:.08em;color:#aaa}
+.cinematic-site span.tp-tile-img{width:min(100%,15vw);height:100%;max-width:none}
+.cinematic-site span.tp-badge{width:4.1vw;height:4.1vw;min-width:44px;min-height:44px;border-color:#666;background:#1a1a1a;color:#bbb;font-size:9px;padding:2px}
+.cinematic-site span.tp-badge small{display:none}
+
+/* ───── Know Before You Go: match ───── */
+.cinematic-site .tp-match{padding-top:clamp(28px,3.5vw,82px);padding-bottom:clamp(36px,4.6vw,108px);text-align:center}
+.cinematic-site .tp-competition,.cinematic-site .tp-date{font:400 clamp(13px,1.4vw,32px)/1.3 var(--body)}
+.cinematic-site .tp-date{color:var(--tp-grey)}
+.cinematic-site .tp-teams{display:flex;align-items:center;justify-content:center;gap:1.8vw;margin:2.4vw 0 1.6vw}
+.cinematic-site .tp-teams strong{font:800 clamp(22px,3.5vw,82px)/1 var(--heavy)}
+.cinematic-site .tp-monogram{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#f1f1f1;color:#555;font:800 clamp(20px,3vw,64px)/1 var(--heavy)}
+.cinematic-site .tp-teams .tp-crest{--opponent-crest-size:clamp(56px,8.1vw,190px);width:var(--opponent-crest-size);height:var(--opponent-crest-size);object-fit:contain}
+.cinematic-site .tp-versus{font:400 clamp(22px,3.5vw,82px)/1 var(--body);margin:0 1vw}
+.cinematic-site .tp-watch{display:inline-flex;align-items:center;gap:.7vw;font:400 clamp(13px,1.2vw,28px)/1 var(--body);min-height:44px}
+/* Sam's YouTube file is a 655 x 146 canvas; at 5.15vw tall its play button matches the design's size. */
+.cinematic-site .tp-youtube{height:clamp(40px,5.15vw,121px);width:auto}
+.cinematic-site span.tp-youtube{width:clamp(90px,8vw,190px);flex-direction:row}
+.cinematic-site span.tp-youtube small{display:none}
+.cinematic-site .tp-youtube-text{font:800 clamp(16px,2vw,46px)/1 var(--heavy)}
+.cinematic-site .tp-facts{padding:5vw 1vw 7vw}
+.cinematic-site .tp-fact-tiles{row-gap:3vw}
+
+/* ───── Know Before You Go: raffle and donor ───── */
+.cinematic-site .tp-raffle{padding:3.6vw 0 4.6vw;text-align:center;box-shadow:0 -6px 12px -4px #0003,0 6px 12px -4px #0003;z-index:1}
+.cinematic-site .tp-raffle-sub{font:400 clamp(13px,1.6vw,36px)/1.2 var(--body);color:var(--tp-red);text-transform:uppercase;margin-top:.3vw}
+.cinematic-site .tp-raffle-photo{display:block;width:69%;height:auto;margin:3.4vw auto 0}
+.cinematic-site .tp-page span.tp-raffle-photo{margin-left:auto;margin-right:auto;aspect-ratio:1040/480;font-size:clamp(12px,1.2vw,22px)}
+.cinematic-site .tp-raffle hr{border:0;border-top:1px solid #9a9a9a;margin:3.4vw .5% 0}
+.cinematic-site .tp-raffle-body{font:400 clamp(15px,1.67vw,38px)/1.45 var(--body);text-align:left;padding:2.6vw 5.1vw 0}
+.cinematic-site .tp-raffle-body b{font:800 1em/1 var(--heavy)}
+.cinematic-site .tp-donor{padding:6vw 4vw 8vw;text-align:center;box-shadow:none}
+.cinematic-site .tp-donor-logo{display:block;width:12.7vw;min-width:120px;height:auto;margin:2.6vw auto 0}
+.cinematic-site .tp-page span.tp-donor-logo{margin-left:auto;margin-right:auto;aspect-ratio:1;border-radius:50%}
+.cinematic-site .tp-donor-name{font:800 clamp(20px,2.4vw,52px)/1.2 var(--heavy);margin-top:2vw}
+.cinematic-site .tp-donor-body{font:400 clamp(15px,1.67vw,38px)/1.45 var(--body);text-align:left;margin-top:3.6vw}
+.cinematic-site .tp-donor .tp-buy{width:auto;min-width:0;display:inline-flex;margin-top:3vw;padding:0 1.1vw;min-height:max(44px,3.7vw);font:800 clamp(12px,.95vw,22px)/1 var(--heavy);text-transform:uppercase;letter-spacing:.05em}
+
+@media(max-width:700px){
+ .cinematic-site .tp-heading{min-height:112px;padding:22px 20px}
+ .cinematic-site .tp-heading h1{font-size:clamp(26px,8.4vw,36px)}
+ .cinematic-site .tp-section{padding-left:20px;padding-right:20px}
+ .cinematic-site .tp-copy{padding-top:30px;font-size:15px}
+ .cinematic-site .tp-bullets{padding-left:0;margin-top:14px;gap:6px}
+ .cinematic-site .tp-bullets li{padding-left:22px}
+ .cinematic-site .tp-bullets li:before{width:10px;height:10px;top:.45em}
+ .cinematic-site .tp-includes{margin:24px 0 12px}
+ /* Price table: the seat row on top, the three prices side by side with their labels. */
+ .cinematic-site .tp-pricing{padding:40px 20px 48px}
+ .cinematic-site .tp-pricing thead{display:none}
+ .cinematic-site .tp-pricing table,.cinematic-site .tp-pricing tbody{display:block;margin:0}
+ .cinematic-site .tp-pricing tr{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+ .cinematic-site .tp-pricing tbody th{grid-column:1/-1;height:64px;display:flex;align-items:center;justify-content:center}
+ .cinematic-site .tp-seat{font-size:22px;gap:12px}
+ .cinematic-site .tp-badge{width:30px;height:30px}
+ .cinematic-site .tp-price{display:flex;flex-direction:column;justify-content:center;gap:6px;height:auto;min-height:92px;padding:10px 6px;font-size:26px}
+ .cinematic-site .tp-price:before{content:attr(data-label);font:400 10px/1.2 var(--body);text-transform:uppercase;letter-spacing:.02em}
+ .cinematic-site .tp-buy{width:100%;min-width:0;margin-top:28px}
+ .cinematic-site .tp-tiles{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:24px;column-gap:12px}
+ .cinematic-site span.tp-tile-img{width:min(100%,120px)}
+ .cinematic-site .tp-tiles p{font-size:14px;letter-spacing:.1em;margin-top:6px}
+ /* Christian 2026-11-08: Member Benefits stays 3 x 3 on phones. */
+ .cinematic-site .tp-benefit-tiles{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:8px}
+ .cinematic-site .tp-benefit-tiles p{font-size:11px;letter-spacing:.06em}
+ .cinematic-site .tp-benefits,.cinematic-site .tp-facts{padding:36px 16px 44px}
+ .cinematic-site .tp-benefits>h2{margin-bottom:28px}
+ .cinematic-site .tp-closing{padding:36px 20px 44px}
+ .cinematic-site .tp-closing .tp-buy{margin-top:20px}
+ .cinematic-site .tp-ticket{margin-top:28px}
+ .cinematic-site .tp-teams{gap:10px;margin:18px 0 12px}
+ .cinematic-site .tp-versus{margin:0 2px}
+ .cinematic-site .tp-watch{gap:8px}
+ .cinematic-site .tp-raffle{padding:32px 0 36px}
+ .cinematic-site .tp-raffle-photo{width:calc(100% - 40px);margin-top:22px}
+ .cinematic-site .tp-raffle hr{margin-top:24px}
+ .cinematic-site .tp-raffle-body{padding:18px 20px 0}
+ .cinematic-site .tp-donor{padding:40px 20px 48px}
+ .cinematic-site .tp-donor-logo{margin-top:18px}
+ .cinematic-site .tp-donor-body{margin-top:20px}
+ .cinematic-site .tp-donor .tp-buy{padding:0 16px;margin-top:24px}
+}

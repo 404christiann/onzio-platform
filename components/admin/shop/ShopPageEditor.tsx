@@ -22,19 +22,25 @@ import FileUpload from "@/components/admin/FileUpload";
 import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import ResilientImage from "@/components/ResilientImage";
 import ShopPreviewFrame from "./ShopPreviewFrame";
+import CinematicShopCanvas from "./CinematicShopCanvas";
+import CinematicShopFields, { type CinematicShopTarget } from "./CinematicShopFields";
+import { SHOP_CARD_ICONS, SHOP_EDITION_VARIANTS, type CinematicShopPresentation, type ShopCardIcon } from "@/lib/cinematic-shop-content";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
 import { submitPageSave } from "@/lib/page-editor-save";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
 import type { ShopKitContent } from "@/lib/queries";
 import { hasShopPurchaseDetails } from "@/lib/shop-purchase-details";
+import { CINEMATIC_KIT_BULLET_POINTS, MAX_KIT_BULLET_POINTS } from "@/lib/shop-kit";
 import { SHOP_OFF_BANNER } from "@/lib/store-visibility";
-import { shopSaveRequestSchema, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
+import { shopSaveRequestSchemaFor, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
 
 const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };
-type Target = "copy" | "photos" | "cta" | "photoRows" | "purchase" | "fixed" | "kit";
+const CARD_ICON_LABELS: Record<ShopCardIcon, string> = { "": "No icon", video: "Video camera", jersey: "Jersey", "shipping-box": "Shipping box", "no-access": "No returns" };
+type Target = "copy" | "photos" | "cta" | "photoRows" | "purchase" | "fixed" | "kit" | CinematicShopTarget;
 
 function allKitContent(draft: ShopPageDraft, surface: ShopSurface): Record<ShopVariant, ShopKitContent> {
   return Object.fromEntries(SHOP_VARIANTS.map((variant) => {
@@ -61,12 +67,19 @@ export function useShopPresentation() {
   const template = club.presentationTemplateKey;
   const shopPolicy = codeSiteAdminFor(club)?.shop;
   const isClubhouse = template === "clubhouse@1";
+  const isCinematic = template === "cinematic@2";
   const sharedWithHomepage = isClubhouse;
   const generic = !shopPolicy && !isClubhouse;
   const hasHomeFeature = shopPolicy?.showHomeFeature ?? !sharedWithHomepage;
-  const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];
+  // Cinematic jersey options map to Home / Away / Third, so its Shop page edits all three kits. Its kits (Shop page and
+  // homepage jersey) may also list 10 bullets; every other design keeps 8 (the database rule). The limit rides on this
+  // existing per-design branch so it adds no template selector.
+  const { variants, maxBulletPoints }: { variants: ShopVariant[]; maxBulletPoints: number } = shopPolicy ? { variants: [...shopPolicy.variants], maxBulletPoints: MAX_KIT_BULLET_POINTS }
+    : sharedWithHomepage ? { variants: SHOP_VARIANTS, maxBulletPoints: MAX_KIT_BULLET_POINTS }
+    : isCinematic ? { variants: [...SHOP_EDITION_VARIANTS], maxBulletPoints: CINEMATIC_KIT_BULLET_POINTS }
+    : { variants: ["home", "away"], maxBulletPoints: MAX_KIT_BULLET_POINTS };
   return {
-    club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly: isClubhouse,
+    club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly: isClubhouse, isCinematic, maxBulletPoints,
     renderPreview(content: Record<ShopVariant, ShopKitContent>, surface: ShopSurface, onSelectKit: (variant: ShopVariant) => void, genericContent: ReactNode, emptyPhoto?: ReactNode) {
       return <TemplateFontScope templateKey={template}>
         {shopPolicy?.preview === "club-page" ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
@@ -80,7 +93,7 @@ export function useShopPresentation() {
 
 export default function ShopPageEditor() {
   const presentation = useShopPresentation();
-  const { club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly } = presentation;
+  const { club, shopPolicy, generic, hasHomeFeature, variants, sharedWithHomepage, nameOnly, isCinematic, maxBulletPoints } = presentation;
   const storeOff = !club.storeEnabled;
 
   const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>(shopPolicy?.initialSurface ?? "shop");
@@ -96,6 +109,8 @@ export default function ShopPageEditor() {
   const [target, setTarget] = useState<Target | null>(null);
   const [phone, setPhone] = useState(false);
   const [replaceLatest, setReplaceLatest] = useState(false);
+  const uploadClub = useRef(club.id);
+  uploadClub.current = club.id;
   const saveInFlight = useRef(false);
   const [conflicts, setConflicts] = useState<Partial<Record<ShopSurface, ShopSnapshot>>>({});
   const [pendingSaves, setPendingSaves] = useState<Partial<Record<ShopSurface, ReturnType<typeof toShopSaveRequest>>>>({});
@@ -214,10 +229,77 @@ export default function ShopPageEditor() {
     editDraft((page) => ({ ...page, purchase: { ...page.purchase, [field]: value }, purchaseChanged: true }));
   }
 
+  function updatePresentation<K extends keyof CinematicShopPresentation>(field: K, value: CinematicShopPresentation[K]) {
+    editDraft(page => ({ ...page, presentation: { ...page.presentation, [field]: value }, presentationChanged: true }));
+  }
+
+  async function cleanupUnsavedMap(assetId: string | null) {
+    if (!assetId || assetId === snapshot?.presentation?.mapAssetId) return;
+    await fetch("/api/admin/media/cleanup", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assetId }) }).catch(() => undefined);
+  }
+
+  async function uploadMap(files: FileList | null) {
+    if (!files?.[0] || !draft || uploading || saveInFlight.current || pendingSaves[surface]) return;
+    const file = files[0], clubId = club.id, previous = draft.presentation.mapAssetId;
+    setUploading(true); setSaveError(null);
+    try {
+      const client = createClient(), path = `map/${crypto.randomUUID()}-${file.name}`;
+      const result = await client.storage.from("shop-artwork").upload(path, file);
+      if (result.error || !result.data) throw new Error(result.error?.message ?? "Could not upload the map.");
+      const publicResult = client.storage.from("shop-artwork").getPublicUrl(path);
+      if (publicResult.error || !publicResult.data.publicUrl) throw new Error("Could not prepare the map.");
+      if (uploadClub.current !== clubId) return;
+      let dimensions: { mapWidth?: number; mapHeight?: number } = {};
+      try { const bitmap = await createImageBitmap(file); dimensions = { mapWidth: bitmap.width, mapHeight: bitmap.height }; bitmap.close(); } catch { /* The finalized asset supplies authoritative dimensions after Save. */ }
+      editDraft(page => ({ ...page, presentation: { ...page.presentation, ...dimensions, mapAssetId: result.data!.assetId, mapUrl: publicResult.data.publicUrl, mapVisible: true }, presentationChanged: true }));
+      await cleanupUnsavedMap(previous);
+    } catch (error) { if (uploadClub.current === clubId) setSaveError(error instanceof Error ? error.message : "Could not upload the map."); }
+    finally { if (uploadClub.current === clubId) setUploading(false); }
+  }
+
+  async function removeMap() {
+    if (!draft || uploading || saveInFlight.current || pendingSaves[surface]) return;
+    const assetId = draft.presentation.mapAssetId;
+    editDraft(page => ({ ...page, presentation: { ...page.presentation, mapAssetId: null, mapUrl: "", mapVisible: false }, presentationChanged: true }));
+    await cleanupUnsavedMap(assetId);
+  }
+
+  async function cleanupUnsavedDetail(assetId: string | null) {
+    const saved = snapshot?.presentation;
+    if (!assetId || saved?.mapAssetId === assetId || saved?.details?.some(detail => detail.assetId === assetId)) return;
+    await fetch("/api/admin/media/cleanup", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assetId }) }).catch(() => undefined);
+  }
+
+  // Jersey Details tile photo. Save stays disabled while it uploads.
+  async function uploadDetailPhoto(index: number, files: FileList | null) {
+    if (!files?.[0] || !draft || !draft.presentation.details[index] || uploading || saveInFlight.current || pendingSaves[surface]) return;
+    const file = files[0], clubId = club.id, previous = draft.presentation.details[index].assetId;
+    setUploading(true); setSaveError(null);
+    try {
+      const client = createClient(), path = `details/${crypto.randomUUID()}-${file.name}`;
+      const result = await client.storage.from("shop").upload(path, file);
+      if (result.error || !result.data) throw new Error(result.error?.message ?? "Could not upload the photo.");
+      const publicResult = client.storage.from("shop").getPublicUrl(path);
+      if (publicResult.error || !publicResult.data.publicUrl) throw new Error("Could not prepare the photo.");
+      if (uploadClub.current !== clubId) return;
+      const assetId = result.data.assetId, url = publicResult.data.publicUrl;
+      editDraft(page => ({ ...page, presentation: { ...page.presentation, details: page.presentation.details.map((detail, i) => i === index ? { ...detail, assetId, url, width: undefined, height: undefined } : detail) }, presentationChanged: true }));
+      await cleanupUnsavedDetail(previous);
+    } catch (error) { if (uploadClub.current === clubId) setSaveError(error instanceof Error ? error.message : "Could not upload the photo."); }
+    finally { if (uploadClub.current === clubId) setUploading(false); }
+  }
+
+  async function removeDetailPhoto(index: number) {
+    if (!draft || uploading || saveInFlight.current || pendingSaves[surface]) return;
+    const assetId = draft.presentation.details[index]?.assetId ?? null;
+    editDraft(page => ({ ...page, presentation: { ...page.presentation, details: page.presentation.details.map((detail, i) => i === index ? { ...detail, assetId: null, url: "", width: undefined, height: undefined } : detail) }, presentationChanged: true }));
+    await cleanupUnsavedDetail(assetId);
+  }
+
   async function savePage() {
     if (!draft || !snapshot || (!dirty && !pendingSaves[surface]) || saveInFlight.current || uploading || conflict) return;
     const request = pendingSaves[surface] ?? toShopSaveRequest(snapshot, draft, crypto.randomUUID());
-    const parsed = shopSaveRequestSchema.safeParse(request);
+    const parsed = shopSaveRequestSchemaFor(maxBulletPoints).safeParse(request);
     if (!parsed.success) { setSaveError(parsed.error.issues[0]?.message ?? "Check the fields on this page."); return; }
     saveInFlight.current = true;
     setSaving(true); setSaveError(null); setSaved(false); setPendingSaves((current) => ({ ...current, [surface]: request }));
@@ -299,20 +381,21 @@ export default function ShopPageEditor() {
                 <ToolButton label="Edit kit text" onClick={() => setTarget("copy")} />
                 <ToolButton label="Edit kit photos" onClick={() => setTarget("photos")} />
                 {showExtras && <><ToolButton label="Edit photo row" onClick={() => setTarget("photoRows")} /><ToolButton label="Edit purchase details" onClick={() => setTarget("purchase")} /></>}
+                {isCinematic && surface === "shop" && <><ToolButton label="Edit jersey options" onClick={() => setTarget("editions")} /><ToolButton label="Edit jersey details" onClick={() => setTarget("details")} /><ToolButton label="Edit care line" onClick={() => setTarget("attributes")} /><ToolButton label="Edit size chart" onClick={() => setTarget("sizeChart")} /><ToolButton label="Edit map" onClick={() => setTarget("map")} /><ToolButton label="Edit sponsors" onClick={() => setTarget("sponsors")} /><ToolButton label="Edit page labels" onClick={() => setTarget("page")} /></>}
               </div>
               <ShopPreviewFrame host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} onSelect={(selection) => setTarget(selection as Target)}>
-                {presentation.renderPreview(content, surface, setSelectedVariant, <>
+                {presentation.renderPreview(content, surface, setSelectedVariant, isCinematic && surface === "shop" ? <CinematicShopCanvas kits={content} draft={draft} variant={currentVariant} onVariantChange={variant => { setSelectedVariant(variant); setTarget(current => current === "editions" ? current : "copy"); }} /> : <>
                     <div className={surface === "shop" ? "pt-24 sm:pt-28" : ""} style={{ backgroundColor: "var(--color-white)" }}>
-                      <ShopKitSectionContainer surface={surface} headingTag={surface === "shop" ? "h1" : "h2"} fadeImageToWhite editorContent={content} selectedVariant={currentVariant} onVariantChange={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
+                      <ShopKitSectionContainer surface={surface} headingTag={surface === "shop" ? "h1" : "h2"} fadeImageToWhite editorContent={content} maxBulletPoints={maxBulletPoints} selectedVariant={currentVariant} onVariantChange={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
                       {showExtras && draft.photoRows[currentVariant].length > 0 && <ShopPhotoStrip photos={publicPhotoRow(draft.photoRows[currentVariant], currentVariant)} />}
                       {showExtras && hasShopPurchaseDetails(publicPurchase(draft.purchase)) && <ShopPurchaseDetailsSection details={publicPurchase(draft.purchase)} animate={false} />}
                     </div>
-                  </>, !content[currentVariant].photos.length ? <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button> : null)}
+                  </>, !content[currentVariant].photos.length && !(isCinematic && surface === "shop") ? <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button> : null)}
               </ShopPreviewFrame>
             </div>
             <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`shop-page-inspector min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
               {target ? <>
-                <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
+                <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "editions" ? "Jersey options" : target === "details" ? "Jersey details" : target === "attributes" ? "Color, material and care" : target === "sizeChart" ? "Size chart" : target === "map" ? "Shop map" : target === "sponsors" ? "Shop sponsors" : target === "page" ? "Page labels and image framing" : target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
                 <fieldset disabled={locked} className="min-w-0">
                 {target === "fixed" ? <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">This copy belongs to the website design and is managed by Onzio.</p> : null}
                 {(target === "copy" || target === "kit" || target === "cta") && currentKit && <>
@@ -322,7 +405,7 @@ export default function ShopPageEditor() {
                     <TextField label="Kit title" value={currentKit.section.title} onChange={(value) => setSectionField("title", value)} />
                     {!nameOnly && <TextAreaField label="Description" value={currentKit.section.description} onChange={(value) => setSectionField("description", value)} />}
                     {!nameOnly && <>
-                      <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, 8))} />
+                      <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, maxBulletPoints))} />
                       {surface === "shop" && shopPolicy?.shopPageShows ? <p className="text-xs text-muted-foreground">Your Shop page shows the first {shopPolicy.shopPageShows.bullets} bullet points, each split at its first colon into a label and a value (for example “Sizes: Youth and adult”). Any more are saved but not shown.</p> : null}
                       <TextAreaField label="Store information" value={currentKit.section.store_note} onChange={(value) => setSectionField("store_note", value)} />
                     </>}
@@ -334,9 +417,10 @@ export default function ShopPageEditor() {
                 </>}
                 {target === "photos" && currentKit && <PhotoEditor photos={currentKit.photos} label="kit" uploading={uploading} onUpload={(files) => void uploadPhotos(files, false)} onRemove={(photo) => void removePhoto(photo, false)} onChange={setKitPhotos} shownCount={surface === "shop" ? shopPolicy?.shopPageShows?.photos : shopPolicy?.homeFeatureShows?.photos} shownWhere={surface === "shop" ? "Your Shop page" : "The homepage shop feature"} />}
                 {target === "photoRows" && showExtras && <PhotoEditor photos={draft.photoRows[currentVariant]} label="photo row" uploading={uploading} onUpload={(files) => void uploadPhotos(files, true)} onRemove={(photo) => void removePhoto(photo, true)} onChange={setRowPhotos} />}
+                {isCinematic && surface === "shop" && (["map", "sponsors", "page", "editions", "details", "attributes", "sizeChart"] as const).some(item => item === target) && <CinematicShopFields target={target as CinematicShopTarget} value={draft.presentation} onChange={updatePresentation} uploading={uploading} onUploadMap={files => void uploadMap(files)} onRemoveMap={() => void removeMap()} onUploadDetail={(index, files) => void uploadDetailPhoto(index, files)} onRemoveDetail={index => void removeDetailPhoto(index)} />}
                 {target === "purchase" && showExtras && <div className="space-y-3">
                   <TextField label="Section heading" value={draft.purchase.heading} onChange={(value) => updatePurchase("heading", value)} />
-                  {draft.purchase.cards.map((card, index) => <div key={index} className="space-y-2 rounded-lg border border-border p-3"><p className="text-xs font-semibold">Detail card {index + 1}</p>{(["label", "title", "body"] as const).map((field) => <TextField key={field} label={field === "body" ? "Body" : field === "title" ? "Title" : "Label"} value={card[field]} onChange={(value) => updatePurchase("cards", draft.purchase.cards.map((item, i) => i === index ? { ...item, [field]: value } : item))} />)}<button type="button" className="min-h-11 text-sm font-semibold text-destructive" onClick={() => updatePurchase("cards", draft.purchase.cards.filter((_, i) => i !== index))}>Remove card</button></div>)}
+                  {draft.purchase.cards.map((card, index) => <div key={index} className="space-y-2 rounded-lg border border-border p-3"><p className="text-xs font-semibold">Detail card {index + 1}</p>{(["label", "title", "body"] as const).map((field) => { const Field = isCinematic && field === "body" ? TextAreaField : TextField; return <Field key={field} label={field === "body" ? "Body" : field === "title" ? "Title" : "Label"} value={card[field]} onChange={(value) => updatePurchase("cards", draft.purchase.cards.map((item, i) => i === index ? { ...item, [field]: value } : item))} />; })}{isCinematic && surface === "shop" && <label className="block"><span className={ADMIN_LABEL_CLASS}>Icon</span><NativeSelect value={draft.presentation.cardIcons[index] ?? ""} onChange={(event) => updatePresentation("cardIcons", draft.purchase.cards.map((_, i) => i === index ? event.target.value as ShopCardIcon : draft.presentation.cardIcons[i] ?? ""))} className="mt-1 min-h-11 rounded-[10px] text-base">{SHOP_CARD_ICONS.map(icon => <NativeSelectOption key={icon} value={icon}>{CARD_ICON_LABELS[icon]}</NativeSelectOption>)}</NativeSelect></label>}<button type="button" aria-label={`Remove detail card ${index + 1}`} className="min-h-11 text-sm font-semibold text-destructive" onClick={() => { updatePurchase("cards", draft.purchase.cards.filter((_, i) => i !== index)); if (isCinematic && surface === "shop" && draft.presentation.cardIcons.length > index) updatePresentation("cardIcons", draft.presentation.cardIcons.filter((_, i) => i !== index)); }}>Remove card</button></div>)}
                   {draft.purchase.cards.length < 4 && <ToolButton label="Add detail card" onClick={() => updatePurchase("cards", [...draft.purchase.cards, { label: "", title: "", body: "" }])} />}
                   <TextField label="Footer label" value={draft.purchase.cta_eyebrow} onChange={(value) => updatePurchase("cta_eyebrow", value)} />
                   <TextAreaField label="Footer text" value={draft.purchase.cta_text} onChange={(value) => updatePurchase("cta_text", value)} />

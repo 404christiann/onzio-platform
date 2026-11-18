@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { normalizeHostname } from "@/lib/tenant";
 import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
+import { CINEMATIC_PLACEHOLDER_ROUTES } from "@/lib/cinematic-routes";
+import { parsePresentationDocument, templateKey } from "@/packages/presentation";
 
 const PUBLIC_TENANT_PATHS = new Set([
   "/",
@@ -21,14 +23,20 @@ const PUBLIC_TENANT_PATHS = new Set([
 
 const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";
 const PROGRAM_DETAIL_PATH = new RegExp(`^/programs/${PROGRAM_SLUG_PATTERN}$`);
+// RC2027-NEWS article addresses; the page checks the template and the article.
+const NEWS_ARTICLE_PATH = /^\/news\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REGISTRATION_PATH =
   /^\/register\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/confirmation)?$/;
 
 export function isPublicTenantPath(pathname: string): boolean {
   if (PUBLIC_TENANT_PATHS.has(pathname)) return true;
+  // The destination handler checks the trusted template and returns 404 for
+  // every other template; the rewrite still resolves the verified tenant.
+  if (Object.hasOwn(CINEMATIC_PLACEHOLDER_ROUTES, pathname)) return true;
   return (
     /^\/roster\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
     /^\/schedule\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
+    NEWS_ARTICLE_PATH.test(pathname) ||
     PROGRAM_DETAIL_PATH.test(pathname) ||
     REGISTRATION_PATH.test(pathname)
   );
@@ -263,6 +271,41 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-onzio-club-id", tenant.id);
   requestHeaders.set("x-onzio-club-slug", tenant.slug);
   if (user) requestHeaders.set("x-onzio-user-id", user.id);
+
+  if (Object.hasOwn(CINEMATIC_PLACEHOLDER_ROUTES, request.nextUrl.pathname)) {
+    // Query without member cookies: public RLS exposes only the published
+    // document, so an owner's newer draft cannot enable these destinations.
+    // Reject here to retain an HTTP404 before Next starts streaming a shell.
+    const publicClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { db: { schema: "onzio" }, cookies: { getAll: () => [], setAll: () => {} } },
+    );
+    let presentationClient = publicClient.schema("onzio");
+    let publishedId: string | null = null;
+    if (runtimeAccess === "private_preview") {
+      // A member's private preview is protected by the existing fresh-session
+      // RLS. Resolve its explicit published pointer, never its latest draft.
+      const { data: state, error: stateError } = await onzio
+        .from("presentation_state").select("published_document_id")
+        .eq("club_id", tenant.id).maybeSingle();
+      if (stateError || !state?.published_document_id) return applyTenantRobotsPolicy(notFound());
+      publishedId = state.published_document_id;
+      presentationClient = onzio;
+    }
+    let publishedQuery = presentationClient.from("presentation_documents")
+      .select("configuration").eq("club_id", tenant.id);
+    if (publishedId) publishedQuery = publishedQuery.eq("id", publishedId);
+    const { data: published, error } = await publishedQuery.maybeSingle();
+    if (error || !published) return applyTenantRobotsPolicy(notFound());
+    try {
+      if (templateKey(parsePresentationDocument(published.configuration, { surface: "production" }).template) !== "cinematic@2") {
+        return applyTenantRobotsPolicy(notFound());
+      }
+    } catch {
+      return applyTenantRobotsPolicy(notFound());
+    }
+  }
 
   if (isPublicTenantPath(request.nextUrl.pathname)) {
     const target = request.nextUrl.clone();

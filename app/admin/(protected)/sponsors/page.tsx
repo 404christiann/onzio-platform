@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { useClubContext } from "@/components/ClubContextProvider";
+import { AdminPage, AdminPanel } from "@/components/admin/AdminPage";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { Sponsors } from "@/components/admin/reimagined/Sponsors";
 import { ClassicSponsorsPage } from "@/components/admin/sponsors/ClassicSponsorsPage";
@@ -9,5 +12,23 @@ import { ClassicSponsorsPage } from "@/components/admin/sponsors/ClassicSponsors
 // the same rows one place at a time.
 export default function AdminSponsorsPage() {
   const { portal } = useAdminPortal();
-  return portal === "reimagined" ? <Sponsors /> : <ClassicSponsorsPage />;
+  const club = useClubContext();
+  const page = portal === "reimagined" ? <Sponsors /> : <ClassicSponsorsPage />;
+  if (club.presentationTemplateKey !== "cinematic@2") return page;
+  // Rose City (cinematic@2): its Club Partners pages keep their own partner list.
+  return (
+    <>
+      <AdminPage className="mb-6">
+        <AdminPanel className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+          <p className="font-body text-sm text-muted-foreground">
+            The Club Partners and Partnership Opportunities pages have their own partner list. They can reuse these logos.
+          </p>
+          <Link href="/admin/partners" className="font-body text-sm font-semibold text-primary underline">
+            Edit Partners pages
+          </Link>
+        </AdminPanel>
+      </AdminPage>
+      {page}
+    </>
+  );
 }

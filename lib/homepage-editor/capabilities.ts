@@ -5,7 +5,7 @@ import type { HeroFields, HomepageSection, PieceId } from "./model";
 
 export type HomepageRenderer = {
   templateKey: TemplateKey | null;
-  slideshowVariant: "none" | "matchday" | "legacy";
+  slideshowVariant: "none" | "matchday" | "legacy" | "cinematic";
   heroVariant?: "editable" | "legacy-fixed";
 };
 
@@ -28,16 +28,18 @@ export function homepageRendererForClub(club: { presentationTemplateKey: Templat
   const siteHomepage = codeSiteFor(club) === "diverse-city" ? diverseCityHomepage : null;
   return {
     templateKey: key,
-    slideshowVariant: siteHomepage?.slideshowVariant ?? (club.slug === "rose-city" ? "legacy" : "matchday"),
-    heroVariant: siteHomepage?.heroVariant ?? (club.slug === "rose-city" && key !== "clubhouse@1" ? "legacy-fixed" : "editable"),
+    slideshowVariant: key === "cinematic@2" ? "cinematic" : siteHomepage?.slideshowVariant ?? (club.slug === "rose-city" ? "legacy" : "matchday"),
+    heroVariant: siteHomepage?.heroVariant ?? (club.slug === "rose-city" && key !== "clubhouse@1" && key !== "cinematic@2" ? "legacy-fixed" : "editable"),
   };
 }
 
 export function resolveHomepageCapabilities(input: HomepageRenderer) {
+  const cinematic = input.templateKey === "cinematic@2";
   const siteHomepage = codeSiteForTemplateKey(input.templateKey) === "diverse-city" ? diverseCityHomepage : null;
   const clubhouse = input.templateKey === "clubhouse@1";
   const editableSections: HomepageSection[] = [];
   const heroEditableFields: (keyof HeroFields)[] = [];
+  if (cinematic) editableSections.push("revamp");
   if (input.heroVariant !== "legacy-fixed") {
     editableSections.push("hero");
     if (siteHomepage) heroEditableFields.push(...siteHomepage.heroEditableFields);
@@ -53,6 +55,7 @@ export function resolveHomepageCapabilities(input: HomepageRenderer) {
   }
   return {
     editableSections, heroEditableFields,
+    maxPhotos: cinematic ? 7 : 6,
     photoCaptionEditable: siteHomepage?.photoCaptionEditable ?? (input.slideshowVariant === "legacy"),
     videoSourceEditable: false as const,
     sharedTargets: {
@@ -155,4 +158,14 @@ export function resolveHomepageBindings({ capabilities }: {
     revision: 1,
     elements,
   };
+}
+
+const CINEMATIC_REVAMP_PIECES: readonly PieceId[] = [
+  "revamp.sponsors", "revamp.raffle", "revamp.ticket", "revamp.match", "revamp.prices", "revamp.championship", "revamp.navigation",
+];
+
+/** Bound pieces, plus cinematic@2's revamp pieces, which save as one section outside the legacy bindings. */
+export function homepageAllowedPieces(capabilities: ReturnType<typeof resolveHomepageCapabilities>): PieceId[] {
+  const pieces = Object.keys(resolveHomepageBindings({ capabilities }).elements) as PieceId[];
+  return capabilities.editableSections.includes("revamp") ? [...pieces, ...CINEMATIC_REVAMP_PIECES] : pieces;
 }

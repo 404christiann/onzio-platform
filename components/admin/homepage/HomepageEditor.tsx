@@ -1,5 +1,6 @@
 "use client";
 
+import { CINEMATIC_PAGE_SHORTCUTS } from "@/lib/cinematic-editor-shortcuts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "@/components/admin/icons";
@@ -14,6 +15,8 @@ import ResilientNativeImage from "@/components/ResilientNativeImage";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import TemplateFontScope from "@/components/TemplateFontScope";
+import CinematicShell from "@/components/cinematic/CinematicShell";
+import CinematicHomepageFields from "./CinematicHomepageFields";
 import AcademyShell from "@/components/sites/diverse-city/Shell";
 import HomepageRecoveryReview from "./HomepageRecoveryReview";
 import HomepageEditorSkeleton from "./HomepageEditorSkeleton";
@@ -26,15 +29,20 @@ import HomepagePreviewFrame from "./HomepagePreviewFrame";
 import HomepageFields from "./HomepageFields";
 import ClassicHomepageEditor from "./ClassicHomepageEditor";
 import HomepageNotifications, { useHomepageNotification } from "./HomepageNotifications";
+import { AdminPageHeader } from "@/components/admin/AdminPage";
+import saveButtonStyles from "@/components/admin/ui/AdminSaveButton.module.css";
 import { savedLabel, websiteState } from "@/lib/save-status";
 import "./homepage-editor.css";
 
-const SECTION_NAMES = { hero: "Top of your homepage", photos: "Photos", story: "Your club’s story", video: "Video feature" };
+const SECTION_NAMES = { hero: "Top of your homepage", photos: "Photos", story: "Your club’s story", video: "Video feature", revamp: "Matchday content and navigation" };
 // ADMIN-RE-09: the reimagined edit bar's shorter names ("Not saved yet: Hero").
-const EDIT_BAR_NAMES = { hero: "Hero", photos: "Photos", story: "Club story", video: "Video" };
+const EDIT_BAR_NAMES = { hero: "Hero", photos: "Photos", story: "Club story", video: "Video", revamp: "Matchday content" };
 
 export default function HomepageEditor() {
-  const classic = useAdminPortal().portal === "classic";
+  const club = useClubContext();
+  // cinematic@2 (Rose City) keeps the editor that carries its revamp sections
+  // and artwork tools; ClassicHomepageEditor has no revamp support yet.
+  const classic = useAdminPortal().portal === "classic" && club.presentationTemplateKey !== "cinematic@2";
   const { openMobile: navigationOpen } = useSidebar();
   return classic ? <ClassicHomepageEditor PreviewShell={HomepagePublicPreview} navigationOpen={navigationOpen} /> : <ExistingHomepageEditor />;
 }
@@ -199,6 +207,8 @@ function ExistingHomepageEditor() {
   const isStory = piece === "story.text" || piece === "story.cta";
   const visibility = isStory ? "story" : piece === "video" ? "video" : null;
   const sharedShortcuts: { label: string; short: string; href: string }[] = [];
+  if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push({ label: "Edit in Tickets", short: "Tickets", href: "/admin/tickets" });
+  if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push(...CINEMATIC_PAGE_SHORTCUTS);
   if (capabilities.sharedTargets.storyText) sharedShortcuts.push({ label: "Edit in About", short: "About", href: "/admin/about" });
   if (capabilities.sharedTargets.programs) sharedShortcuts.push({ label: "Edit in Programs", short: "Programs", href: "/admin/programs" });
   if (capabilities.sharedTargets.shop && club.storeEnabled) sharedShortcuts.push({ label: "Edit in Shop", short: "Shop", href: "/admin/shop" });
@@ -208,7 +218,10 @@ function ExistingHomepageEditor() {
   const done = () => { captureAnchor(piece); panel.current?.close(); restoreSelectionFocus(); dispatch({ type: "done" }); };
   const saveDisabled = !!getHomepageSaveBlocker(state) || !!editor.recoveryConflict;
   const status = state.save === "saving" ? "Saving your homepage…" : state.save === "saved" ? "Saved. Your homepage is updated." : editor.dirty.length ? `Not saved yet: ${editor.dirty.map(section => SECTION_NAMES[section]).join(", ")}` : "Nothing to save yet.";
-  const saveButton = <button type="button" className="hp-button hp-save" disabled={saveDisabled} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
+  // Classic-portal Save (only cinematic@2 reaches this editor there): main's 38px Save look, keeping its own label.
+  const saveButton = <button type="button" className={`admin-press ${saveButtonStyles.button}`} data-state={state.save === "saving" ? "saving" : saveDisabled ? "clean" : "dirty"} disabled={saveDisabled} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
+  // The phone thumb bar keeps its compact 44px touch target.
+  const thumbSaveButton = <button type="button" className="hp-button hp-save" disabled={saveDisabled} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
   const editBar = reimagined ? <EditBar
     state={state.save === "saving" ? "saving" : editor.dirty.length ? "dirty" : state.save === "saved" ? "saved" : "clean"}
     unsaved={editor.dirty.map(section => EDIT_BAR_NAMES[section])}
@@ -219,10 +232,10 @@ function ExistingHomepageEditor() {
   /> : null;
   const preview = <HomePageClient initialHeroContent={{ ...state.draft.hero, id: 1, updated_at: "" }} />;
   const tools = piece ? <>
-    {isShared ? <button className="hp-button" onClick={() => go(sharedHref)}>{sharedLabel}</button> : <button className="hp-button" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "primary" }); }}>Change the words</button>}
-    {piece === "photos" && <button className="hp-button" disabled={frozen || state.draft.photos.items.length >= 6} onClick={() => photoInput.current?.click()}>Add photo</button>}
+    {isShared ? <button className="hp-button" onClick={() => go(sharedHref)}>{sharedLabel}</button> : <button className="hp-button" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "primary" }); }}>{piece.startsWith("revamp.") ? "Edit this section" : "Change the words"}</button>}
+    {piece === "photos" && <button className="hp-button" disabled={frozen || state.draft.photos.items.length >= capabilities.maxPhotos} onClick={() => photoInput.current?.click()}>Add photo</button>}
     {visibility && <label className="hp-visibility"><input type="checkbox" checked={state.draft[visibility].visible} disabled={frozen || (visibility === "video" && !snapshot.videoSource)} onChange={event => dispatch({ type: "field-changed", field: `${visibility}.visible`, value: event.target.checked })} />Show on homepage</label>}
-    {!isShared && <button className="hp-button hp-more" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "more" }); }}>More options</button>}
+    {!isShared && !piece.startsWith("revamp.") && <button className="hp-button hp-more" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "more" }); }}>More options</button>}
     <button className="hp-button" onClick={done}>Done</button>
   </> : null;
   const parts: { name: string; piece: PieceId }[] = [];
@@ -230,11 +243,12 @@ function ExistingHomepageEditor() {
   if (capabilities.editableSections.includes("photos")) parts.push({ name: "Photos", piece: "photos" });
   if (capabilities.editableSections.includes("story")) parts.push({ name: "Your story", piece: "story.text" });
 
+  if (capabilities.editableSections.includes("revamp")) parts.push({ name: "Match & prices", piece: "revamp.match" }, { name: "Ticket & map", piece: "revamp.ticket" }, { name: "Navigation", piece: "revamp.navigation" });
   if (capabilities.editableSections.includes("video")) parts.push({ name: "Video", piece: "video" });
 
   return <div ref={root} className="hp-editor" data-sheet-open={!!disclosure && !playback} data-playback={playback} data-portal={reimagined ? "reimagined" : undefined}>
     {editBar}
-    {!reimagined && <header className="hp-heading"><div><h1>Homepage</h1><p>Click a part of your page to make it yours.</p></div><div className="hp-desktop-save">{!disclosure && saveButton}</div></header>}
+    {!reimagined && <AdminPageHeader className="mb-3 sm:mb-[18px]" eyebrow="Public website" title="Homepage" description="Click a part of your page to make it yours." actions={mobile ? undefined : <div className="hp-desktop-save">{!disclosure && saveButton}</div>} />}
     {!reimagined && <div className="hp-status" role="status" aria-live="off" data-dirty={editor.dirty.length > 0}>{status}</div>}
     {!navigationOpen && !mobile && !disclosure && !destination && <HomepageNotifications {...notificationProps} />}
     {editor.recoveryUnavailable && <p className="hp-recovery-notice" role="alert">Browser recovery is unavailable. Keep this page open until you save; your unsaved work may not survive closing it.</p>}
@@ -268,11 +282,12 @@ function ExistingHomepageEditor() {
         <div className="hp-panel-heading"><h2>{HOMEPAGE_PIECE_LABELS[piece]}</h2>{!reimagined && saveButton}</div>
         <div className="hp-panel-fields">
         {!destination && <HomepageNotifications {...notificationProps} inModal />}
-          {(piece !== "photos" || capabilities.photoCaptionEditable) && <HomepageFields clubName={club.name} piece={piece} draft={state.draft} disabled={frozen} change={(field, value) => dispatch({ type: "field-changed", field, value })} programs={editor.programs} more={disclosure.mode === "more"} />}
+          {piece.startsWith("revamp.") && state.draft.revamp && <CinematicHomepageFields piece={piece} content={state.draft.revamp} disabled={frozen} change={content => dispatch({ type: "revamp-changed", content })} replaceArtwork={editor.replaceArtwork} retryArtwork={slot => { void editor.retryArtwork(slot); }} />}
+          {!piece.startsWith("revamp.") && (piece !== "photos" || capabilities.photoCaptionEditable) && <HomepageFields clubName={club.name} piece={piece} draft={state.draft} disabled={frozen} change={(field, value) => dispatch({ type: "field-changed", field, value })} programs={editor.programs} more={disclosure.mode === "more"} />}
           {(piece === "hero.cta" || (piece === "photos" && capabilities.photoCaptionEditable)) && disclosure.mode !== "more" && <button className="hp-button" onClick={() => dispatch({ type: "disclosure-opened", mode: "more" })}>More options</button>}
           {isStory && <p className="hp-help">Blank fields use your website’s standard wording.</p>}
           {piece === "video" && <p className="hp-help">The video is set by Onzio.{!snapshot.videoSource && " Contact Onzio to add a video."}</p>}
-          {piece === "photos" && <><p>{state.draft.photos.items.length} of 6 photos used</p>{state.draft.photos.items.map((photo, index) => <section key={photo.clientId} className="hp-photo" aria-label={`Photo ${index + 1}`}>
+          {piece === "photos" && <><p>{state.draft.photos.items.length} of {capabilities.maxPhotos} photos used</p>{state.draft.photos.items.map((photo, index) => <section key={photo.clientId} className="hp-photo" aria-label={`Photo ${index + 1}`}>
             {photo.url && <ResilientNativeImage src={photo.url} alt={photo.alt} />}
             <label htmlFor={`photo-${photo.clientId}`}>Describe this photo</label><input id={`photo-${photo.clientId}`} className="hp-field" value={photo.alt} disabled={frozen} maxLength={20000} aria-describedby={`photo-help-${photo.clientId}`} onChange={event => editor.updatePhoto(photo.clientId, { alt: event.target.value })} />
             <p id={`photo-help-${photo.clientId}`} className="hp-help">Helps people using screen readers understand the photo.</p>
@@ -281,14 +296,14 @@ function ExistingHomepageEditor() {
               dispatch({ type: "photos-changed", photos: items.map((p, order) => ({ ...p, order })) });
             }}>{delta === -1 ? "Move up" : "Move down"}</button>)}<button className="hp-button" disabled={frozen} onClick={() => editor.removePhoto(photo.clientId)}>Remove photo</button></div>
             {photo.upload === "uploading" && <p role="status">Adding your photo…</p>}{photo.upload === "failed" && <div role="alert"><p>{photo.error?.message}</p><button className="hp-button" onClick={() => void editor.retryPhoto(photo.clientId)}>Try this photo again</button></div>}
-          </section>)}<button className="hp-button" disabled={frozen || state.draft.photos.items.length >= 6} onClick={() => photoInput.current?.click()}>Add photo</button></>}
+          </section>)}<button className="hp-button" disabled={frozen || state.draft.photos.items.length >= capabilities.maxPhotos} onClick={() => photoInput.current?.click()}>Add photo</button></>}
         </div>
         <div className="hp-panel-footer"><button className="hp-button" onClick={done}>Done</button></div>
       </dialog>}
     </div>
     {mobile && !navigationOpen && !disclosure && !destination && <div className="hp-mobile-notification-slot"><HomepageNotifications {...notificationProps} /></div>}
     <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
-    <div ref={thumbBar} className="hp-thumb-bar" hidden={navigationOpen}><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div>{!reimagined && <div className="hp-thumb-save">{saveButton}</div>}{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
+    <div ref={thumbBar} className="hp-thumb-bar" hidden={navigationOpen}><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div>{!reimagined && <div className="hp-thumb-save">{thumbSaveButton}</div>}{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
     <dialog ref={dialog} className="hp-leave-dialog" aria-labelledby="hp-leave-title" onCancel={event => { if (editor.isDiscardingUnsaved()) event.preventDefault(); else setDestination(null); }}><h2 id="hp-leave-title">{reimagined ? "Save your changes first?" : "Save your homepage changes?"}</h2><p>Your changes have not been saved yet.</p>{(state.submitted || editor.recoveryConflict) && <p>Your browser draft and any unconfirmed save will be kept when you leave.</p>}{destination && <HomepageNotifications {...notificationProps} inModal />}<div><button className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict || editor.discardingUnsaved} onClick={async () => { if (await editor.save()) { setDestination(null); if (destination) router.push(destination); } }}>Save and continue</button><button className="hp-button" disabled={editor.discardingUnsaved} onClick={() => { if (!editor.isDiscardingUnsaved()) setDestination(null); }}>Keep editing</button><button className="hp-button" disabled={state.save === "saving" || editor.discardingUnsaved} onClick={async () => { if (!await editor.discardUnsavedUploads()) return; setDestination(null); if (destination) router.push(destination); }}>Leave without saving</button></div></dialog>
   </div>;
 }
@@ -297,5 +312,6 @@ function ExistingHomepageEditor() {
 function HomepagePublicPreview({ children, playback }: { children: React.ReactNode; playback: boolean }) {
   const club = useClubContext();
   const preview = children;
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicShell editing={!playback}>{preview}</CinematicShell>;
   return codeSiteAdminFor(club)?.homepage.previewShell === "site-shell" ? <AcademyShell>{preview}</AcademyShell> : <TemplateFontScope templateKey={club.presentationTemplateKey}>{playback && <Nav />}<main>{preview}</main>{playback && <Footer />}</TemplateFontScope>;
 }

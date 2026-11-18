@@ -13,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverPositioner, PopoverTrigger } from "@/components/ui/popover";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
-import { MAX_MATCH_SCORE, parseDateInput, formatDateInput, uploadPhoto, logoUploadErrorMessage, deleteUnusedMatchImageUrls, type Match } from "./schedule-model";
+import LeagueLogoUpload from "@/components/admin/schedule/LeagueLogoUpload";
+import MatchSummaryFields from "@/components/admin/schedule/MatchSummaryFields";
+import { MAX_MATCH_SCORE, parseDateInput, formatDateInput, uploadPhoto, logoUploadErrorMessage, deleteUnusedMatchImageUrls, type FormState } from "./schedule-model";
 
 export function MatchForm({
   form,
@@ -23,8 +25,8 @@ export function MatchForm({
   onUploadBusyChange,
   onMediaActivity,
 }: {
-  form: Omit<Match, "id">;
-  onChange: Dispatch<SetStateAction<Omit<Match, "id">>>;
+  form: FormState;
+  onChange: Dispatch<SetStateAction<FormState>>;
   seasons: DBSeason[];
   cleanupDraftUploads?: boolean;
   onUploadBusyChange: (delta: number) => void;
@@ -155,6 +157,29 @@ export function MatchForm({
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
           </Field>
+          {club.presentationTemplateKey === "cinematic@2" && (
+            <Field id="match-league-logo" label="League logo" optional className="sm:col-span-2">
+              <LeagueLogoUpload
+                inputId="match-league-logo"
+                logoUrl={form.league_logo_url}
+                leagueName={form.competition ?? ""}
+                onUploaded={async (url) => {
+                  if (cleanupDraftUploads) await deleteUnusedMatchImageUrls({
+                    bucket: "league-logos", urls: [form.league_logo_url],
+                    column: "league_logo_url", allowedPrefixes: ["match-leagues/"],
+                  });
+                  onChange((current) => ({ ...current, league_logo_url: url }));
+                }}
+                onRemove={async () => {
+                  if (cleanupDraftUploads) await deleteUnusedMatchImageUrls({
+                    bucket: "league-logos", urls: [form.league_logo_url],
+                    column: "league_logo_url", allowedPrefixes: ["match-leagues/"],
+                  });
+                  onChange((current) => ({ ...current, league_logo_url: null }));
+                }}
+              />
+            </Field>
+          )}
         </div>
       </MatchFormSection>
 
@@ -240,17 +265,37 @@ export function MatchForm({
             />
           </Field>
 
-          <Field id="match-address" label="Street address" optional>
-            <input
+          {club.presentationTemplateKey === "cinematic@2" ? (
+            <Field
               id="match-address"
-              type="text"
-              placeholder="e.g. 1234 N Broadacre St"
-              value={form.address ?? ""}
-              onChange={(e) => set("address", e.target.value)}
-              maxLength={MATCH_TEXT_LIMITS.address}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-            />
-          </Field>
+              label="Address for directions"
+              optional
+              help="Visitors tap Directions on the Schedule to get Google Maps directions to this address. Type the full street address with the city. Leave it blank to hide Directions."
+            >
+              <input
+                id="match-address"
+                type="text"
+                placeholder="e.g. 1570 E Colorado Blvd, Pasadena, CA 91106"
+                value={form.address ?? ""}
+                onChange={(e) => set("address", e.target.value)}
+                maxLength={MATCH_TEXT_LIMITS.address}
+                aria-describedby="match-address-help"
+                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              />
+            </Field>
+          ) : (
+            <Field id="match-address" label="Street address" optional>
+              <input
+                id="match-address"
+                type="text"
+                placeholder="e.g. 1234 N Broadacre St"
+                value={form.address ?? ""}
+                onChange={(e) => set("address", e.target.value)}
+                maxLength={MATCH_TEXT_LIMITS.address}
+                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              />
+            </Field>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]">
             <Field id="match-city" label="City" optional>
@@ -315,8 +360,52 @@ export function MatchForm({
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
           </Field>
+
+          {club.presentationTemplateKey === "cinematic@2" && (
+            <Field
+              id="match-replay-video"
+              label="Stream or replay video (YouTube link)"
+              optional
+              help="Before kickoff, paste the livestream link; YouTube keeps the same link for the replay. It shows on the Schedule, the homepage and this match’s summary. Leave it blank to show “coming soon”."
+              className="sm:col-span-2"
+            >
+              <input
+                id="match-replay-video"
+                type="url"
+                inputMode="url"
+                placeholder="e.g. https://youtu.be/…"
+                value={form.replay_video_url ?? ""}
+                onChange={(e) => set("replay_video_url", e.target.value)}
+                aria-describedby="match-replay-video-help"
+                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              />
+            </Field>
+          )}
         </div>
       </MatchFormSection>
+
+      {club.presentationTemplateKey === "cinematic@2" && (
+        <MatchFormSection
+          id="summary-heading"
+          title="Match summary"
+          description="Optional. Fill in what you have after the match; anything left empty is hidden on the Match Summary page."
+        >
+          <Field id="match-attendance" label="Attendance" optional>
+            <input
+              id="match-attendance"
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              placeholder="e.g. 1356"
+              value={String(form.attendance ?? "")}
+              onChange={(e) => set("attendance", e.target.value === "" ? null : Number(e.target.value))}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+            />
+          </Field>
+          <MatchSummaryFields value={form.summary} clubLabel={club.name} opponentLabel={form.opponent || "Opponent"} onChange={(summary) => onChange((current) => ({ ...current, summary }))} />
+        </MatchFormSection>
+      )}
 
       {/* Academy fixture cards do not show sponsor columns. */}
       {!hidesMatchSponsorFields && (

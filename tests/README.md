@@ -768,3 +768,38 @@ Export the local test environment before database checks. Run shared-fixture
 writers serially. The Programs editor page, admin navigation entry, preview-forms
 route, public routes, and Academy preview keep their Academy-only policy. This
 SQL and API package claims no new browser acceptance or hosted application.
+
+## cinematic@2 Tickets page
+
+With the isolated local test environment explicitly exported, run `npx vitest run tests/contracts/cinematic-tickets-content.test.ts tests/contracts/cinematic-tickets-recovery.test.ts tests/contracts/cinematic-tickets-route.test.ts tests/database/cinematic-tickets-save.test.ts`. Contracts cover strict URL/media/template/tenant boundaries, independent revisions, stale/direct writes, actor receipts, exact response-loss retry and partial/semantic draft recovery. Normal media publication and actual CUA desktop/phone Save/reload/public reflection evidence are recorded in docs/rose-city-tickets-2027-implementation.md. No hosted tests/seeds.
+
+
+Cinematic revision2 Shop coverage: `tests/contracts/cinematic-shop-editor.test.ts`,
+`tests/contracts/cinematic-shop-renderer.test.ts`, and
+`tests/database/cinematic-shop-save.test.ts` cover authored/empty renderer parity,
+settings draft/recovery, tenant/template isolation, atomic map save/rollback,
+receipts and reference-safe media retirement. Actual local admin/public desktop
+and phone evidence is documented in `docs/rose-city-shop-2027-implementation.md`.
+
+
+## Cinematic 2027 roster
+
+`npx vitest run tests/contracts/cinematic-roster-renderer.test.ts tests/contracts/cinematic-roster-import.test.ts tests/contracts/player-modal-media.test.ts tests/contracts/roster-media-resilience.test.ts` verifies shared data rendering, existing modal media behavior, preservation of historical totals and a new zero-stat active cohort. Import fixtures are synthetic; tests never contact a hosted project. Actual local source/media/SQL/browser acceptance is recorded in docs/rose-city-roster-2027-implementation.md and outer review-notes/roster-2027/implemented.
+
+
+## Cinematic Schedule and editable league logo
+
+`npx vitest run tests/contracts/cinematic-schedule.test.ts tests/contracts/admin-schedule-match-editor.test.ts tests/database/schedule-league-logo.test.ts` covers club-timezone Next (including away and invalid/played fixtures), saved logos, empty/removed-media states,13-game first-page bounds, stable order and local tenant/media/reference safeguards. Browser acceptance additionally exercises all three actual upload/replace/remove → Save/reload/public paths and4→8→12→13 pagination. Tests use isolated local fixtures; no hosted tests. Full evidence and limitations: docs/rose-city-schedule-2027-implementation.md.
+
+
+## Cinematic Partners pages (RC2027-PARTNERS)
+
+`npx vitest run tests/contracts/cinematic-partners-content.test.ts tests/contracts/cinematic-partners-pages.test.ts tests/contracts/cinematic-partners-editor.test.ts` covers the content rules, both public routes (cinematic@2 only, other designs keep `/sponsors`), the save route's logo retirement and the editor draft helpers. With the isolated test environment exported, `npx vitest run tests/database/cinematic-partners-save.test.ts` covers the atomic save, receipts, shared Sponsors logos, reference-safe retirement, invalid content, tenant isolation and public read. It needs migration `20261112170000` on local Supabase. Evidence: `docs/rose-city-partners-2027-implementation.md`.
+
+## Cinematic Injury Report (RC2027-INJURY-REPORT)
+
+`npx vitest run tests/contracts/cinematic-injury-report-content.test.ts tests/contracts/cinematic-injury-report-page.test.ts tests/contracts/cinematic-injury-report-editor.test.ts` covers the content rules, the public page at `/news/injury-report` (Roster player data, inactive players hidden, the empty state, logo fallback, video placeholder), the save route and the editor draft helpers. With the isolated test environment exported, `npx vitest run tests/database/cinematic-injury-report.test.ts` covers the atomic save, receipts, the Roster picker, player and media rules, reference-safe retirement, invalid content, tenant isolation and public read. It needs migration `20261112180000` on local Supabase. Evidence: `docs/rose-city-injury-report-2027-implementation.md`.
+
+## Cinematic Season Ticket Membership and Know Before You Go (RC2027-TICKET-PAGES)
+
+`npx vitest run tests/contracts/cinematic-ticket-pages-content.test.ts tests/contracts/cinematic-ticket-pages-editor.test.ts tests/contracts/cinematic-ticket-pages-renderer.test.ts tests/contracts/cinematic-ticket-pages-admin-routes.test.ts tests/contracts/visitor-page-api.test.ts tests/contracts/cinematic-navigation.test.ts` covers the save rules (one image slot per benefit, price row and tile; safe links; list limits), the editor's add/remove/reorder helpers, both public pages (Schedule's next home match, empty images hidden publicly and labelled in the editor preview, section switches), the routes, the admin pages and the Tickets drop-down. With the isolated test environment exported, `npx vitest run tests/database/cinematic-ticket-pages-save.test.ts` covers the atomic saves, independent revisions, receipts, invalid content, direct writes, tenant and template isolation, media rules and reference-safe retirement; `tests/database/cinematic-homepage-atomic-save.test.ts` covers the two new menu labels. They need migrations `20261112200000` and `20261112210000` on local Supabase.

@@ -35,7 +35,7 @@ describe("admin sidebar grouped navigation", () => {
       (entry) => entry.type === "group",
     );
     expect(groups.map((entry) => entry.routeIds)).toEqual([
-      ["homepage", "programs", "tryouts", "shop", "about", "sponsors", "contact"],
+      ["homepage", "programs", "tryouts", "shop", "about", "sponsors", "contact", "news"],
       ["seasons", "roster", "schedule", "match-stats", "standings"],
       ["branding", "team-access"],
     ]);

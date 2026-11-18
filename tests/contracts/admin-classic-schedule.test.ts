@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { emptyForm, hasResult, matchTooLong, normalizeScore, monthGroupKey, formatRowDate, MAX_MATCH_SCORE } from "@/components/admin/schedule/schedule-model";
+import { EMPTY_MATCH_SUMMARY } from "@/lib/match-summary";
 
 const page = readFileSync("app/admin/(protected)/schedule/page.tsx", "utf8");
 const legacy = readFileSync("components/admin/schedule/LegacySchedulePage.tsx", "utf8");
@@ -17,6 +18,8 @@ describe("classic Schedule regression boundaries", () => {
       date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "",
       sponsor_name: null, sponsor_logo_url: null, sponsor_link: null, home: true, venue: "", address: "", city: "", state: "",
       rose_city_score: null, opponent_score: null, season_id: "season",
+      // cinematic@2 (Rose City) Schedule fields, sent only for that design.
+      league_logo_url: null, replay_video_url: null, attendance: null, summary: EMPTY_MATCH_SUMMARY,
     });
     expect(hasResult({ rose_city_score: 0, opponent_score: 0 })).toBe(true);
     expect(hasResult({ rose_city_score: 0, opponent_score: null })).toBe(false);

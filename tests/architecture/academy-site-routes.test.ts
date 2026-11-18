@@ -9,6 +9,7 @@ import {
   matchAcademyRoute,
   type AcademyRouteId,
 } from "@/components/sites/diverse-city/routes";
+import { CINEMATIC_PLACEHOLDER_ROUTES } from "@/lib/cinematic-routes";
 
 const root = process.cwd();
 const adapters = resolve(root, "app/%5Fclubs/[slug]");
@@ -21,6 +22,10 @@ function walk(directory: string): string[] {
   });
 }
 
+// cinematic@2 (Rose City) destinations: these adapters render only for that
+// design (notFound otherwise), so they are not Academy pages.
+const CINEMATIC_ONLY_PATTERNS = new Set([...Object.keys(CINEMATIC_PLACEHOLDER_ROUTES), "/news/[articleSlug]", "/[...revamp]"]);
+
 function implementedPatterns() {
   return walk(adapters)
     .filter((path) => path.endsWith(`${sep}page.tsx`))
@@ -28,6 +33,7 @@ function implementedPatterns() {
       const directory = relative(adapters, path).split(sep).slice(0, -1);
       return `/${directory.join("/")}`;
     })
+    .filter((pattern) => !CINEMATIC_ONLY_PATTERNS.has(pattern))
     .sort();
 }
 

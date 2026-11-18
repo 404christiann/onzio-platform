@@ -1,4 +1,5 @@
 import AcademyAboutPage from "@/components/sites/diverse-city/AcademyAboutPage";
+import CinematicAbout from "@/components/cinematic/CinematicAbout";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
 import { EMPTY_ABOUT_PAGE_CONTENT } from "@/lib/about-content";
 import { getClubContextBySlug } from "@/lib/club-context";
@@ -16,6 +17,9 @@ export default async function TenantAboutPage({
     console.error("TenantAboutPage:", error);
     return { about: EMPTY_ABOUT_PAGE_CONTENT };
   });
+  if (club.presentationTemplateKey === "cinematic@2") {
+    return <CinematicAbout content={content.about} />;
+  }
   if (club.presentationTemplateKey === "clubhouse@1") {
     const sponsors = await fetchSiteSponsorLogos("carousel", club.id);
     return <ClubhouseAboutPage content={content.about} sponsors={sponsors} />;

@@ -206,6 +206,9 @@ describe("classic Games page writes", () => {
     opponent_short_name: null,
     opponent_logo_url: null,
     competition: null,
+    // cinematic@2 (Rose City) Schedule fields: empty for every other design.
+    league_logo_url: null,
+    replay_video_url: null,
     sponsor_name: null,
     sponsor_logo_url: null,
     sponsor_link: null,
@@ -236,10 +239,13 @@ describe("classic Games page writes", () => {
   };
 
   it("sends exactly the fields these payloads pin", () => {
-    expect(formKeys()).toEqual(Object.keys(CLASSIC_FIELDS).sort());
+    // Attendance and the Match Summary are in the form, but summaryColumnsFor
+    // sends them only for cinematic@2 clubs.
+    expect(formKeys()).toEqual([...Object.keys(CLASSIC_FIELDS), "attendance", "summary"].sort());
+    expect(classic).toContain("return isCinematic ? { ...rest, attendance, ...matchSummaryColumns(summary) } : rest;");
     expect(classic).toContain('import { createClient } from "@/lib/admin-client";');
-    expect(classic).toMatch(/supabase\.from\("matches"\)\.insert\(\[\{\s*\.\.\.addForm,/);
-    expect(classic).toMatch(/supabase\.from\("matches"\)\.update\(\{\s*\.\.\.editForm,/);
+    expect(classic).toMatch(/supabase\.from\("matches"\)\.insert\(\[\{\s*\.\.\.summaryColumnsFor\(addForm\),/);
+    expect(classic).toMatch(/supabase\.from\("matches"\)\.update\(\{\s*\.\.\.summaryColumnsFor\(editForm\),/);
   });
 
   it("adds a classic game, and refuses one over the limits", () => {

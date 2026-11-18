@@ -11,7 +11,7 @@ async function loadPresentation(): Promise<PresentationExports> {
   return import("@/packages/presentation");
 }
 
-// Pinned registrations for the two active templates.
+// Pinned registrations for the two shared active templates (cinematic@2 is Rose City only).
 const CLUBHOUSE_TEMPLATE_SNAPSHOT = {
   id: "clubhouse",
   version: 1,
@@ -127,9 +127,9 @@ describe("active template registry", () => {
     expect(templateRegistry["academy@1"]).toEqual(ACADEMY_TEMPLATE_SNAPSHOT);
   });
 
-  it("exposes only clubhouse and academy for new assignments", async () => {
+  it("exposes only cinematic@2 (Rose City), clubhouse and academy for new assignments", async () => {
     const { templateRegistry, activeTemplateRegistration, isActiveTemplateKey } = await loadPresentation();
-    expect(Object.keys(templateRegistry).sort()).toEqual(["academy@1", "clubhouse@1"]);
+    expect(Object.keys(templateRegistry).sort()).toEqual(["academy@1", "cinematic@2", "clubhouse@1"]);
     expect(activeTemplateRegistration("clubhouse@1")).toEqual(CLUBHOUSE_TEMPLATE_SNAPSHOT);
     expect(activeTemplateRegistration("academy@1")).toEqual(ACADEMY_TEMPLATE_SNAPSHOT);
     for (const key of ["cinematic@1", "heritage@1", "editorial@1", null]) {
@@ -143,7 +143,7 @@ describe("active template registry", () => {
     const nextMatch = sectionRegistry["shared.next-match"];
     const { compatibleTemplates: nextMatchTemplates, ...nextMatchRest } = nextMatch;
     expect(nextMatchRest).toEqual(SHARED_NEXT_MATCH_SNAPSHOT_MINUS_TEMPLATES);
-    expect(nextMatchTemplates).toEqual(["clubhouse@1", "academy@1"]);
+    expect(nextMatchTemplates).toEqual(["cinematic@2", "clubhouse@1", "academy@1"]);
 
     const history = sectionRegistry["shared.history"];
     const { compatibleTemplates: historyTemplates, ...historyRest } = history;
@@ -151,14 +151,14 @@ describe("active template registry", () => {
     expect(historyTemplates).toEqual(["clubhouse@1", "academy@1"]);
   });
 
-  it("keeps active sections scoped and cinematic section concepts available for future versions", async () => {
+  it("keeps active sections scoped and cinematic sections scoped to cinematic@2", async () => {
     const { sectionRegistry } = await loadPresentation();
     expect(sectionRegistry["clubhouse.hero"]?.compatibleTemplates).toEqual(["clubhouse@1"]);
     expect(sectionRegistry["academy.hero"]?.compatibleTemplates).toEqual(["academy@1"]);
     expect(sectionRegistry["cinematic.hero"]?.type).toBe("cinematic.hero");
     expect(sectionRegistry["cinematic.gallery"]?.type).toBe("cinematic.gallery");
-    expect(sectionRegistry["cinematic.hero"]?.compatibleTemplates).toEqual([]);
-    expect(sectionRegistry["cinematic.gallery"]?.compatibleTemplates).toEqual([]);
+    expect(sectionRegistry["cinematic.hero"]?.compatibleTemplates).toEqual(["cinematic@2"]);
+    expect(sectionRegistry["cinematic.gallery"]?.compatibleTemplates).toEqual(["cinematic@2"]);
     expect(sectionRegistry["heritage.identity"]).toBeUndefined();
     expect(sectionRegistry["editorial.hero"]).toBeUndefined();
   });

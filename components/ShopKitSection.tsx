@@ -26,6 +26,8 @@ interface ShopKitSectionProps {
   fadeImageToWhite?: boolean;
   ctaHref?: string;
   variantTabs?: ReactNode;
+  /** The club's bullet limit when the caller knows it (the Shop editor preview); public pages keep the default 8. */
+  maxBulletPoints?: number;
 }
 
 export default function ShopKitSection({
@@ -36,6 +38,7 @@ export default function ShopKitSection({
   fadeImageToWhite = false,
   ctaHref,
   variantTabs,
+  maxBulletPoints,
 }: ShopKitSectionProps) {
   const editing = useHomepagePreview() !== null;
   const shopPiece = useHomepagePiece("shared.shop");
@@ -48,7 +51,7 @@ export default function ShopKitSection({
     url: photo.url.trim(),
     alt: kitPhotoAlt(section.title, index, validPhotos.length),
   }));
-  const bulletPoints = normalizeKitBulletPoints(section.bullet_points);
+  const bulletPoints = normalizeKitBulletPoints(section.bullet_points, maxBulletPoints);
   const storeNote = normalizeKitStoreNote(section.store_note).trim();
 
   // Used both as this page's own H1 hero (already in view on mount, nothing

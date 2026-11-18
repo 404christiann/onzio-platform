@@ -1,5 +1,6 @@
 import type { DBShopCarouselPhoto, DBShopKitPhoto, DBShopKitSection, DBShopPurchaseDetails, ShopKitVariant } from "@/lib/db-types";
 import { normalizeKitBuyLink } from "./contract";
+import { EMPTY_CINEMATIC_SHOP_CONTENT, shopContentOnly, withShopDefaults, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import type { ShopPhoto, ShopSaveRequest, ShopSection, ShopSnapshot, ShopVariant } from "./contract";
 
 export type KitDraft = { exists: boolean; section: ShopSection; photos: ShopPhoto[] };
@@ -10,6 +11,8 @@ export type ShopPageDraft = {
   changedVariants: ShopVariant[];
   changedRows: ShopVariant[];
   purchaseChanged: boolean;
+  presentation: CinematicShopPresentation;
+  presentationChanged: boolean;
 };
 
 export const SHOP_VARIANTS: ShopVariant[] = ["home", "third", "away"];
@@ -64,11 +67,13 @@ export function draftFromShopSnapshot(snapshot: ShopSnapshot): ShopPageDraft {
     changedVariants: [],
     changedRows: [],
     purchaseChanged: false,
+    presentation: structuredClone(withShopDefaults(snapshot.presentation ?? EMPTY_CINEMATIC_SHOP_CONTENT)),
+    presentationChanged: false,
   };
 }
 
 export function shopDraftDirty(draft: ShopPageDraft | undefined): boolean {
-  return Boolean(draft && (draft.changedVariants.length > 0 || draft.changedRows.length > 0 || draft.purchaseChanged));
+  return Boolean(draft && (draft.changedVariants.length > 0 || draft.changedRows.length > 0 || draft.purchaseChanged || draft.presentationChanged));
 }
 
 export function toShopSaveRequest(snapshot: ShopSnapshot, draft: ShopPageDraft, operationId: string): ShopSaveRequest {
@@ -96,6 +101,7 @@ export function toShopSaveRequest(snapshot: ShopSnapshot, draft: ShopPageDraft, 
     variants,
     ...(draft.changedRows.length > 0 ? { photoRows } : {}),
     ...(draft.purchaseChanged ? { purchase: draft.purchase } : {}),
+    ...(draft.presentationChanged ? { presentation: shopContentOnly(draft.presentation) } : {}),
   };
 }
 

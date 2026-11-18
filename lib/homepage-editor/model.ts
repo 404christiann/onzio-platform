@@ -1,4 +1,5 @@
-export type HomepageSection = "hero" | "photos" | "story" | "video";
+import { cinematicHomepageEditableContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+export type HomepageSection = "hero" | "photos" | "story" | "video" | "revamp";
 
 export type HeroFields = {
   eyebrow: string;
@@ -41,6 +42,7 @@ export type HomepageVideoFields = {
 };
 
 export type HomepageDraft = {
+  revamp?: CinematicHomepageContent;
   hero: HeroFields;
   photos: { seasonLabel: string; items: HomepagePhoto[] };
   story: HomepageStoryFields;
@@ -48,6 +50,13 @@ export type HomepageDraft = {
 };
 
 export type PieceId =
+  | "revamp.sponsors"
+  | "revamp.raffle"
+  | "revamp.ticket"
+  | "revamp.match"
+  | "revamp.prices"
+  | "revamp.championship"
+  | "revamp.navigation"
   | "hero.eyebrow"
   | "hero.heading"
   | "hero.intro"
@@ -72,6 +81,7 @@ export type HomepageEditorState = {
   editableSections: HomepageSection[];
   allowedPieces: PieceId[];
   editableFields: string[];
+  maxPhotos: number;
   selection: PieceId | null;
   disclosure: Disclosure | null;
   save: SaveState;
@@ -86,6 +96,7 @@ export type HomepageEditorAction =
   | { type: "done" }
   | { type: "field-changed"; field: string; value: string | boolean }
   | { type: "photos-changed"; photos: HomepagePhoto[] }
+  | { type: "revamp-changed"; content: CinematicHomepageContent }
   | { type: "save-started"; operationId: string }
   | { type: "save-failed"; code: string; message: string }
   | { type: "save-reconciled-not-committed" }
@@ -125,6 +136,7 @@ const VIDEO_FIELDS: readonly (keyof HomepageVideoFields)[] = [
 ];
 
 const PIECES: readonly PieceId[] = [
+  "revamp.sponsors", "revamp.raffle", "revamp.ticket", "revamp.match", "revamp.prices", "revamp.championship", "revamp.navigation",
   "hero.eyebrow",
   "hero.heading",
   "hero.intro",
@@ -149,6 +161,7 @@ const DEFAULT_EDITABLE_FIELDS: readonly string[] = [
 
 function cloneDraft(draft: HomepageDraft): HomepageDraft {
   return {
+    ...(draft.revamp ? { revamp: structuredClone(draft.revamp) } : {}),
     hero: { ...draft.hero },
     photos: {
       seasonLabel: draft.photos.seasonLabel,
@@ -178,7 +191,7 @@ function cloneState(state: HomepageEditorState): HomepageEditorState {
 }
 
 function isSection(value: string): value is HomepageSection {
-  return value === "hero" || value === "photos" || value === "story" || value === "video";
+  return value === "hero" || value === "photos" || value === "story" || value === "video" || value === "revamp";
 }
 
 function isPiece(value: string): value is PieceId {
@@ -186,6 +199,7 @@ function isPiece(value: string): value is PieceId {
 }
 
 function sectionForPiece(piece: PieceId): HomepageSection {
+  if (piece.startsWith("revamp.")) return "revamp";
   if (piece === "photos") return "photos";
   if (piece === "story" || piece === "story.text" || piece === "story.cta" || piece === "shared.story") return "story";
   if (piece === "video") return "video";
@@ -210,6 +224,7 @@ function samePhotos(left: HomepageDraft["photos"], right: HomepageDraft["photos"
 }
 
 function sameSection(section: HomepageSection, left: HomepageDraft, right: HomepageDraft): boolean {
+  if (section === "revamp") return JSON.stringify(left.revamp ? cinematicHomepageEditableContent(left.revamp) : null) === JSON.stringify(right.revamp ? cinematicHomepageEditableContent(right.revamp) : null);
   if (section === "photos") return samePhotos(left.photos, right.photos);
   if (section === "hero") {
     return HERO_FIELDS.every((field) => left.hero[field] === right.hero[field]);
@@ -227,6 +242,7 @@ export function createHomepageEditorState(input: {
   editableSections: HomepageSection[];
   allowedPieces?: string[];
   editableFields?: string[];
+  maxPhotos?: number;
 }): HomepageEditorState {
   return {
     baseline: cloneDraft(input.content),
@@ -236,6 +252,7 @@ export function createHomepageEditorState(input: {
     editableSections: input.editableSections.filter(isSection),
     allowedPieces: input.allowedPieces?.filter(isPiece) ??
       PIECES.filter((piece) => input.editableSections.includes(sectionForPiece(piece))),
+    maxPhotos: input.maxPhotos ?? 6,
     editableFields: input.editableFields ? [...input.editableFields] : [...DEFAULT_EDITABLE_FIELDS],
     selection: null,
     disclosure: null,
@@ -253,9 +270,10 @@ export function getDirtyHomepageSections(state: HomepageEditorState): HomepageSe
 
 export function getHomepageSaveBlocker(state: HomepageEditorState): string | null {
   if (state.save === "saving") return "SAVING";
+  if (state.editableSections.includes("revamp") && state.draft.revamp && [state.draft.revamp.raffle, state.draft.revamp.ticket, state.draft.revamp.championship.trophy, state.draft.revamp.footerLogo].some(art => art?.upload && art.upload !== "ready")) return "ARTWORK_NOT_READY";
   const dirty = getDirtyHomepageSections(state);
   if (dirty.length === 0) return "NO_CHANGES";
-  if (state.editableSections.includes("photos") && state.draft.photos.items.length > 6) {
+  if (state.editableSections.includes("photos") && state.draft.photos.items.length > state.maxPhotos) {
     return "TOO_MANY_PHOTOS";
   }
   if (
@@ -335,10 +353,17 @@ export function reduceHomepageEditor(
     return next;
   }
 
-  if (state.submitted && (action.type === "field-changed" || action.type === "photos-changed")) {
+  if (state.submitted && (action.type === "field-changed" || action.type === "photos-changed" || action.type === "revamp-changed")) {
     return state;
   }
 
+  if (action.type === "revamp-changed") {
+    if (!state.editableSections.includes("revamp")) return state;
+    const next = cloneState(state);
+    next.draft.revamp = structuredClone(action.content);
+    if (!sameSection("revamp", state.draft, next.draft)) { next.save = "idle"; next.saveError = null; }
+    return next;
+  }
   if (action.type === "field-changed") return changeField(state, action.field, action.value);
 
   if (action.type === "photos-changed") {

@@ -1,0 +1,18 @@
+{
+  "hero_title": "About Club",
+  "story_paragraphs": [
+    "Rose City FC was founded to give Pasadena a semi-professional club it could call its own. What started as a small group with a shared idea has grown into a full roster, a coaching staff, and a matchday community that fills the stands at Robinson Stadium.",
+    "Since our first season in the UPSL, the club has built its identity on disciplined, attacking soccer and a refusal to be outworked. That identity carried us to a UPSL Championship in 2024 - a milestone we treat as a beginning, not a destination.",
+    "Today, Rose City FC is building toward the next level - investing in player development, deepening our roots in the Pasadena community, and giving local talent a real pathway forward in the sport."
+  ],
+  "feature_image_url": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/4290ec66-676e-5990-a4b5-fd8eec5b80a2.webp",
+  "values_heading": "Our Values",
+  "values": [
+    {"title": "Community", "description": "Rose City FC belongs to Pasadena - every matchday is a reason for this city to gather."},
+    {"title": "Competition", "description": "We compete to win. Every season, every match, every training session is a step toward silverware."},
+    {"title": "Character", "description": "On the pitch and off it, the club is built by players and staff who represent this crest with pride."}
+  ],
+  "closing_text": "Join us at Robinson Stadium this season.",
+  "closing_cta_label": "See the Schedule",
+  "closing_cta_href": "/schedule"
+}

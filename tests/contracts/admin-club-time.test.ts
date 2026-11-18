@@ -32,10 +32,12 @@ describe("public kickoff logic uses the club's zone", () => {
 });
 
 describe("where the zone comes from", () => {
-  it("the tenant layout reads it separately, fail-safe, and provides it on both site shells", () => {
+  it("the tenant layout reads it separately, fail-safe, and provides it on every site shell", () => {
     const layout = read("app/%5Fclubs/[slug]/layout.tsx");
     expect(layout).toContain("const timeZone = await readPublicClubTimeZone(club.id);");
-    expect(layout.match(/<ClubTimeZoneProvider timeZone=\{timeZone\}>/g)).toHaveLength(2);
+    // Two shared site shells plus the cinematic@2 (Rose City) shell.
+    expect(layout.match(/<ClubTimeZoneProvider timeZone=\{timeZone\}>/g)).toHaveLength(3);
+    expect(layout).toContain("<ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell");
   });
 
   it("the public read is time-boxed and falls back to Los Angeles", () => {

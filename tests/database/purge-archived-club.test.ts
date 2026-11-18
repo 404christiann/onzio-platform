@@ -3,6 +3,17 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Client } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { emptyChickFilAContent } from "@/lib/chick-fil-a-content";
+import { starterCinematicContactContent } from "@/lib/cinematic-contact-content";
+import { cinematicHomepageStorageRecord, defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { starterCinematicInjuryReportContent } from "@/lib/cinematic-injury-report-content";
+import { starterCinematicPartnersContent } from "@/lib/cinematic-partners-content";
+import { starterCinematicPolicyContent } from "@/lib/cinematic-policies-content";
+import { emptyRobinsonContent } from "@/lib/cinematic-robinson-content";
+import { EMPTY_CINEMATIC_SHOP_CONTENT } from "@/lib/cinematic-shop-content";
+import { emptyTicketPageContent } from "@/lib/cinematic-ticket-pages-content";
+import { emptyStadiumContent } from "@/lib/stadium-content";
+import { emptyTicketsContent } from "@/lib/tickets-content";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 
@@ -15,8 +26,32 @@ const MIGRATION = resolve(
   __dirname,
   "../../supabase/migrations/20261111080000_purge_archived_club.sql",
 );
+// Rose City (cinematic@2) redefines the function with its 15 tables; it
+// must win over the main definition above.
+const ROSE_CITY_MIGRATION = resolve(
+  __dirname,
+  "../../supabase/migrations/20261117020000_cinematic_purge_tables.sql",
+);
 const OPERATOR = USER_IDS.ownerAal2;
 const LEDGERS = ["onzio.audit_events", "onzio.stripe_events", "onzio.club_exports"];
+
+// A JSON value as a jsonb literal. Media identity lives in FK columns, not
+// in the stored JSON, so assetId keys are dropped as the save functions do.
+function jsonb(value: unknown): string {
+  const text = JSON.stringify(value, (key, item) => (key === "assetId" ? undefined : item));
+  return `$json$${text}$json$::jsonb`;
+}
+const HOMEPAGE = cinematicHomepageStorageRecord(defaultCinematicHomepageContent());
+const NEWS = {
+  category: "sponsor-partner",
+  cardHeading: "Partner",
+  title: "A partner joins the club",
+  subtitle: "",
+  coverAlt: "",
+  paragraphs: ["The club announces a partner."],
+  actionLabel: "",
+  actionHref: "",
+};
 
 // One row in every club table for the club in purge_test.club_id: archived,
 // suspended, domain inactive, no live subscription, a Connect account that
@@ -37,6 +72,7 @@ declare
   program uuid := gen_random_uuid();
   doc uuid := gen_random_uuid();
   digest text := repeat('d', 64);
+  homepage_asset uuid := gen_random_uuid();
 begin
   insert into onzio.clubs (id, slug, name, lifecycle, public_access, tier, archived_at)
   values (c, 'purge-' || left(c::text, 8), 'Purge Target', 'archived', 'suspended', 'starter', now());
@@ -122,6 +158,37 @@ begin
   insert into onzio_private.shop_page_revisions (club_id, surface) values (c, 'shop') on conflict do nothing;
   insert into onzio_private.tryouts_page_revisions (club_id) values (c) on conflict do nothing;
   insert into onzio_private.tryouts_page_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+
+  -- Rose City (cinematic@2) tables, with each page's starter content. Ticket
+  -- page images must be published Homepage graphics.
+  insert into onzio.media_assets (id, club_id, storage_bucket, storage_path, surface, media_kind, mime_type, byte_size, width, height, checksum_sha256, status, published_at)
+  values (homepage_asset, c, 'onzio-media', c || '/homepage/' || homepage_asset || '.png', 'homepage', 'graphic', 'image/png', 100, 50, 50, repeat('c', 64), 'published', now());
+  insert into onzio.homepage_revamp_content (club_id, content, presentation_config) values (c, ${jsonb(HOMEPAGE.content)}, ${jsonb(HOMEPAGE.presentation_config)});
+  insert into onzio.cinematic_shop_content (club_id, content) values (c, ${jsonb(EMPTY_CINEMATIC_SHOP_CONTENT)});
+  insert into onzio.cinematic_tickets_content (club_id, content) values (c, ${jsonb(emptyTicketsContent())});
+  insert into onzio.cinematic_chick_fil_a_content (club_id, content) values (c, ${jsonb(emptyChickFilAContent())});
+  insert into onzio.cinematic_stadium_content (club_id, content) values (c, ${jsonb(emptyStadiumContent())});
+  insert into onzio.cinematic_robinson_content (club_id, content) values (c, ${jsonb(emptyRobinsonContent())});
+  insert into onzio.cinematic_contact_content (club_id, content) values (c, ${jsonb(starterCinematicContactContent())});
+  insert into onzio.cinematic_policy_content (club_id, content) values (c, ${jsonb(starterCinematicPolicyContent())});
+  insert into onzio.cinematic_news_articles (club_id, slug, content, published_at) values (c, 'purge-news', ${jsonb(NEWS)}, now());
+  insert into onzio.cinematic_partners_content (club_id, content) values (c, ${jsonb({ pages: starterCinematicPartnersContent().pages })});
+  insert into onzio.cinematic_partners (club_id, id, sort_order, name) values (c, gen_random_uuid(), 0, 'Partner');
+  insert into onzio.cinematic_injury_report_content (club_id, content) values (c, ${jsonb(starterCinematicInjuryReportContent().page)});
+  insert into onzio.cinematic_injury_entries (club_id, id, sort_order, player_id, injury, timeline) values (c, gen_random_uuid(), 0, player, 'Ankle', '2 weeks');
+  insert into onzio.cinematic_ticket_pages (club_id, page, content) values (c, 'season-membership', ${jsonb(emptyTicketPageContent("season-membership"))});
+  insert into onzio.cinematic_ticket_page_images (club_id, page, slot, media_asset_id) values (c, 'season-membership', 'ticket', homepage_asset);
+
+  insert into onzio_private.chick_fil_a_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.cinematic_contact_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.cinematic_injury_report_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.cinematic_news_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.cinematic_partners_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.cinematic_policy_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.robinson_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.stadium_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.ticket_page_save_receipts (club_id, page, actor_id, operation_id, request_hash, response) values (c, 'season-membership', owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.tickets_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
 end
 $fixture$;
 `;
@@ -207,6 +274,7 @@ beforeEach(async () => {
   await db.connect();
   await db.query("begin");
   await db.query(readFileSync(MIGRATION, "utf8"));
+  await db.query(readFileSync(ROSE_CITY_MIGRATION, "utf8"));
   club = randomUUID();
   slug = `purge-${club.slice(0, 8)}`;
   exportId = `export_${club}`;

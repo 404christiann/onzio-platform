@@ -22,6 +22,7 @@ export default function ShopKitSectionContainer({
   selectedVariant,
   onVariantChange,
   editorContent,
+  maxBulletPoints,
 }: {
   headingTag?: "h1" | "h2";
   fadeImageToWhite?: boolean;
@@ -29,6 +30,8 @@ export default function ShopKitSectionContainer({
   selectedVariant?: ShopKitVariant;
   onVariantChange?: (variant: ShopKitVariant) => void;
   editorContent?: Record<ShopKitVariant, ShopKitContent>;
+  /** Passed by the Shop editor preview so it shows every bullet the club may save. */
+  maxBulletPoints?: number;
 }) {
   const clubId = useClubId();
   const [contentByVariant, setContentByVariant] =
@@ -96,6 +99,7 @@ export default function ShopKitSectionContainer({
       headingTag={headingTag}
       animate={!editorContent}
       fadeImageToWhite={fadeImageToWhite}
+      maxBulletPoints={maxBulletPoints}
       ctaHref={surface === "home" ? "/shop" : undefined}
       variantTabs={showVariantTabs ? (
         <div

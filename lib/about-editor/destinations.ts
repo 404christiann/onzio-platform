@@ -10,6 +10,9 @@ const LEGACY_DEFAULT_ROUTES = ["home", "roster", "schedule", "club", "club-logo"
 const LEGACY_SUPPORTED_ROUTES = [...LEGACY_DEFAULT_ROUTES, "sponsors"] as const;
 
 const LABELS: Record<RouteKey, string> = {
+  tickets: "Tickets", "season-membership": "Season Ticket Membership", stadium: "Stadium", "stadium-parking": "Stadium Parking", "stadium-guidelines": "Stadium Guidelines",
+  "chick-fil-a": "Chick-fil-A", "know-before-you": "Know Before You Go", "fan-code": "Fan Code of Conduct", "foothill-transit": "Foothill Transit", "media-credentials": "Media Credentials",
+  "injury-report": "Injury Report", "news-page": "News", partnership: "Partnership Opportunities", "national-anthem": "National Anthem Request",
   home: "Home",
   roster: "Roster",
   schedule: "Schedule",

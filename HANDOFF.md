@@ -1,3 +1,19 @@
+## 2026-11-17 - onzio-fonts: one-off production storage bucket (outside migrations)
+
+- **Status:** `done`, a deliberate one-off. Recorded for draft PR 151 (Rose City 2027).
+- **What:** Christian created the Supabase Storage bucket `onzio-fonts` by hand in the
+  production project, not through a checked-in migration. It is public, accepts only
+  ttf/woff2, and has a 512 KB file limit. It holds `Avenir-Medium.ttf` and
+  `Avenir-Heavy.ttf`, which the Rose City cinematic site loads through
+  `NEXT_PUBLIC_FONT_BASE_URL` (set in Vercel production on 2026-11-17).
+- **Outside migrations on purpose:** Christian's decision. Staging and fresh local stacks
+  don't have the bucket. Without the variable, the site uses the self-hosted Figtree.
+- **Licensing:** no Avenir webfont license is on file. Christian accepted hosting the
+  FontsGeek files for launch on 2026-11-17. The exit plan (delete the two objects, or unset
+  the variable and redeploy, which falls back to Figtree) and the follow-up (buy a webfont
+  license or switch fonts) are in `docs/rose-city-2027-fonts.md`. The LEMON MILK receipt
+  is still an open launch gate.
+
 ## 2026-11-10 - Unit tests run in parallel: test:contracts and test:legacy about 5 times faster
 
 - **Status:** `in_progress`, draft PR open, merged with `main` and verified in full
@@ -733,6 +749,26 @@
 - **Done:** merged as #109 (`a85ce6b`). The CHECK migration is ADMIN-RE-07c
   (entry above).
 
+## 2026-11-09 — Ticket pages committed and Schedule links merged into the homepage branch
+
+At Christian's request:
+- The Season Ticket Membership and Know Before You Go work was committed as `99544db`. The local
+  `.claude/` folder was left out.
+- `codex/rose-city-schedule-2027` (`fa6ff9b`) was merged as `b8a3e7d`. The only conflicts were the
+  new entries at the top of `HANDOFF.md` and `STATUS.md`; both entries were kept whole.
+
+Verification on `b8a3e7d`:
+- `tsc --noEmit` is clean.
+- Contracts and architecture: 182 files, 1475 tests pass. `lib/__tests__`: 423 tests pass. Database:
+  49 files, 459 tests pass.
+- On port 3197, `/schedule`, `/tickets/season-membership` and `/tickets/know-before-you-go` return
+  200. Schedule Directions open `google.com/maps/dir/?api=1&destination=…`. The local sample YouTube
+  link is a dummy video.
+
+Nothing is pushed or deployed. Migrations `20261104040000` through `20261105070000` (9 in all) are
+applied to the local database only. They must pass the `CLAUDE.md` production migration gate before
+any production deploy.
+
 ## 2026-11-08 - ADMIN-RE-07 Add a game
 
 - **Status:** `in_progress` on branch `claude/admin-re-07-add-game-4e0b24`
@@ -1110,6 +1146,118 @@
   changed.
 - **Exact next step:** merge the plan PR, then start `ADMIN-RE-01`.
 
+## 2026-11-08 — RC2027-SCHEDULE-LINKS: Directions, Watch on YouTube and Sam's final Schedule (local only)
+
+Christian asked for the Schedule to match Sam's final design, with Directions opening Google Maps
+routed to the address entered in `/admin`, and the YouTube logo opening the link entered in
+`/admin`. He approved the plan and the three test seams. Built in the worktree
+`implementation/onzio-platform-schedule`, branch `codex/rose-city-schedule-2027` from `c547226`.
+Uncommitted; nothing pushed, merged or deployed.
+
+Findings first: Sam's Dropbox file is byte-identical to the Oct 30 Schedule already archived in outer
+`assets/originals/schedule-2027/`, which Match Summary built from. Both owner fields already existed:
+`matches.address` and the one YouTube link `matches.replay_video_url`. So there is **no migration**
+and no new column; the YouTube field was reused, not duplicated.
+
+What changed:
+
+- **Directions:** `lib/google-maps-directions.ts` builds Google's documented directions link
+  (`https://www.google.com/maps/dir/?api=1&destination=<encoded address>`). It replaces the old
+  `maps.google.com/?q=` search link on the cinematic Schedule. It opens in a new tab. A blank address
+  shows no Directions link.
+- **Watch on YouTube:** unchanged behavior, now covered by tests: Sam's logo links to the owner's
+  link in a new tab, before and after kickoff. Only HTTPS YouTube video links are accepted (existing
+  rule in the editor, the admin route and the database). Blank keeps the approved grey "Replay /
+  Stream coming soon" text, not clickable.
+- **Schedule editor:** "Street address" is now "Address for directions", with a hint that it powers
+  the Directions link (`aria-describedby`).
+- **Look (`components/cinematic/schedule.css`, appended block):** the NEXT tag sits beside the date
+  from 1201px up (under it on tablets); the opponent name sits on the row's middle line with the crest
+  and the stadium line just below it; Directions uses the stadium line's grey.
+- **One line (Christian's follow-up):** the stadium name and Directions always share one line. A long
+  name is shortened with "…" (full name on hover). Below 1440px the stadium line starts under the
+  crest, which gives it room.
+- **Dummy link (Christian asked):** `scripts/sample-rose-city-schedule-links-local.ts --apply` put
+  YouTube's public "Me at the zoo" clip on the latest played and the next local match;
+  `--remove` restores them exactly. **It is still applied** on the shared local rehearsal so
+  Christian can see the working logo.
+
+Tests (test-first, at the agreed seams): `tests/contracts/schedule-directions.test.ts` (link
+maker, Schedule render, editor label). `match-summary-pages.test.ts` reads the new venue `<span>`.
+
+Verification:
+
+- Contract, architecture and unit tests: 227 files, 1,867 tests pass. Database: 48 files, 432 tests pass (local rehearsal; this branch adds no migration).
+- `tsc --noEmit` passes; ESLint is clean on every touched file.
+- Headless Chromium on the worktree's server (`rose-city.localhost:3199`) at 1920, 1440, 1280, 1024,
+  920, 768, 390 and 320px: no horizontal overflow, and the stadium line and Directions on one line in
+  every row.
+- Browser pane: every Directions link is the Google directions link with `target=_blank`; clicking
+  Directions and the logo each tried to open a new tab to google.com / youtube.com (the pane blocks
+  tabs from automated clicks). No console errors.
+- Editor, signed in as the local seed owner: the new label and hint show; changing a match's address
+  and saving changed the public Directions link immediately. The address was then restored.
+
+Answered: Christian confirmed the "7:45PM EST" in Sam's file is a typo; the site keeps showing PT.
+
+Question for Sam: his "Watch on YouTube" image has "Watch on" in light grey; on the dark NEXT row his
+mockup shows it white. Sam's Dropbox (`RCFC Website icon's 2027/`) was searched on 2026-11-08: it
+holds only `RCFC YouTube website icon white 2027.png` and `... black 2027.png`, and both have grey
+"Watch on" (the site's `watch-on-youtube-*.png` are crops of them). No white-text version exists yet.
+- **Pin (Christian, after the Dropbox search):** Directions now uses Sam's green pin from the same
+  folder (`RCFC Green Location Pin website icon 2027.png`, identical to outer
+  `assets/originals/icons-2027/green-location-pin.png`), resized to 86x96 like the other icons as
+  `public/rose-city/icons/green-location-pin.png`. It replaces the pin drawn in code. Decorative
+  (`alt=""`), hidden if it fails to load. After the swap: contract, architecture and unit tests 227
+  files / 1,868 tests pass, `tsc` and ESLint pass, and the one-line check still holds at every width.
+
+Follow-ups, not done: the other site designs (`FixtureRow`, `AcademyFixtureRow`,
+`ClubhouseSchedulePage`) still use the old `maps.google.com/?q=` search link.
+
+## 2026-11-08 — RC2027-TICKET-PAGES implemented locally (uncommitted)
+
+Sam's last two Rose City 2027 pages, Season Ticket Membership and Know Before You Go, are built in
+the shared checkout on `codex/rose-city-homepage-2027`. Nothing is committed, pushed or deployed;
+Christian decides about commits. The full ledger entry (placeholder slots, questions for Sam, files,
+verification) is the 2026-11-08 RC2027-TICKET-PAGES entry in `docs/phase-11/diverse-city/STATUS.md`.
+
+- **Preview:** outer `design-explorations/ticket-pages-2027/` (port 3216). Christian approved both
+  on 2026-11-08 and asked for Member Benefits to stay 3 × 3 on phones.
+- **Public pages (cinematic@2):** `/tickets/season-membership` and `/tickets/know-before-you-go`.
+  TICKETS is now a drop-down (Tickets, Season ticket membership, Know before you go); the Stadium
+  menu's "Know before you" item opens the same page, and the empty `/stadium/know-before-you`
+  placeholder route is gone. The match box comes from Schedule's next home match.
+- **Editors:** `/admin/season-membership` and `/admin/know-before-you-go`, linked from the Homepage
+  editor shortcuts. Every icon, logo and the PlayStation photo is an empty slot the owner fills from
+  admin; empty slots are hidden publicly and labelled in the editor preview. No icons were drawn,
+  searched or reused.
+- **Database:** migrations `20261105060000_cinematic_ticket_pages` (new tables
+  `onzio.cinematic_ticket_pages` and `onzio.cinematic_ticket_page_images`, receipts, Save RPCs,
+  advisory lock 734901340; image identities in a tenant FK table, so reference-safe retirement finds
+  them) and `20261105070000_cinematic_tickets_menu_labels` (allows the two new menu labels), applied
+  to the local rehearsal only via `scripts/apply-rose-city-ticket-pages-migrations-local.ts`. Sam's
+  copy is seeded locally by `scripts/seed-rose-city-ticket-pages-2027-local.ts`.
+- **Verification:** `tsc` and ESLint clean; contract/architecture/unit 230 files, 1,886 tests pass;
+  database 49 files, 459 tests pass. Both routes return 200 on `http://rose-city.localhost:3197`. Owner edits,
+  an image upload and removal, and a tile add/remove were saved and shown publicly in a real browser,
+  then restored to the seed.
+- **Before any hosted release:** the CLAUDE.md migration gate applies to `20261105060000` and
+  `20261105070000` as well as the seven earlier local-only migrations.
+- **Sam's files (2026-11-08, local rehearsal only):** his 22-icon Dropbox folder, the black YouTube
+  logo and the PlayStation 5 photo (as WebP) were uploaded through the two editors: all nine Member
+  Benefit icons, all 15 tiles, the YouTube logo and the prize photo. The tile art box now shows Sam's
+  752 × 350 icon canvas at one column wide, so icons keep his design sizes; the YouTube logo is sized
+  to the design. The ticket banner and the Chronic Tacos logo (empty margins trimmed) followed on
+  2026-11-08, then the "G" badge (cropped from Sam's "General Seating" image); every image slot
+  is filled, and the price colors use Sam's source files. Per Christian: 7 home games (bullet and $14
+  savings), red star decorative, sample match follows Schedule, other copy as designed. The
+  YouTube file was cropped to the logo alone to match Sam's design. "Watch every game live" opens
+  the game-day live stream link from the editor (placeholder `https://www.youtube.com/@RoseCityFC/live`
+  for now); with no link it falls back to the club's YouTube channel from Branding, and with neither
+  it is plain text.
+- **Main's test speed work (PRs #97 and #98):** not on this branch yet. When it is merged in, point
+  main's `tests/global-setup/local-audit-cleanup.ts` at `localPostgresConfig()`; details in STATUS.
+
 ## 2026-11-05 - MAIN-BROWSER-TEST-FIXES three browser checks that failed on clean main
 
 - Status: `in_progress` on branch `claude/fix-main-browser-tests` from `main` `deffccc`; PR open, not merged, not deployed; no migration or production change. Christian approved ("Ok, send it"). All three failed on a clean `main` build first. Stats discard (1440px season): a hidden, not-yet-swapped React stream copy (`<div id="S:0" hidden>`) made a strict text match see two "All changes saved"; check scoped to the visible tab panel. About/Logo save (two cases): written for retired Cinematic, Alpha is Academy with no Logo page; cases now publish Clubhouse for Alpha and restore it. Homepage legacy branch: PR #85's Rose City public hold makes the public page a 404 by design; hold list moved to `lib/public-site-hold.ts`, and while the hold stands the test asserts it and keeps its preview checks. No skips or deletions.
@@ -1140,6 +1288,703 @@
 - Status: `in_progress` on branch `claude/epic-haibt-c3f2bb`; not reviewed, merged or deployed. Five bugs reported from the admin redesign research were rechecked on `main` `246cf71`. Contact hero-image gating is not a bug on main (field removed in `5b07964`). Fixed: Rose City sample content leaking to other clubs (kit bullet points and store note on every template, purchase-detail blanks and the Niky's buy link, the new-kit draft, prefilled Branding social URLs, Sponsors/About editor initial state, the `(public)/club/about` error fallback); the Branding "contrast check" copy; `clubs.store_enabled` now gates the tenant `/shop` route, template, Clubhouse and Diverse City navigation, the template footer, homepage kit blocks, the hero Team Store button, admin navigation and the Shop editor; empty kits no longer show the Home kit in the generic template. Details and file list are in the Diverse City STATUS ledger.
 - Verification: new `tests/contracts/admin-platform-bug-fixes.test.ts` red before and green after; TypeScript passed; ESLint passed on all changed files (`npm run lint` stops on a nested-worktree plugin conflict); contracts 1,505/1,505; legacy 428/428; architecture 421 passed with the one existing skip across 13 files. Database and browser suites not run; no migration and no attested Academy source root changed.
 - Blockers: confirm read-only that Diverse City's `clubs.store_enabled` is `true` before any release, or its live Store disappears. The shop save RPC still only blocks editorial when the store is off (a database gate needs a migration). Whether to hide the Contact admin for clubs without a public Contact page is a product decision. Exact next step: independent review, then a PR.
+
+## 2026-11-04 — Robinson Stadium editor merged into the homepage branch
+
+At Christian's request, `codex/rose-city-robinson-editor-2027` (`3b36b7c`) was merged into
+`codex/rose-city-homepage-2027` as `5156238`. The Injury Report work was already on this branch.
+
+How the conflicts were resolved:
+
+- `HANDOFF.md` and `docs/phase-11/diverse-city/STATUS.md`: each package keeps its own whole entry.
+- `components/admin/homepage/HomepageEditor.tsx`: it uses the shared list in
+  `lib/cinematic-editor-shortcuts.ts`, which now also holds "Edit in Injury Report". The Injury
+  Report reachability test (`cinematic-injury-report-editor.test.ts`) and the Robinson admin-route
+  test now read that list. They check the same thing as before.
+- `lib/database.generated.ts` merged on its own. It is identical to a fresh regeneration from the
+  local schema, whose migration ledger matches this branch exactly (through `20261105050000`).
+
+Verification on the merged code:
+
+- `tsc --noEmit` passes, and ESLint passes on the files touched by the merge.
+- Contract, architecture and unit tests: 226 files, 1,857 tests pass.
+- Database: 48 files, 432 tests pass.
+- A temporary dev server on the merged tree loaded these pages with 200: `/stadium` (with the
+  confirmed copy, both dates and the parking anchor), `/stadium/foothill-transit`,
+  `/news/injury-report`, `/news`, `/sponsors` and `/`.
+- The machine was heavily loaded during these checks (load average 24 to 32, and the local
+  Supabase API taking 20 seconds or more). First requests often hit 500s, "socket hang up" or
+  `UNKNOWN_TENANT` from timed-out tenant lookups, including on the untouched homepage. Each page
+  loaded on retry. The shared 3198 server showed the same flakiness.
+
+Nothing is pushed or deployed. Before any hosted release, the CLAUDE.md migration gate applies to
+`20261105040000` (Injury Report) and `20261105050000` (Robinson), along with the earlier
+unreleased migrations.
+
+## 2026-11-04 — RC2027-ROBINSON-EDITOR implemented locally
+
+Christian approved the plan and the test layers. `/admin/stadium` now edits the Robinson Stadium
+page (`/stadium`, cinematic@2): the story, the Stadium Info rows, Food & Beverage, the directions,
+the seating map and the other images, and whether each section is shown. The public page looks
+exactly as before. Match data still comes from Schedule, and the purchase link from Tickets.
+Today's confirmed copy is the starting content, keeping both the 2001 and the 1999 dates. Full
+detail is in `docs/rose-city-robinson-editor-2027-implementation.md`.
+
+The work is on branch `codex/rose-city-robinson-editor-2027` (from `ecb47d1`), in worktree
+`implementation/onzio-platform-robinson`, on dev server 3195. Committed with Christian's OK; not pushed
+or merged.
+
+What moved:
+
+- `/admin/stadium` used to edit the older Bus Route record, which renders at
+  `/stadium/foothill-transit`. That editor moved, unchanged, to `/admin/foothill-transit`.
+- The Homepage editor now shows both shortcuts. Its cinematic@2 shortcut list moved to
+  `lib/cinematic-editor-shortcuts.ts`.
+- `/stadium` no longer borrows the match switch or the partner logo from the Bus Route record.
+- A cinematic@2 club without a saved Robinson page now sees a neutral "Stadium" heading instead of
+  Rose City's content.
+
+Database (isolated local rehearsal only):
+
+- Migration `20261105050000_cinematic_robinson_page` is applied, via
+  `scripts/apply-rose-city-robinson-migration-local.ts`. It adds new objects only:
+  - `onzio.cinematic_robinson_content`, with nine guarded media FK columns;
+  - receipts, validators, and the `load_robinson_editor` / `save_robinson_editor` RPCs;
+  - advisory lock `734901330`.
+- `scripts/seed-rose-city-robinson-2027-local.ts` stored the confirmed copy. It published the eight
+  static page images through the normal pipeline (the seating diagram at 3000px) and reused the
+  partner logo.
+- `lib/database.generated.ts` only adds the new table and its two RPCs.
+
+Verification:
+
+- Robinson tests: 38 contract tests and 14 database tests. They include an exact markup match
+  against a fixture captured from the static page before the change.
+- Full suites: contract, architecture and unit tests (223 files, 1,827 tests) and database tests
+  (47 files, 423 tests) pass. `tsc` passes, and ESLint passes on the changed files.
+- Real Chrome compared the old page (3198) with the new one (3195) at 320, 390, 768, 1280 and
+  1440px. Document size and 15 landmark positions and sizes were identical at every width.
+- An owner edit saved, survived a reload, appeared publicly, and was undone through the editor. The
+  stored row again exactly equals the confirmed copy.
+- `tests/contracts/cinematic-partners-editor.test.ts` now reads the Partners shortcut from the new
+  shortcuts module. It checks the same thing as before.
+
+Gotcha for every worktree: `public/fonts/avenir-local/Avenir-Medium.ttf` is gitignored. Copy it
+from the main folder, or Chrome uses the system Avenir and some line heights change.
+
+Not done: physical-phone/VoiceOver checks, merging into the homepage branch, and any hosted step.
+Migration `20261105050000` needs the CLAUDE.md production migration gate before any deploy.
+
+## 2026-11-04 — Injury Report merged into the homepage branch
+
+At Christian's request ("Merge it"), `codex/rose-city-injury-report-2027` was merged into
+`codex/rose-city-homepage-2027`:
+
+- `2e5f074` (the package) and `449ba10` (its docs note), merged as `ba4a7c4`;
+- `a52bb5f`, a one-line type fix to the local seed script, merged as `b78edfb`. `tsc` on the merge
+  caught it: the script was written after the package's last type check.
+
+The branch was still at `ecb47d1`, so there were no conflicts.
+
+Verification on the merged code:
+
+- `tsc --noEmit` passes, and ESLint is clean on the Injury Report files and the Homepage editor.
+- Contract, unit and architecture: 221 files, 1,831 tests pass.
+- Database: the Injury Report, News and Partners tests pass (3 files, 24 tests).
+- The shared dev server (`rose-city.localhost:3198`) returns 200 for `/news/injury-report` (with
+  the injury cards), `/news`, `/sponsors` and `/stadium/guidelines`.
+
+Nothing is pushed or deployed. Before any hosted release, the CLAUDE.md migration gate also covers
+`20261105040000`.
+
+## 2026-11-04 — RC2027-INJURY-REPORT implemented locally
+
+Christian approved the Injury Report preview (outer `design-explorations/injury-report-2027/`, port
+3215), including the redesigned "No injuries" state, and the four test seams. The page and its
+editor are built for cinematic@2. Scope, rules and evidence are in
+`docs/rose-city-injury-report-2027-implementation.md`.
+
+**Where the work is:** its own worktree, `implementation/onzio-platform-injury`, on branch
+`codex/rose-city-injury-report-2027` from `ecb47d1`. Committed as `2e5f074` with Christian's OK; not pushed, merged or deployed.
+
+What was built:
+
+- **Public page:** `/news/injury-report` replaces the placeholder. It shows:
+  - "Presented by" with the partner logo, or the name as text until a logo is uploaded;
+  - cards for Roster players, in the owner's order;
+  - a "No current injuries" card when there are none;
+  - the photo band, Rehab heading, quote and a click-to-play YouTube video ("Coming soon" without a
+    link);
+  - the partner strip.
+- **Editor:** `/admin/injury-report`, reached from the Homepage editor's new "Edit in Injury
+  Report" shortcut. It edits:
+  - the partner name and logo;
+  - up to 24 entries (an active Roster player, injury, timeline and note), which can be reordered;
+  - the band photo and its description, the Rehab heading, the quote, the attribution and the
+    YouTube link.
+- **Data:** `onzio.cinematic_injury_report_content` and `onzio.cinematic_injury_entries` (composite
+  FK to `onzio.players`), under the `roster` permission, with receipt-based load and save RPCs and
+  advisory lock `734901330`.
+
+Migration `20261105040000_cinematic_injury_report.sql` is applied to the isolated local rehearsal
+only, through `scripts/apply-rose-city-injury-report-migration-local.ts`. The guarded seed
+`scripts/seed-rose-city-injury-report-2027-local.ts` wrote three made-up sample entries for Roster
+players #4, #7 and #9, a sample quote, and the band reusing Home's photo 3.
+
+Verification:
+
+- Contract, unit and architecture: 221 files, 1,831 tests pass.
+- Database: 47 files, 418 tests pass.
+- `tsc` passes, and ESLint is clean on touched files.
+- Real Chrome at 320, 390, 768, 1280 and 1440px: no sideways scroll and no broken images.
+- Editor in headless Chromium as the local owner: save, reload, public page, field messages and
+  390px all checked, then the edit was restored to the seed.
+- Logo and band uploads were not tried in a browser.
+
+Shared files this package touches (expect merge conflicts):
+
+- `HANDOFF.md` and `STATUS.md` (top entries);
+- `lib/database.generated.ts` (two tables and two RPCs);
+- `HomepageEditor.tsx` (one shortcut line);
+- `tests/README.md`;
+- `cinematic-news-pages.test.ts` (the injury-report case now expects the real page).
+
+**Before any hosted release, the CLAUDE.md migration gate applies to `20261105040000`.** Next:
+merge `codex/rose-city-injury-report-2027` into the homepage branch when Christian says so. Sam still owes the MVMNT
+CULTR logo and real report content.
+
+## 2026-11-04 — News, Partners and the icon image fix merged into the homepage branch
+
+At Christian's request ("Lets merge all of them"), three branches were merged into
+`codex/rose-city-homepage-2027`. Each merge is its own commit:
+
+- `codex/rose-city-news-2027` (`a8a1b5a`), merged as `f0a494e`;
+- `codex/rose-city-partners-2027` (`066a596`), merged as `62dd029`;
+- `codex/rose-city-resilient-images` (`a1df541`), merged as `6f8c6e5`.
+
+Stadium Guidelines and Fan Code of Conduct were already on this branch (`96e7d06`).
+
+How the conflicts were resolved:
+
+- `HANDOFF.md` and `docs/phase-11/diverse-city/STATUS.md`: each package keeps its own whole entry.
+- `lib/database.generated.ts`: regenerated from the isolated local schema
+  (`supabase gen types typescript --db-url <55322> --schema onzio`), which has every migration
+  applied. Every line that is new against all three branches comes from a committed migration: the
+  Shop detail, footer logo and partners foreign keys, plus the policy and partners editor
+  functions.
+- The Homepage editor keeps both the Policies and the Partners shortcuts.
+
+Verification on the merged code:
+
+- `tsc --noEmit` passes, and ESLint reports no warnings or errors.
+- Contract, architecture and unit tests: 218 files, 1,801 tests pass.
+- Database: 46 files, 409 tests pass.
+- On the shared dev server (`rose-city.localhost:3198`), `/news`, `/sponsors`,
+  `/community/partnership`, `/stadium/guidelines`, `/stadium/fan-code`, `/shop`, `/schedule` and
+  `/stadium` return 200. In the browser, `/sponsors` and `/news` show no broken images and no
+  sideways scroll.
+
+Nothing is pushed or deployed. Before any hosted release, the CLAUDE.md migration gate applies to
+the new migrations: `20261104040000`, `20261104050000`, `20261105010000`, `20261105020000` and
+`20261105030000`.
+
+## 2026-11-04 — RC2027-NEWS implemented locally
+
+Christian approved the News preview (outer `design-explorations/news-2027/`, port 3213) and asked
+for it to be built. Scope, rules and the editor are in `docs/rose-city-news-2027-implementation.md`.
+The work is on branch `codex/rose-city-news-2027` in its own worktree
+(`implementation/onzio-platform-news`, from `e8cdf22`), because the parallel sessions shared one
+folder and one dev server.
+
+Christian's decisions:
+
+- **Date:** the Foothill article is dated Friday, Nov 20, 2026 (Sam wrote "Wednesday").
+- **Cover:** the cover is a crop of Sam's mockup until he sends the photo.
+- **Remove:** hides an article and keeps it restorable.
+- **Future dates:** an article with a future date still shows right away.
+- **Styling:** no BoardUI.
+
+What was built:
+
+- **Public pages:** `/news` (Sam's legend, numbered cards newest first, colour bands) and
+  `/news/<address>` (dark header, cover, category, Pacific-time date, paragraphs, button), both
+  with the partner strip. Unknown or removed articles show "not found". `/news/injury-report`
+  keeps its placeholder.
+- **Admin → News** (cinematic@2 only): add, edit, remove and restore articles, with a cover
+  upload, field messages and a phone/desktop preview.
+- **Data:** `onzio.cinematic_news_articles` with RLS, a validator and receipt-based save/load
+  RPCs, plus a new `news` media surface.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`cinematic-news-content.test.ts`);
+- public pages (`cinematic-news-pages.test.ts`);
+- database and save route (`tests/database/cinematic-news.test.ts`,
+  `cinematic-news-admin.test.ts`);
+- the editor (`cinematic-news-editor.test.ts`).
+
+The exact admin-navigation tests now list News; they stay exact.
+
+Migration `20261105010000_cinematic_news.sql` is applied to the isolated local rehearsal only (it
+landed after the Policies and Partners migrations on the local ledger). The guarded seed published
+the Foothill article and its cover; nothing else changed.
+
+**Placeholder articles (follow-up, 2026-11-04).** Christian asked for `/news` to match Sam's
+reference with all five categories, using placeholder text the owner can change in Admin → News.
+`scripts/seed-rose-city-news-2027-placeholders-local.ts --execute-local` (loopback only; it refuses
+unless the Foothill article is the only one) added four articles in Sam's card order. Each has its
+own copy of the locker cover, as in his reference:
+
+1. Community: "Win free Foothill Transit bus passes at every RCFC home game" (Nov 18).
+2. Partner: "Chick-fil-A joins RCFC as an Official Partner" (Nov 16).
+3. News: "Tepito Coffee is brewing at Robinson Stadium this season" (Nov 13).
+4. New Player: "RCFC Welcomes Nick Mendez" (Nov 10), Sam's title.
+
+Chrome checks: the desktop list shows cards 1 to 5 with Sam's headings and colour bands, matching
+the reference. At 320 and 390px the list and all four new articles have no sideways scroll and no
+broken images. The dates are correct in Pacific time, and the button links (`/schedule`,
+`/community/partnership`, `/roster`) load. The receipt is in
+`assets/rose-city-news-2027/local-placeholder-receipt.json`.
+
+Verification:
+
+- **Tests:**
+  - All contract tests pass (160 files, 1,310 tests).
+  - The News database tests pass (6 tests).
+  - The full database run, under load from the parallel sessions, had 16 timeouts in
+    `homepage-atomic-save` and `registration-rls`. Those two files and the News file then passed
+    55/55 on their own.
+- **Type check and lint:** `tsc --noEmit` passes. ESLint is clean on every touched file.
+- **Real Chrome** on `http://rose-city.localhost:3199`, at 320, 390, 768, 1280 and 1440px in
+  exact-width frames:
+  - no horizontal overflow and no broken images on either page;
+  - the date reads "Friday, Nov 20, 2026 at 12:00 PM";
+  - no console errors.
+- **Editor**, run in headless Chromium as the local fixture owner (sign-in code read from the
+  rehearsal's Mailpit):
+  - the sidebar shows News;
+  - a blank article shows field messages;
+  - a subtitle edit saved, survived reload, showed publicly, and was restored;
+  - Remove hid the article from visitors and from the list; Restore brought it back;
+  - the editor fits 390px;
+  - no page errors.
+- **Seed state:** the Foothill article shows Sam's text again and is not removed. Its revision is now 11, after three check runs.
+
+Next steps:
+
+- Christian approved committing (2026-11-04). The work is committed on `codex/rose-city-news-2027`
+  only.
+- Sam sends the original locker-room photo.
+- The branch has to be merged with the Policies and Partners work. Expect conflicts in `HANDOFF.md`,
+  `lib/database.generated.ts`, `lib/admin-route-manifest.ts` and the admin nav tests.
+
+Committed on the branch only. Nothing is pushed, merged or deployed.
+
+## 2026-11-04 — RC2027-POLICIES implemented locally
+
+Christian approved the Stadium Guidelines / Fan Code of Conduct preview (outer
+`design-explorations/policies-2027/`, port 3214) and asked for it to be built. Scope, rules and
+editor are in `docs/rose-city-policies-2027-implementation.md`.
+
+Christian's decisions:
+
+- **Empty rows:** rows without an answer are shown and open to "Details coming soon."
+- **Seed rows:** both pages start with all six of Sam's rows, in his order, including his second,
+  empty "Animals" row. Only Accessibility and Animals have answers. (Christian, later the same day:
+  "Copy the way it looks on Sam reference. Include all of the sections." This replaced the earlier
+  five-row seed.)
+- **Look:** every row with an answer starts open, as in Sam's files. Chevrons are the thinner
+  icons.download `thin` caret; rows, answer text and the title band were tightened to his spacing.
+- **Styling:** no BoardUI.
+- **Editor:** at `/admin/policies`, linked from the Homepage editor's shortcuts.
+
+What was built:
+
+- **Public pages:** `/stadium/guidelines` and `/stadium/fan-code` for cinematic@2. They share one
+  accordion layout with the Contact-style title band.
+- **Editor:** one editor for both pages. It edits the title, red line and section heading, and an
+  ordered list of rows. Each row has a heading and an answer made of subheadings and paragraphs.
+- **Storage:** content lives in the new `onzio.cinematic_policy_content` table.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`tests/contracts/cinematic-policies-content.test.ts`);
+- public pages (`cinematic-policies-pages.test.ts`);
+- the database save (`tests/database/cinematic-policies-save.test.ts`);
+- the editor draft (`cinematic-policies-editor.test.ts`).
+
+Migration `20261105020000_cinematic_policy_pages.sql` is applied to the isolated local rehearsal
+only, with `scripts/apply-rose-city-policies-migration-local.ts`. The guarded seed
+`scripts/seed-rose-city-policies-2027-local.ts` wrote Sam's six rows to both pages. It replaces
+the earlier five-row seed and still refuses to overwrite anything else.
+
+Verification:
+
+- **Tests:**
+  - Contract, unit and architecture: 1,747 of 1,748 pass. The one failure,
+    `platform-architecture.test.ts`, flags direct `<img>` use in the already-committed
+    `CinematicMatchResult`, `CinematicMatchSummary`, `CinematicSchedule` and `CinematicShop`. This
+    package does not touch those files.
+  - Database: 44 files, 394 tests pass.
+- **Type check and lint:** `tsc --noEmit` passes. ESLint is clean on every touched file.
+- **Real Chrome** (`rose-city.localhost:3198`), both pages at 320, 390, 768, 1280 and 1440px:
+  - six rows each, with both answered rows (Accessibility, Animals) open;
+  - four "Details coming soon." rows, which open on click;
+  - no horizontal overflow, no broken images and no console errors.
+  - A global `h1–h6` uppercase rule was overriding the "Parking"/"Seating" subheadings; it is now
+    reset in `policies.css`.
+- **Editor**, checked in headless Chromium with the synthetic local owner (`o***@alpha.local`):
+  - an edit saved, survived reload and appeared on `/stadium/fan-code`;
+  - the Stadium Guidelines page was unchanged by it;
+  - a blank row heading blocked the save with "Fan Code of Conduct, row 6: enter a row heading.";
+  - the 390px editor has no horizontal overflow;
+  - the edit was then undone through the editor, and the seed script confirms the stored content
+    equals Sam's seed again.
+- **Not checked in a browser:** the Homepage editor's new "Policies" shortcut. Local sign-in codes
+  were contended by the other sessions.
+
+After the "copy Sam's look" change: the 17 policy contract tests, `tsc` and ESLint pass again, and
+the real-Chrome check above was rerun on the new layout. At 1242px, "while parked." still wraps to a
+second line where Sam's file fits it on one; the site's body font runs slightly wider than his.
+
+The shared dev server on 3198 briefly returned 500 on several routes, including `/contact` and
+`/tickets`, while other sessions' edits recompiled. It then recovered.
+
+Next steps:
+
+- Christian reviews the real pages and the editor.
+- Sam or the club supplies the three missing answers and real Fan Code rows.
+
+Nothing is committed, pushed or deployed. The CLAUDE.md migration gate applies before any hosted
+release.
+
+## 2026-11-04 — RC2027-PARTNERS implemented locally
+
+Christian approved the Club Partners and Partnership Opportunities previews on 2026-11-03. They are
+now built into `/sponsors` and `/community/partnership` for cinematic@2, with owner editing. The
+scope, rules and editor are in `docs/rose-city-partners-2027-implementation.md`.
+
+**Where the work is:** its own worktree, `implementation/onzio-platform-partners`, on branch
+`codex/rose-city-partners-2027` from `e8cdf22`. The shared folder turned out to be used by the
+Policies session as well. Nothing is committed.
+
+Christian's decisions:
+
+- **Styling:** no BoardUI.
+- **Partner list:** one shared partner list for both pages.
+- **Opportunities button:** the owner sets its link; the bar is hidden until a link is saved.
+- **Modern Woodmen:** use the colour logo the Home carousel already uses.
+
+What was built:
+
+- **Public pages:** `CinematicPartners` renders both pages from the approved preview CSS. A partner
+  without a logo shows "Original logo pending". Other designs keep their existing `/sponsors`.
+- **Editor:** a new Partners editor at `/admin/partners`, reached from Homepage → "Edit in
+  Partners" and from the Sponsors editor. It edits each page's copy and an ordered list of up to 24
+  partners (name, role, logo, logo colour). Logos are picked from the Sponsors editor's records or
+  uploaded through the media pipeline; nothing is copied.
+- **Data:** `onzio.cinematic_partners_content` and `onzio.cinematic_partners` (composite tenant FK
+  to `media_assets`). The save is atomic, with revisions and receipts. Logos no partner uses any
+  more go through the reference-safe retirement, so shared logos are kept.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`cinematic-partners-content.test.ts`);
+- public pages (`cinematic-partners-pages.test.ts`);
+- database (`tests/database/cinematic-partners-save.test.ts`);
+- the editor and save route (`cinematic-partners-editor.test.ts`).
+
+Migration `20261105030000_cinematic_partners.sql` is applied to the isolated local rehearsal only,
+through `scripts/apply-rose-city-partners-migration-local.ts`. The guarded seed
+`scripts/seed-rose-city-partners-2027-local.ts` wrote Sam's copy and seven partners. It reuses six
+existing logos and uploads nothing.
+
+Verification:
+
+- **Tests:**
+  - All contract tests pass (159 files, 1317 tests).
+  - The database suite passes (44 files, 397 tests).
+  - The architecture suite fails 1 of 21 tests: `routes application images through resilient
+    components`. It names `CinematicMatchResult`, `CinematicMatchSummary`, `CinematicSchedule` and
+    `CinematicShop`, which are unchanged since `e8cdf22`. This failure predates this package.
+- **Type check and lint:** `tsc --noEmit` passes, and ESLint is clean on every touched file.
+- **Browser checks:** done in the app's built-in browser, on the Partners dev server
+  (`http://rose-city.localhost:3196`). Claude in Chrome would not load any page; every tab stayed
+  on New Tab.
+  - Both pages at 320, 390, 768, 1280 and 1440px: no horizontal overflow, 7 cards, 6 logos, none
+    broken.
+  - At 1280px the grid is 634px tall, the same as the approved preview.
+  - The Opportunities bottom bar is hidden.
+  - Signed in as the local fixture owner through the local mail catcher:
+    - the editor loads with all seven partners, and the logo picker includes the carousel logos;
+    - a subtitle edit and a reorder saved, survived reload and appeared on `/sponsors`;
+    - a second save restored both. The database is back to the seed, and all six shared logos are
+      still published;
+    - the editor at 390px and the Sponsors link were also checked.
+- **Not checked:** logo upload in the browser (it needs a file picker), and a physical phone.
+
+Follow-ups found:
+
+- Nested routes such as `/club/about` and `/community/partnership` leave a hidden duplicate of the
+  page in a `<div hidden id="S:0">` after streaming in dev. Single-level routes don't. Users can't
+  see it, but it predates this package and is worth checking in a production build.
+- The four pre-existing `<img>` uses that break the architecture test.
+
+Next: Christian reviews the real pages and decides whether to commit. Waiting on Sam: the MVMNT
+CULTR logo, the stacked logo versions and the Opportunities button destination.
+
+## 2026-11-04 — RC2027 resilient icon images (architecture test fix)
+
+`tests/architecture/platform-architecture.test.ts` → "routes application images through resilient
+components" was failing on direct `<img>` tags added by the Home update and `e8cdf22` (Shop redesign
+and Match Summary). Fixed on branch `codex/rose-city-resilient-images` (worktree
+`implementation/onzio-platform-images`, from `e8cdf22`). Uncommitted, waiting on Christian's OK.
+
+What changed: the eight remaining native `<img>` tags now use `@/components/ResilientNativeImage`,
+which all four files already imported. Same props, so the same image, classes and sizes.
+
+- `CinematicMatchResult.tsx`: the "Watch on YouTube" replay logo.
+- `CinematicMatchSummary.tsx`: timeline event icons, match-information icons, officials and kit
+  group icons, and the YouTube logo. The YouTube logo, the only one with alt text, gets
+  `hideOnError`, so a failed load leaves the link text instead of a photo placeholder.
+- `CinematicSchedule.tsx`: the Watch/Rewatch YouTube icon.
+- `CinematicShop.tsx`: the purchase-details info icons.
+
+Rendered output differs only in attribute order and the component's `data-image-delivery-attempt`
+(plus `data-critical-image` on the YouTube logo). No CSS targets those attributes. Icons that fail
+to load now disappear instead of showing a broken-image glyph.
+
+Verification:
+
+- `npm run test:architecture`: 3 files, 21 tests pass (was 1 failing).
+- `npm run test:contracts`: 156 files, 1287 tests pass. `tsc --noEmit` passes.
+- Headless Chromium (Playwright) on the worktree's dev server (3197) and, as a baseline, the shared
+  3198 server with the unchanged components: Home, Shop, Schedule and a Match Summary page at 390
+  and 1440px. No broken images or failed image requests. Every icon's rendered size matches the
+  baseline exactly.
+- Local data has no match summaries or replay videos, so the timeline, officials/kit, YouTube-logo
+  and Schedule YouTube icons don't render live. For those, a temporary server-render test compared
+  the old and new Summary, Schedule, Replay and Latest Result output with sample data (the Match
+  Summary sample script's data plus a replay URL). Markup was identical apart from the attributes
+  above. The test was deleted and the shared database was not touched.
+
+Next step: Christian decides whether to commit this branch and merge it into
+`codex/rose-city-homepage-2027`.
+
+## 2026-11-04 — RC2027-MATCH-SUMMARY implemented locally
+
+Christian approved the Match Summary preview and asked for it to be built. The scope, rules and
+editor are in `docs/rose-city-match-summary-2027-implementation.md`.
+
+What was built:
+
+- **Schedule:** Summary and Rewatch columns. Each match has one optional YouTube link: the stream
+  before kickoff, the replay afterwards, and a placeholder when blank. Directions now sit under the
+  venue.
+- **Match Summary page:** at `/schedule/<id>` for cinematic@2.
+- **Schedule editor:** a "Match summary" section with attendance, timeline, statistics, officials,
+  kit colors and lineups. Scorers follow the timeline's goals.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`match-summary-content.test.ts`);
+- public pages (`match-summary-pages.test.ts`);
+- database and save route (`tests/database/match-summary.test.ts`, `match-summary-admin.test.ts`);
+- the Schedule editor (`match-summary-editor.test.ts`).
+
+`admin-schedule-replay.test.ts` was updated for the renamed field.
+
+Migration `20261104050000_match_summary.sql` is applied to the isolated local rehearsal only. No
+summary content was seeded.
+
+Verification:
+
+- **Tests:** all contract tests pass (156 files, 1287 tests). The earlier full run, including unit
+  tests, passed 205 files and 1710 tests. The database suite passes (43 files, 388 tests).
+- **Type check and lint:** `tsc --noEmit` passes. ESLint has no errors; the only warnings are
+  `<img>` warnings for the small icons.
+- **Real Chrome checks** of `http://rose-city.localhost:3198` at 390 and 1440px, using temporary
+  sample data that was then removed:
+  - the Schedule links three played matches and shows "Replay coming soon" and "Stream coming
+    soon";
+  - the summary page shows every section;
+  - a match without a summary shows only information and replay;
+  - an upcoming match shows the "after the match" message;
+  - no horizontal overflow, no broken images and no console errors.
+- **Not checked:** the editor fields were not opened in the browser, because the local admin needs
+  an emailed login code.
+
+Next: Christian reviews the real pages. Nothing is committed, pushed or deployed. The Shop update
+and the replay logo change are also uncommitted.
+
+## 2026-11-04 — Replay card logo; Match Summary preview ready for approval
+
+- **Replay card:** the Replay the Match card (Home, and the coming Match Summary) now shows Sam's
+  white "Watch on YouTube" logo on the black side, as Christian asked, both when a video is set and
+  on the "Coming soon" placeholder. Test-first: `tests/contracts/cinematic-match-result.test.ts`.
+  All contract tests pass (152 files, 1267 tests). Checked in Chrome on Home at 1440, 390 and
+  320px, and in the Match Summary preview.
+- **Match Summary preview:** at outer `design-explorations/match-summary-2027/` (port 3212). It
+  covers Sam's Match Summary page and his Oct 30 Schedule with Summary and Rewatch columns. See its
+  README for the decisions, including one optional YouTube link per match (stream before kickoff,
+  replay afterwards). Christian approved everything except the logo, which is now fixed. The
+  build has not started.
+- **Shop update:** still uncommitted.
+
+## 2026-11-04 — RC2027-SHOP-UPDATE implemented locally
+
+Christian approved the Shop preview, including Sam's own icons and the Chick-fil-A route map for
+Map view, and asked for it to be built. The full scope, data rules and the open questions for Sam
+are in `docs/rose-city-shop-update-2027-implementation.md`.
+
+Christian's decisions:
+
+- **Buttons:** Authentic / Replica replace Home/Away on the public page. Away stays editable.
+- **Detail photos:** white boxes until Sam replaces the Real Madrid placeholders.
+- **Prices:** owner-editable.
+- **Map view:** shows Sam's Chick-fil-A Route Zoom Map, whole.
+- **Styling:** no BoardUI; the page uses the existing Shop styles.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`tests/contracts/cinematic-shop-update-content.test.ts`);
+- the public Shop page (`cinematic-shop-update-renderer.test.ts`);
+- the database save (`tests/database/cinematic-shop-update-save.test.ts`);
+- the editor draft (`cinematic-shop-update-editor.test.ts`).
+
+Migration `20261104040000_cinematic_shop_update.sql` is applied to the isolated local rehearsal
+only. The guarded seed `scripts/seed-rose-city-shop-update-2027-local.ts`:
+
+- wrote Sam's copy, sections and route map;
+- retired the old Bus Route map;
+- left every other content table unchanged.
+
+Verification:
+
+- **Tests:** the new contract and database tests pass. All contract and unit tests pass (201
+  files, 1690 tests). The database suite passes (42 files, 387 tests) on a second run; on the first
+  run, `homepage-story-programs-page-content.test.ts` failed 12 tests under load and passed 32/32 on
+  its own.
+- **Type check and lint:** `tsc --noEmit` passes. ESLint shows only a `no-img-element` warning for
+  the small icon images.
+- **Real Chrome checks** of `http://rose-city.localhost:3198/shop` at 320, 390, 768, 1280 and
+  1440px:
+  - no horizontal overflow, and the size chart fits its frame;
+  - six white tiles, four card icons, five care items, and the route map loads;
+  - Replica switches the line and its button is marked pressed;
+  - Buy now keeps the Niky's link;
+  - the only console message is the existing sponsor-carousel shorthand warning.
+- **Not checked:** the new editor fields were not opened in the browser, because the local admin
+  needs an emailed login code.
+
+Next: Christian reviews the real Shop page. Sam supplies the tile photos, an optional camera icon,
+and the Niky's address and replica details. Nothing is committed, pushed or deployed.
+
+## 2026-11-04 — RC2027-HOME-UPDATE implemented locally
+
+Christian approved the Home update preview and asked for it to be built. It
+covers Sam's Oct 31 Home result strip, Replay the Match, the jersey copy and
+"Includes" label, and the RCFC footer logo. Full scope, ownership, migrations
+and the open questions for Sam are in
+`docs/rose-city-home-update-2027-implementation.md`.
+
+Christian's decisions:
+
+- **Result strip:** shows the latest finished match, home or away.
+- **Replay:** an embedded YouTube player per match, with a "coming soon"
+  placeholder.
+- **Jersey bullets:** the limit is raised from 8 to 10, because Sam lists nine.
+- **Footer logo:** owner-editable in Homepage → Navigation, falling back to the
+  crest and name when blank.
+
+Built test-first at seams Christian confirmed:
+
+- latest-result selection;
+- the YouTube link rule (in the editor, the admin route and a database
+  constraint);
+- strip and replay rendering;
+- the footer logo slot (contract, database save/load/reject/retire, footer
+  render);
+- the ten-bullet limit (unit and database).
+
+Three local-only migrations (20261104010000/020000/030000) were applied with
+`scripts/apply-rose-city-home-update-migrations-local.ts`. The guarded seed
+`scripts/seed-rose-city-home-update-2027-local.ts` published the sub-mark as the
+footer logo and wrote Sam's jersey copy. The real local Home page, checked in
+Chrome at 1440px, shows:
+
+- the strip, with the latest local sample result (AMSG FC 2–1);
+- the replay placeholder;
+- both crests;
+- nine Includes items with no store note;
+- the RCFC footer logo;
+- no sideways scroll and no console errors.
+
+Verification:
+
+- **Tests:**
+  - The new contract tests pass: latest result, YouTube rule, admin route,
+    Schedule field, footer slot, footer render, strip and replay.
+  - The Shop cap tests pass, and the `fetchSchedule` mapping test passes.
+  - The new database tests pass against the loopback rehearsal: replay
+    constraint, footer save/load/reject/retire and ten bullets. The existing
+    cinematic homepage atomic-save, Shop and league-logo database tests also
+    pass. The atomic-save anthem case timed out once under machine load and
+    passed 8/8 on rerun.
+  - The full contract + legacy suite ran 1,676/1,677. The single failure was
+    the ten-bullet test, captured mid-edit before the constant changed; it now
+    passes.
+- **Static checks:** project-wide `tsc --noEmit` exits 0, and ESLint is clean
+  on every touched file.
+- **Browser:** the real Home page at 390px and 1440px shows the strip with both
+  crests, the replay placeholder, nine Includes items, the RCFC footer logo,
+  no horizontal overflow and no page errors. /shop, /schedule and /club/logo
+  return 200.
+- **Not checked by eye:** the new Schedule and Homepage editor fields. The
+  local admin needs an emailed login code, so they are covered by contract
+  tests only.
+
+No hosted writes, push or deploy. The CLAUDE.md migration gate applies to the
+three new migrations before any hosted release.
+
+Next steps:
+
+- Christian reviews in the owner editors.
+- Sam confirms the score, opponent and "City of Roses" wording.
+- The owner enters the real 2027 fixtures and replay links.
+
+## 2026-11-04 — Sam reference review; Crest Sub-Mark card added locally
+
+The local site was compared page by page with Sam's current Dropbox originals,
+desktop first and then phone. Findings and the package plan are in
+`docs/rose-city-2027-reference-review-2026-11-04.md`. Sam's Home (Oct 31 JPG),
+Shop, Schedule and Crest files are newer than the references the app was built
+from, so their new sections are not implemented. Every other page matches its
+reference.
+
+Christian's decisions:
+
+- Schedule fixtures, the ticket purchase link, the Stem text and the roster
+  photos stay as owner-edited content for later.
+- The footer sub-mark logo goes into the Home update package; it needs a new
+  editable slot and migration.
+- Crest card 7 goes in now.
+
+Card 7 is content only. The Logo page already renders any number of features.
+`scripts/add-rose-city-crest-submark-local.ts --execute-local` published two
+graphics through the normal pipeline. It appended "Sub-Mark" to the local test
+tenant's Logo row with an updated_at guard, which took the features from 6 to 7.
+About, homepage, branding and hero rows were verified unchanged. Inputs, gap
+and receipt are in `assets/rose-city-crest-2027/submark/`. The missing piece is
+the italic "RCFC" wordmark after the icon: Dropbox has no standalone file.
+
+The /club/logo page shows card 7 at 1440px and 390px with no sideways scroll or
+blank images. ESLint passes on the new script, and the project-wide
+`tsc --noEmit` passes.
+
+The port 3198 dev server was hung on /roster at about 95% CPU and was
+restarted, with Christian's OK. No hosted writes, push or deploy.
+Next: RC2027-HOME-UPDATE preview, once Sam confirms the score, opponent and copy.
 
 ## 2026-11-03 - SITE-07 #54 and Rose City public hold release checkpoint
 
@@ -2779,6 +3624,760 @@ production approvals below are not current-session authorization. Next:
 the user assigns a task; start it with `onzio task NAME`, test/review and
 submit a PR. This environment setup authorizes no feature implementation,
 production release, or hosted data/provider action.
+
+## 2026-10-13 — Approved Tickets implemented and verified locally
+
+RC2027-TICKETS: source/local acceptance complete; physical-device acceptance
+remains in the site-wide gate. Christian approved desktop/phone, requested15%
+larger perk icons and implementation. Actual /tickets, stable nav ID tickets;
+editor /admin/tickets via Homepage → Edit in Tickets. Full contract/evidence/
+ownership/release boundaries: docs/rose-city-tickets-2027-implementation.md.
+
+New CinematicTickets/tickets.css preserves reference sections, centered Pay
+Later/Chick-fil-A, original bus/map/icons, cropped banner blank strip, plain
+nonclickable map and larger icons. Other templates/approved navbar/Home/Crest
+preserved. Prices and match wording remain shared Homepage fields, next HOME
+fixture is Schedule-backed with honest empty state. Approved Closest ball/PUSD
+staff shared copy corrected. External purchase URL is a new validated Tickets
+field, still empty pending user supply; purchase inactive.
+
+Independent cinematic_tickets_content revision + seven composite tenant/media
+FKs, strict direct-writer/media guards and actor receipts in local migration
+20261014000100. User-scoped atomic load/save API/RPC retains authorization,
+design/revision conflicts, response-loss exact retry and reference-safe cleanup.
+Scoped browser recovery preserves incomplete URLs without publishing them and
+normalizes JSON key ordering for dirty checks. Seven artwork uploads reuse
+homepage-artwork pipeline; all page copy/images/descriptions editable. Preview
+uses same public component, phone/desktop frames (inner388/1278 includingborder).
+Admin sidebar manifest byte-unchanged; HomepageEditor adds a shortcut using its
+existing dirty/leave guard; HomepagePreviewFrame optional label defaultsHomepage.
+
+Seven source-preserving graphics normal-published locally;7/7 delivered checksums.
+Narrow seed guards55321/55322, test tenant, existing Tickets rows and protected
+About/Logo/branding/hero/Shop rows. Tickets insert/shared two-copy correction is
+one local CAS transaction. Source/provenance in assets/rose-city-tickets-2027
+and outer archive; local receipt ignored. No broad homepage seed.
+
+Final TypeScript, Next build/lint, database-types exact check and whitespace pass.
+Final isolated full208 files/1915 tests; original assertions unchanged. Real CUA
+public1280/390/320: no overflow/eight loaded page images, center offsets<.004px,
+larger icons, correct cropped ticket/plain map, title-case prices, inactive buy,
+sticky headertop0. Actual desktop Subtitle and phone footnote Save/reload/public
+reflection plus independent SQL persistence pass; approved copy restored and
+seven original media IDs unchanged. Partial https:/ URL reload recovers; clearing
+returns All changes saved without publication. Editor real preview checked.
+Evidence outer review-notes/tickets-2027/implemented/{browser-checks,persistence,
+recovery,editor-preview}.json and screenshots. Final build/full suite logs
+/private/tmp/rose-city-tickets-{build,full-tests}-complete.log.
+
+No commit/push/hosted content/schema/deployment/production launch. Existing static
+protected phone preview still predates Tickets/Crest. Physical iPhone/VoiceOver/
+remaining font gates open. Next: user review/external URL, continue rest of site.
+Shop chat explicitly coordinated and now owns shared migration/types/build/runtime
+window. Preserve its source/WIP and appended HANDOFF entries; Tickets made no
+Shop source edits. Shared queries/db-types untouched by Tickets; Shop can extend
+its own owner. All original dirty Crest/Safari/poster changes preserved.
+
+
+## 2026-10-13 — Tickets design accepted; Pay Later aligned
+
+Christian said desktop/mobile look good, with final request to center Pay Later
+under PERKS like the reference. Isolated preview now uses three equal columns
+on both sizes. CUA1280/390/320 confirms center errors<0.004px, no overflow,
+and all phone captions fit. Raffle image respects narrow column width. Final
+Vite build passes; evidence outer review-notes/tickets-2027/perks-alignment.json
+and perks-desktop.jpg. Design accepted including this correction; actual Tickets
+implementation has not started. External purchase URL still missing. Next:
+implement accepted design when requested with clear content/editor ownership,
+local media publication and actual public/admin persistence verification.
+No app runtime/content/DB/deployment changes. Production launch remains held.
+
+## 2026-10-13 — Tickets preview reference corrections
+
+Christian requested centered Chick-fil-A, no tap-to-view map hint/action,
+and removal of the ticket artwork's bottom white strip. Isolated preview only:
+SVG logo now display:block with auto horizontal margins; map is a plain image;
+ticket display frame1730/752 clips source rows752–824 (white/gray exterior),
+preserving original1730×825 source bytes and the full colored ticket.
+Vite build passes. CUA1280/390 verifies logo center error<0.004px, no horizontal
+overflow, correct ticket ratio and no map link/hint. Evidence: outer
+review-notes/tickets-2027/reference-corrections.json and corrected desktop/phone
+top and centered-logo screenshots. Review remains http://127.0.0.1:3201/.
+Actual app/source/content unchanged; design_review remains open. No deployment.
+
+## 2026-10-13 — Tickets reference and isolated responsive preview
+
+Package RC2027-TICKETS: **design_review**; application implementation pending
+Christian's desktop/phone design acceptance. Reference supplied: Rose City FC
+Tickets page 8 Drop Down Menu 2027 Final Master.jpg. Review at
+http://127.0.0.1:3201/ (Desktop, Phone, Your reference); standalone /tickets?preview=1.
+Source/ownership/limitations/next step: outer design-explorations/tickets-2027/README.md.
+
+All required art found: root ticket banner, complete bus/parking map, Foothill
+bus, credit card, seat, raffle ticket and seat background; Chick-fil-A in Sponsors.
+Shared-root and Tickets folder pagination complete (Tickets empty). Seven originals
+preserved with revisions/size/SHA256 receipts in outer assets/originals/tickets
+and assets/tickets-source-receipts.json. Cached Chick-fil-A metadata revision/size
+matches live Dropbox; source canvas whitespace is removed only by display viewBox.
+White seat source gets reference black silhouette through CSS brightness(0).
+No original image file was altered or logo path redrawn.
+
+Actual CinematicShell/Nav/Footer are imported into isolated Vite prototype,
+with existing fixed-public-content/no-backend adapters. Reference composition
+retained; phone stacks page sections and full-size map link preserves readability.
+Christian confirmed Closest (instead of Closet) and PUSD students & staff.
+These corrections exist only in prototype; actual homepage content unchanged.
+He confirmed external Buy Tickets redirect; exact URL still missing, so preview
+button disabled. Empty Schedule snapshot uses announcement state; no sample
+March13/opponent/kickoff fixture inserted. Reference benefits/transit/parking
+copy transcribed, not independently verified as current operating terms.
+
+Inspected /tickets placeholder catch-all, cinematic-routes, CinematicDestination,
+homepage content/save/media contract, CinematicHome and next-home-fixture/Fixture.
+Prices/ticket artwork and match copy currently belong to Homepage; actual next
+HOME fixture/sponsor belong to Schedule. No Tickets-specific editor/singleton
+or Fixture purchase URL exists. Preserve homepage's internal /tickets CTA/schema;
+future Tickets external URL needs explicit validated authoring ownership, without
+relaxing existing homepage/registration/Connect/billing contracts.
+
+Verification: isolated final Vite build passes; CUA1280/390/320 shows no overflow
+(content1265/375/305), titles clear white sticky header, page images loaded after
+scroll at1280/390, phone perk labels fit and purchasing inactive. Evidence:
+outer review-notes/tickets-2027/browser-checks.json, desktop-top.jpg, phone-top.jpg,
+phone-320.jpg, overview.jpg and source-sheet.jpg. Embedded browser desktop
+fullPage export crops width; use native top screenshots/live review. Browser
+viewport evidence only; no physical/native or admin Save claim.
+
+No app runtime/editor/API/schema/database changes, commit/push/deployment or
+hosted mutation. Existing dirty Crest/Safari/poster work preserved. Production
+launch held. Exact next: Christian reviews desktop/phone, then accepted Tickets
+implementation with matching authoring ownership, narrow local media publication
+and actual public/admin save/reload verification; purchase URL when supplied.
+
+
+## 2026-10-13 — New conversation requested for Tickets
+
+Christian selected Tickets as the next page and explicitly requested a new
+conversation. Target /tickets, stable nav ID tickets. He will provide the new
+agent with the reference; all required images are in Dropbox. Wait for that
+reference before design planning or edits. Once supplied, inspect the existing
+route/content/editor contracts, retrieve exact assets from Rose City FC x Onzio
+2027, then show isolated responsive desktop/mobile preview before material
+implementation. Preserve the approved homepage, white sticky navbar and Crest.
+
+Continue in this implementation checkout on codex/rose-city-homepage-2027,
+HEAD2f70087. Crest implementation and prior Safari/poster review remain
+uncommitted; do not reset/clean them. Latest local verification below is204
+files/1874 tests, types/build/lint,20 Crest media checksum checks and actual
+public/admin desktop/phone Save/reload. Actual app3198; Crest design review3200.
+No new commit/push/deployment. Physical-device gate and production launch hold
+remain. The protected static phone preview still predates the Crest implementation.
+
+## 2026-10-13 — Approved Crest page implemented and verified locally
+
+Package RC2027-CREST: source/local browser acceptance complete; physical-phone
+acceptance remains open with the site-wide native gate. Christian explicitly
+approved the final desktop/mobile preview and requested implementation. Actual
+page: http://rose-city.localhost:3198/club/logo; editor: /admin/about → Club Logo
+page. No push, merge, hosted update, deployment or production launch.
+
+New CinematicCrest/crest.css renders the approved white title/annotated crest,
+six shadowed feature cards, dark Pasadena map and six source color graphics.
+Phone patches/headings/icons stay on one line down to320px; desktop composition
+is retained. Public route and AboutPageCanvas dispatch only cinematic@2 to the
+same component; legacy ClubLogoPageClient is byte-unchanged. Public query uses
+the authenticated server schema, matching the About route, with tenant-neutral
+empty fallback. Empty first-image/feature/map/color authoring targets remain;
+empty public map/diagram reserve no blank artwork space. Map/color ratios prevent
+late lazy-image layout shifts. Public media renders directly with resilient
+native images and no optimizer/runtime transformations.
+
+Existing Logo fields own all feature copy, patches/icons, diagram/map and colors.
+The missing annotated diagram was authored as a replaceable2100x1590 graphic
+from the untouched supplied master and approved leader-line/label layout.
+The missing Stem icon derives exact original pixels using the approved
+green-to-alpha matrix. Source artwork is never redrawn. Generic page heading/
+subtitle are deliberately fixed presentation labels; the selectable heading
+explains Onzio ownership in admin. No new schema/migration; selected-page Save,
+revision/receipts, retry/recovery, URL canonicalization and media cleanup stay.
+
+20 prepared graphics have provenance/source hashes and normal isolated publication
+receipts in assets/rose-city-crest-2027. The new narrow local seed refuses hosted
+targets, wrong tenant, and existing editable Logo rows; it only inserts this
+page and asserts About/homepage/branding rows unchanged.20/20 real validator and
+delivered-byte checksums pass. Original30 Dropbox files/reference remain in the
+outer archive. No second lossy preparation pass or global provider change.
+
+Verification: TypeScript; final Next production build/lint/types;204 test files /
+1874 tests; latest renderer/route focused4/4 after empty-state refinements; diff
+check and legacy-renderer byte comparison. React quality review confirms no new
+effects/state, scoped CSS, direct media, template gate and shared public/admin
+markup. CUA actual1280/390/320 checks find no horizontal overflow, loaded20 images,
+all six aligned phone rows and untruncated titles at320. Club phone drill-in
+opens actual /club/logo; sticky header leaves the title visible. Browser content
+width may be15px smaller with a native scrollbar.
+
+Actual admin desktop and phone description edits Save/reload successfully; public
+reload reflected the desktop marker and an independent loopback query verified
+phone persistence. Approved placeholder was restored through UI. Final query
+checks all feature copy/geometry/media identities and separate About remains
+absent. Final rebuilt canvas/phone sheet renders the same component; no nested
+color selection targets. Evidence: outer review-notes/crest-2027/implemented/
+(browser-checks.json, persistence.json, desktop/phone full, admin desktop/phone,
+overview). Logs: /private/tmp/rose-city-crest-{full-tests-final,next-build-final}.log.
+
+Existing Safari/poster dirty work is preserved. The old protected static phone
+deployment still uses its Crest placeholder; it was not updated in this task.
+No physical iPhone/touch/keyboard/VoiceOver claim. Next: review the actual local
+Crest page, then Christian chooses the next page. Physical-device and full-site
+release acceptance/temporary destinations/fonts remain under the launch hold.
+
+## 2026-10-13 — Crest preview mobile single-line feature headings
+
+Christian likes desktop and requested mobile crest/heading/detail-icon alignment
+on one line, allowing smaller sizes. Updated only outer preview max600/max360px
+card CSS: responsive patches/headings/icons and no wrapping; body remains15px.
+All six rows fit and align within0.004px on requested390/320 CUA viewports,
+without horizontal overflow (375/305px content with scrollbar). Build passes;
+desktop pre600px styles match the previous preview byte-for-byte. Evidence in
+outer review-notes/crest-2027/phone-alignment.json and phone-aligned-cards.jpg.
+Review is open in Phone mode at http://127.0.0.1:3200/. Application source,
+backend, prior dirty work and launch hold are preserved. Desktop accepted;
+responsive design_review remains open pending Christian's mobile review.
+
+## 2026-10-13 — Crest reference and isolated responsive preview
+
+Status: design_review, application implementation pending design acceptance.
+Christian supplied `Rose City FC Club Crest & Identity website 2027.jpg`
+(2484x10363), and directed us to Dropbox Our Identity. The complete 30-file
+folder was listed/metadata-verified/downloaded into the outer workspace with
+original bytes and source/checksum receipts preserved. Responsive review:
+http://127.0.0.1:3200/ — Desktop, Phone and Your reference; standalone at
+http://127.0.0.1:3200/club/logo?preview=1. Source/limitations/next step:
+outer `design-explorations/crest-2027/README.md`; CUA screenshots under
+outer `review-notes/crest-2027/`. The actual CinematicShell/Nav/Footer are reused
+with existing fixed-public-content/no-backend adapters. No application source,
+database content, hosted deployment or production changes were made.
+
+Composition follows reference: white title/annotated master crest, six feature
+cards (Name, Rose, #23, #Crown, Key, Stem), dark original Pasadena map and six
+original color graphics. Phone stacks descriptions below crest/title and uses
+two color columns. Original crest/artwork paths are not redrawn. Missing diagram
+is HTML labels/leader lines over the untouched master. Missing Stem icon uses a
+clipped master region and reversible color-to-alpha display filter. Christian
+explicitly approved placeholder Stem text, editable later through admin; do not
+reuse the reference's accidentally duplicated Key description. Other copy is
+reference-derived, not new researched factual assertions.
+
+Inspection confirms existing Logo editor supports up to24 features/six colors,
+asset URLs/icon geometry and page-scoped atomic revisions/receipts/media cleanup.
+Current local `/club/logo` rendered an empty main. Existing shared legacy renderer
+is `ClubLogoPageClient`; future cinematic@2 dispatch must also reach AboutPageCanvas
+without changing other templates. Title/subtitle/diagram labels are currently
+outside the Logo edit schema. Preserve all existing contracts; do not silently
+hardcode new uneditable page copy during implementation.
+
+Verification: isolated Vite build passes; CUA requested1280/390/320 checks find
+no horizontal overflow. Desktop/390 verifies six features/colors, loaded map/
+logos, actual sticky header and Museo/Avenir computed fonts. Full-page screenshots
+saved. Browser content width may be15px smaller with a native scrollbar. No admin
+Save or physical-phone acceptance claimed. Existing dirty Safari/poster work and
+production hold preserved. Exact next step: user design review, then implement
+the accepted cinematic@2 page and matching admin preview using normal loopback-only
+asset publication and real public/admin Save/reload/template-isolation checks.
+
+## 2026-10-13 — New conversation requested for the Crest page
+
+Christian explicitly selected the Crest page as the next page and requested a
+new conversation with full context. Target route is /club/logo, linked by the
+stable navigation ID club-crest. Continue in this isolated checkout on
+codex/rose-city-homepage-2027, preserving the committed white sticky navbar
+baseline2f70087 and uncommitted Safari/poster review changes listed below.
+The new agent should inspect the existing page/editor, approved assets and
+references, then present a responsive preview before material page changes.
+Do not invent crest symbolism/history; get missing source content/reference
+from Christian while continuing independent inspection. Production stays held.
+This selection supersedes statements below that the next page is not chosen.
+
+## 2026-10-13 — Safari review and image-quality audit; hardware gate remains open
+
+Christian requested final iPhone/Safari review and an image-quality explanation,
+then a handoff to work on the next page in a new conversation. Accepted baseline
+is local commit2f70087 on codex/rose-city-homepage-2027. Review fixes below are
+uncommitted; preserve them. No new conversation has been created or next page
+chosen. Production launch remains explicitly held.
+
+Native Safari tested in Xcode Simulator iPhone17/iOS26.5 on the exact public
+phone bundle: native video visibly loops inline without controls, white menu
+opens, Club drill-in and Back/Close work, pointer opening has no black close
+outline, keyboard opening retains its necessary outline. Landscape rotation
+reproduced hamburger overlap with the cutout. Scoped cinematic CSS now uses
+max(gutter, env(safe-area-inset-left/right)) for header/dialog header/content,
+with20px default/16px narrow gutters, and100 percent WebKit text-size adjustment.
+Landscape header and Close now clear the cutout in native Safari screenshots.
+Tenant generateViewport adds cover and white theme ONLY for cinematic@2;
+actual Next DOM confirms the resulting meta and loaded higher-res poster.
+
+Hardware acceptance remains OPEN: a paired physical phone is available, but
+Mirroring is at its setup screen. Setup/privacy/auth settings were not changed.
+A user question requested the physical Safari checklist and which images are
+blurry; no answer had arrived at this record. Simulator native scroll/drag
+input did not move the page, so touch scrolling, address-bar collapse, landscape
+inner scrolling and VoiceOver are not claimed. Chrome viewport/source checks
+cover sticky/overflow behavior separately. Skill mobile-native explicitly says
+Test on hardware before calling it done. Do not relabel Simulator as physical.
+
+Image audit: six original match photos are1200x670; photo1 is1500x837. Delivered
+sizes match, so detail is already limited in the supplied originals. At1280 CSS
+pixels/DPR2,1200px images have47 percent of ideal pixel width. On390px/DPR3, the
+approved mobile1.2 crop has69 percent of ideal vertical detail. Preview assets
+are WebP92 then normalized again to WebP82. Avoidable extra compression is a
+contributor; larger photographer exports plus a single normalization pass are
+the proper next quality step. Do not synthesize missing detail or silently
+change approved cropping. Ticket original1800x791 is also limited at large
+Retina desktop sizes; raffle2264x3000 and player1500x2068 have more headroom on
+phones. Logo PNGs have adequate density. Hero is native1280x720 MP4; higher
+source/delivery work is separate and no Bunny configuration changed.
+
+Official same-episode maxres poster fetched/visually verified at1280x720 instead
+of480x360, SHA2560c280a7a9ccbfeba7151217719db1a0fe5d6fb0571a8d86fb059005b988be872,
+119139 bytes. Original low-res poster retained. Source input/provenance/manifest
+and normal validator updated; all30 pass. Only this poster was published through
+the real media pipeline on isolated local Supabase55321. CAS-protected row
+update verified every other content column unchanged. Script:
+scripts/update-rose-city-episode-poster-local.ts --execute-local. Seed uses the
+poster checksum in its upload identity to preserve immutable media versions.
+Actual app and hosted preview load1280x720. No hosted database write or global
+media-normalization change. Prepared source provenance remains outside app in
+workspace assets/additional-provenance.json; bundle/input/receipts are in repo.
+
+Protected testing Preview / READY: https://onzio-platform-r5fw865f3-404christianns-projects.vercel.app
+Deployment dpl_BoyYYLthzmxMg9hoHqYWqqMAJNom, protection unchanged. Fixed public
+content/temporary destinations,51 output files, zero functions/credentials;
+not full backend acceptance. Actual rebuilt app: http://rose-city.localhost:3198/.
+Final TypeScript, Next production build,202 files/1870 tests, bundle check/build,
+actual30-input validator and whitespace pass. Native/hosted captures and audit
+JSON: workspace review-notes/iphone-safari-review/. Production preservation:
+phone-testing/safari-review-preservation.json. No push/merge/production launch.
+
+Next-conversation handoff: use this isolated checkout and existing branch;
+read this section, AGENTS.md and docs/rose-city-2027-implementation.md. Preserve
+white sticky navbar, ALL CAPS/Avenir, compact red desktop dropdowns, white phone
+menu, transparent blue/white Foothill marks and the uncommitted review fixes.
+Do not use the dirty original Downloads checkout. Next page is Christian's
+choice; present an isolated responsive design before material new page changes.
+Keep the open physical-phone checklist and larger-photo-source request visible.
+Before launch: remaining content/copy review, temporary destinations, LEMON MILK
+evidence, complete app acceptance and separately authorized hosted rollout.
+
+## 2026-10-13 — Accepted white sticky navbar, local commit requested
+
+Christian accepted the restored white sticky header and asked to commit it.
+Commit scope: actual navigation/style changes, approved icon sprite and license,
+transparent blue/white Foothill PNGs and provenance, regression contracts,
+font-input exclusions and current implementation/testing handoffs. No push,
+merge, production launch, domain assignment or hosted data change authorized.
+The existing verified result remains202 files/1870 tests, TypeScript/Next build,
+artifact check/build/scan and desktop/phone viewport verification. No runtime
+changes after those checks. Supplied Avenir confirmation is retained; its
+local-only file is still excluded from this commit under the established
+production packaging boundary. Protected phone artifact includes confirmed
+Avenir. Production packaging is a later explicit release-preparation step.
+
+Homepage structure and editor are implemented: hero, raffle, real Schedule
+next-home card, prices, ticket/map artwork, seven photos, championship,2027
+jersey/player, episode, sponsors and footer. Remaining homepage acceptance:
+final physical-phone/Safari review of current white sticky navigation and
+scroll/menu/video behavior; review2027 prices/raffle/sponsors/fixture and copy
+(including imported Closet ball wording); finish destination content where
+cinematic version2 still renders temporary pages; confirm remaining LEMON MILK
+commercial-use evidence. Confirmed Avenir does not need to be requested again.
+Full application/backend destination testing is separate from the static
+phone artifact. Final release preparation must preserve existing Schedule,
+Shop, social destinations and tenant/media identities; production stays held.
+
+Exact next step: content/copy review and physical-phone feedback, then complete
+remaining destination pages and full-application acceptance before any launch.
+This section supersedes historical navbar directions below.
+
+## 2026-10-13 — Restored white navbar, sticky desktop and mobile
+
+Christian rejected the floating transparent/docking direction and requested the
+prior white header, retained transparent Foothill artwork, a blue-text version,
+and sticky navigation. Restored the approved hybrid CSS proportions with a
+white sticky top0 header in normal flow (desktop clamp140–196px; phone88px plus
+safe-area). Removed hero-overlay/glass/docking layout, state, animation, and
+scroll/observer hooks. Homepage hero returns to original proportions. Kept ALL
+CAPS desktop labels and Avenir navbar/dropdown, title-case Robinson Stadium,
+compact red rounded dropdowns264px/334px stadium, white phone dialog, licensed
+icons, hamburger/dropdown motion, keyboard/Back focus and touch outline fix.
+
+Exact original Foothill SVG renders to2432x400 RGBA PNG with transparent exterior
+and blue lettering; no geometry or emblem edit. Source blue SVG, PNG, provenance
+in workspace assets/prepared/foothill-blue.*; app/public and testing/public use
+images/cinematic/foothill-blue.png. PNG SHA256
+8a1fc50faf320b1567ee3c04699af8627d1551c09580ae76e1f5df5ebd995754;
+712845 transparent pixels, matching white variant. White SVG/PNG retained for
+future use. Rose City/Foothill brand guard retained; other partners/tenants keep
+configured sources. Both header and white phone menu use transparent blue mark.
+
+Sticky header exposed Next route scroll retention: clicking Schedule from a
+scrolled Home left its heading partly behind the header. Pathname-change effect
+now resets owner-window scroll instantly for a changed route without a hash,
+preserving initial load and hash behavior. Actual Next browser reproduction
+now shows scroll0, header bottom173.8125, heading top340.8125 after navigation.
+
+Protected testing Preview / READY: https://onzio-platform-cg8nuyf12-404christianns-projects.vercel.app
+Deployment dpl_GKDKqwizUUBQeCjYff4EpyZMhKwB. Fixed-public-content testing artifact
+still uses temporary destination pages, zero backend functions/credentials;
+50 output files include both logo variants. Existing Vercel Authentication
+retained. Actual rebuilt application remains http://rose-city.localhost:3198/.
+
+Verification: focused8/8, final isolated full202 files/1870 tests, TypeScript,
+Next production build, Vite check/build/scan and whitespace pass. Browser1280
+and1025 confirm sticky header top0 when scrolling, exact white background, no
+logo/nav overlap, loaded blue derivative, Avenir and title-cased Stadium entry.
+390/320 preserve white phone menu, no touch close outline, blue transparent
+mark, Back focus and no horizontal overflow. Hosted desktop/390 verified;
+screenshots in review-notes/navbar/white-sticky/. Physical-phone acceptance
+remains Christian's review; viewport checks do not establish real-device feel.
+
+Production id/aliases/framework/protection unchanged, recorded in
+phone-testing/white-sticky-preservation.json. No push/merge/production launch,
+domain assignment, or hosted database write. Next: phone/desktop review of this
+protected URL, continue finishing the site, hold production until explicit
+approval after completion. Previous transparent/docking records below are
+historical and superseded by this section.
+
+## 2026-10-13 — White Foothill mark and animated scroll docking
+
+Implemented the requested follow-up in actual CinematicNav and scoped CSS.
+Foothill lettering is white with a transparent exterior; original blue emblem
+and every SVG path geometry remain exact. The original SVG and derivative SVG/
+PNG plus pixel/provenance evidence remain in workspace assets/prepared. PNG
+SHA256 30e16506d7201ed7cf798406876d9847d7bb0903f6e458bd92c219e8c04726e3
+is copied to public/images/cinematic/foothill-white.png in app and testing bundle.
+The derivative is restricted to Rose City's configured Foothill Transit mark;
+other tenants/partners retain their configured asset. White phone dialog keeps
+the original blue lettering. No CSS inversion or generated logo geometry.
+
+Desktop labels are ALL CAPS; both navbar and dropdown text use CinematicAvenir.
+Stock stadium dropdown text is exactly Robinson Stadium; custom edited wording
+remains editable. Existing compact red rounded panels and white phone menu,
+licensed icons, native modal, Back/focus and pointer close-ring fix remain.
+
+After 120px of desktop scrolling, logos dock into the ends of one glass capsule;
+returning below 64px restores the large crest beside the central pill. Docked
+crest48px, capsule76px; top crest112px / compact desktop96px retained. Secondary
+pages start docked in normal flow. Owner-window listeners are cleaned up. FLIP
+animates transform only over240ms with shared ease-in-out, including the glass
+surface; current visual bounds support interrupted reversal. Keyboard is instant;
+reduced motion uses only a150ms surface fade. These preference branches were
+source-checked, not tested on physical hardware. Resize cancels/snap-remeasures.
+Font-ready measurement keeps glass aligned with Avenir. Hero-end tint preserved.
+
+Protected testing Preview / READY:
+https://onzio-platform-9ir9h18y5-404christianns-projects.vercel.app
+Deployment dpl_8XD89C82UcJ8f2wqwc9W2AHUESXM. Vercel Authentication retained.
+This fixed-public-content artifact has temporary destination pages,49 output
+files, zero functions/database credentials; full backend acceptance is separate.
+Actual rebuilt Next.js app remains at http://rose-city.localhost:3198/.
+
+Verification: focused8/8; isolated full202 files/1870 tests; TypeScript, Next
+production build, Vite check/build/output scan, and whitespace pass. Initial
+sandboxed full-suite attempt was blocked by loopback EPERM; rerun with local
+network access passed. Browser1280/1025/390/320 checks confirm docking/reversal,
+no overlap or phone overflow, loaded white derivative, unchanged264x334 Stadium
+panel with all8 links, computed Avenir/casing, white phone menu/original mark,
+no touch close outline, Back focus restoration. Actual Next Home and loaded
+Schedule verified (heading175.5px clears header96px). Hosted desktop/390px checks
+pass with no browser errors. Screenshots: review-notes/navbar/scroll-docking/.
+
+Production deployment, aliases, framework and protection unchanged, recorded in
+phone-testing/scroll-docking-preservation.json. No push/merge/production launch,
+custom-domain assignment or hosted DB write. Next: Christian reviews this
+protected URL on a physical phone and scroll feel on desktop, continue finishing
+the site, keep production held pending completion and explicit launch approval.
+
+## 2026-10-13 — Approved transparent pill implemented, larger crest
+
+Christian selected MVMNT-inspired Logos beside the pill and requested a
+slightly bigger Rose City logo. Actual CinematicNav and scoped CSS now use
+independent logos beside a translucent centered navigation capsule. Desktop
+crest112px vs selected study96px (17 percent larger); compact desktop96px.
+The154px Foothill mark remains original artwork on a translucent light plaque.
+Avenir, red/black/white colors, all route identities and editable labels remain.
+
+Header floats over the homepage hero, with owner-document IntersectionObserver
+increasing capsule tint over lighter content. Secondary pages retain a sticky
+header in normal flow, with darker glass and readable labels. Native Bunny
+video delivery remains unchanged; hero proportions/scrim follow the approved
+transparent study. Phone closed header is transparent over the hero; approved
+white dialog,72px/64px closed-header crest, logos, icons, drill-in/back focus,
+240ms menu animation and pointer close-ring fix are preserved. Desktop red
+menus remain264px /8px padding /38px rows /14px text, Stadium334px with8 links.
+
+Protected testing Preview / READY: https://onzio-platform-dnec5gs12-404christianns-projects.vercel.app
+Deployment dpl_BtwXSsuF8nFYkHqV4nVnk4vBht6J; Vercel Authentication retained. This is the
+fixed-public-content phone-testing artifact with temporary destination pages,
+not full backend/admin/payment acceptance. Updated actual local Next.js app is
+running at http://rose-city.localhost:3198/ (PID15074 when restarted).
+
+Verification: focused6/6, isolated full202 files/1868 tests, TypeScript, Next
+production build, artifact check/build/scan (48 files, zero functions/credentials)
+and whitespace pass. Local actual React checks1280/1025/390/320 confirm larger
+crest, no overflow/overlap, scrolled tint, red Stadium geometry and all8 links,
+white phone dialog/no touch outline, subgroup heading/Back focus/Escape. Actual
+Next Home and fully loaded Schedule checked; heading295px clears header148px.
+Hosted desktop/390px checks confirm loaded logos/native video, larger crest,
+white mobile menu, pointer focus rule and no browser errors. Evidence:
+review-notes/navbar/implemented-mvmnt/. Physical phone review remains Christian's
+next acceptance step; browser viewports are not physical-device acceptance.
+
+Production id, aliases, framework and protection unchanged, verified against
+fresh before/after project reads in phone-testing/transparent-pill-preservation.json.
+No push, merge, production launch, custom-domain assignment or hosted database
+write. Next: test this protected URL on the phone, finish the remaining site,
+and keep production held until completion plus separate explicit approval.
+
+## 2026-10-13 — Hamburger and desktop dropdown motion
+
+Christian requested animation for hamburger activation and desktop dropdowns.
+Existing actual CinematicNav and scoped styles now animate pointer opening and
+closing: white phone dialog fades/slides vertically by 3 percent over 240ms;
+red desktop panels fade/lift 8px with subtle scale over 200ms, originating at
+their trigger. Transform/opacity only. Interrupted phone entry closes from its
+current frame; repeated closing is ignored. Native dialog stays modal through
+exit. Desktop closed panels become inert and aria-hidden immediately while the
+visual exit completes. Colors, proportions, logos and touch-focus fix retained.
+
+Keyboard activation and Escape are instant with focus restoration; reduced
+motion uses 150ms fades without translation/scale. CSS duration unit conversion
+handles optimized .24s serialization correctly for WAAPI's millisecond input.
+Reduced-motion branches were source-checked; physical preference/device testing
+is not claimed. No new animation dependency.
+
+Protected Preview / READY: https://onzio-platform-dzcs3380e-404christianns-projects.vercel.app
+Deployment dpl_DFWNp7cjTLyTV1yUfgEJMYs25Uyk. Existing Vercel Authentication retained.
+Hosted desktop/390px browser checks confirm motion frames, close completion,
+Back to menu focus, keyboard outline/Escape, and no browser errors. Screenshots
+and JSON evidence: review-notes/vercel-phone-preview/menu-motion/.
+Types/build/package scan pass (48 files, zero functions/credentials). Isolated
+full suite: 202 files/1868 tests pass; final duration repair rechecked with
+focused 6/6, TypeScript and whitespace. Production id, aliases, framework and
+protection unchanged, recorded in phone-testing/menu-motion-preservation.json.
+
+This remains the fixed-public-content phone review artifact; destination pages
+are placeholders. Actual local app3198 still serves its prior build; rebuild
+before local motion review. No push, merge, production launch, custom-domain
+assignment or hosted database write. Next: Christian reviews motion on phone,
+then continue site completion while production remains held.
+
+## 2026-10-13 — Touch-opening close-button focus ring fixed
+
+Christian supplied an iPhone Safari screenshot showing a black outline on the
+close button immediately after tapping the hamburger. Added one scoped CSS rule
+in cinematic.css: a focused close control has no outline while the existing
+navigation modality attribute indicates pointer input. Native dialog autofocus,
+accessible control naming and keyboard focus styling remain intact. Other
+controls, colors, layout and media are unchanged.
+
+Protected testing Preview / READY: https://onzio-platform-4ipd0jmwf-404christianns-projects.vercel.app
+Deployment dpl_HTiLmtdUnCwpBgHg7qGoLeA6DHaA supersedes the earlier testing URL.
+Hosted390px browser verification: pointer-open close remains focused but outline
+style is none; keyboard Enter-open close is focused with data-keyboard-input and
+solid3px outline. No browser errors. Screenshot/receipt:
+review-notes/vercel-phone-preview/touch-focus/. This is browser verification of
+the modality rule; physical iPhone retesting belongs to Christian's review.
+Artifact build/types and packaging scan pass; focused6/6 and isolated full202
+files/1868 tests pass; repository TypeScript and whitespace pass. Production
+deployment, aliases, framework and protection compare unchanged. No production
+release, domain assignment, hosted database write, push or merge.
+
+The local3198 server still serves its prior build; the corrected stylesheet is
+in the implementation source and the hosted phone-testing bundle. Rebuild3198
+when next reviewing the local app. Next: use the new testing URL on the phone
+and continue site completion with production on hold.
+
+## 2026-10-13 — Protected Vercel phone-testing preview READY
+
+Christian authorized a testing deployment while keeping production launch on
+hold until the site is completely finished. He subsequently confirmed Avenir;
+the supplied Medium file is included in this protected preview and verified
+byte-for-byte (53,264 bytes; SHA-2566382b3641be89a4527a33737870646d42310255f2b997e65a8b08c8adc73f8cf).
+No receipt inspection is claimed. The prior local-only font exclusion remains
+in the main app checkout; this testing artifact packages the confirmed font.
+
+Preview: https://onzio-platform-ijmby6ag6-404christianns-projects.vercel.app
+Deployment: dpl_7owtWifyekSV1yWBBakSDS7XtfXM, READY / Preview, existing
+onzio-platform project prj_I362ysmh9cse5cRxnL7db4dOhsEs. Vercel Authentication
+is retained; open the URL on a phone while signed into Christian's Vercel
+account. An anonymous browser reaches the login gate; signed-in Chrome loads
+and exercises the real homepage/menu components.
+
+Hosted staging was previously retired; current Supabase inventory contains
+only production. Therefore the isolated phone-testing/ artifact imports the
+actual cinematic@2 React components/styles and freezes only the local public
+rehearsal content. Seven photos, six sponsors and22 approved normalized image
+objects are bundled; no admin/auth/payment handlers, database credentials,
+production reads/exports or hosted database changes are included. Next Link
+and pathname have static navigation adapters, and all21 destinations are
+placeholder pages for this visual review. This is homepage/navigation testing,
+not full Next/server/admin/payment acceptance. The original app source is
+unchanged by this deployment, other than documentation.
+
+Verification: artifact TypeScript/build, output scan (48 files, zero functions
+or credentials), actual protected hosted Chrome1280/390/320, Avenir source and
+font check, loaded logos, native Bunny video readyState4/playing, no overflow,
+white drill-in/back focus/About route/Escape and desktop264x334px Stadium menu
+with all8 links. Browser error log empty. Anonymous Vercel login protection and
+signed-in access verified. Production deployment dpl_2b73gDEd6LrJzoZJDTEbRMdS2K4i,
+production aliases, project framework and protection compare unchanged before/
+after. Evidence: review-notes/vercel-phone-preview; receipts/build/source in
+phone-testing/. Physical phone acceptance is now available for Christian to
+perform; it has not been claimed from browser viewports.
+
+Next: collect phone feedback, finish the remaining site pages/features, and keep
+production held until completion plus separate explicit approval. No push,
+merge, production domain assignment, migration or presentation-pointer change.
+
+## 2026-10-13 — Approved navbar hybrid implemented locally
+
+Christian approved the white-phone combined preview. Implemented the accepted
+reference proportions and Original + rounded desktop menus in cinematic@2:
+header clamp(140px,13.58vw,196px), crest min(10.35vw,150px), lowered label/partner
+alignment, red 264px rounded menus with 8px padding and 38px rows. All destination
+links and editable labels remain; there are no repeated desktop menu headings.
+Phone uses an 88px/72px header and full-screen white drill-in navigation, both
+logos, dark text/red accents, Tickets/Schedule shortcuts, Back to menu, and the
+four approved medium/outline/round icons. Icon sources/license/hashes accompany
+the selected SVG sprite in public/icons/cinematic-navigation. Shop visibility
+still follows the existing club setting; other templates remain unchanged.
+
+Verification: production build including lint, sequential TypeScript and
+whitespace; isolated full suite 202 files / 1868 tests; focused navigation and
+shell rerun 6/6 after a type-signature correction. The first full invocation
+omitted .env.test and failed environment/JWT preconditions; the explicit isolated
+rerun passes unchanged. Actual browser1280/1025 and390/320 confirms desktop
+264x334px Stadium panel with all8 links, containment and no headings; loaded
+logos/white phone background, no horizontal overflow, Back focus restoration,
+Escape/menu-trigger focus and body scroll unlock, eight Stadium routes, correct
+About href/caret and navigation. Native dialog Tab traversal retains background
+inertness while allowing browser chrome. Phone heading case is explicitly scoped
+to the approved presentation. Captures/receipts: review-notes/navbar/implemented-hybrid
+outside the repository. These are browser viewport checks, not new physical
+phone/VoiceOver acceptance.
+
+Local3198 serves the updated build. Existing font-work edits are preserved.
+No push, merge, hosted mutation, data export or deployment. Launch stays on hold.
+Next: review the local homepage; separately authorize any future release.
+
+## 2026-10-13 — Launch held; supplied font ZIPs inspected
+
+Christian stopped launch preparation and requested using the Avenir/LEMON MILK
+ZIPs in Downloads. No hosted changes, exports, push, merge or deployment.
+Avenir Medium is wired into the local cinematic2 preview; supplied font bytes
+are excluded from Git and Vercel uploads. LEMON MILK BoldItalic already matches
+the ZIP. Neither archive contains the needed license receipt. Font evidence,
+official licensing links and the remaining publication gate are recorded in
+`docs/rose-city-2027-fonts.md`. Preserve the approved layout and original dirty
+OTP checkout. Local build/lint/types, sequential TypeScript and whitespace checks pass.
+Actual1280px/390px CDP confirms ZIP-supplied Avenir rendering, exact unchanged
+navbar geometry/text widths, no overflow or JS errors. Evidence lives outside
+Git in `review-notes/fonts/`. Next: keep launch on hold; obtain commercial/web
+license evidence only if publication is later requested.
+
+Read-only preflight before the hold: refreshed main remainsf91616c, four
+implementation commits apply cleanly; live READY Vercel deployment
+`dpl_2b73gDEd6LrJzoZJDTEbRMdS2K4i` serves that same main commit. Production
+Supabase has50 migrations, while this branch has51. Rose City's existing tenant
+is kinddemo, has no presentation pointers or identity/timezone row, and the
+custom domain records are inactive. A future release must resolve the intended
+domain and preserve the current legacy/no-pointer renderer for rollback; never
+copy the synthetic local seed into hosted data. These observations do not
+authorize a release.
+
+## 2026-10-13 — Larger crest within the roomier navbar
+
+Christian requested a slightly larger navigation logo. Increased only the Rose
+City crest:64→76px desktop and48→56px phone. Header heights stay88/68px, with
+unchanged alignment, Foothill size and navigation behavior. The isolated roomier
+comparison was updated too. Actual1280px/390px checks confirm loaded crest,
+shared vertical centers and no horizontal overflow; captures are outside the
+repo in `review-notes/navbar/larger-crest-desktop.png` and
+`larger-crest-phone.png`. Build/lint, sequential TypeScript and whitespace pass.
+Full suite passed200 files/1843 tests; the remaining registration database file
+hit a local connection-readiness timeout, then passed all22 cases unchanged on
+the focused rerun. All1865 distinct tests therefore pass across those runs.
+Local3198 serves this build. No push, hosted mutation or deployment. Next:
+review final homepage and separately authorize hosted release preparation.
+
+## 2026-10-13 — Roomier navbar selected (supersedes Slim)
+
+Christian changed the selected comparison to Roomier. The final application
+header is88px desktop with64px crest and68px phone with48px crest; navigation,
+Foothill and Menu stay centered, the Menu target remains44px, and desktop
+panels start at88px. Only scoped CSS proportions changed on the existing
+revamp branch. Fresh build/lint, TypeScript, full201-file/1865-test suite and
+whitespace checks pass. Actual1280px/390px browser checks confirm the dimensions,
+no horizontal overflow, contained Community panel/Escape, and phone drawer
+open/close. Captures: `review-notes/navbar/roomier-desktop.png` and
+`roomier-phone.png` outside the repository. Viewport checks only; no new hardware
+claim. Local3198 serves the new build; no push/deployment/hosted mutations.
+Next: review the final committed homepage, then separately authorize hosted
+release preparation per `docs/rose-city-2027-implementation.md`.
+
+## 2026-10-13 — Approved slim Rose City navbar
+
+Christian selected Slim from the isolated responsive comparison. Applied only
+header proportions in `components/cinematic/cinematic.css` on
+`codex/rose-city-homepage-2027`: desktop72px/crest56px, phone60px/crest44px,
+44px Menu target, centered navigation/Foothill logo, and dropdowns starting at
+the header edge. Homepage content and navigation behavior remain unchanged.
+Production build (including lint), sequential TypeScript, full201 files/1865
+tests and whitespace checks pass. Actual local app at1280px/390px has no
+horizontal overflow; desktop dropdown containment/Escape and phone drawer
+open/close pass. Phone evidence is browser viewport verification only. Saved
+captures: `Rose City 2027 Revamp/review-notes/navbar/implemented-desktop.png`
+and `implemented-phone.png`. Initial sandbox checks could not access Google
+Fonts or loopback Supabase; network-enabled reruns passed. The local production
+server on3198 serves the updated build. No hosted mutation, push or deployment.
+Next: review the committed homepage, then separately authorize the hosted
+release preparation described in `docs/rose-city-2027-implementation.md`.
+
+## 2026-10-13 — Rose City 2027 approved homepage implementation
+
+Christian approved the isolated homepage preview and authorized implementation
+on a new branch plus a local commit. Work is isolated in
+`codex/rose-city-homepage-2027`, based on refreshed `origin/main` at `f91616c`,
+under `Rose City 2027 Revamp/implementation/onzio-platform`; the original dirty
+OTP checkout is unchanged. No push, merge, deployment, hosted migration/content
+write or billing/lifecycle mutation is authorized or performed by this turn.
+
+The approved homepage is implemented as reusable `cinematic@2`, with its own
+scoped shell/styles and template-aware homepage editor. Whole raffle/ticket
+artwork is nonclickable publicly, prices/copy/nav labels are editable, the map
+has Show/Hide, seven photos retain atomic save/recovery, real next-home Schedule
+data uses the club timezone, current sponsors rotate on white on both widths,
+Bunny plays muted/inline without controls, and colored socials plus fully
+opaque Powered by Onzio retain the approved behavior. New destinations are
+temporary; other presentation versions preserve their existing renderers.
+
+The isolated local Supabase stack uses API55321/DB55322/Mailpit55324 and site3198.
+Reviewed assets are normalized through the real media pipeline; local synthetic
+subscription/membership fixtures never touch hosted billing. Final full suite
+passes 201 files/1865 tests, including scoped route guards and existing database
+regressions. Detailed browser/build evidence is recorded in
+`docs/rose-city-2027-implementation.md`; contract and asset provenance are in
+`docs/rose-city-cinematic-content-contract.md` and
+`assets/rose-city-2027/manifest.json`. Phone captures are browser viewport checks,
+not new physical iPhone/VoiceOver acceptance.
+
+Next: review this implementation commit, resolve the portable Avenir font/file
+and existing LEMON MILK commercial-use receipt, then prepare a separately
+approved hosted migration/media/presentation rollout. Preserve existing Schedule,
+Shop, social destinations, sponsor IDs and all other clubs. Never apply the
+local seed's synthetic club/subscription/member rows to hosted data.
 
 ## 2026-10-12 — Yellow billing warning follow-up
 
@@ -17330,3 +18929,434 @@ and fonts, two animation frames, separate theme reports, and explicit readiness
 failures. Syntax check passes; no screenshots are claimed from this helper yet.
 Next: serial corrected persistence10, management2, public-page phone/recovery,
 Contact, loading after shared fixture release, then baseline captures.
+
+
+## 2026-10-13 — Shop reference preview and recovered red gallery
+
+RC2027-SHOP: design_review. Christian confirmed Dropbox Shop page5 reference
+and requested coordination with Tickets chat01a1372a-2996-7a13-b883-28bbe924a705.
+That chat was read and messaged; Tickets files/runtime remain its scope.
+Isolated review http://127.0.0.1:3202/ provides Desktop/Phone390/Small phone320
+and reference. Source, scope and next step: outer
+design-explorations/shop-2027/README.md.
+
+Recovered all six original red player images in reference order from the
+migrated public Shop gallery with anonymous, tenant-scoped marketing reads.
+Downloaded exact home/away gallery bytes and Away lead;13 checksum receipts
+in outer assets/shop-2027-gallery-receipts.json. No private data or hosted write.
+Home/Away selection uses existing sources/copy, and Buy Now preserves the
+existing public product URL. Supplied2027 lead, white shadowed detail cards,
+reference-focused raster map display, actual existing sponsor carousel and
+approved shell/footer are in isolated preview only. Tickets full map unaffected.
+
+Vite build passes; CUA1280/390/320 no overflow, six red images loaded, desktop
+Away switch and purchase destinations verified. Evidence outer
+review-notes/shop-2027/. No application source/editor/API/DB changes, app build
+or runtime restart, commit/push/deployment. Physical/native/admin/backend/
+checkout acceptance not claimed; production launch held. Next: review/refine,
+then accepted cinematic@2 Shop implementation using existing atomic Shop
+save/media contracts and separate home/shop surface ownership; coordinate
+shared files/runtime/seeds with Tickets.
+
+
+## 2026-10-13 — Shop preview lead framing and gallery spacing
+
+RC2027-SHOP remains design_review, http://127.0.0.1:3202/. Christian requested
+reference-like lead positioning and less spacing in the six-player row.
+Only outer Shop preview CSS changed: lead80% centered with5% headroom and
+reference desktop placement; taller complete gallery players, zero grid gaps
+and narrower desktop row account for original transparent margins.
+Isolated build passes; CUA1280/390/320 no overflow, desktop originals loaded.
+Evidence outer review-notes/shop-2027/framing-spacing-checks.json and refined
+lead/gallery desktop/phone screenshots. Details in Shop preview README.
+No application source/backend/content or Tickets runtime changes. Next: review
+these refinements, then implement only after accepted design. Launch held.
+
+## 2026-10-13 — Tickets final reference placement refined
+
+RC2027-TICKETS: user's seat background/subtitle feedback implemented in
+Tickets CSS only, mirrored to isolated review. Seat artwork moved down to
+compensate for its blank canvas margin; legs meet the section boundary.
+Desktop subtitle begins immediately after the G in SINGLE (measured0.008px
+error); smaller tablet minimum keeps the line intact, phone stays centered.
+Vite build/diff whitespace pass. Shop combined Next build/restart includes
+this CSS. Actual /tickets1280 checked read-only: correct background position,
+single-line caption and no overflow; prototype1280/768/390/320 fits.
+Evidence outer review-notes/tickets-2027/implemented/placement-{preview-checks,
+actual-checks}.json, placement-actual-desktop.png and preview screenshots.
+No new content/schema/runtime mutation, viewport override or unrelated code
+edits by Tickets. Shop retains shared integration/full-suite/runtime ownership;
+its remaining checks are independent. Production launch remains held.
+
+
+## 2026-10-13 — Shop implemented (RC2027-SHOP)
+
+Status: source/local browser acceptance complete; physical-phone and production gates open.
+Approved Shop preview is implemented at /shop and /admin/shop for cinematic@2.
+Shared public/admin renderer preserves reduced lead zoom, tight six original red
+players, Home/Away, purchase cards, approved map crop and existing sponsor carousel.
+All page content/images/framing/visibility have admin controls; sponsor logos use
+the existing Sponsors editor. New settings extend the existing atomic Shop save,
+revision, receipts/recovery and reference-safe media contracts; Homepage remains
+separate. Guarded local seed publishes15 assets and protects unrelated content.
+Actual desktop/phone Save→reload→public checks, real map replacement/conflict rebase,
+player reorder/restore,15 delivered hashes, types/build/lint and1933 tests pass.
+Details/evidence: docs/rose-city-shop-2027-implementation.md and outer
+review-notes/shop-2027/implemented. Tickets chat coordinated all shared windows;
+its final source and Safari/poster/Crest dirty work are preserved. No hosted writes,
+push or deployment. Next: user review; physical-phone and site-wide release gates.
+
+## 2026-10-13 — Chick-fil-A and Robinson Stadium parallel previews
+
+RC2027-CHICK-FIL-A and RC2027-STADIUM: isolated previews ready for design review;
+application integration awaits Christian's desktop/phone approval. Two parallel
+workers own separate outer preview, evidence and original-asset directories;
+ports 3203 and 3204. Main alone owns shared application/schema/admin/build/runtime
+work and this ledger. Scope and exact next step:
+docs/rose-city-stadium-food-2027-design.md.
+
+References are supplied Food & Beverage and Bus Route masters. Exact Dropbox
+meal pass, three step graphics, dedicated Chick-fil-A map and restaurant photo
+found. The Free Game Ticket .png is actually PSB; original bytes retained with
+lossless composite extraction documented separately. Robinson's original map
+already includes its vertical Line 187 card, and its original bus is cached.
+Chick-fil-A steps use centered equal columns and consistent rows as requested.
+Both previews import the approved cinematic@2 shell; copied footer wording is
+updated only within isolated adapters to match current local public content.
+
+Preview targets: /stadium/chick-fil-a and /stadium. The separate Foothill Transit
+route remains untouched. Fresh actual-browser /schedule check shows SCHEDULE
+COMING SOON; previews retain an honest announcement instead of sample fixture.
+Supplied partnership/parking/transit/discount terms are design copy pending
+current confirmation; external purchase URL is still absent.
+
+Both isolated builds pass. Fresh desktop1280/phone390/320 document widths equal
+their viewports; Chick-fil-A icon/caption/number rows align exactly with centers
+within0.004px. Main independently reviewed both previews/screenshots. Evidence:
+outer review-notes/{chick-fil-a-2027,robinson-stadium-2027}/, including overview.jpg
+and browser-checks.json. Review http://127.0.0.1:3203/ and :3204/ supports desktop,
+phone, small phone and reference. Current long footer tagline required scoped
+preview-only brand shrink/text wrapping to remove6px desktop overflow; shared
+source untouched. Reassess actual shell during approved integration. Existing
+application source, data, media identities and dirty work are preserved. Local
+app 3198 remains running without restart. Next: approve both desktop/phone designs,
+then editable-page implementation through existing save/media contracts.
+No production/hosted write, commit,
+push or deployment. Physical-phone/VoiceOver acceptance remains open.
+
+## 2026-10-13 — Accepted page layouts, requested typography corrections
+
+Christian said Chick-fil-A looks great except Details must use his supplied
+Phosphor CG Regular, and Robinson looks good except body-section headings must
+be bold. Accepted layout/artwork/1–2–3 alignment is preserved.
+
+Details now uses the actual Downloads OTF at regular400/reference red, removing
+the simulated display-font outline. Local font copy/source hash is recorded in
+the isolated preview. Font load and exact unchanged step geometry verified at
+1280/390/320; focused details-font desktop/phone/screens and checks are in outer
+review-notes/chick-fil-a-2027. Both preview builds pass. Robinson's four body h2
+headings now use the actual supplied Avenir Heavy face, scoped to that preview
+with synthesis disabled. Font loaded/no-overflow1280/390/320 checks and final
+build pass; main reviewed visibly bold final screenshot. Evidence in outer
+review-notes/robinson-stadium-2027/section-heading-checks.json and
+section-headings-desktop.jpg; exact font provenance in avenir-heavy-source.json.
+
+Application/admin/schema/runtime and unrelated dirty work remain untouched.
+Next: accepted-page integration
+through the existing tenant/save/media contracts. Shared ownership remains with
+main. No production/hosted write, commit, push or deployment.
+
+## 2026-10-13 — Replacement Details font and meal-pass red
+
+Christian supplied OnlineWebFonts_COM_599a27c4bba399ca288a5770c37275d4.zip to
+replace the prior Details font, then requested the meal-pass image's red.
+Only isolated Details now uses genuine supplied Phosphor W00 Regular WOFF2
+and #CA2F3B, sampled identically from the original/served meal-pass graphic.
+Prior CG source retained. Other page red, approved layout/steps and Robinson
+remain untouched.1280/390/320 font load/color/no-overflow and exact unchanged
+step geometry verified; main reviewed screenshot. Evidence: outer
+review-notes/chick-fil-a-2027/details-w00-checks.json and
+details-w00-review-desktop.jpg. Source provenance in owned preview.
+Next: accepted-page integration under existing tenant/save/media contracts.
+No application/admin/database/runtime/global-font/hosted/deployment mutation.
+
+
+## 2026-10-13 — Accepted visitor pages integrated locally
+
+Christian explicitly requested subagents to implement the accepted Chick-fil-A
+and Robinson Stadium designs. The two page workers own scoped renderers, content
+models, editors and assets; the main agent owns shared routes, atomic Save/API,
+migrations, generated types, local publication and combined verification. Both
+public routes and independent admin editors now run on local3198.
+
+Migrations20261014001648 and20261014002445 applied only to guarded isolated
+55321/55322 test tenant, without a reset. Eleven media references use seven new
+normal-pipeline publications plus four verified existing Tickets assets. Original
+content/media identities were preserved. Independent strict revisions, actor
+receipts, recovery, RLS and media reference guards cover both pages. Full suite
+passes222 files/1999 tests; combined build, TypeScript and scoped lint pass.
+
+Desktop/phone public verification and normal editor persistence acceptance are
+in progress. A Chrome hidden-srcDoc preview root timing issue was found and
+fixed with a narrow shared guard; final rebuild/retest pending. Physical-device
+and VoiceOver acceptance remain open. No commit, push, hosted write, export or
+deployment; previous Homepage/About/Crest/Tickets/Shop work remains preserved.
+
+
+## Final local acceptance — 2026-10-13
+
+Both accepted visitor pages are complete locally on3198, with public/admin
+routes, independent atomic Save, editable copy/sections/images, supplied W00
+meal-pass red and real Avenir Heavy headings. Desktop/phone-width saves and
+normal meal-pass/photo/map uploads passed; approved copy and phone crops restored.
+Final11 media references/checksums pass; shared original Tickets artwork remains
+published. Final combined build/lint/types pass;222-file/1999-test full suite
+and final7-file/25-test focused rerun pass. Source-freeze pending notes above are
+historical. Canonical integration details and final evidence are in
+docs/rose-city-stadium-food-2027-design.md, under Final local implementation
+acceptance. Physical-device/VoiceOver and existing release gates remain open;
+no commit/push/hosted write/deployment. User local review is the next step.
+
+
+## 2026-10-13 — Roster implemented locally (RC2027-ROSTER)
+
+Approved reference cards and restored original modal now render at
+http://rose-city.localhost:3198/roster for cinematic@2 only. Museo/Avenir, red
+accents, 260ms desktop-only hover, phone tap sheet and original carousel/Bio/
+stats retained. Shared player/admin/query contracts and other templates remain.
+Unique cinematic-roster/squad classes prevent old Clubhouse CSS collisions.
+
+Narrow local-only import carries33 profiles/two action photos and30+3 old
+2025–26 aggregate rows; creates active2027 with24+3 all-zero rows for27 active
+players.41 existing normalized media assets copied with exact delivered hashes/
+UUID paths. Serializable insert, empty-target guard, unrelated table/media
+digest checks and repeat-import refusal pass. No broad seed/reset/hosted writes.
+Historical fixtures remain in the unchanged source; this is roster rehearsal.
+
+Final build/types/lint,224 files/2004 tests, actual1280/390/320 roster/modal/
+hover/carousel/focus checks and independent SQL history/cohort comparison pass.
+179 pre-existing WIP files preserved. Source/ownership/receipt/release details:
+docs/rose-city-roster-2027-implementation.md. Evidence: outer
+review-notes/roster-2027/implemented/. Combined final app remains on3198;
+Chick-fil-A/Stadium/Shop/Tickets/Crest source, rows and approved shell preserved.
+No commit/push/deployment/production launch; static phone preview unchanged.
+Physical-phone/site-wide release gates remain open. Next: actual roster review,
+then separately authorized release preparation with fresh source reconciliation.
+
+
+RC2027-ROSTER concurrency note: after the verified roster build, Schedule/About
+implementation chats became active. Schedule owns newer shared league-logo
+fields/admin mapping and captured roster hashes; it explicitly preserves roster
+and season activation. These later changes are retained.179-file audit shows
+no unrelated edits by the roster task; the admin-client delta is exactly two
+Schedule-owned additions. Keep the existing roster build3198 running; fresh
+combined verification/runtime integration belongs to the active page workers.
+Roster source/data/acceptance details remain in its scoped implementation doc.
+
+
+## 2026-10-13 — RC2027-ROSTER admin persistence follow-up passed
+
+Initial roster acceptance did not test admin add/edit; this follow-up now passes actual authenticated local portal creation for a field player and Goalkeeper, automatic zero-stat2027 seeding, desktop/390px profile Save changes/reload/public-card+modal reflection, and field season-stat Save/reload/public reflection. No console errors or app-source changes. Two disposable QA players and their stats were removed by exact-ID local guards; all original33 profiles, seasons, historical/new aggregate rows and41 roster/flag media are byte-equivalent JSON to the captured baseline. Public roster restored to27 cards. Concurrent About media changes retained. No runtime restart, broad reset, production mutation or deployment. Photo uploads/native-device acceptance are not claimed. Scoped details/evidence: docs/rose-city-roster-2027-implementation.md and outer review-notes/roster-2027/implemented/admin-persistence-verification.json. RC2027-ROSTER source/local acceptance remains complete; site-wide release gates remain open.
+
+
+## 2026-10-13 — Schedule implemented locally (RC2027-SCHEDULE)
+
+Status: source/local browser and persistence acceptance complete; physical-phone
+and hosted release gates open. Public/admin Schedule for cinematic@2 now uses
+the accepted white/dark Next rows, soft separator, spaced scores/badges, four
+initial cards, four-at-a-time Load more and hidden phone numbers. Active season
+fixtures/club timezone remain the source of truth; other templates are preserved.
+All three logo types are editable: opponent/sponsor retain their owners; League
+logo uses new nullable match URL/asset fields, composite tenant FK, published
+media guards, reference-safe cleanup, admin upload/replace/remove and hydrated
+public/admin reads. No hardcoded UPSL/sponsor fixture in the renderer.
+
+Guarded local seed reused the roster-owned2027 season and copied only the
+approved three old results plus next AMSG fixture; nine reviewed logos normal
+published with delivered hashes. No season creation/activation or roster writes.
+Real desktop replacement → Save/reload → public and phone removal/restoration
+pass for all three images. Final twelve logo checksums match accepted artwork.
+Actual13-game keyboard batches4→8→12→13 and desktop mouse activation pass;
+exact nine temporary fixtures removed.1440/390/320: no overflow/missing images,
+phone numbers hidden. Final226 files/2010 tests, types/lint/build, exact generated
+Schedule type check and scoped whitespace pass; existing assertions retained.
+
+Final exact seven roster file hashes and five roster table digests match the
+starting baseline. Concurrent roster QA Field/Keeper tests were left intact
+and baseline rechecked after that chat removed them. No rollback/reset. One
+final build accidentally ran to completion in the shared checkout; it changed
+generated build output only, not roster source. Shared servers were never
+restarted. The final build/server is separate on3211, preserving the ongoing
+About work and all original dirty changes. No commit/push/hosted writes/deploy.
+
+Actual local: http://rose-city.localhost:3211/schedule; admin /admin/schedule.
+Source/ownership/verification/release: docs/rose-city-schedule-2027-implementation.md.
+Evidence: outer review-notes/schedule-2027/implemented. Next: user/physical-phone
+review; separately approved combined rollout, migration/media publication and
+full-site release checks.3211 serves the tested Schedule snapshot;3198 retains
+its existing process, and the static phone deployment is unchanged.
+
+
+## 2026-10-13 — Approved About page implemented and verified locally
+
+RC2027-ABOUT: source/local acceptance complete. Christian approved the preview
+and requested implementation with admin editability. Actual verified public
+page http://rose-city.localhost:3208/club/about; editor /admin/about. Source,
+files, persistence/media/layout evidence and release boundaries are documented
+in docs/rose-city-about-2027-implementation.md.
+
+CinematicAbout/about.css preserve approved copy/photo/layout with Robinson
+Stadium wording. Tenant route and admin canvas dispatch only cinematic@2 to
+the same renderer. Existing content fields, Save/recovery/revisions/receipts,
+image pipeline and Crest canvas retained. No schema/API change. Guarded local
+seed imported only the previously absent About row and original photo, and
+confirmed protected page/player/season/match/branding content unchanged.
+
+Real admin Save/reload/public reflection and independent SQL confirmed all
+copy, button destination and actual photo replacement. Phone inspector Save
+worked; approved copy restored. Published original-normalized photo/checksum
+verified. Actual public1280 plus390/320 QA-frame layout checks show no overflow.
+Full228 files/2014 tests, types/lint/full Next build/whitespace pass.
+
+Independent build/runtime in /private/tmp/rose-city-about-runtime on3208; older
+3198 preserved. Extra temporary QA server stopped. No commit/push, hosted
+content/schema/storage/deployment or production launch. Physical-device and
+site-wide release gates remain. Next: local page/editor review, shared runtime
+consolidation when appropriate and separately authorized release work.
+
+## 2026-11-03 — Remaining-page source audit and Foothill route
+
+Sam's Dropbox references were inspected against the November 3 Notion audit.
+The existing `/stadium` public/admin implementation uses the **Bus Route**
+reference, while `Rose City FC Robinson Stadium website 2027.jpg` depicts a
+different page. A new `cinematic@2`-only `/stadium/foothill-transit` route now
+reuses that existing Bus Route content without moving/deleting its local row
+or media. `/stadium` and `/admin/stadium` still share it and need a separate
+Robinson implementation/editor. Parking must become a link to
+`/stadium#parking-lot-no-5` after the Robinson page exists.
+
+Local Chrome desktop/390px rendered the Foothill page and phone menu; a local
+owner subtitle edit saved, survived editor reload, appeared publicly, and was
+restored through a second save. Source and editing decisions for every remaining
+page, as well as requested missing materials, are in
+`docs/rose-city-remaining-pages-2027.md`. The Foothill design is ready for
+Christian's preview, not yet accepted. Preserve all preexisting uncommitted
+work. No push, merge, deployment or hosted data/media operation occurred.
+
+Sam added `Rose City FC x Robinson Stadium layout diagram x sponsors final
+vertical 2027 grayscale blank.jpg` to Dropbox on November 3. The 8978×5516
+original matches the seating/vendor map near the top of the Robinson reference
+and is archived as outer `assets/originals/remaining-pages/robinson-layout-diagram-original.jpg`
+(SHA-256 `809585a4ffa24dee414ab397cc7333feb1e480451ee49d13b7eab8446e9cfcb9`).
+The next isolated design preview is in outer workspace
+`design-explorations/partners-2027/`: Club Partners and Partnership
+Opportunities share six available original logos and the current application
+header/footer. The missing MVMNT CULTR original and color Modern Woodmen
+version are clearly marked; owner editing and app routes await design review.
+Vite build and real Chrome desktop/390px phone visual checks passed. Review
+server is local on port3202. No hosted or production change.
+
+Robinson Stadium now has an isolated responsive preview at outer
+`design-explorations/robinson-2027/` on local port3203. It uses the new
+standalone map, existing approved Chick-fil-A and Foothill artwork, and the
+actual cinematic header/footer. The conflicting dedication years and sample
+fixture are excluded; stadium facts/history need club confirmation. Desktop
+images and width, initial390px phone layout, and the parking anchor were
+checked. A later phone full-size-map link/copy revision builds, but browser
+control timed out before its final phone visual recheck. The app `/stadium`
+route and editor are unchanged, awaiting design review and distinct content
+ownership. No push, merge, deployment, or hosted mutation.
+
+Christian supplied the 2027 Tryouts and Media Credential Request Google Form
+URLs on November 3. The exact links are in `docs/rose-city-remaining-pages-2027.md`.
+The `cinematic@2` Tryouts and Media Credentials menu routes now read separate,
+owner-editable HTTPS destinations from tenant-owned Homepage Navigation content.
+Other Tryouts templates are unchanged. Migration `20261103010000` permits the
+new optional JSON fields; the guarded local seed applied it and saved both
+links only in the isolated Rose City test tenant, preserving all other homepage
+content. Fourteen focused contracts and TypeScript passed. Real local owner UI
+saved a temporary blank Media destination, retained it after reload, restored
+the supplied URL, and retained both original links after final reload. Desktop
+Club navigation reached the Tryouts form; 390px Club and Stadium menus exposed
+the Tryouts and Media Credentials links. No form submission, hosted write, push,
+merge, or deployment.
+
+Christian then replaced the Media Credentials destination with
+`https://forms.gle/jG5yF7kjhC93MLsA6` on November 3. The short link resolves
+to the Rose City Media Credential Request form. The guarded local seed changed
+only this tenant's destination, and the real local route response points to it.
+Christian confirmed Contact's Media button shares that same destination;
+Tryouts, Tickets and Partnerships use their matching site routes. Contact's
+Information target is still to come. A Contact design preview at outer
+`design-explorations/contact-2027/` on port 3204 uses Sam's reference, the
+current cinematic shell, and compact cards for desktop and 390px phone widths.
+Christian compared the heading with Sam's reference; the isolated preview now has a tighter heading/subtitle gap and no extra blank area under the cards. Its Vite build passes, and real browser 1280px/320px full-size checks show no horizontal overflow or clipped cards. Screenshots are in the preview directory as `contact-desktop-1280-verified.png` and `contact-phone-320-verified.png`.
+The app Contact route/editor remain unchanged. Christian requested every page
+be checked for screen fit, including horizontal overflow, clipped controls,
+and unnecessary vertical space. No hosted mutation, push, merge, or deploy.
+
+## 2026-11-03 — Approved Contact page implemented locally
+
+RC2027-CONTACT has source and local browser acceptance. Christian accepted the
+tighter Contact preview as good enough. The cinematic@2 public `/contact` page
+now renders Sam's five-row design from an independent tenant-owned content row.
+The owner `/admin/contact` editor saves the heading, subtitle, and five prompt
+and button labels. Four confirmed actions use fixed site routes; Information
+stays inactive until Christian supplies its destination. Academy and Editorial
+Contact routes and editors are unchanged.
+
+Migration `20261103020000` adds the content table, RLS, validation, independent
+revision, and actor-scoped save receipts. A guarded script seeded only the
+isolated Rose City test tenant at local ports 55321/55322 and verified that the
+Homepage and legacy Contact tables did not change. The complete isolated suite
+passed 232 files and 2,041 tests. TypeScript, scoped lint, and whitespace
+checks passed. The real public page fit 320px, 390px, 768px, 1280px, and 1440px
+without horizontal overflow or clipped cards. Phone Community navigation
+reached Contact. A temporary owner subtitle edit saved, survived editor reload,
+appeared publicly, and was restored by a second save. The 390px editor had no
+horizontal overflow. Screenshots are in outer
+`review-notes/contact-2027/implemented/`.
+
+Next: obtain Information's actual destination, then verify that owner save,
+reload, and the public button. Physical-phone review and the site-wide screen
+fit gate remain open. No hosted content, push, merge, deploy, or production
+launch was changed.
+
+## 2026-11-03 — National Anthem Request link added locally
+
+Christian supplied `https://forms.gle/tAezhCRdXH1Z1bMR7`; it resolves to the
+RCFC National Anthem Vocalist Request Form. The cinematic@2 Community menu
+route `/community/national-anthem` now redirects through a tenant-owned,
+owner-editable Homepage Navigation field. A blank field shows the existing
+placeholder. Other templates remain gated.
+
+Migration `20261103030000` permits the optional destination and older saved
+rows continue to load with a blank value. The guarded local seed updated only
+the isolated Rose City test tenant at 55321/55322 and preserved the rest of
+its Homepage JSON. A real owner UI blank Save survived reload and displayed
+the placeholder; a second Save restored the supplied URL, survived reload,
+and the route opened the confirmed form. The phone and desktop Community menus
+exposed the route. No form was submitted. The complete local suite passed 232
+files and 2,044 tests; TypeScript, targeted lint, and whitespace checks passed.
+The owner editor screenshot is in outer `review-notes/national-anthem-2027/`.
+No hosted write, push, merge, deployment, or production launch occurred.
+
+## 2026-11-03 — Desktop screen fit and Partners spacing follow-up
+
+Christian clarified that the screen-fit concern is primarily desktop, and compared the isolated Club Partners preview with Sam’s reference. The outer `design-explorations/partners-2027/preview.css` now removes the forced intro height, widens desktop content, and shortens logo slots and phone gaps. The 1280px first partner grid fell from 937px to 634px; the 1920px desktop screenshot is `design-explorations/partners-2027/club-partners-desktop-1920-compact.png`. Vite build passed. Both isolated partner previews rendered at 320, 390, 768, 1280, and 1440px without horizontal overflow or broken images. Exact stacked logos in Sam’s reference still need their standalone originals; existing source logos are horizontal. This is still a design preview, not an app route or owner editor.
+
+The rendered local app width scan covered Home, About, Crest, Roster, Schedule, Shop, Tickets, the current Bus Route `/stadium`, Chick-fil-A, Foothill Transit, and Contact at those same five widths; none had document-level horizontal overflow. Roster passed on retry after a transient local timeout. Several desktop and phone first screens were visually sampled, but image loads were incomplete in some early captures. The screen-fit gate remains open for owner-edited content, unimplemented pages, and physical-device acceptance. Detail is in `docs/rose-city-remaining-pages-2027.md`. Preserve the dirty worktree; no push, merge, deployment, or hosted write occurred.
+
+Christian accepted the revised Club Partners desktop preview on 2026-11-03. This is design signoff only: `/sponsors` still shows a placeholder for `cinematic@2`, and the existing owner Sponsors editor only manages carousel/footer logos. Implement the approved page with independent owner-editable content and ordered partner artwork in a separate local package.
+
+Christian then accepted all three remaining review items: the Robinson Stadium preview, Partnership Opportunities preview, and local Foothill Transit page. Foothill remains locally implemented with physical-phone review open. Robinson and both partner app routes still need independent owner-editable implementation, and Robinson facts/history require club confirmation before publication. No push, merge, deployment, or hosted content changed.
+
+Christian clarified that Sam will confirm the stadium rules/history and the news, injury, and match details. Treat Sam as the follow-up source for those facts; no fact is confirmed merely by this assignment. The reference mockups remain unverified until he supplies final details.
+
+## 2026-11-04 — Robinson Stadium reference confirmation and local route
+
+Christian confirmed the Home Field Advantage history and quote, Stadium Info values, Food & Beverage content, and all directions in Sam's Robinson reference. The isolated preview and local `/stadium` route now show that copy with obvious typos corrected. The reference gives 2001 in the story and 1999 in the info card; both remain visible. The `/stadium` page uses the original seating diagram and lockers image, and its Food & Beverage title band, shadow, meal pass sizing and placement were compared with Sam's 900px screenshot. The existing Foothill Transit content remains on `/stadium/foothill-transit`. Stadium Parking points to `/stadium#parking-lot-no-5`; `/stadium/parking` redirects there. Match and ticket actions still use Schedule and Tickets data. The Robinson story/info/directions/images are static in the local route, so a separate owner editor and content record remain a release task.
+
+The isolated preview build and app TypeScript/scoped lint passed. Eight focused Stadium/Foothill contracts passed. The live local route rendered at 900px, 1280px, and 390px with all images loaded, no page errors, and no horizontal overflow. Browser navigation confirmed the parking redirect and anchor. No commit, push, merge, hosted write, or deployment was performed.
+
+Later 2026-11-04 visual correction: Christian compared the story and directions with Sam's crops. The local route and isolated preview now share the same story width and spacing, regular quote and left attribution, right-aligned Stadium Info rows, and compact directions with indented paragraphs and blue bullets. Dominant source-image pixels were sampled for Yes `#90cf28`, No `#e93b30`, and transit bullets `#508dc4`. The 900px browser captures of story, info, and directions are in outer `review-notes/robinson-stadium-2027/confirmed/`. At 900px, the app and preview have matching measured section heights and colors. The preview build, app TypeScript/scoped lint, eight focused contracts, and browser width checks at 320, 390, 768, 1280, and 1440px pass without horizontal overflow, broken images, or page errors. No release action occurred.

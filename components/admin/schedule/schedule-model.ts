@@ -2,6 +2,7 @@ import { formatClubDate } from "@/lib/club-time";
 import { createClient } from "@/lib/admin-client";
 import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { EMPTY_MATCH_SUMMARY, type MatchSummary } from "@/lib/match-summary";
 
 export type Match = {
   id: string;
@@ -11,6 +12,7 @@ export type Match = {
   opponent_short_name: string | null;
   opponent_logo_url: string | null;
   competition: string | null;
+  league_logo_url: string | null;
   sponsor_name: string | null;
   sponsor_logo_url: string | null;
   sponsor_link: string | null;
@@ -21,19 +23,23 @@ export type Match = {
   state: string | null;
   rose_city_score: number | null;
   opponent_score: number | null;
+  replay_video_url: string | null;
+  attendance: number | null;
+  /** Stored Match Summary (lib/match-summary.ts); read safely when a match is opened. */
+  summary: unknown;
   season_id: string;
 };
 
-export type FormState = Omit<Match, "id">;
+export type FormState = Omit<Match, "id" | "summary"> & { summary: MatchSummary };
 
 export type ResultFilter = "all" | "home" | "away" | "missing";
 
 export function emptyForm(seasonId = ""): FormState {
   return {
-    date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "",
+    date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "", league_logo_url: null,
     sponsor_name: null, sponsor_logo_url: null, sponsor_link: null,
     home: true, venue: "", address: "", city: "", state: "",
-    rose_city_score: null, opponent_score: null, season_id: seasonId,
+    rose_city_score: null, opponent_score: null, replay_video_url: null, attendance: null, summary: structuredClone(EMPTY_MATCH_SUMMARY), season_id: seasonId,
   };
 }
 
@@ -141,7 +147,7 @@ export async function deleteUnusedMatchImageUrls({
 }: {
   bucket: string;
   urls: Array<string | null | undefined>;
-  column: "opponent_logo_url" | "sponsor_logo_url";
+  column: "opponent_logo_url" | "sponsor_logo_url" | "league_logo_url";
   allowedPrefixes: string[];
 }) {
   const supabase = createClient();

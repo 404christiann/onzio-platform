@@ -6,6 +6,8 @@ import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
 import { EditableRegion } from "@/components/admin/ui/EditableRegion";
 import AcademyAboutPage from "@/components/sites/diverse-city/AcademyAboutPage";
 import ClubLogoPageClient from "@/components/ClubLogoPageClient";
+import CinematicCrest from "@/components/cinematic/CinematicCrest";
+import CinematicAbout from "@/components/cinematic/CinematicAbout";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
 import TemplateFontScope from "@/components/TemplateFontScope";
 import { useClubContext } from "@/components/ClubContextProvider";
@@ -250,7 +252,11 @@ export default function AboutPageCanvas(props: Props) {
   const club = useClubContext();
   let rendered: { content: ReactNode; imageSection: "story" | "values" };
   if (props.page === "logo") {
-    rendered = { content: <ClubLogoPageClient content={props.logo} animate={false} editorEmptySections />, imageSection: "story" };
+    rendered = club.presentationTemplateKey === "cinematic@2"
+      ? { content: <CinematicCrest content={props.logo} editorEmptySections />, imageSection: "story" }
+      : { content: <ClubLogoPageClient content={props.logo} animate={false} editorEmptySections />, imageSection: "story" };
+  } else if (club.presentationTemplateKey === "cinematic@2") {
+    rendered = { content: <CinematicAbout content={props.about} editorEmptySections />, imageSection: "story" };
   } else if (club.presentationTemplateKey === "clubhouse@1") {
     rendered = { content: <ClubhouseAboutPage content={props.about} sponsors={props.sponsors} renderHeading={props.classic ? heading => <header data-about-editor-section="hero" style={{ position: "relative", zIndex: 5 }}>{heading}</header> : undefined} />, imageSection: "values" };
   } else {

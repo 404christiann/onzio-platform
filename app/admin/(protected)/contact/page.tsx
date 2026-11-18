@@ -12,6 +12,7 @@ import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import ContactPageCanvas, { type ContactCanvasTarget } from "@/components/admin/contact/ContactPageCanvas";
+import CinematicContactEditor from "@/components/admin/contact/CinematicContactEditor";
 import { buildContactPagePayload, buildContactProfilePayload, emptyContactDraft, validateContactDraft, type ContactDraft, type ContactPageDraft, type ContactProfileDraft, type ContactValidationErrors } from "@/lib/contact-admin";
 import { type ContactEditorSaveRequest, type ContactEditorSnapshot } from "@/lib/contact-page-editor/contract";
 import type { ContactContent } from "@/lib/queries";
@@ -309,7 +310,9 @@ function ContactEditor() {
 export default function AdminContactPage() {
   const { portal } = useAdminPortal();
   const club = useClubContext();
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicContactEditor />;
   if (!codeSiteAdminFor(club)?.contact.routeVisible) {
+
     return <AdminPage><AdminPageHeader eyebrow="Public website" title="Contact" description="This website design does not publish a Contact page." /></AdminPage>;
   }
   return portal === "reimagined" ? <ContactEditor /> : <ClassicContactEditor />;

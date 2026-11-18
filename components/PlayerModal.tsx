@@ -17,9 +17,10 @@ interface Props {
   player: Player;
   onClose: () => void;
   seasonLabel?: string;
+  presentation?: "cinematic";
 }
 
-export default function PlayerModal({ player, onClose, seasonLabel = "Current Season" }: Props) {
+export default function PlayerModal({ player, onClose, seasonLabel = "Current Season", presentation }: Props) {
   const { clubLogoUrl } = useClubBranding();
   const stats = player.stats;
 
@@ -65,7 +66,9 @@ export default function PlayerModal({ player, onClose, seasonLabel = "Current Se
   }
 
   return (
-    <Dialog open={true} onClose={onClose} className="relative z-[100]">
+    <Dialog open={true} onClose={onClose}
+      className={presentation === "cinematic" ? "relative z-[100] cinematic-player-modal" : "relative z-[100]"}
+      aria-label={presentation === "cinematic" ? `${player.name.trim()} profile` : undefined}>
 
       {/* Backdrop */}
       <DialogBackdrop

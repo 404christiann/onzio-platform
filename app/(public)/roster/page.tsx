@@ -14,6 +14,7 @@ import { Player, Staff } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import AcademyRosterPage from "@/components/sites/diverse-city/AcademyRosterPage";
 import ClubhouseRosterPage from "@/components/ClubhouseRosterPage";
+import CinematicRosterPage from "@/components/cinematic/CinematicRosterPage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -68,6 +69,7 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
 
 export default function RosterPage() {
   const club = useClubContext();
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicRosterPage />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseRosterPage />;
   if (codeSiteFor(club) === "diverse-city") return <AcademyRosterPage />;
   return <LegacyRosterPage />;

@@ -494,6 +494,20 @@ describe('fetchSchedule sponsor mapping', () => {
       scorers: [],
     }])
   })
+
+  it('carries a played match replay video and its scorers to the public fixture model', async () => {
+    mockFrom.mockReturnValue(chain({
+      data: [{
+        id: 'match-replay', date: '2027-03-20', time: '19:45', opponent: 'Ocelot FC', home: true, venue: 'Robinson Stadium',
+        rose_city_score: 1, opponent_score: 0, scorers: ["J. Hernandez (38′)"],
+        replay_video_url: 'https://www.youtube.com/embed/fJf_A4LdKDw?rel=0',
+      }],
+      error: null,
+    }))
+    const [fixture] = await fetchSchedule()
+    expect(fixture.replayVideoUrl).toBe('https://www.youtube.com/embed/fJf_A4LdKDw?rel=0')
+    expect(fixture.scorers).toEqual(["J. Hernandez (38′)"])
+  })
 })
 
 // ─────────────────────────────────────────────────────────────

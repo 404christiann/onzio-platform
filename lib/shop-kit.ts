@@ -6,22 +6,26 @@ export function titleLines(title: string): string[] {
   return title.split("\n");
 }
 
+/** Every template except cinematic@2 (main's limit, onzio_private.validate_shop_section). */
 export const MAX_KIT_BULLET_POINTS = 8;
+/** cinematic@2 only; mirrors onzio_private.validate_cinematic_shop_section. */
+export const CINEMATIC_KIT_BULLET_POINTS = 10;
 export const MAX_KIT_PHOTOS = 6;
 
 /** Trims, removes empty entries, and caps the list to the public layout limit. */
-export function cleanKitBulletPoints(points: readonly string[]): string[] {
+export function cleanKitBulletPoints(points: readonly string[], max = MAX_KIT_BULLET_POINTS): string[] {
   return points
     .map((point) => point.trim())
     .filter(Boolean)
-    .slice(0, MAX_KIT_BULLET_POINTS);
+    .slice(0, max);
 }
 
 /** A kit with no saved points shows none; it never borrows another club's. */
-export function normalizeKitBulletPoints(value: unknown): string[] {
+export function normalizeKitBulletPoints(value: unknown, max = MAX_KIT_BULLET_POINTS): string[] {
   if (!Array.isArray(value)) return [];
   return cleanKitBulletPoints(
     value.filter((point): point is string => typeof point === "string"),
+    max,
   );
 }
 
