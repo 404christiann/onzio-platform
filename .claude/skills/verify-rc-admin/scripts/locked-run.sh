@@ -10,7 +10,13 @@ HEAD_URL="http://rose-city.localhost:$RCV_HEAD_PORT" BASE_URL="http://rose-city.
 AUTH="$CACHE/auth-$$.json"
 pids=()
 # Kill exactly what this run started (the server pid and any child it forked), never by name.
-stop() { for p in ${pids[@]+"${pids[@]}"}; do pkill -P "$p" 2>/dev/null; kill "$p" 2>/dev/null; done; rm -f "$CACHE"/server-$$-*.pid "$AUTH"; }
+stop() {
+  for p in ${pids[@]+"${pids[@]}"}; do pkill -P "$p" 2>/dev/null; kill "$p" 2>/dev/null; done
+  # We hold the DB lock, so whatever still listens on our two ports is ours. A leaked next-server keeps the lock's file
+  # descriptor open and blocks every other worker's locked run until it is killed.
+  for port in "$RCV_HEAD_PORT" "$RCV_BASE_PORT"; do kill $(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null) 2>/dev/null; done
+  rm -f "$CACHE"/server-$$-*.pid "$AUTH"
+}
 trap stop EXIT
 fail() { echo "locked-run: $*" >&2; echo "{\"gate\":\"setup\",\"error\":\"$*\"}" > "$RCV_OUT/results/setup.json"; exit 1; }
 
@@ -39,7 +45,17 @@ newest="$(ls "$RCV_WT/supabase/migrations" | tail -1 | cut -d_ -f1)"
 [[ "$ledger" == "$newest" ]] || fail "ledger $ledger != newest migration $newest after reset"
 
 echo "locked-run: seed Rose City + Diverse City"
-"$RCV_SKILL/scripts/seed-local.sh" "$RCV_BASE_SRC" > "$LOG/seed.log" 2>&1 || { tail -15 "$LOG/seed.log" >&2; fail "seed failed (see logs/seed.log)"; }
+# Right after a reset PostgREST can still serve the old schema cache ("Could not query the database for the schema cache"):
+# ask it to reload and retry the seed a few times (local stack only; the seed is upserts).
+seeded=0
+for attempt in 1 2 3; do
+  docker exec supabase_db_onzio-platform-contracts psql -U postgres -qAtc "NOTIFY pgrst, 'reload schema'" >/dev/null 2>&1 || true
+  sleep $((attempt * 3))
+  "$RCV_SKILL/scripts/seed-local.sh" "$RCV_BASE_SRC" > "$LOG/seed.log" 2>&1 && { seeded=1; break; }
+  grep -q "schema cache" "$LOG/seed.log" || break
+  echo "locked-run: seed hit a stale schema cache (attempt $attempt), retrying"
+done
+[[ $seeded == 1 ]] || { tail -15 "$LOG/seed.log" >&2; fail "seed failed (see logs/seed.log)"; }
 
 start() { # <dir> <port> <name>
   # exec node directly so $! is the server itself (npx would leave next-server as an orphaned child)
@@ -62,7 +78,10 @@ echo "locked-run: sign in (Inbucket code)"
 (cd "$RCV_WT" && node "$RCV_SKILL/scripts/sign-in.mjs" "$HEAD_URL" "$AUTH" > "$LOG/sign-in.log" 2>&1) || fail "sign-in failed (see logs/sign-in.log)"
 
 echo "locked-run: browser gates 2, 3, 4, 6"
-(cd "$RCV_WT" && RCV_HEAD_URL="$HEAD_URL" RCV_MAIN_URL="$BASE_URL" RCV_STORAGE="$AUTH" RCV_OUT="$RCV_OUT" \
+# Playwright runs from the repo that holds this skill (its node_modules), not from the package worktree: the spec imports
+# @playwright/test from here, and two copies of it in one run is an error. Same directory when the skill lives in the package.
+SKILL_REPO="$(cd "$RCV_SKILL/../../.." && pwd)"
+(cd "$SKILL_REPO" && RCV_HEAD_URL="$HEAD_URL" RCV_MAIN_URL="$BASE_URL" RCV_STORAGE="$AUTH" RCV_OUT="$RCV_OUT" \
   RCV_ROUTE="$RCV_ROUTE" RCV_TOUCHED="$RCV_TOUCHED" RCV_SHARED_FIX="$RCV_SHARED_FIX" \
   npx playwright test --config="$RCV_SKILL/playwright.config.ts" > "$LOG/playwright.log" 2>&1)
 code=$?

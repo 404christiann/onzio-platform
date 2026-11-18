@@ -107,6 +107,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   );
   const breadcrumb = getAdminBreadcrumb(pathname, accessContext);
   const topTrail = shellTopTrail(breadcrumb, pageHasFrame);
+  const slotTrail = shellTopTrail(breadcrumb, false); // what the slot holds; hidden, not removed, on a framed page
   const activeGroup = getAdminGroupForPathname(pathname, accessContext);
   const [openGroupKey, setOpenGroupKey] = useState(activeGroup);
 
@@ -360,8 +361,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           >
             <Menu className="size-5" aria-hidden="true" />
           </button>
-          <div className="hidden min-w-0 xl:block">
-            {topTrail === "none" ? null : topTrail === "breadcrumb" && breadcrumb ? (
+          {/* A framed page keeps the slot and its content but invisible (no box, no landmark, no focus), so the search box and
+              theme button never move when the page registers its frame after first paint. */}
+          <div className={topTrail === "none" ? "invisible hidden min-w-0 xl:block" : "hidden min-w-0 xl:block"} aria-hidden={topTrail === "none" || undefined}>
+            {slotTrail === "breadcrumb" && breadcrumb ? (
               <nav aria-label="Breadcrumb">
                 <ol className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                   {breadcrumb.map((crumb, index) => (

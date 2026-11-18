@@ -10,6 +10,7 @@ export {
   type PageSaveFailure,
   type PageSaveState,
 } from "./pageSaveState";
+export { KIT_EDIT_ATTRIBUTE, KIT_EDIT_PROPS, KIT_EDIT_SELECTOR } from "./kitEdit";
 export { PreviewCards, type PreviewCardItem, type PreviewCardsProps } from "./PreviewCards";
 export { applyInertOutside, tabbablesIn, wrapTarget } from "./inertOutside";
 export { SectionCards, hasVisibilityControl, type SectionCardItem, type SectionCardsProps } from "./SectionCards";
