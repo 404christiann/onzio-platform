@@ -1,6 +1,6 @@
 # Rose City 2027 font inputs
 
-Launch is on hold at Christian's request on 2026-10-13. This work is local only.
+Launch was on hold at Christian's request from 2026-10-13. On 2026-11-17 Christian accepted these fonts for launch; see Launch decision below.
 
 ## Supplied archives
 
@@ -41,8 +41,8 @@ suite was not repeated. No purchase, donation, hosted change or publication.
 Christian confirmed Avenir during testing-preview preparation. The supplied
 Medium font is now included in the protected Vercel phone preview; its hosted
 bytes match the supplied local file. No new licensing receipt was inspected.
-The main checkout retains its existing local-only exclusions pending a future
-production packaging review; production remains on hold. LEMON MILK receipt
+The main checkout still keeps the supplied Avenir files out of Git and Vercel;
+production loads them from the onzio-fonts bucket (see Launch decision below). LEMON MILK receipt
 status is unchanged. See `rose-city-2027-phone-preview.md`.
 
 ## Launch decision — 2026-11-17
