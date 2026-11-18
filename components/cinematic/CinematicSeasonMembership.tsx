@@ -1,13 +1,14 @@
-import type { TicketPageView } from "@/lib/cinematic-ticket-pages-content";
+import { isTicketPartShown, type TicketPageView } from "@/lib/cinematic-ticket-pages-content";
 import { TicketArt, TicketButton, TicketPageHeading, TicketTiles } from "./CinematicTicketPageParts";
 
 /** Sam's Season Ticket Membership page (2027 Final Master), opened from the Tickets menu. */
 export default function CinematicSeasonMembership({ content, placeholders = false }: { content: TicketPageView<"season-membership">; placeholders?: boolean }) {
   const { intro, pricing, button, benefits, closing, images } = content;
+  const showButton = isTicketPartShown(button);
   const column = (label: string) => label.endsWith("*") ? <>{label.slice(0, -1)}<span className="tp-star">*</span></> : label;
   return <div className="tp-page tp-season">
-    <TicketPageHeading title={content.heading.title} subtitle={content.heading.subtitle} />
-    {(intro.text.trim() || intro.highlights.length > 0 || intro.includes.length > 0) && <section className="tp-section tp-copy" aria-label="About the membership">
+    {isTicketPartShown(content.heading) && <TicketPageHeading title={content.heading.title} subtitle={content.heading.subtitle} />}
+    {isTicketPartShown(intro) && (intro.text.trim() || intro.highlights.length > 0 || intro.includes.length > 0) && <section className="tp-section tp-copy" aria-label="About the membership">
       {intro.text.trim() && <p>{intro.text}</p>}
       {intro.highlights.length > 0 && <ul className="tp-bullets">{intro.highlights.map((item, index) => <li key={index}>{item}</li>)}</ul>}
       {intro.includes.length > 0 && <>
@@ -24,7 +25,7 @@ export default function CinematicSeasonMembership({ content, placeholders = fals
         </tr>)}</tbody>
       </table>
       {pricing.footnote.trim() && <p className="tp-footnote">{pricing.footnote}</p>}
-      <TicketButton label={button.label} href={button.href} />
+      {showButton && <TicketButton label={button.label} href={button.href} />}
     </section>}
     {benefits.visible && benefits.items.length > 0 && <section className="tp-band tp-benefits" aria-labelledby="tp-benefits-title">
       <h2 id="tp-benefits-title">{benefits.heading}</h2>
@@ -32,7 +33,7 @@ export default function CinematicSeasonMembership({ content, placeholders = fals
     </section>}
     {closing.visible && <section className="tp-band tp-closing" aria-label={closing.heading || "Become a member"}>
       {closing.heading.trim() && <h2>{closing.heading}</h2>}
-      <TicketButton label={button.label} href={button.href} />
+      {showButton && <TicketButton label={button.label} href={button.href} />}
       <TicketArt image={images.ticket} label="Ticket graphic" className="tp-ticket" placeholders={placeholders} />
     </section>}
   </div>;

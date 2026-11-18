@@ -26,6 +26,9 @@ export const MAX_KBYG_TILES = 24;
 const short = z.string().max(120);
 const long = z.string().max(4000);
 const visible = z.boolean();
+/** RC-ADMIN-07: optional show/hide flag (absent = shown; hidden only on an explicit false). */
+const optionalVisible = z.boolean().optional();
+export const isTicketPartShown = (part: { visible?: boolean }): boolean => part.visible !== false;
 const link = z.string().max(2000).refine(isSafeContactInformationHref, "Use an HTTPS address, an email address (mailto:) or a page on this site.");
 const itemId = (prefix: string) => z.string().regex(new RegExp(`^${prefix}-[a-z0-9-]{1,50}$`), "Invalid item ID.");
 export const ticketPageImageSchema = z.object({ assetId: z.uuid().nullable(), alt: z.string().max(1000) }).strict();
@@ -44,14 +47,14 @@ function slotRule(fixed: readonly string[], ids: (content: never) => string[]) {
 }
 
 const seasonShape = z.object({
-  heading: z.object({ title: short, subtitle: short }).strict(),
-  intro: z.object({ text: long, highlights: z.array(long).max(MAX_SEASON_HIGHLIGHTS), includesHeading: short, includes: z.array(long).max(MAX_SEASON_INCLUDES) }).strict(),
+  heading: z.object({ title: short, subtitle: short, visible: optionalVisible }).strict(),
+  intro: z.object({ visible: optionalVisible, text: long, highlights: z.array(long).max(MAX_SEASON_HIGHLIGHTS), includesHeading: short, includes: z.array(long).max(MAX_SEASON_INCLUDES) }).strict(),
   pricing: z.object({
     visible, sectionLabel: short, columns: z.array(short).length(3),
     rows: z.array(z.object({ id: itemId("seat"), name: short, prices: z.array(z.string().max(40)).length(3) }).strict()).max(MAX_SEASON_PRICE_ROWS),
     footnote: long,
   }).strict(),
-  button: z.object({ label: z.string().max(60), href: link }).strict(),
+  button: z.object({ visible: optionalVisible, label: z.string().max(60), href: link }).strict(),
   benefits: z.object({ visible, heading: short, items: z.array(z.object({ id: itemId("benefit"), label: short }).strict()).max(MAX_SEASON_BENEFITS) }).strict(),
   closing: z.object({ visible, heading: short }).strict(),
   images,

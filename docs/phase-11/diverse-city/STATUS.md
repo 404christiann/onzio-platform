@@ -1,5 +1,55 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-07 Tickets and Season Membership show/hide flags (schema)
+
+**Agent/package:** Claude Code (Sonnet worker W7, orchestrated), RC-ADMIN-07, branch
+`claude/rc-admin-07` from `0e5ff559`. **Status:** `in_progress`: PR open for review. It merges only
+on Christian's word. Christian approved this one schema change on 2026-11-18; the other Rose City
+admin packages stay app-code-only.
+
+**Completed work:**
+
+- Optional show/hide flags. A missing flag means shown, and a section is hidden only on an explicit
+  `false`.
+  - Tickets (`lib/tickets-content.ts`): `perksVisible`, `includesVisible`, `transitVisible`,
+    `directionsVisible`, `purchaseVisible`.
+  - Season Membership (`lib/cinematic-ticket-pages-content.ts`): `visible` on `heading`, `intro` and
+    `button`. The button flag hides both Buy buttons.
+- Migration `20261118010000_cinematic_ticket_visibility_flags.sql`. It replaces
+  `onzio_private.check_tickets_content` and `check_ticket_page_content`; the only differences from
+  the originals are the new keys in the allowed lists and boolean type checks. It also adds the helper
+  `check_ticket_page_optional_visible`. Security invoker, empty search path and the same grants are
+  kept. No table, column, RPC or data change, and no backfill. Unknown keys are still rejected.
+- The public Tickets and Season renderers honour the flags.
+- No admin switches yet; RC-ADMIN-04 adds them.
+- Editors never inject the flags, so untouched saves stay byte-identical.
+
+**Files changed:** `lib/tickets-content.ts`, `lib/cinematic-ticket-pages-content.ts`,
+`components/cinematic/CinematicTickets.tsx`, `components/cinematic/CinematicSeasonMembership.tsx`,
+`components/admin/tickets/TicketsEditor.tsx` (type only), the migration,
+`tests/contracts/cinematic-ticket-visibility-flags.test.ts`,
+`tests/database/cinematic-ticket-visibility-flags.test.ts`.
+
+**Verification:**
+
+- `tsc --noEmit` clean.
+- `npm run test:unit`: 325 files, 3573 tests pass.
+- `npm run test:architecture`: 18 files pass.
+- After a local `supabase db reset` (CLI 2.109.1) the ledger's newest version is
+  `20261118010000`. In one DB-lock hold the db project ran 4 files, 68 tests, all passing: the new
+  test plus the existing Tickets and Season save tests and the purge test. Rose City's seeded Tickets
+  copy and the Season reference content save through the real RPCs and load back unchanged, with no
+  flag keys added.
+- No browser run: there is no admin UI change, and renderer tests cover the public pages.
+
+**Blockers or unresolved decisions:** Production order. The migration must be applied to production
+through the CLAUDE.md migration gate before any code that sets these flags (RC-ADMIN-04) deploys,
+because the old validator rejects the new keys. Merging this PR on its own is safe: nothing sets a
+flag yet.
+
+**Exact next step:** bot review of the PR; Christian decides the merge; apply the migration to
+production through the gate before RC-ADMIN-04 ships.
+
 ## 2026-11-18 - Rose City admin design phase (design only, no work package yet)
 
 **Agent/package:** Claude Code, design session, no work package ID yet (proposed RC-ADMIN-01 to 06).
