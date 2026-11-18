@@ -83,6 +83,21 @@ Smoke checks on `diversecityfc.com`, `www.diversecityfc.com` and `diverse-city-f
 
 **Switched back, 2026-11-11T20:51:29Z.** It was Christian's decision ("Lets undo the new admin for diverse city actually"), and he gave the go in the flip session. The dry run (same setup, `main` `e37b0048`) showed `reimagined`, `{}`, `America/Chicago` to `classic`. The command above then reconciled `admin_portal` `classic`, `admin_flags` `{}`, `time_zone` `America/Chicago`, with `time_zone_set_at` unchanged. The readback gave `needsUpdate: false`. On all three Diverse City domains, `/`, `/programs`, `/roster`, `/shop`, `/schedule` and `/admin/login` return 200, with no `UNKNOWN_TENANT`. Diverse City is on the classic admin again. It can be switched on again with the `--portal=reimagined` command above, only on Christian's go.
 
+## Rose City switched back to classic — 2026-11-17 (Pacific)
+
+**Switched back, 2026-11-18T04:17:44Z** (2026-11-17, 8:17 pm Pacific). Christian moved Rose City from the reimagined admin back to classic with manual SQL in the production project (`ioalthwsdrlzrubomrow`), not through `scripts/set-club-admin-portal.ts`. That SQL wrote the same `manual.club_admin_portal_set` audit event the script writes, with `actor_type = 'migration'`, so the row looks like the earlier flips. No dry run was recorded and the exact statement is not in the repo; `admin_flags` and `time_zone` were not read back.
+
+Readback (Christian, read-only, Supabase SQL editor, 2026-11-18), joining `onzio.audit_events` to `onzio.clubs` on `club_id` for `operation = 'manual.club_admin_portal_set'`:
+
+| club | current `admin_portal` | event at (UTC) | set to |
+| --- | --- | --- | --- |
+| rose-city | classic | 2026-11-18 04:17:44 | classic |
+| diverse-city | classic | 2026-11-11 20:51:30 | classic |
+| diverse-city | classic | 2026-11-11 20:37:30 | reimagined |
+| rose-city | classic | 2026-11-09 21:23:09 | reimagined |
+
+The two Diverse City rows and the Rose City 2026-11-09 row match `GATE-FLIP-DC` and `GATE-FLIP-RC` above. Rose City is on the classic admin. It goes back to reimagined only with the `--portal=reimagined` command in `GATE-FLIP-RC`, on Christian's go.
+
 ## Notes for the walk-through
 
 - "Saved · on your website" labels are hold-aware (decision 2): while Rose City's public site is held, the new admin says the change is saved but not yet on the website.
