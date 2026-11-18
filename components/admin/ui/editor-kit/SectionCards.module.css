@@ -1,0 +1,151 @@
+.list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: 10px;
+  list-style: none;
+}
+
+/* The skeleton uses these same classes, so the loaded list occupies exactly the space the skeleton did. */
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 16px;
+  min-block-size: 72px;
+  padding: 12px 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+.text {
+  min-inline-size: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: .9375rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.summary {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: hsl(var(--muted-foreground));
+  font-size: .8125rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A hidden section dims through colour, not opacity, so the text keeps 4.5:1 contrast. */
+.card[data-hidden] .title {
+  color: hsl(var(--muted-foreground));
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* A 44px touch target around the 24px switch, drawn by the card so AdminSwitch stays untouched. */
+.visibility :global(button[role="switch"])::after {
+  content: "";
+  position: absolute;
+  inset: -10px -6px;
+}
+
+.visibilityText {
+  min-inline-size: 3.5ch;
+  color: hsl(var(--muted-foreground));
+  font-size: .8125rem;
+}
+
+.chip {
+  display: inline-flex;
+  min-block-size: 26px;
+  padding: 0 10px;
+  align-items: center;
+  border-radius: 999px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--muted-foreground));
+  font-size: .75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.edit {
+  min-block-size: 38px;
+  min-inline-size: 64px;
+  padding: 0 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground, var(--foreground)));
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.edit:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .edit {
+    transition: transform 120ms cubic-bezier(.23, 1, .32, 1), background-color 150ms ease;
+  }
+
+  .edit:active {
+    transform: scale(.97);
+  }
+}
+
+@media (hover: hover) {
+  .edit:hover {
+    background: hsl(var(--accent));
+  }
+}
+
+@media (max-width: 767px) {
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 10px;
+    /* Title and summary row plus the controls row: fixed, so the skeleton matches it. */
+    min-block-size: 112px;
+  }
+
+  .controls {
+    justify-content: space-between;
+  }
+
+  .edit {
+    min-block-size: 44px;
+  }
+}
+
+/* Explicit lists, one explicit property list. Doubled selectors beat the portal's `.admin-press` rule, which sets a blanket transition on every property. */
+:global(.admin-portal) .edit.edit {
+  transition-property: transform, background-color, color, border-color, opacity;
+  transition-duration: 120ms, 150ms, 150ms, 150ms, 150ms;
+  transition-timing-function: cubic-bezier(.23, 1, .32, 1), ease, ease, ease, ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edit {
+    transition-property: background-color, color, opacity;
+    transition-duration: 120ms;
+    transition-timing-function: ease-out;
+  }
+}

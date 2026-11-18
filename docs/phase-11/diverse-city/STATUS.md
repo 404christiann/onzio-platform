@@ -1,5 +1,75 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-01 Rose City admin shared pieces and Hub navigation
+
+**Agent/package:** Claude Code (Sonnet worker W1, orchestrated), RC-ADMIN-01, branch
+`claude/rc-admin-01` on `2e87b594`. **Status:** `in_progress`: PR open for bot review. It merges
+only on Christian's word. App code only: no migration, schema, RPC, data, hosted, Stripe, DNS or
+email change.
+
+**Completed work:**
+
+- **Shared editor kit** in `components/admin/ui/editor-kit/`:
+  - `PageFrame`: breadcrumb, "Open page", Save, a phone bottom bar, and "Discard changes" when there
+    are unsaved edits.
+  - `PageSaveButton`: clean, dirty, saving, saved (drawn check), retry, error and conflict. It never
+    says "All changes saved", and every state reaches 4.5:1 contrast in both themes.
+  - `SectionCards` (Cards) and `PreviewCards` (Previews), each card with a show/hide switch only when
+    the schema has a flag, otherwise an "Always shown" chip.
+  - `EditorDialog`: two panes plus a split live-preview mode on desktop, and a full-screen sheet on
+    phone. It traps focus, closes on Escape, returns focus to the opener, and sets `aria-modal`
+    with the page behind it inert.
+  - Also the yellow `ValidationMessage`, the image, string-list, object-list and table fields, and
+    skeletons shaped like the loaded page (0 px shift).
+- **Hub navigation (Christian's pick, cinematic@2 only):**
+  - The Website group shows Homepage, Shop, About, News and "All website pages".
+  - The new route `/admin/website-pages` lists every Website page under Pages / Tickets and
+    stadium / Partners, with static descriptions. It returns 404 for any club without hub pages.
+  - Pages that are only on the hub highlight "All website pages", and the top bar shows
+    Website / group / page. The breadcrumb uses an optional `pageTitle`, so it reads "Robinson
+    Stadium", "Season Ticket Membership" and "Stadium Guidelines & Fan Code".
+  - Pages on the new frame register through a context, so only one Breadcrumb landmark is announced.
+  - Search and the flat route list still find every route.
+  - Diverse City and every other template are unchanged, and a contract test pins this.
+- No existing editor changes its look or behaviour in this package.
+
+**Files changed:**
+- Modified: `components/AdminShell.tsx`, `components/admin/reimagined/MoreList.tsx`,
+  `lib/admin-route-manifest.ts`, `tests/contracts/admin-route-manifest.test.ts`,
+  `tests/contracts/admin-sidebar-groups.test.ts`.
+- New: `components/admin/ui/editor-kit/`, `components/admin/adminRouteIcons.ts`,
+  `components/admin/website/AllWebsitePages.tsx`, `app/admin/(protected)/website-pages/page.tsx`,
+  `tests/contracts/admin-editor-kit.test.ts`.
+
+**Verification:**
+
+- `tsc --noEmit` clean, and `npm run test:unit` passes 326 files / 3629 tests, both re-run after
+  rebasing onto `2e87b594`.
+- verify-rc-admin on `3fc2e60c`:
+  - gate 1 scope: PASS
+  - gate 2: all 14 editor save payloads byte-identical to origin/main
+  - gate 5 repo gates: PASS (architecture 152 tests, selector debt unchanged)
+  - gate 6 Diverse City admin: PASS
+  - gates 3 and 4: not applicable, because the hub page has no editable field. They run on
+    `/admin/stadium` in RC-ADMIN-02.
+- Manual checks in the real admin, at 1440 light and 390 dark:
+  - Diverse City `/admin/website-pages` is 404, the same as main.
+  - The Rose City hub has 15 cards and axe reports 0 violations.
+  - Breadcrumbs, the sidebar highlight, search and the phone drawer work.
+- A kit harness covered contrast, focus trap, reduced motion and skeleton shift.
+- Not seen in a real editor yet: the phone Save bar inside the shell. No editor uses `PageFrame`
+  until RC-ADMIN-02.
+
+**Blockers or unresolved decisions:**
+- On new-frame pages the trail shows twice on screen: plain text in the top bar plus the page header.
+- Chick-fil-A shares the Shop cart icon, and Sponsors and Partners share an icon.
+- The verify-rc-admin save-state check looks for `data-admin-save-button`; the new button uses
+  `data-page-save-button`.
+- All of these are to be settled in RC-ADMIN-02.
+
+**Exact next step:** bot review; Christian decides the merge; then Wave 1 (RC-ADMIN-02 Stadium on
+Previews, 05 Homepage Overview, 06 Shop Both kits).
+
 ## 2026-11-18 - RC-ADMIN-07 Tickets and Season Membership show/hide flags (schema)
 
 **Agent/package:** Claude Code (Sonnet worker W7, orchestrated), RC-ADMIN-07, branch

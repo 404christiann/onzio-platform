@@ -1,0 +1,125 @@
+/* Heights equal the line boxes of the text they stand in for, so nothing moves when the content arrives. */
+.crumb {
+  inline-size: 160px;
+  block-size: calc(.8125rem * 1.5);
+}
+
+.title {
+  inline-size: min(320px, 70%);
+  block-size: calc(1.75rem * 1.15);
+  margin-block-start: 4px;
+}
+
+.description {
+  inline-size: min(420px, 90%);
+  block-size: calc(.875rem * 1.5);
+  margin-block-start: 6px;
+}
+
+.open {
+  inline-size: 104px;
+  block-size: 38px;
+  border-radius: 10px;
+}
+
+.save {
+  inline-size: 96px;
+  block-size: 38px;
+  border-radius: 10px;
+}
+
+.cardTitle {
+  block-size: calc(.9375rem * 1.3);
+}
+
+.cardSummary {
+  block-size: calc(.8125rem * 1.4);
+  margin-block-start: 2px;
+}
+
+.switch {
+  inline-size: 42px;
+  block-size: 24px;
+  border-radius: 999px;
+}
+
+.edit {
+  inline-size: 64px;
+  block-size: 38px;
+  border-radius: 10px;
+}
+
+.sectionRow {
+  block-size: 1rem;
+}
+
+.panelTitle {
+  inline-size: 40%;
+  block-size: calc(1rem * 1.5);
+  margin-block-end: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin-block-end: 16px;
+}
+
+.fieldLabel {
+  inline-size: 30%;
+  block-size: 1rem;
+}
+
+.fieldInput {
+  block-size: 40px;
+  border-radius: 10px;
+}
+
+@media (max-width: 767px) {
+  .title {
+    block-size: calc(1.5rem * 1.15);
+  }
+
+  .open {
+    block-size: 44px;
+  }
+
+  .description {
+    block-size: calc(.875rem * 1.5 * 2);
+  }
+
+  .save {
+    inline-size: 100%;
+    block-size: 44px;
+  }
+
+  .edit {
+    block-size: 44px;
+  }
+
+  .sectionRow {
+    block-size: 1.2rem;
+  }
+}
+
+.previewBox {
+  border-radius: 0;
+  content-visibility: visible;
+}
+
+.previewTitle {
+  block-size: calc(.9375rem * 1.3);
+}
+
+.previewEdit {
+  inline-size: 56px;
+  block-size: 32px;
+  border-radius: 8px;
+}
+
+@media (max-width: 767px) {
+  .previewEdit {
+    inline-size: 64px;
+    block-size: 44px;
+  }
+}

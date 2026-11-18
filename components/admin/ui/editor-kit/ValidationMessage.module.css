@@ -1,0 +1,39 @@
+.message {
+  --warn: 48 100% 56%;
+  --warn-ink: 40 90% 12%;
+
+  display: flex;
+  min-inline-size: 0;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid hsl(var(--warn) / .55);
+  border-radius: 10px;
+  background: hsl(var(--warn) / .16);
+  color: hsl(var(--foreground));
+  font-size: .8125rem;
+  line-height: 1.45;
+}
+
+/* The tile is the same solid yellow with a dark glyph in both themes, so it never depends on the surrounding colours. */
+.tile {
+  display: grid;
+  inline-size: 24px;
+  block-size: 24px;
+  flex: none;
+  place-items: center;
+  border-radius: 7px;
+  background: hsl(var(--warn));
+  color: hsl(var(--warn-ink));
+}
+
+.text {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  padding-block-start: 2px;
+}
+
+.title {
+  margin: 0 0 2px;
+  font-weight: 600;
+}

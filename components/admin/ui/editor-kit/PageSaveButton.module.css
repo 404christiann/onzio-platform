@@ -1,0 +1,167 @@
+.button {
+  --save-warn: 48 100% 56%;
+  --save-warn-ink: 40 90% 12%;
+  /* The portal forces the primary text colour to white, which fails on the dark-mode blue and on green.
+     The kit sets its own ink: white on the light-mode blue, near-black on the dark-mode blue and on green. */
+  --save-ink-on-primary: 0 0% 100%;
+  --save-ink-on-green: 144 82% 7%;
+  --save-green: #34C759;
+  --save-retry-border: 40 95% 32%;
+
+  display: inline-flex;
+  min-inline-size: 96px;
+  min-block-size: 38px;
+  padding: 0 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--save-ink-on-primary));
+  font-size: .875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Beats the portal's `.admin-press` rule, which sets a blanket transition on every property. */
+:global(.admin-portal) .button.button {
+  transition-property: transform, background-color, color, border-color;
+  transition-duration: 120ms, 220ms, 220ms, 220ms;
+  transition-timing-function: cubic-bezier(.23, 1, .32, 1), ease, ease, ease;
+}
+
+:global(.admin-theme[data-admin-theme="dark"]) .button {
+  --save-ink-on-primary: 220 20% 10%;
+  --save-green: #30D158;
+  --save-retry-border: 48 100% 56%;
+}
+
+.button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.button[aria-disabled="true"] {
+  cursor: default;
+}
+
+.button[data-state="clean"] {
+  border-color: hsl(var(--border));
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--muted-foreground));
+}
+
+.button[data-state="saving"] {
+  cursor: progress;
+}
+
+.button[data-state="saved"] {
+  background-color: var(--save-green);
+  color: hsl(var(--save-ink-on-green));
+}
+
+/* An earlier save is unconfirmed: outlined in the warning yellow so it reads as "try that again". */
+.button[data-state="retry"] {
+  border: 2px solid hsl(var(--save-retry-border));
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+.button[data-state="error"] {
+  background-color: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+.button[data-state="conflict"] {
+  background-color: hsl(var(--save-warn));
+  color: hsl(var(--save-warn-ink));
+}
+
+.label {
+  display: inline-block;
+}
+
+.ring {
+  inline-size: 14px;
+  block-size: 14px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+}
+
+.check {
+  flex: none;
+}
+
+.check path {
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button:not([aria-disabled="true"]):active {
+    transform: scale(.97);
+  }
+
+  .ring {
+    animation: pageSaveSpin 700ms linear infinite;
+  }
+
+  .button[data-state="saved"] {
+    animation: pageSavePop var(--admin-motion-save-pop, 320ms) var(--admin-motion-ease-out, ease-out);
+  }
+
+  .button[data-state="saved"] .check path {
+    animation: pageSaveDraw var(--admin-motion-save-check-draw, 280ms)
+      var(--admin-motion-ease-out, ease-out) var(--admin-motion-save-check-delay, 80ms) both;
+  }
+}
+
+/* Reduced motion: no spin, no pop and no check drawing. The ring stays as a static cue and the check is already drawn. */
+@media (prefers-reduced-motion: reduce) {
+  :global(.admin-portal) .button.button {
+    transition-property: background-color;
+    transition-duration: var(--admin-motion-reduced-motion-fade, 120ms);
+    transition-timing-function: ease-out;
+  }
+}
+
+@media (max-width: 767px) {
+  .button {
+    min-block-size: 44px;
+  }
+}
+
+@keyframes pageSaveSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pageSavePop {
+  0% {
+    transform: scale(.97);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes pageSaveDraw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

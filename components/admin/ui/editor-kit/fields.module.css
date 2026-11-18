@@ -1,0 +1,215 @@
+.imageField {
+  display: grid;
+  gap: 6px;
+}
+
+.description,
+.limit {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: .8125rem;
+  line-height: 1.4;
+}
+
+.list {
+  display: grid;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  gap: 10px;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: 2px;
+  font-size: .8125rem;
+  font-weight: 600;
+}
+
+.rows,
+.records {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.input {
+  inline-size: 100%;
+  min-block-size: 40px;
+  padding: 8px 12px;
+  border: 1px solid hsl(var(--input));
+  border-radius: 10px;
+  background: hsl(var(--card));
+  color: inherit;
+  /* 16px on a phone so iOS does not zoom the page when a field takes focus. */
+  font-size: 1rem;
+}
+
+textarea.input {
+  min-block-size: 84px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.input:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 1px;
+}
+
+.input:disabled {
+  opacity: .6;
+}
+
+@media (min-width: 768px) {
+  .input {
+    font-size: .875rem;
+  }
+}
+
+.add,
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.add {
+  min-block-size: 38px;
+  padding: 0 14px;
+  gap: 8px;
+}
+
+.remove {
+  inline-size: 40px;
+  min-block-size: 40px;
+  color: hsl(var(--muted-foreground));
+}
+
+.add:focus-visible,
+.remove:focus-visible,
+.tableWrap:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.add:disabled,
+.remove:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+@media (max-width: 767px) {
+  .input {
+    min-block-size: 44px;
+  }
+
+  .add,
+  .remove {
+    min-block-size: 44px;
+  }
+
+  .remove {
+    inline-size: 44px;
+  }
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.record {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--secondary) / .5);
+}
+
+.recordHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recordTitle {
+  font-size: .8125rem;
+  font-weight: 600;
+}
+
+.recordFields {
+  display: grid;
+  gap: 12px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+}
+
+.table {
+  inline-size: 100%;
+  min-inline-size: 480px;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 8px 8px 4px;
+  color: hsl(var(--muted-foreground));
+  font-size: .75rem;
+  font-weight: 600;
+  text-align: start;
+}
+
+.table td {
+  padding: 4px 8px;
+  vertical-align: top;
+}
+
+.table tbody tr:last-child td {
+  padding-block-end: 8px;
+}
+
+.removeCell {
+  inline-size: 1%;
+  white-space: nowrap;
+}
+
+/* Explicit lists, one explicit property list. Doubled selectors beat the portal's `.admin-press` rule, which sets a blanket transition on every property. */
+:global(.admin-portal) .add.add,
+:global(.admin-portal) .remove.remove {
+  transition-property: transform, background-color, color, border-color, opacity;
+  transition-duration: 120ms, 150ms, 150ms, 150ms, 150ms;
+  transition-timing-function: cubic-bezier(.23, 1, .32, 1), ease, ease, ease, ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .add,
+.remove {
+    transition-property: background-color, color, opacity;
+    transition-duration: 120ms;
+    transition-timing-function: ease-out;
+  }
+}
