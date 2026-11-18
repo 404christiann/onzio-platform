@@ -1,0 +1,25 @@
+.box {
+  position: relative;
+  inline-size: 100%;
+  overflow: hidden;
+  background: #fff;
+  border-radius: inherit;
+  contain: layout paint;
+}
+.frame {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: block;
+  border: 0;
+  background: #fff;
+  transform-origin: top left;
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+  will-change: transform;
+}
+.box[data-ready] .frame { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .frame { transition: none; }
+}
+.box:not([data-ready]) { background: hsl(var(--muted)); }

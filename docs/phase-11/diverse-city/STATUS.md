@@ -1,5 +1,57 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-06 Rose City Shop editor, Both kits
+
+**Agent/package:** Claude Code (Sonnet worker W6, orchestrated), RC-ADMIN-06, branch `claude/rc-admin-06`
+on `7370d307`. **Status:** `in_progress`, draft PR. It merges only on Christian's word. App code
+only: no migration, schema, RPC, data or production change, and nothing under `components/cinematic/`.
+
+**Completed work:**
+
+- **Who gets it:** Rose City on the classic portal now gets `RoseCityShopEditor` at `/admin/shop`. The
+  reimagined portal keeps `ShopPageEditor` and other classic clubs keep `ClassicShopPageEditor`. The
+  page file still has one template read, so the selector ratchet is unchanged.
+- **Kit columns:** Home, Away and Third sit side by side. Each column's photo, words and photo row open
+  that part in EditorDialog, or the full-screen sheet on phone. A dashed "Add <next kit>" column shows
+  when that kit doesn't exist. Jersey option i is kit i, and only the last option can be removed.
+- **Shared sections:** shown in two columns below the kits.
+- **Surfaces:** a "Shop page / Homepage shop feature" switch. Each surface has its own draft, save and
+  conflict, and switching with unsaved edits goes through `useUnsavedGuard`.
+- **Previews:** the real `CinematicShop` runs in scaled iframes, measured with a ResizeObserver, so
+  nothing is clipped and nothing shifts on load.
+- **Sliders:** `presentation.leadScale` (30–100) and `presentation.leadTop` (0–30) are smooth sliders
+  with a 48 px touch target. The old editor had them as number fields. An untouched page sends
+  nothing different.
+- **Save is unchanged:** the same `toShopSaveRequest`, `shopSaveRequestSchemaFor` and `submitPageSave`,
+  the same POST, `X-Editor-Recovery` header and operation poll.
+- **Save states:**
+  - "Retry same save" re-sends the stored request.
+  - On 409, "Load latest and keep my edits" and "Reload saved page".
+  - Discard asks for confirmation.
+  - Upload buckets per slot, field limits and 1–6 kit photos are kept.
+- **Fixed:** "Add third kit" with no saved options now pads options so the third kit appears.
+
+**Files changed:** `app/admin/(protected)/shop/page.tsx` and, new, `components/admin/shop/rose-city/`
+(the editor, fields, scaled frame, preview parts, smooth slider, fields model, styles), plus
+`tests/contracts/rose-city-shop-both-kits.test.ts`.
+
+**Verification:** `verify.sh run --route /admin/shop --touched shop` on `7370d307` exits 0.
+- Scope: PASS.
+- Payloads: the 13 untouched editors are identical.
+- Save states: clean, dirty, saving, saved, retry, conflict and discard all PASS.
+- Visuals: CLS 0.00001 at 1440 and 0 at 390, light and dark; 0 new axe violations; 0 reduced-motion
+  offenders.
+- Repo: `tsc` clean, 3647 unit tests, 152 architecture tests, selector debt unchanged.
+- Diverse City: 8/8 pages identical.
+
+**Blockers or unresolved decisions:** none.
+- axe's moderate `region` note on four admin sidebar elements also appears on other admin pages; it
+  belongs to the shell, not Shop.
+- The discard confirm reads "Discard changes" here and "Discard and reload" in Stadium and Homepage.
+  Wording is to be unified in a later pass.
+
+**Exact next step:** bot review; Christian decides the merge.
+
 ## 2026-11-18 - RC-ADMIN-05 Rose City Homepage editor, Overview
 
 **Agent/package:** Claude Code (Sonnet worker W5, orchestrated), RC-ADMIN-05, branch `claude/rc-admin-05`
