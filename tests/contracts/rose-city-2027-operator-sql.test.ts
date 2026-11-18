@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { templateRegistry } from "@/packages/presentation";
+import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
 import {
+  DEFAULT_EPISODE_VIDEO_URL,
+  EPISODE_VIDEO_SQL_PATTERN,
   OPERATOR_WRITES,
   ROSE_CITY_CLUB_ID,
   ROSE_CITY_ROUTES,
@@ -20,6 +23,7 @@ const EXPECTED_WRITES = {
   },
   "presentation-inputs": {
     "onzio.homepage_revamp_content": ["header_partner_media_asset_id", "hero_poster_media_asset_id", "seats_background_media_asset_id", "episode_poster_media_asset_id", "presentation_config"],
+    "onzio.behind_the_rose_section": ["video_url"],
   },
 };
 
@@ -111,6 +115,37 @@ describe("Rose City 2027 operator SQL", () => {
 
   it("publishes the cinematic@2 template's own default routes", () => {
     expect([...ROSE_CITY_ROUTES]).toEqual(templateRegistry["cinematic@2"].defaultRoutes);
+  });
+
+  describe("episode video (step B)", () => {
+    it("defaults to the approved Rose City episode and accepts another YouTube embed link", () => {
+      expect(buildPresentationInputsSql({ inputs: INPUTS, commit: false })).toContain(`v_video_url constant text := '${DEFAULT_EPISODE_VIDEO_URL}'`);
+      const other = "https://www.youtube.com/embed/abcdefghijk?rel=0";
+      expect(buildPresentationInputsSql({ inputs: { ...INPUTS, episodeVideoUrl: other }, commit: false })).toContain(`v_video_url constant text := '${other}'`);
+    });
+
+    it("refuses anything but a canonical YouTube embed link before writing SQL", () => {
+      for (const url of [
+        "https://www.youtube.com/watch?v=fJf_A4LdKDw",
+        "https://youtu.be/fJf_A4LdKDw",
+        "http://www.youtube.com/embed/fJf_A4LdKDw?rel=0",
+        "https://www.youtube.com/embed/fJf_A4LdKDw",
+        "https://evil.example/embed/fJf_A4LdKDw?rel=0",
+        "https://www.youtube.com/embed/fJf_A4LdKDw?rel=0'; drop table onzio.clubs; --",
+        "",
+      ]) {
+        expect(() => buildPresentationInputsSql({ inputs: { ...INPUTS, episodeVideoUrl: url }, commit: false }), url).toThrow(/YouTube embed/);
+      }
+    });
+
+    it("checks the same pattern in SQL, requires the video row, and only compares and sets video_url", () => {
+      const sql = buildPresentationInputsSql({ inputs: INPUTS, commit: false });
+      expect(EPISODE_VIDEO_SQL_PATTERN).toBe(MATCH_REPLAY_EMBED_PATTERN.source);
+      expect(sql).toContain(`if v_video_url !~ '${EPISODE_VIDEO_SQL_PATTERN}' then`);
+      expect(sql).toContain("SAVE_THE_HOMEPAGE_VIDEO_SECTION_FIRST");
+      expect(sql).toContain("if v_video.video_url is distinct from v_video_url then");
+      expect(sql).toMatch(/update onzio\.behind_the_rose_section set video_url = v_video_url where club_id = v_club_id;/);
+    });
   });
 
   it("refuses malformed input before generating anything", () => {

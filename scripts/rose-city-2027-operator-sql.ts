@@ -5,8 +5,9 @@
  *   --step publish               Step A, before any admin editing: publishes Rose City's cinematic@2 presentation
  *                                document (presentation_documents, presentation_state, presentation_publications).
  *   --step presentation-inputs   Step B, after the owner has saved the cinematic homepage and uploaded the four
- *                                artworks in the admin: sets the operator-owned homepage inputs, which are the four
- *                                artwork asset columns and presentation_config on homepage_revamp_content.
+ *                                artworks in the admin: sets the operator-owned homepage inputs. Those are the four
+ *                                artwork asset columns and presentation_config on homepage_revamp_content, plus the
+ *                                episode video (behind_the_rose_section.video_url), which no admin save writes.
  *
  * Each file is one transaction:
  * - guards first;
@@ -19,6 +20,7 @@
  *   npx tsx scripts/rose-city-2027-operator-sql.ts --step presentation-inputs \
  *     --header-partner <asset uuid> --hero-poster <asset uuid> --seats-background <asset uuid> --episode-poster <asset uuid> \
  *     [--hero-video-guid <guid>] [--hero-video-library-id <id>] [--sponsor-treatment <sponsor logo uuid>=invert|dark-lettering ...] \
+ *     [--episode-video-url https://www.youtube.com/embed/<11-character id>?rel=0] \
  *     [--commit] [--out file.sql]
  */
 import { createHash } from "node:crypto";
@@ -26,6 +28,7 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePresentationDocument, validatePresentationDocument, type PresentationDocument } from "@/packages/presentation";
+import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
 
 export const ROSE_CITY_CLUB_ID = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7";
 export const ROSE_CITY_SLUG = "rose-city";
@@ -42,6 +45,7 @@ export const OPERATOR_WRITES = {
   },
   "presentation-inputs": {
     "onzio.homepage_revamp_content": ["header_partner_media_asset_id", "hero_poster_media_asset_id", "seats_background_media_asset_id", "episode_poster_media_asset_id", "presentation_config"],
+    "onzio.behind_the_rose_section": ["video_url"],
   },
 } as const;
 
@@ -78,7 +82,21 @@ export type PresentationInputs = {
   headerPartner: string; heroPoster: string; seatsBackground: string; episodePoster: string;
   heroVideoGuid?: string; heroVideoLibraryId?: string;
   sponsorTreatments?: Record<string, "invert" | "dark-lettering">;
+  episodeVideoUrl?: string;
 };
+
+// The episode player iframes this link (components/cinematic/CinematicEpisode.tsx). YouTube embed links only, in the
+// same canonical form the match replay column enforces (lib/youtube-embed.ts). The SQL checks the same pattern.
+export const DEFAULT_EPISODE_VIDEO_URL = "https://www.youtube.com/embed/fJf_A4LdKDw?rel=0";
+export const EPISODE_VIDEO_SQL_PATTERN = MATCH_REPLAY_EMBED_PATTERN.source;
+
+export function episodeVideoUrl(inputs: PresentationInputs): string {
+  const url = inputs.episodeVideoUrl ?? DEFAULT_EPISODE_VIDEO_URL;
+  if (!MATCH_REPLAY_EMBED_PATTERN.test(url)) {
+    throw new Error("--episode-video-url must be a YouTube embed link: https://www.youtube.com/embed/<11-character id>?rel=0");
+  }
+  return url;
+}
 
 // Artwork columns, the media kind each one renders as, and the alt text from the approved rehearsal.
 export const PRESENTATION_ARTWORK = [
@@ -246,19 +264,26 @@ export function buildPresentationInputsSql(options: { inputs: PresentationInputs
     throw new Error("--hero-video-guid or --hero-video-library-id is malformed.");
   }
   const sponsorIds = Object.keys(config.sponsorTreatments);
+  const videoUrl = episodeVideoUrl(inputs);
   const artworkRows = PRESENTATION_ARTWORK.map(({ key, column, kind }) => `(${quote(column)}, ${quote(inputs[key])}::uuid, ${quote(kind)})`).join(", ");
-  return `${header("presentation-inputs", options.commit, PRESENTATION_ARTWORK.map(({ key, column }) => `${column} = ${inputs[key]} (${key})`))}
+  return `${header("presentation-inputs", options.commit, [
+    ...PRESENTATION_ARTWORK.map(({ key, column }) => `${column} = ${inputs[key]} (${key})`),
+    `behind_the_rose_section.video_url = ${videoUrl}`,
+  ])}
 
 do $operator$
 declare
   v_club_id constant uuid := ${quote(ROSE_CITY_CLUB_ID)};
   v_config constant jsonb := ${jsonLiteral(config, "cfg")};
+  v_video_url constant text := ${quote(videoUrl)};
   v_club onzio.clubs;
   v_template text;
   v_row onzio.homepage_revamp_content;
+  v_video onzio.behind_the_rose_section;
   v_count integer;
   v_check record;
   v_asset onzio.media_assets;
+  v_changes text[] := '{}';
 begin
 ${CLUB_GUARD}
   select d.template_id || '@' || d.template_version into v_template
@@ -270,6 +295,13 @@ ${CLUB_GUARD}
   select * into v_row from onzio.homepage_revamp_content where club_id = v_club_id for update;
   if not found then
     raise exception 'SAVE_THE_CINEMATIC_HOMEPAGE_FIRST: Rose City has no homepage_revamp_content row yet';
+  end if;
+  select * into v_video from onzio.behind_the_rose_section where club_id = v_club_id for update;
+  if not found then
+    raise exception 'SAVE_THE_HOMEPAGE_VIDEO_SECTION_FIRST: Rose City has no behind_the_rose_section row yet';
+  end if;
+  if v_video_url !~ ${quote(EPISODE_VIDEO_SQL_PATTERN)} then
+    raise exception 'EPISODE_VIDEO_NOT_YOUTUBE_EMBED: %', v_video_url;
   end if;
   -- Each artwork must be a published Rose City homepage asset of the kind its slot renders.
   for v_check in select * from (values ${artworkRows}) as t(column_name, asset_id, kind) loop
@@ -295,7 +327,7 @@ ${sponsorIds.length ? `  select count(*) into v_count from onzio.site_sponsor_lo
     and v_row.seats_background_media_asset_id is not distinct from ${quote(inputs.seatsBackground)}::uuid
     and v_row.episode_poster_media_asset_id is not distinct from ${quote(inputs.episodePoster)}::uuid
     and v_row.presentation_config = v_config then
-    perform set_config('onzio_operator.result', 'no-op', true);
+    null;
   else
     update onzio.homepage_revamp_content
       set header_partner_media_asset_id = ${quote(inputs.headerPartner)}::uuid,
@@ -306,8 +338,18 @@ ${sponsorIds.length ? `  select count(*) into v_count from onzio.site_sponsor_lo
       where club_id = v_club_id;
     get diagnostics v_count = row_count;
     if v_count <> 1 then raise exception 'EXPECTED_ONE_ROW: updated %', v_count; end if;
-    perform set_config('onzio_operator.result', 'changed: homepage presentation inputs updated', true);
+    v_changes := v_changes || 'homepage presentation inputs updated'::text;
   end if;
+
+  if v_video.video_url is distinct from v_video_url then
+    update onzio.behind_the_rose_section set video_url = v_video_url where club_id = v_club_id;
+    get diagnostics v_count = row_count;
+    if v_count <> 1 then raise exception 'EXPECTED_ONE_ROW: updated %', v_count; end if;
+    v_changes := v_changes || 'episode video updated'::text;
+  end if;
+
+  perform set_config('onzio_operator.result',
+    case when cardinality(v_changes) = 0 then 'no-op' else 'changed: ' || array_to_string(v_changes, ', ') end, true);
 end
 $operator$;
 
@@ -316,8 +358,11 @@ select current_setting('onzio_operator.result', true) as result,
   r.header_partner_media_asset_id, r.hero_poster_media_asset_id, r.seats_background_media_asset_id, r.episode_poster_media_asset_id,
   r.presentation_config = ${jsonLiteral(config, "cfg")} as config_matches,
   r.presentation_config->>'heroVideoGuid' as hero_video_guid,
+  v.video_url as episode_video_url,
+  v.video_url = ${quote(videoUrl)} as episode_video_matches,
   (select revision from onzio_private.homepage_revisions where club_id = r.club_id) as homepage_revision
 from onzio.homepage_revamp_content r
+join onzio.behind_the_rose_section v on v.club_id = r.club_id
 where r.club_id = ${quote(ROSE_CITY_CLUB_ID)};
 
 ${options.commit ? "commit;" : "rollback;"}
@@ -341,7 +386,7 @@ function parseArgs(argv: string[]) {
     if (required && !list[0]) throw new Error(`${name} is required.`);
     return list[0];
   };
-  const known = new Set(["--step", "--actor", "--out", "--header-partner", "--hero-poster", "--seats-background", "--episode-poster", "--hero-video-guid", "--hero-video-library-id", "--sponsor-treatment"]);
+  const known = new Set(["--step", "--actor", "--out", "--header-partner", "--hero-poster", "--seats-background", "--episode-poster", "--hero-video-guid", "--hero-video-library-id", "--sponsor-treatment", "--episode-video-url"]);
   for (const name of values.keys()) if (!known.has(name)) throw new Error(`Unknown option ${name}.`);
   return { values, commit: flags.has("--commit"), one };
 }
@@ -364,7 +409,7 @@ function main() {
         headerPartner: one("--header-partner")!, heroPoster: one("--hero-poster")!,
         seatsBackground: one("--seats-background")!, episodePoster: one("--episode-poster")!,
         heroVideoGuid: one("--hero-video-guid", false), heroVideoLibraryId: one("--hero-video-library-id", false),
-        sponsorTreatments,
+        sponsorTreatments, episodeVideoUrl: one("--episode-video-url", false),
       },
     });
   } else {
