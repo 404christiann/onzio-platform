@@ -1,5 +1,86 @@
 # Diverse City FC Status
 
+## 2026-11-18 - Rose City admin design phase (design only, no work package yet)
+
+**Agent/package:** Claude Code, design session, no work package ID yet (proposed RC-ADMIN-01 to 06).
+**Status:** `design settled, not built`. No application code, migration, hosted action, Stripe, DNS or email
+change. Nothing pushed except what the nested session opened (PR 152, below, since merged).
+
+**Completed work:**
+
+- Inventory of the Rose City admin pages and an audit of every admin route (390 and 1440 wide, light and dark,
+  worst-case data from break-ui) on the reimagined portal and, after Rose City moved to classic, on the classic
+  portal at `63246b49`. Main findings: nine Rose City editors had no sidebar row; on those pages the classic top
+  bar said "Admin"; the editors are 4,000 to 14,000 px tall; five different page frames; four different Save
+  placements; generic three-bar loading panels.
+- Prototypes of the settled design (see `HANDOFF.md` for the picks) and a build order with six packages.
+- A nested session fixed four classic admin bugs and opened PR 152 (nine sidebar rows, bouncing
+  tab routes, Analytics roster for players without season stats, sponsor tile contrast). The brief said local
+  and uncommitted; it committed and opened the PR anyway. It was converted to draft, then merged to `main`
+  on 2026-11-18 (`0e5ff559`, merged by onzio-coder), after a bot review with no Critical, High or Medium findings.
+
+**Files changed:** `HANDOFF.md`, `docs/phase-11/diverse-city/STATUS.md` only (this notes-only change). The
+prototypes and screenshots are untracked files in the design worktree.
+
+**Verification:** no code under test. Each prototype was driven in Chromium (Playwright) at 390 and 1440, light
+and dark, through its picker, dialogs and a Save cycle: no console errors. Not tried on a real phone. PR 152's code
+was not run or reviewed in this phase (it has its own entry above).
+
+**Blockers or unresolved decisions:** the open questions listed in `HANDOFF.md`.
+
+**Exact next step:** start RC-ADMIN-01 (shared page frame, section cards, editor
+dialog and sheet, validation, image field, lists, table editor, skeletons, sidebar headings), with no page
+changes.
+
+## 2026-11-18 - Rose City admin verification skill (tooling, before RC-ADMIN-01)
+
+**Agent/package:** Claude Code, no work package (tooling for RC-ADMIN-01 to 06), worktree
+`.claude/worktrees/rc-admin-verify`, branch `claude/rc-admin-verify` from `0e5ff559`. **Status:**
+`in_progress`: built and baseline-proven; one docs-and-tooling commit with the design notes above,
+in draft PR #153, which must merge before RC-ADMIN-01's PR. onzio-bot's re-review confirmed its
+fail-fast scope and env-target fixes; its remaining Medium, the production portal record, is answered (below).
+No application code, migration, schema, RPC, hosted action, Stripe, DNS or email change.
+
+**Completed work:**
+
+- Project skill `verify-rc-admin` (`.claude/skills/verify-rc-admin/`): one command
+  verifies a package against six gates: scope (app code only; fails on migrations, SQL, generated
+  types, seed scripts, `.rpc(` changes), save payloads byte-identical to origin/main for every
+  untouched Rose City editor (14 editors), save states on the package's editor (clean, dirty,
+  saving, saved with green check and never "All changes saved", retry, conflict with "Load latest
+  and keep my edits", discard), visuals at 390 and 1440 light and dark (layout shift, sideways
+  scroll, reduced motion, axe on the form and dialog), repo gates (typecheck, unit, architecture,
+  selector debt unchanged), and Diverse City's classic admin unchanged.
+- It builds the package and a pristine origin/main copy, then in one
+  `scripts/with-local-db-lock.sh` hold resets the shared stack (CLI 2.109.1), seeds Rose City and
+  Diverse City, serves both builds with `ONZIO_ENVIRONMENT=staging`, signs in
+  `owner-aal2@alpha.local` through Inbucket and runs Playwright.
+- Decisions: axe is a ratchet against origin/main (main already fails `color-contrast` on the
+  Chick-fil-A image "Remove" buttons); layout shift limit is CLS < 0.001 (main shows 0.00001
+  sub-pixel rounding); "Load latest and keep my edits" exists only on Chick-fil-A in main, so gate 3
+  fails on other editors until a package adds it. Six Rose City seeds cannot run on the shared stack
+  (shop-update, partners, injury-report, form-links, roster, schedule; reasons in the skill).
+
+**Files changed:** `.claude/skills/verify-rc-admin/` (SKILL.md, playwright.config.ts,
+rc-admin-verify.spec.ts, scripts/verify.sh, locked-run.sh, seed-local.sh, sign-in.mjs,
+scope-check.mjs, report.mjs), this file and `HANDOFF.md`.
+
+**Verification:** `verify.sh run --worktree . --route /admin/chick-fil-a --package BASELINE-main`
+on `0e5ff559`: all six gates pass (14/14 payloads identical; all seven save steps; 4 views with no
+new axe violation and no reduced-motion offender; typecheck, 3555 unit and 152 architecture tests;
+8/8 Diverse City pages identical). Report and 19 screenshots in
+`test-results/rc-admin-verify/20261118-075205-BASELINE-main/` (gitignored). The reduced-motion probe
+was checked to report the dialog's 140 ms transform when motion is allowed. Not yet run on a real
+RC-ADMIN package.
+
+**Blockers or unresolved decisions:** none. onzio-bot's last Medium (no record of Rose City's
+production switch to `classic`) is answered: Christian's read-only readback (2026-11-18) shows
+`admin_portal = classic` and the audit row at 2026-11-18T04:17:44Z, now recorded in
+`docs/admin-portal-production-release.md` (manual SQL, so no dry run).
+
+**Exact next step:** merge #153, then the RC-ADMIN-01 orchestrator runs
+`verify.sh run --worktree <pkg> --route <editor> --package RC-ADMIN-01` before showing anything.
+
 ## 2026-11-17 - Classic admin Rose City audit fixes (no work package)
 
 **Agent/package:** Claude Code, no work package, branch

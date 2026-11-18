@@ -1,3 +1,49 @@
+## 2026-11-18 - Rose City admin design phase: settled design and build order (design only)
+
+- **Status:** `design settled, not built`. No application code, no PR for the design, nothing pushed,
+  production not touched. Rose City is on the classic admin in production (switched 2026-11-17 night).
+- **That switch was manual SQL, not `scripts/set-club-admin-portal.ts`**, so it has no dry run in the ledger; its record and readback (audit row 2026-11-18T04:17:44Z, `admin_portal = classic`) are in `docs/admin-portal-production-release.md`.
+- **Where it lives:** an audit page and seven prototypes, untracked and local, in the worktree
+  `.claude/worktrees/rose-city-admin-design-ef2267` under `design-previews/rose-city-admin/`
+  (`audit/`, `stadium-sections/`, `pages-cards/`, `homepage-preview/`, `shop-preview/`, `nav/`). The audit
+  covers every admin route at 390 and 1440, light and dark, on the classic and the reimagined portal.
+- **Christian's picks:** the classic sidebar with the Website group split under Pages, Tickets and
+  stadium, and Partners, listing every Rose City editor; one page header with breadcrumb, "Open page" and
+  Save (grey, blue, then green with a drawn check, bottom bar on phone); the editors (Stadium, Foothill
+  Transit, Chick-fil-A, Tickets, Season Membership, Know Before You Go, Policies) as section cards with a
+  two-pane dialog on desktop and a full-screen sheet on phone; the Homepage as "Overview" (whole page in
+  two columns, numbered, click to edit); the Shop as "Both kits" (Home, Away and Third side by side).
+  Section order stays fixed.
+- **Build order (one PR each, app code only, no schema or RPC change):** PR 152 (sidebar rows and audit bug fixes) is
+  merged (`0e5ff559`, 2026-11-18); RC-ADMIN-01 shared pieces; 02 Stadium; 03 Foothill Transit and Chick-fil-A; 04
+  Tickets, Season Membership, Know Before You Go; 05 Homepage Overview; 06 Shop Both kits. Still to design:
+  Partners, Injury Report, News, Schedule, Sponsors.
+- **Open questions:** Chick-fil-A and Tickets image-to-card mapping (assumed); where the current Shop editor
+  exposes `leadScale` and `leadTop`; Homepage hero, video and caption fields (partly inspected); real Away
+  and Third kit copy (not in the repo); show/hide for Tickets and parts of Season Membership, and any
+  section reordering, would each need a schema change and were not offered.
+- **PR 152:** opened non-draft by a nested session against the "local, uncommitted" instruction; converted
+  to draft on Christian's request, then merged to `main` on 2026-11-18 (`0e5ff559`, merged by onzio-coder).
+  Its diff and test results were not reviewed in this phase.
+- **Exact next step:** Christian says go for RC-ADMIN-01. Details in `STATUS.md`.
+
+## 2026-11-18 - Rose City admin verification skill (tooling for RC-ADMIN-01 to 06)
+
+- **Status:** `in_progress`: built and baseline-proven; one commit with the design notes above in
+  draft PR #153 (`claude/rc-admin-verify`, from `0e5ff559`). No app, schema, hosted, Stripe, DNS or
+  email change. It must merge before RC-ADMIN-01's PR.
+- **What:** project skill `.claude/skills/verify-rc-admin/`. Every RC-ADMIN package runs
+  `.claude/skills/verify-rc-admin/scripts/verify.sh run --worktree <pkg> --route /admin/<editor>
+  --package RC-ADMIN-0N [--touched <editor keys>] [--shared-fix]` before Christian sees it. Gates:
+  scope, payload identity vs origin/main for untouched editors, save states, visuals (390/1440,
+  light/dark, layout shift, reduced motion, axe ratchet vs main), repo gates, Diverse City unchanged.
+  Reset, seed, sign-in and browser run share one local DB lock hold; production is never touched.
+- **Verification:** baseline on `0e5ff559` passes all six gates; report in
+  `test-results/rc-admin-verify/20261118-075205-BASELINE-main/report.html`. Details and decisions in
+  `docs/phase-11/diverse-city/STATUS.md`.
+- **Exact next step:** merge #153 (the classic-switch record onzio-bot asked for is now in
+  `docs/admin-portal-production-release.md`), then RC-ADMIN-01.
+
 ## 2026-11-17 - onzio-fonts: one-off production storage bucket (outside migrations)
 
 - **Status:** `done`, a deliberate one-off. Recorded for draft PR 151 (Rose City 2027).
