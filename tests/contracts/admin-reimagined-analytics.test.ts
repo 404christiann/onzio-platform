@@ -43,7 +43,8 @@ describe("the Analytics page keeps both admins working (ADMIN-RE-19)", () => {
     expect(classic).toContain('"use client"');
     expect(classic).toContain("export default function ClassicAnalyticsPage()");
     expect(classic).toContain("Chart.register(...registerables)");
-    expect(classic).toContain("fetchRoster(undefined, clubId)");
+    // It lists active players even before they have season numbers.
+    expect(classic).toContain("fetchRoster(undefined, clubId, { includeActivePlayersWithoutSeasonStats: true })");
     expect(classic).toContain("fetchPlayerMatchTrend");
   });
 

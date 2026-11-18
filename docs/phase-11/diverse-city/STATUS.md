@@ -1,5 +1,46 @@
 # Diverse City FC Status
 
+## 2026-11-17 - Classic admin Rose City audit fixes (no work package)
+
+**Agent/package:** Claude Code, no work package, branch
+`claude/classic-admin-rose-city-fixes-d1041e` from `63246b49`. **Status:**
+`in_progress`: local, unstaged and uncommitted until Christian reviews the diff.
+App code only: no migration, schema, RPC, data, hosted action, Stripe, DNS or
+email change. No Diverse City behavior change.
+
+**Completed work:**
+
+- Sidebar: nine cinematic@2 editors (Stadium, Foothill Transit, Chick-fil-A,
+  Tickets, Season Membership, Know Before You Go, Policies, Partners, Injury
+  Report) are manifest routes in the Website group, so the classic sidebar
+  highlights them and the top bar names them. They show for cinematic@2 only
+  (`cinematicOnly`, which News now uses too).
+- Bounces: a classic club opening `/admin/games`, `/admin/website` or
+  `/admin/club` lands on Schedule, Homepage or Branding (`classicLandingForTab`).
+  `/admin/insights`, Programs, `add-game`, `score`, `your-club` and `season-stats`
+  are unchanged: reimagined-only or already pointing at their classic page.
+- Analytics: `fetchRoster` built the roster from season-stats rows, so active
+  players without them were dropped. Classic Analytics now passes
+  `includeActivePlayersWithoutSeasonStats` (active season only; the public site
+  does not).
+- Sponsors: logo tiles use a fixed neutral ground, not `bg-background`.
+
+**Files changed:** `lib/admin-route-manifest.ts`, `lib/admin-tabs.ts`,
+`lib/admin-tab-page.ts`, `lib/queries.ts`, `components/AdminShell.tsx`,
+`components/admin/reimagined/MoreList.tsx`,
+`components/admin/ClassicAnalyticsPage.tsx`,
+`components/admin/sponsors/ClassicSponsorsPage.tsx`, and the tests under
+`tests/contracts/` and `lib/__tests__/queries.test.ts` that pin them.
+
+**Verification:** `tsc --noEmit` clean; `npm run test:unit` 324 files, 3555
+tests pass; `npm run test:architecture` 18 files pass (the template-selector
+ratchet stays at 2 `cinematic@2` literals in the manifest). Not run in a browser.
+
+**Blockers or unresolved decisions:** none. Rose City's 25 players still have no
+season stats rows (data, untouched here); the public roster is unchanged.
+
+**Exact next step:** Christian reviews the diff, then commit and PR.
+
 ## 2026-11-10 - Test infrastructure: template-selectors split (no work package)
 
 **Agent/package:** Claude Code, test infrastructure, no work package, follow-up

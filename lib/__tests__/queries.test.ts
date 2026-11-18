@@ -795,6 +795,56 @@ describe('fetchRoster (season-aware)', () => {
     expect(result.seasonId).toBe(activeSeason.id)
   })
 
+  it('lists active players that have no season stats row when the caller asks for them (admin Analytics)', async () => {
+    const playersChain = chain({ data: [activePlayer], error: null })
+    const photosChain = chain({ data: [], error: null })
+    mockFrom
+      .mockReturnValueOnce(chain({ data: [activeSeason], error: null })) // active season lookup
+      .mockReturnValueOnce(chain({ data: [], error: null }))             // player_season_totals: no rows yet
+      .mockReturnValueOnce(chain({ data: [], error: null }))             // goalkeeper_season_totals: none
+      .mockReturnValueOnce(playersChain)                                 // players: every active player
+      .mockReturnValueOnce(photosChain)                                  // player_photos
+
+    const result = await fetchRoster(undefined, 'club-1', { includeActivePlayersWithoutSeasonStats: true })
+
+    expect(result.forwards.map(p => p.id)).toEqual(['player-active'])
+    expect(result.forwards[0].stats).toMatchObject({ goals: 0, assists: 0, mins: 0 })
+    expect(playersChain.eq).toHaveBeenCalledWith('club_id', 'club-1')
+    expect(playersChain.eq).toHaveBeenCalledWith('active', true)
+    expect(playersChain.in).not.toHaveBeenCalled()
+    expect(photosChain.in).toHaveBeenCalledWith('player_id', ['player-active'])
+  })
+
+  it('keeps the roster to players with a season stats row by default (public site)', async () => {
+    const playersChain = chain({ data: [], error: null })
+    mockFrom
+      .mockReturnValueOnce(chain({ data: [activeSeason], error: null }))
+      .mockReturnValueOnce(chain({ data: [], error: null }))
+      .mockReturnValueOnce(chain({ data: [], error: null }))
+      .mockReturnValueOnce(playersChain)
+      .mockReturnValueOnce(chain({ data: [], error: null }))
+
+    await fetchRoster(undefined, 'club-1')
+
+    expect(playersChain.in).toHaveBeenCalledWith('id', [])
+    expect(playersChain.eq).not.toHaveBeenCalledWith('active', true)
+  })
+
+  it('does not widen a historical season even when the caller asks for active players', async () => {
+    const playersChain = chain({ data: [inactivePlayer], error: null })
+    mockFrom
+      .mockReturnValueOnce(chain({ data: dbSeasons, error: null }))
+      .mockReturnValueOnce(chain({ data: historicalStats, error: null }))
+      .mockReturnValueOnce(chain({ data: [], error: null }))
+      .mockReturnValueOnce(playersChain)
+      .mockReturnValueOnce(chain({ data: [], error: null }))
+
+    await fetchRoster(historicalSeason.id, 'club-1', { includeActivePlayersWithoutSeasonStats: true })
+
+    expect(playersChain.in).toHaveBeenCalledWith('id', ['player-inactive'])
+    expect(playersChain.eq).not.toHaveBeenCalledWith('active', true)
+  })
+
   it('does not query season stats and returns an empty roster when the club has no active season', async () => {
     const calledTables: string[] = []
     mockFrom.mockImplementation((table: string) => {

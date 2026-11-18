@@ -40,6 +40,22 @@ export const ADMIN_TABS = [
   { id: "club", label: "Club", href: "/admin/club", title: "Club and account" },
 ] as const satisfies readonly AdminTab[];
 
+/**
+ * Where a classic club lands from a tab's address (a bookmark or a typed URL;
+ * nothing in the classic admin links to a tab). Games, Website and Club each
+ * have a classic page for the same job. Programs and Insights have none, so
+ * they, like a club without the tab, go to the Dashboard.
+ */
+const CLASSIC_TAB_LANDING: Partial<Record<AdminTabId, `/admin${string}`>> = {
+  games: "/admin/schedule",
+  website: "/admin/homepage",
+  club: "/admin/branding",
+};
+
+export function classicLandingForTab(tab: AdminTabId): `/admin${string}` {
+  return CLASSIC_TAB_LANDING[tab] ?? "/admin";
+}
+
 /** The admin_flags key that turns on the Insights tab (the Sponsor Insights add-on). */
 export const SPONSOR_INSIGHTS_FLAG = "sponsor_insights";
 

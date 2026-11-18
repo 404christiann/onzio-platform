@@ -1342,6 +1342,33 @@ export async function fetchSiteSocialLinks(clubId?: string): Promise<DBSiteSocia
   return clubId ? rows : normalizeSiteSocialLinks(rows);
 }
 
+export type FetchRosterOptions = {
+  /**
+   * The roster is normally the players the season has a stats row for (the
+   * season totals views start from player_season_stats). The admin Analytics
+   * page sets this so an active player with no season numbers yet still shows
+   * (zeroed stats) instead of the page claiming there are no players. Applies to
+   * the active season only; the public site never sets it.
+   */
+  includeActivePlayersWithoutSeasonStats?: boolean;
+};
+
+async function fetchActivePlayersAndPhotos(tenantId: string) {
+  const playersResult = await supabase
+    .from("players")
+    .select("*")
+    .eq("club_id", tenantId)
+    .eq("active", true);
+  const playerIds = ((playersResult.data ?? []) as { id: string }[]).map((row) => row.id);
+  const photosResult = await supabase
+    .from("player_photos")
+    .select("player_id, url, sort_order")
+    .eq("club_id", tenantId)
+    .in("player_id", playerIds)
+    .order("sort_order", { ascending: true });
+  return [playersResult, photosResult] as const;
+}
+
 /**
  * Fetches players grouped by position with season-aggregate stats.
  *
@@ -1350,7 +1377,11 @@ export async function fetchSiteSocialLinks(clubId?: string): Promise<DBSiteSocia
  * historical seasons retain players who have since been deactivated.
  * Falls back to the active season when omitted.
  */
-export async function fetchRoster(seasonId?: string, clubId?: string): Promise<{
+export async function fetchRoster(
+  seasonId?: string,
+  clubId?: string,
+  options: FetchRosterOptions = {},
+): Promise<{
   goalkeepers: Player[];
   defenders:   Player[];
   midfielders: Player[];
@@ -1404,14 +1435,17 @@ export async function fetchRoster(seasonId?: string, clubId?: string): Promise<{
     ...gkStats.map((r)    => r.player_id as string),
   ].filter(Boolean);
 
-  const [playersResult, photosResult] = await Promise.all([
-    supabase.from("players").select("*").eq("club_id", tenantId).in("id", allPlayerIds),
-    supabase.from("player_photos")
-      .select("player_id, url, sort_order")
-      .eq("club_id", tenantId)
-      .in("player_id", allPlayerIds)
-      .order("sort_order", { ascending: true }),
-  ]);
+  const [playersResult, photosResult] =
+    options.includeActivePlayersWithoutSeasonStats && isActiveSeason
+      ? await fetchActivePlayersAndPhotos(tenantId)
+      : await Promise.all([
+          supabase.from("players").select("*").eq("club_id", tenantId).in("id", allPlayerIds),
+          supabase.from("player_photos")
+            .select("player_id, url, sort_order")
+            .eq("club_id", tenantId)
+            .in("player_id", allPlayerIds)
+            .order("sort_order", { ascending: true }),
+        ]);
   const rosterDataError = playersResult.error ?? photosResult.error;
   if (rosterDataError) throw new Error(`fetchRoster players: ${rosterDataError.message}`);
 

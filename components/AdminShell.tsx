@@ -21,6 +21,10 @@ import {
   IconBranding,
   IconTeamAccess,
   IconPayments,
+  IconMapPin,
+  IconGlobe,
+  IconLock,
+  IconWarning,
   IconGroupWebsite,
   IconGroupCompetition,
   IconGroupClubSettings,
@@ -94,6 +98,15 @@ const ROUTE_ICONS: Record<AdminRouteIconKey, AdminIconComponent> = {
   "branding": IconBranding,
   "team-access": IconTeamAccess,
   "payments": IconPayments,
+  "stadium": IconMapPin,
+  "foothill-transit": IconGlobe,
+  "chick-fil-a": IconShop,
+  "tickets": IconRegistrations,
+  "season-membership": IconTeamAccess,
+  "know-before-you-go": IconAbout,
+  "policies": IconLock,
+  "partners": IconSponsors,
+  "injury-report": IconWarning,
 };
 
 const GROUP_ICONS: Record<AdminGroupIconKey, AdminIconComponent> = {

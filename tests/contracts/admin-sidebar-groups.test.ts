@@ -35,7 +35,12 @@ describe("admin sidebar grouped navigation", () => {
       (entry) => entry.type === "group",
     );
     expect(groups.map((entry) => entry.routeIds)).toEqual([
-      ["homepage", "programs", "tryouts", "shop", "about", "sponsors", "contact", "news"],
+      [
+        "homepage", "programs", "tryouts", "shop", "about", "sponsors", "contact", "news",
+        // The Rose City (cinematic@2) editors, after News (classic admin audit fix).
+        "stadium", "foothill-transit", "chick-fil-a", "tickets", "season-membership",
+        "know-before-you-go", "policies", "partners", "injury-report",
+      ],
       ["seasons", "roster", "schedule", "match-stats", "standings"],
       ["branding", "team-access"],
     ]);

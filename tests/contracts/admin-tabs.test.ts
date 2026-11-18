@@ -10,6 +10,7 @@ import {
 import {
   ADMIN_TABS,
   SPONSOR_INSIGHTS_FLAG,
+  classicLandingForTab,
   gamesTabStatus,
   getAdminTabDots,
   getAdminTabPages,
@@ -220,12 +221,25 @@ describe("tab pages", () => {
     expect(page).toContain('export const dynamic = "force-dynamic";');
   });
 
-  it("sends a classic club, or a club without the tab, to /admin", () => {
+  it("sends a classic club to its classic page and a club without the tab to /admin", () => {
     const loader = read("lib/admin-tab-page.ts");
     expect(loader).toContain("requireFreshClubSession(supabase)");
-    expect(loader).toContain('if (portal.portal !== "reimagined") redirect("/admin");');
+    expect(loader).toContain('if (portal.portal !== "reimagined") redirect(classicLandingForTab(tab));');
     expect(loader).toContain('if (!getVisibleAdminTabs(access).some((candidate) => candidate.id === tab)) redirect("/admin");');
     expect(loader).not.toMatch(/service-role|SERVICE_ROLE/);
+  });
+
+  it("lands a classic club on the classic page for the same job", () => {
+    expect(classicLandingForTab("games")).toBe("/admin/schedule");
+    expect(classicLandingForTab("website")).toBe("/admin/homepage");
+    expect(classicLandingForTab("club")).toBe("/admin/branding");
+    // Programs and Insights have no classic page; they go to the Dashboard.
+    expect(classicLandingForTab("programs")).toBe("/admin");
+    expect(classicLandingForTab("insights")).toBe("/admin");
+    expect(classicLandingForTab("home")).toBe("/admin");
+    // Every landing is a real classic page that is in the manifest.
+    const hrefs = new Set(ADMIN_ROUTE_MANIFEST.filter((route) => !("reimaginedOnly" in route)).map((route) => route.href as string));
+    for (const tab of ADMIN_TABS) expect(hrefs.has(classicLandingForTab(tab.id))).toBe(true);
   });
 
   it("never shows zeros for website visits: Insights says why there are no numbers", () => {
