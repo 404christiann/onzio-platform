@@ -29,6 +29,20 @@ const ADMIN_ACCESS: AdminRouteAccessContext = {
   isBillingAuthorized: false,
 };
 
+// The nine Rose City (cinematic@2) editors that used to have no sidebar row.
+const CINEMATIC_EDITORS = [
+  { id: "stadium", label: "Stadium" },
+  { id: "foothill-transit", label: "Foothill Transit" },
+  { id: "chick-fil-a", label: "Chick-fil-A" },
+  { id: "tickets", label: "Tickets" },
+  { id: "season-membership", label: "Season Membership" },
+  { id: "know-before-you-go", label: "Know Before You Go" },
+  { id: "policies", label: "Policies" },
+  { id: "partners", label: "Partners" },
+  { id: "injury-report", label: "Injury Report" },
+] as const;
+const CINEMATIC_EDITOR_IDS = CINEMATIC_EDITORS.map((editor) => editor.id);
+
 function visibleIds(context: AdminRouteAccessContext) {
   return getVisibleAdminRoutes(context).map((route) => route.id);
 }
@@ -44,13 +58,14 @@ function navigationIds(context: AdminRouteAccessContext) {
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
     // ADMIN-RE-12c (deliberate): Programs and tryouts is the 23rd; the
-    // cinematic@2-only News editor (RC2027-NEWS) is the 24th.
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(24);
+    // cinematic@2-only News editor (RC2027-NEWS) is the 24th; the nine other
+    // Rose City editors (CLASSIC-RC-FIX) are the 25th to 33rd.
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(33);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      24,
+      33,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      24,
+      33,
     );
   });
 
@@ -71,6 +86,7 @@ describe("strict admin route manifest", () => {
           "sponsors",
           "contact",
           "news",
+          ...CINEMATIC_EDITOR_IDS,
         ],
       },
       {
@@ -161,6 +177,40 @@ describe("strict admin route manifest", () => {
     for (const presentationTemplateKey of ["academy@1", "clubhouse@1", null] as const) {
       expect(visibleIds({ ...OWNER_ACCESS, presentationTemplateKey })).not.toContain("news");
     }
+  });
+
+  it("gives each Rose City editor a Website row, for cinematic@2 only", () => {
+    for (const role of [OWNER_ACCESS, ADMIN_ACCESS]) {
+      const cinematic = { ...role, presentationTemplateKey: "cinematic@2" };
+      expect(visibleIds(cinematic)).toEqual(expect.arrayContaining(CINEMATIC_EDITOR_IDS));
+      const website = getVisibleAdminNavigation(cinematic).find((entry) => entry.type === "group" && entry.id === "website");
+      const rows = website?.type === "group" ? website.routes : [];
+      for (const editor of CINEMATIC_EDITORS) {
+        expect(rows.find((row) => row.id === editor.id)).toMatchObject({
+          label: editor.label,
+          href: `/admin/${editor.id}`,
+          groupId: "website",
+        });
+      }
+    }
+    for (const presentationTemplateKey of ["academy@1", "clubhouse@1", "editorial@1", "future-template@1", null] as const) {
+      const context = { ...OWNER_ACCESS, presentationTemplateKey };
+      for (const id of CINEMATIC_EDITOR_IDS) {
+        expect(visibleIds(context)).not.toContain(id);
+        expect(navigationIds(context)).not.toContain(id);
+      }
+    }
+  });
+
+  it("highlights the Website group and names the page on each Rose City editor", () => {
+    const context = { ...OWNER_ACCESS, presentationTemplateKey: "cinematic@2" };
+    for (const editor of CINEMATIC_EDITORS) {
+      expect(getAdminGroupForPathname(`/admin/${editor.id}`, context)).toBe("website");
+      expect(getAdminGroupForPathname(`/admin/${editor.id}/anything`, context)).toBe("website");
+      expect(getReimaginedPageTitle(`/admin/${editor.id}`)).toBe(editor.label);
+    }
+    // A club that is not cinematic@2 does not light a group for those paths.
+    expect(getAdminGroupForPathname("/admin/stadium", OWNER_ACCESS)).toBeNull();
   });
 
   it("shows public page editors only where their tenant public routes render", () => {

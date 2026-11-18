@@ -59,7 +59,16 @@ export type AdminRouteId =
   | "sign-ups"
   | "add-game"
   | "your-club"
-  | "programs-and-tryouts";
+  | "programs-and-tryouts"
+  | "stadium"
+  | "foothill-transit"
+  | "chick-fil-a"
+  | "tickets"
+  | "season-membership"
+  | "know-before-you-go"
+  | "policies"
+  | "partners"
+  | "injury-report";
 
 export type AdminRouteIconKey =
   | "dashboard"
@@ -81,7 +90,16 @@ export type AdminRouteIconKey =
   | "analytics"
   | "branding"
   | "team-access"
-  | "payments";
+  | "payments"
+  | "stadium"
+  | "foothill-transit"
+  | "chick-fil-a"
+  | "tickets"
+  | "season-membership"
+  | "know-before-you-go"
+  | "policies"
+  | "partners"
+  | "injury-report";
 
 export type AdminGroupIconKey = "website" | "competition" | "club-settings";
 
@@ -100,6 +118,11 @@ export type AdminRouteDefinition = Readonly<{
    * classic club to the old one.
    */
   reimaginedOnly?: true;
+  /**
+   * A page whose editor exists only on the Rose City site design (News and the
+   * nine other site editors). Every other design never sees the row.
+   */
+  cinematicOnly?: true;
 }>;
 
 export type AdminVisibleRoute = Readonly<{
@@ -223,6 +246,79 @@ export const ADMIN_ROUTE_MANIFEST = [
     href: "/admin/news",
     iconKey: "news",
     groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "stadium",
+    label: "Stadium",
+    href: "/admin/stadium",
+    iconKey: "stadium",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "foothill-transit",
+    label: "Foothill Transit",
+    href: "/admin/foothill-transit",
+    iconKey: "foothill-transit",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "chick-fil-a",
+    label: "Chick-fil-A",
+    href: "/admin/chick-fil-a",
+    iconKey: "chick-fil-a",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "tickets",
+    label: "Tickets",
+    href: "/admin/tickets",
+    iconKey: "tickets",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "season-membership",
+    label: "Season Membership",
+    href: "/admin/season-membership",
+    iconKey: "season-membership",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "know-before-you-go",
+    label: "Know Before You Go",
+    href: "/admin/know-before-you-go",
+    iconKey: "know-before-you-go",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "policies",
+    label: "Policies",
+    href: "/admin/policies",
+    iconKey: "policies",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "partners",
+    label: "Partners",
+    href: "/admin/partners",
+    iconKey: "partners",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    id: "injury-report",
+    label: "Injury Report",
+    href: "/admin/injury-report",
+    iconKey: "injury-report",
+    groupId: "website",
+    cinematicOnly: true,
   },
   {
     id: "seasons",
@@ -360,6 +456,15 @@ export const ADMIN_NAVIGATION_MANIFEST = [
       "sponsors",
       "contact",
       "news",
+      "stadium",
+      "foothill-transit",
+      "chick-fil-a",
+      "tickets",
+      "season-membership",
+      "know-before-you-go",
+      "policies",
+      "partners",
+      "injury-report",
     ],
   },
   {
@@ -428,6 +533,15 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   sponsors: ["website", "sponsors", "partners"],
   contact: ["website", "contact", "email", "phone"],
   news: ["website", "news", "articles", "announcements"],
+  "stadium": ["website", "stadium", "venue", "robinson stadium", "directions", "parking"],
+  "foothill-transit": ["website", "foothill transit", "transit", "bus", "getting there"],
+  "chick-fil-a": ["website", "chick-fil-a", "food", "partner offer"],
+  "tickets": ["website", "tickets", "prices", "gameday"],
+  "season-membership": ["website", "season membership", "season tickets", "membership"],
+  "know-before-you-go": ["website", "know before you go", "visiting", "gameday guide", "bag policy"],
+  "policies": ["website", "policies", "rules", "code of conduct", "terms"],
+  "partners": ["website", "partners", "sponsors", "logos"],
+  "injury-report": ["website", "injury report", "injuries", "availability"],
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
@@ -477,8 +591,8 @@ export function isAdminRouteVisible(
   // Only designs that publish a Contact page get the Contact editor (cinematic@2
   // has its own Contact editor); its details are used nowhere else on other designs.
   if (route.id === "contact" && !siteAdmin?.contact.routeVisible && context.presentationTemplateKey !== "cinematic@2") return false;
-  // News is the cinematic@2 (Rose City) News editor (RC2027-NEWS).
-  if (route.id === "news" && context.presentationTemplateKey !== "cinematic@2") return false;
+  // News (RC2027-NEWS) and the other Rose City editors exist on cinematic@2 only.
+  if (route.cinematicOnly && context.presentationTemplateKey !== "cinematic@2") return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (
     route.billingRequired &&

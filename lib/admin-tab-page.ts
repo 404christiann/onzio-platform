@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { readAdminPortal, type AdminPortalSettings } from "@/lib/admin-portal";
 import { loadAdminHomeData, type AdminHomeData } from "@/lib/admin-home-data";
 import type { AdminRouteAccessContext } from "@/lib/admin-route-manifest";
-import { getVisibleAdminTabs, type AdminTabId } from "@/lib/admin-tabs";
+import { classicLandingForTab, getVisibleAdminTabs, type AdminTabId } from "@/lib/admin-tabs";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext, type ClubContext } from "@/lib/club-context";
 import type { CodeSiteInput } from "@/lib/code-site";
@@ -119,8 +119,9 @@ export type AdminTabPageContext = {
 };
 
 /**
- * Loads a tab page's context, or sends the person elsewhere: a classic club,
- * or a club without this tab, goes to /admin.
+ * Loads a tab page's context, or sends the person elsewhere: a classic club goes
+ * to the classic page for the same job (classicLandingForTab), and a club
+ * without this tab goes to /admin.
  */
 export async function loadAdminTabPage(tab: AdminTabId): Promise<AdminTabPageContext> {
   const supabase = await createClient();
@@ -133,7 +134,7 @@ export async function loadAdminTabPage(tab: AdminTabId): Promise<AdminTabPageCon
     redirect("/admin/login?error=not_authorized");
   }
   const portal = await readAdminPortal(supabase, club.id);
-  if (portal.portal !== "reimagined") redirect("/admin");
+  if (portal.portal !== "reimagined") redirect(classicLandingForTab(tab));
   const home = await readAdminHomeCounts(club.id, portal.timeZone);
   const access = adminAccessFor(club, portal, home.hasLiveSignUps);
   if (!getVisibleAdminTabs(access).some((candidate) => candidate.id === tab)) redirect("/admin");

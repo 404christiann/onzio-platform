@@ -424,7 +424,11 @@ export function ClassicSponsorsPage() {
                 return (
                 <div key={logo.key} {...list.rowProps(logo.key)} className="min-w-0">
                   <div
-                    className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border bg-background transition-colors hover:border-muted-foreground/40"
+                    data-sponsor-logo-tile
+                    // Mid-neutral on purpose, in both themes: white logos need a dark-ish
+                    // ground and dark logos a light-ish one (about 4:1 against pure white
+                    // and 5:1 against black), which bg-background cannot give either.
+                    className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border bg-[#7d7d82] transition-colors hover:border-muted-foreground/40"
                   >
                     <Image
                       src={logo.logo_url}

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { DBSiteSponsorLogo } from "@/lib/db-types";
 import { diffSponsorLogos } from "@/lib/sponsor-content";
@@ -106,4 +108,31 @@ describe("classic sponsor save commands", () => {
     expect(reconcileSponsorDraft(pending.logos, pending).map((logo) => logo.id)).toEqual(["confirmed-a", "confirmed-b"]);
   });
 
+});
+
+describe("classic sponsor logo tiles", () => {
+  const source = readFileSync(resolve(process.cwd(), "components/admin/sponsors/ClassicSponsorsPage.tsx"), "utf8");
+  const tile = source.match(/<div\s+data-sponsor-logo-tile[\s\S]*?className="([^"]+)"/)?.[1] ?? "";
+  const ground = tile.match(/\bbg-\[(#[0-9a-fA-F]{6})\]/)?.[1];
+
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  it("sets logos on a fixed neutral ground, not the theme background", () => {
+    expect(tile).not.toBe("");
+    expect(tile).not.toMatch(/\bbg-(background|card|white|black)\b/);
+    expect(ground).toBeDefined();
+  });
+
+  it("keeps both white and black logos visible on that ground (graphics need 3:1)", () => {
+    expect(contrast(ground!, "#ffffff")).toBeGreaterThanOrEqual(3);
+    expect(contrast(ground!, "#000000")).toBeGreaterThanOrEqual(3);
+  });
 });

@@ -189,7 +189,7 @@ export default function ClassicAnalyticsPage() {
     let active = true;
     setLoading(true);
     setLoadError(null);
-    fetchRoster(undefined, clubId)
+    fetchRoster(undefined, clubId, { includeActivePlayersWithoutSeasonStats: true })
       .then(
         ({
           goalkeepers,

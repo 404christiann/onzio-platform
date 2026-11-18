@@ -4,7 +4,10 @@ import {
   IconBranding,
   IconContact,
   IconDashboard,
+  IconGlobe,
   IconHomepage,
+  IconLock,
+  IconMapPin,
   IconMatchStats,
   IconNews,
   IconPayments,
@@ -19,6 +22,7 @@ import {
   IconStandings,
   IconTeamAccess,
   IconTryouts,
+  IconWarning,
   type AdminIconComponent,
 } from "@/components/admin/icons";
 import type { AdminRouteIconKey } from "@/lib/admin-route-manifest";
@@ -47,4 +51,13 @@ export const ROUTE_ICONS: Record<AdminRouteIconKey, AdminIconComponent> = {
   branding: IconBranding,
   "team-access": IconTeamAccess,
   payments: IconPayments,
+  "stadium": IconMapPin,
+  "foothill-transit": IconGlobe,
+  "chick-fil-a": IconShop,
+  "tickets": IconRegistrations,
+  "season-membership": IconTeamAccess,
+  "know-before-you-go": IconAbout,
+  "policies": IconLock,
+  "partners": IconSponsors,
+  "injury-report": IconWarning,
 };
