@@ -40,6 +40,8 @@ describe("admin sidebar grouped navigation", () => {
         // The Rose City (cinematic@2) editors, after News (classic admin audit fix).
         "stadium", "foothill-transit", "chick-fil-a", "tickets", "season-membership",
         "know-before-you-go", "policies", "partners", "injury-report",
+        // The Website hub row (RC-ADMIN-01): the sidebar lists only four pages and this row for Rose City.
+        "website-pages",
       ],
       ["seasons", "roster", "schedule", "match-stats", "standings"],
       ["branding", "team-access"],

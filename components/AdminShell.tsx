@@ -1,39 +1,12 @@
 "use client";
 
 import {
-  IconDashboard,
-  IconHomepage,
-  IconPrograms,
-  IconTryouts,
-  IconShop,
-  IconAbout,
-  IconSponsors,
-  IconContact,
-  IconNews,
-  IconSeasons,
-  IconRoster,
-  IconSchedule,
-  IconMatchStats,
-  IconSeasonStats,
-  IconStandings,
-  IconRegistrations,
-  IconAnalytics,
-  IconBranding,
-  IconTeamAccess,
-  IconPayments,
-  IconMapPin,
-  IconGlobe,
-  IconLock,
-  IconWarning,
-  IconGroupWebsite,
-  IconGroupCompetition,
-  IconGroupClubSettings,
   ChevronDown,
   Menu,
   X,
-  type AdminIconComponent
 } from "@/components/admin/icons";
 import Link from "next/link";
+import { GROUP_ICONS, ROUTE_ICONS } from "@/components/admin/adminRouteIcons";
 import guided from "@/components/admin/AdminGuided.module.css";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -52,6 +25,7 @@ import {
   type AdminSearchRoute,
 } from "@/components/admin/AdminRouteSearch";
 import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
+import { PageFrameRegistryContext } from "@/components/admin/ui/editor-kit/pageFrameRegistry";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import {
   Sidebar,
@@ -67,58 +41,44 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import {
+  getAdminBreadcrumb,
   getAdminGroupForPathname,
   getVisibleAdminNavigation,
   getVisibleAdminRoutes,
-  type AdminGroupIconKey,
   type AdminRouteAccessContext,
-  type AdminRouteIconKey,
   type AdminVisibleRoute,
 } from "@/lib/admin-route-manifest";
 import { createClient } from "@/lib/supabase-browser";
-
-const ROUTE_ICONS: Record<AdminRouteIconKey, AdminIconComponent> = {
-  "dashboard": IconDashboard,
-  "homepage": IconHomepage,
-  "programs": IconPrograms,
-  "tryouts": IconTryouts,
-  "shop": IconShop,
-  "about": IconAbout,
-  "sponsors": IconSponsors,
-  "contact": IconContact,
-  "news": IconNews,
-  "seasons": IconSeasons,
-  "roster": IconRoster,
-  "schedule": IconSchedule,
-  "match-stats": IconMatchStats,
-  "season-stats": IconSeasonStats,
-  "standings": IconStandings,
-  "registrations": IconRegistrations,
-  "analytics": IconAnalytics,
-  "branding": IconBranding,
-  "team-access": IconTeamAccess,
-  "payments": IconPayments,
-  "stadium": IconMapPin,
-  "foothill-transit": IconGlobe,
-  "chick-fil-a": IconShop,
-  "tickets": IconRegistrations,
-  "season-membership": IconTeamAccess,
-  "know-before-you-go": IconAbout,
-  "policies": IconLock,
-  "partners": IconSponsors,
-  "injury-report": IconWarning,
-};
-
-const GROUP_ICONS: Record<AdminGroupIconKey, AdminIconComponent> = {
-  "website": IconGroupWebsite,
-  "competition": IconGroupCompetition,
-  "club-settings": IconGroupClubSettings,
-};
 
 function isPathActive(pathname: string, href: string) {
   return href === "/admin"
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * What the manifest reads to decide which rows this person sees. The shell and
+ * the Website hub page share it, so the hub lists exactly what the sidebar can reach.
+ */
+export function useAdminRouteAccess(isBillingAuthorized = false): AdminRouteAccessContext {
+  const club = useClubContext();
+  const canMutateContent =
+    club.lifecycle === "onboarding" ||
+    (club.lifecycle === "active" &&
+      (club.kind === "demo" ||
+        club.kind === "test" ||
+        club.publicAccess === "live" ||
+        club.publicAccess === "grace"));
+  return useMemo<AdminRouteAccessContext>(
+    () => ({
+      role: club.role,
+      presentationTemplateKey: club.presentationTemplateKey,
+      isBillingAuthorized,
+      canMutateContent,
+      storeEnabled: club.storeEnabled,
+    }),
+    [canMutateContent, club.presentationTemplateKey, club.role, club.storeEnabled, isBillingAuthorized],
+  );
 }
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
@@ -132,29 +92,19 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [isBillingAuthorized, setIsBillingAuthorized] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const canMutateContent =
-    club.lifecycle === "onboarding" ||
-    (club.lifecycle === "active" &&
-      (club.kind === "demo" ||
-        club.kind === "test" ||
-        club.publicAccess === "live" ||
-        club.publicAccess === "grace"));
-
-  const accessContext = useMemo<AdminRouteAccessContext>(
-    () => ({
-      role: club.role,
-      presentationTemplateKey: club.presentationTemplateKey,
-      isBillingAuthorized,
-      canMutateContent,
-      storeEnabled: club.storeEnabled,
-    }),
-    [canMutateContent, club.presentationTemplateKey, club.role, club.storeEnabled, isBillingAuthorized],
-  );
+  const accessContext = useAdminRouteAccess(isBillingAuthorized);
   const navigation = useMemo(
     () => getVisibleAdminNavigation(accessContext),
     [accessContext],
   );
   const routes = useMemo(() => getVisibleAdminRoutes(accessContext), [accessContext]);
+  // True while the page renders a PageFrame, which carries the canonical Breadcrumb landmark.
+  const [pageHasFrame, setPageHasFrame] = useState(false);
+  const hubOverflow = useMemo(
+    () => navigation.flatMap((entry) => (entry.type === "group" ? (entry.overflowRoutes ?? []) : [])),
+    [navigation],
+  );
+  const breadcrumb = getAdminBreadcrumb(pathname, accessContext);
   const activeGroup = getAdminGroupForPathname(pathname, accessContext);
   const [openGroupKey, setOpenGroupKey] = useState(activeGroup);
 
@@ -245,7 +195,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const renderNavLink = (route: AdminVisibleRoute) => {
     const Icon = ROUTE_ICONS[route.iconKey];
-    const active = isPathActive(pathname, route.href);
+    // On a page that only the hub lists, "All website pages" is the lit row.
+    const active =
+      isPathActive(pathname, route.href) ||
+      hubOverflow.some((overflow) => route.id === "website-pages" && isPathActive(pathname, overflow.href));
     return (
       <SidebarMenuItem key={route.href}>
         <SidebarMenuButton
@@ -406,9 +359,31 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <Menu className="size-5" aria-hidden="true" />
           </button>
           <div className="hidden min-w-0 xl:block">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {currentRoute?.label ?? "Admin"}
-            </p>
+            {breadcrumb && pageHasFrame ? (
+              <p className="truncate text-sm text-muted-foreground" data-admin-top-trail="">
+                {breadcrumb.slice(0, -1).join(" / ")}{" / "}
+                <span className="font-semibold text-foreground">{breadcrumb[breadcrumb.length - 1]}</span>
+              </p>
+            ) : breadcrumb ? (
+              <nav aria-label="Breadcrumb">
+                <ol className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
+                  {breadcrumb.map((crumb, index) => (
+                    <li
+                      key={`${index}-${crumb}`}
+                      aria-current={index === breadcrumb.length - 1 ? "page" : undefined}
+                      className={index === breadcrumb.length - 1 ? "font-semibold text-foreground" : undefined}
+                    >
+                      {index > 0 && <span aria-hidden="true" className="mr-1.5">/</span>}
+                      {crumb}
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            ) : (
+              <p className="truncate text-sm font-semibold text-foreground">
+                {currentRoute?.label ?? "Admin"}
+              </p>
+            )}
           </div>
           <AdminRouteSearch routes={searchRoutes} />
           <AdminThemeToggle />
@@ -446,7 +421,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               )}
             </div>
           ) : null}
-          {children}
+          <PageFrameRegistryContext.Provider value={setPageHasFrame}>{children}</PageFrameRegistryContext.Provider>
         </main>
       </div>
     </SidebarProvider>

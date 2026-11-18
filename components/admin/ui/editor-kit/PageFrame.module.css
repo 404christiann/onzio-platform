@@ -1,0 +1,204 @@
+.frame {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: 20px;
+  /* No transform or filter on this element or above it in the frame:
+     either would turn the fixed phone Save bar into an element positioned inside the header. */
+}
+
+.header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: 14px;
+  /* One row high enough for the 38px Save, so the loaded header equals the skeleton header. */
+  min-block-size: 76px;
+}
+
+.heading {
+  min-inline-size: 0;
+}
+
+.crumbs ol {
+  display: flex;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  color: hsl(var(--muted-foreground));
+  font-size: .8125rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.crumbs li {
+  display: inline-flex;
+  min-inline-size: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.crumbs li + li::before {
+  content: "/";
+  opacity: .6;
+}
+
+.crumbs li[aria-current="page"] {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crumbs a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  text-decoration: underline;
+}
+
+.crumbs a:focus-visible,
+.openPage:focus-visible,
+.discard:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.title {
+  margin: 4px 0 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  max-inline-size: 62ch;
+  margin: 6px 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: .875rem;
+  line-height: 1.5;
+  /* One line on desktop and two on a phone, always the same height, so the skeleton matches whatever the text says. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.openPage {
+  display: inline-flex;
+  min-block-size: 38px;
+  padding: 0 10px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  color: hsl(var(--primary));
+  font-size: .875rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.saveGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.discard {
+  min-block-size: 38px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: .875rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .discard:hover {
+    color: hsl(var(--foreground));
+  }
+}
+
+.content {
+  min-inline-size: 0;
+}
+
+@media (max-width: 767px) {
+  .frame {
+    gap: 16px;
+    /* Room for the bottom bar (56px of controls plus the home indicator) so the last card is reachable. */
+    padding-block-end: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-block-size: 76px;
+  }
+
+  .title {
+    overflow: hidden;
+    font-size: 1.5rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .description {
+    display: -webkit-box;
+    min-block-size: calc(.875rem * 1.5 * 2);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+  }
+
+  .openPage {
+    min-block-size: 44px;
+  }
+
+  .saveGroup {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 30;
+    justify-content: space-between;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid hsl(var(--border));
+    background: hsl(var(--background));
+  }
+
+  .saveGroup > :global(button[data-page-save-button]) {
+    flex: 1;
+  }
+
+  .discard {
+    min-block-size: 44px;
+    padding: 0 12px;
+  }
+}
+
+/* Explicit lists, one explicit property list. Doubled selectors beat the portal's `.admin-press` rule, which sets a blanket transition on every property. */
+:global(.admin-portal) .openPage.openPage,
+:global(.admin-portal) .discard.discard {
+  transition-property: transform, background-color, color, border-color, opacity;
+  transition-duration: 120ms, 150ms, 150ms, 150ms, 150ms;
+  transition-timing-function: cubic-bezier(.23, 1, .32, 1), ease, ease, ease, ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .openPage,
+.discard {
+    transition-property: background-color, color, opacity;
+    transition-duration: 120ms;
+    transition-timing-function: ease-out;
+  }
+}

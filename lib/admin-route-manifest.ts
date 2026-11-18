@@ -68,7 +68,8 @@ export type AdminRouteId =
   | "know-before-you-go"
   | "policies"
   | "partners"
-  | "injury-report";
+  | "injury-report"
+  | "website-pages";
 
 export type AdminRouteIconKey =
   | "dashboard"
@@ -99,7 +100,8 @@ export type AdminRouteIconKey =
   | "know-before-you-go"
   | "policies"
   | "partners"
-  | "injury-report";
+  | "injury-report"
+  | "website-pages";
 
 export type AdminGroupIconKey = "website" | "competition" | "club-settings";
 
@@ -123,6 +125,11 @@ export type AdminRouteDefinition = Readonly<{
    * nine other site editors). Every other design never sees the row.
    */
   cinematicOnly?: true;
+  /**
+   * The page's own heading when it differs from the sidebar and search label.
+   * Only the top-bar breadcrumb reads it, so the last crumb matches the page's h1.
+   */
+  pageTitle?: string;
 }>;
 
 export type AdminVisibleRoute = Readonly<{
@@ -135,6 +142,18 @@ export type AdminVisibleRoute = Readonly<{
   searchKeywords: readonly string[];
 }>;
 
+export type AdminNavigationHeadingId = "pages" | "tickets-and-stadium" | "partners";
+
+/**
+ * A heading on the Website hub page ("All website pages"). The hub groups every
+ * Website row a club can see under these headings. They never render in the sidebar.
+ */
+export type AdminNavigationHeadingDefinition = Readonly<{
+  id: AdminNavigationHeadingId;
+  label: string;
+  routeIds: readonly AdminRouteId[];
+}>;
+
 export type AdminNavigationDefinition =
   | Readonly<{ type: "link"; routeId: AdminRouteId }>
   | Readonly<{
@@ -143,7 +162,24 @@ export type AdminNavigationDefinition =
       label: string;
       iconKey: AdminGroupIconKey;
       routeIds: readonly AdminRouteId[];
+      /**
+       * The Hub. For a club that sees at least one `cinematicOnly` row in this
+       * group, the sidebar lists only these rows and the rest sit behind the hub
+       * page. Every other club sees `routeIds` unchanged. No template check: the
+       * existing cinematicOnly flag decides.
+       */
+      hub?: Readonly<{
+        sidebarRouteIds: readonly AdminRouteId[];
+        hubRouteId: AdminRouteId;
+        headings: readonly AdminNavigationHeadingDefinition[];
+      }>;
     }>;
+
+export type AdminVisibleNavigationSection = Readonly<{
+  id: AdminNavigationHeadingId;
+  label: string;
+  routes: readonly AdminVisibleRoute[];
+}>;
 
 export type AdminVisibleNavigationEntry =
   | Readonly<{ type: "link"; route: AdminVisibleRoute }>
@@ -153,6 +189,8 @@ export type AdminVisibleNavigationEntry =
       label: string;
       iconKey: AdminGroupIconKey;
       routes: readonly AdminVisibleRoute[];
+      /** Present only for the Hub: Website rows the club can see that the sidebar leaves to the hub page. */
+      overflowRoutes?: readonly AdminVisibleRoute[];
     }>;
 
 export type AdminQuickActionId =
@@ -255,6 +293,7 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "stadium",
     groupId: "website",
     cinematicOnly: true,
+    pageTitle: "Robinson Stadium",
   },
   {
     id: "foothill-transit",
@@ -287,6 +326,7 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "season-membership",
     groupId: "website",
     cinematicOnly: true,
+    pageTitle: "Season Ticket Membership",
   },
   {
     id: "know-before-you-go",
@@ -303,6 +343,7 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "policies",
     groupId: "website",
     cinematicOnly: true,
+    pageTitle: "Stadium Guidelines & Fan Code",
   },
   {
     id: "partners",
@@ -317,6 +358,15 @@ export const ADMIN_ROUTE_MANIFEST = [
     label: "Injury Report",
     href: "/admin/injury-report",
     iconKey: "injury-report",
+    groupId: "website",
+    cinematicOnly: true,
+  },
+  {
+    // The Hub: the sidebar shows only the four everyday pages and this row; the page lists every Website editor.
+    id: "website-pages",
+    label: "All website pages",
+    href: "/admin/website-pages",
+    iconKey: "website-pages",
     groupId: "website",
     cinematicOnly: true,
   },
@@ -465,7 +515,37 @@ export const ADMIN_NAVIGATION_MANIFEST = [
       "policies",
       "partners",
       "injury-report",
+      "website-pages",
     ],
+    hub: {
+      sidebarRouteIds: ["homepage", "shop", "about", "news", "website-pages"],
+      hubRouteId: "website-pages",
+      headings: [
+        {
+          id: "pages",
+          label: "Pages",
+          routeIds: ["homepage", "programs", "tryouts", "shop", "about", "contact", "news"],
+        },
+        {
+          id: "tickets-and-stadium",
+          label: "Tickets and stadium",
+          routeIds: [
+            "tickets",
+            "season-membership",
+            "know-before-you-go",
+            "stadium",
+            "foothill-transit",
+            "chick-fil-a",
+            "policies",
+          ],
+        },
+        {
+          id: "partners",
+          label: "Partners",
+          routeIds: ["sponsors", "partners", "injury-report"],
+        },
+      ],
+    },
   },
   {
     type: "group",
@@ -542,6 +622,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   "policies": ["website", "policies", "rules", "code of conduct", "terms"],
   "partners": ["website", "partners", "sponsors", "logos"],
   "injury-report": ["website", "injury report", "injuries", "availability"],
+  "website-pages": ["website", "all pages", "hub", "every page", "website pages"],
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
@@ -623,6 +704,77 @@ export function getVisibleAdminRoutes(
   ).map(toVisibleRoute);
 }
 
+function websiteHub() {
+  for (const entry of ADMIN_NAVIGATION_MANIFEST) {
+    if (entry.type === "group" && "hub" in entry && entry.hub) return entry.hub;
+  }
+  return null;
+}
+
+function clubSeesHub(routes: readonly AdminVisibleRoute[]): boolean {
+  // The existing cinematicOnly flag decides: no new template check.
+  return routes.some((route) => ROUTE_BY_ID.get(route.id)?.cinematicOnly);
+}
+
+/**
+ * The Website hub page's groups: every Website row the club can see under Pages,
+ * Tickets and stadium and Partners. A row no heading names goes under Pages. Empty
+ * for a club without the Hub.
+ */
+export function getWebsiteHubSections(
+  context: AdminRouteAccessContext,
+): readonly AdminVisibleNavigationSection[] {
+  const hub = websiteHub();
+  if (!hub) return [];
+  const routes = getVisibleAdminRoutes(context).filter((route) => route.groupId === "website");
+  if (!clubSeesHub(routes)) return [];
+
+  const placed = new Set<AdminRouteId>([hub.hubRouteId]);
+  const sections = hub.headings.map((heading) => ({
+    id: heading.id,
+    label: heading.label,
+    routes: heading.routeIds.flatMap((routeId) => {
+      const route = routes.find((candidate) => candidate.id === routeId);
+      if (!route) return [];
+      placed.add(routeId);
+      return [route];
+    }),
+  }));
+  const orphans = routes.filter((route) => !placed.has(route.id));
+  if (orphans.length) sections[0] = { ...sections[0], routes: [...sections[0].routes, ...orphans] };
+  return sections.filter((section) => section.routes.length > 0);
+}
+
+/**
+ * The top-bar breadcrumb for a Website page on the Hub: Website, its group, the page.
+ * Null where the shell keeps showing just the page name (every other club and page).
+ */
+export function getAdminBreadcrumb(
+  pathname: string,
+  context: AdminRouteAccessContext,
+): readonly string[] | null {
+  const hub = websiteHub();
+  if (!hub) return null;
+  const route = getVisibleAdminRoutes(context).find(
+    (candidate) => candidate.groupId === "website" && pathnameMatchesRoute(pathname, candidate.href),
+  );
+  if (!route) return null;
+  const sections = getWebsiteHubSections(context);
+  if (sections.length === 0) return null;
+  if (route.id === hub.hubRouteId) return ["Website", route.label];
+  const section = sections.find((candidate) => candidate.routes.some((row) => row.id === route.id));
+  if (!section) return null;
+  const page = ROUTE_BY_ID.get(route.id)?.pageTitle ?? route.label;
+  // A page that shares its group heading's name (Partners under Partners) is one crumb, not two.
+  return page === section.label ? ["Website", section.label] : ["Website", section.label, page];
+}
+
+/** Whether this club can open the Website hub page. Same visibility check as every other route. */
+export function isWebsiteHubVisible(context: AdminRouteAccessContext): boolean {
+  const hub = websiteHub();
+  return Boolean(hub && getVisibleAdminRoutes(context).some((route) => route.id === hub.hubRouteId));
+}
+
 export function getVisibleAdminNavigation(
   context: AdminRouteAccessContext,
 ): readonly AdminVisibleNavigationEntry[] {
@@ -643,6 +795,22 @@ export function getVisibleAdminNavigation(
       return route ? [route] : [];
     });
     if (routes.length === 0) continue;
+    const hub = "hub" in entry ? entry.hub : undefined;
+    if (hub && clubSeesHub(routes)) {
+      const sidebar = new Set<AdminRouteId>(hub.sidebarRouteIds);
+      navigation.push({
+        type: "group",
+        id: entry.id,
+        label: entry.label,
+        iconKey: entry.iconKey,
+        routes: hub.sidebarRouteIds.flatMap((routeId) => {
+          const route = routes.find((candidate) => candidate.id === routeId);
+          return route ? [route] : [];
+        }),
+        overflowRoutes: routes.filter((route) => !sidebar.has(route.id)),
+      });
+      continue;
+    }
     navigation.push({
       type: "group",
       id: entry.id,
