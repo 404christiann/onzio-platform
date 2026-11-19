@@ -103,6 +103,10 @@ export const STAGING_REMOVE_BATCH_SIZE = 100;
 export const STAGING_MAX_FILES_PER_RUN = 2_000;
 export const STAGING_MAX_LIST_CALLS_PER_RUN = 200;
 export const STAGING_TIME_BUDGET_MS = 40_000;
+/** Extra time after the scan budget, only to finish deleting what was already
+ * selected. No new delete batch starts after this; the rest waits for the
+ * next run. Must stay under the route's maxDuration (60 s). */
+export const STAGING_REMOVE_GRACE_MS = 10_000;
 
 export type StagingCleanupResult = {
   inspected: number;
@@ -132,6 +136,7 @@ export async function cleanupAbandonedStagingMedia(input?: {
   const maxListCalls = input?.maxListCalls ?? STAGING_MAX_LIST_CALLS_PER_RUN;
   const deadline =
     Date.now() + (input?.timeBudgetMs ?? STAGING_TIME_BUDGET_MS);
+  const removeDeadline = deadline + STAGING_REMOVE_GRACE_MS;
   let inspected = 0;
   let removed = 0;
   let failed = 0;
@@ -145,10 +150,17 @@ export async function cleanupAbandonedStagingMedia(input?: {
 
   async function removeInBatches(paths: string[]): Promise<void> {
     for (let i = 0; i < paths.length; i += STAGING_REMOVE_BATCH_SIZE) {
+      if (Date.now() >= removeDeadline) {
+        // Selected files that were not deleted stay eligible for the next run.
+        hasMore = true;
+        return;
+      }
       const batch = paths.slice(i, i + STAGING_REMOVE_BATCH_SIZE);
-      const { error: removeError } = await bucket.remove(batch);
+      const { data: deleted, error: removeError } = await bucket.remove(batch);
       if (!removeError) {
-        removed += batch.length;
+        // Storage returns the objects it actually removed; a path that was
+        // already gone is not counted.
+        removed += Array.isArray(deleted) ? deleted.length : batch.length;
         continue;
       }
       failed += batch.length;

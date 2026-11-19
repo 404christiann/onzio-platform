@@ -41,8 +41,9 @@ function fakeStorage(files: Map<string, Obj>) {
     }),
     remove: vi.fn(async (paths: string[]) => {
       removeCalls.push([...paths]);
-      for (const p of paths) files.delete(p);
-      return { data: [], error: null };
+      // Like the real API, return only the objects that existed and were removed.
+      const data = paths.filter((p) => files.delete(p)).map((name) => ({ name }));
+      return { data, error: null };
     }),
   };
   mocks.createServiceRoleClient.mockReturnValue({
@@ -143,6 +144,45 @@ describe("abandoned staging cleanup with shifting list pages", () => {
     expect(listCalls.length).toBeLessThanOrEqual(3);
     expect(result.hasMore).toBe(true);
     expect(files.size).toBeGreaterThan(0);
+  });
+
+  it("counts only files that were actually removed, not ones already gone", async () => {
+    const files = populate(10, OLD, "homepage");
+    const { bucket } = fakeStorage(files);
+    const realRemove = bucket.remove.getMockImplementation()!;
+    // Another process deletes 4 of the files between the scan and the remove.
+    bucket.remove.mockImplementationOnce(async (paths: string[]) => {
+      for (const p of paths.slice(0, 4)) files.delete(p);
+      return realRemove(paths);
+    });
+
+    const result = await cleanupAbandonedStagingMedia();
+
+    expect(result).toMatchObject({ removed: 6, failed: 0 });
+    expect(files.size).toBe(0);
+  });
+
+  it("stops starting delete batches past the time limit and leaves the rest for next run", async () => {
+    const files = populate(250, OLD, "homepage");
+    const { bucket, removeCalls } = fakeStorage(files);
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(now);
+      const realRemove = bucket.remove.getMockImplementation()!;
+      // The first batch is slow enough to push the clock past scan budget + grace.
+      bucket.remove.mockImplementationOnce(async (paths: string[]) => {
+        vi.setSystemTime(now + 60_000);
+        return realRemove(paths);
+      });
+
+      const result = await cleanupAbandonedStagingMedia({ timeBudgetMs: 40_000 });
+
+      expect(removeCalls.map((c) => c.length)).toEqual([100]);
+      expect(result).toMatchObject({ removed: 100, failed: 0, hasMore: true });
+      expect(files.size).toBe(150);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("queues every file of a failed batch for retry and counts them as failed", async () => {
