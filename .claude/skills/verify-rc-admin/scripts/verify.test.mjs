@@ -646,3 +646,13 @@ test("4b-0: every EDITORS row that saves through /api/admin/data names both ops 
     assert.match(code(row), /\btables: \[("[a-z_]+"(, )?)+\]/, `${key} names its tables`);
   }
 });
+
+test("4b-0-2: the seasons row finds the create button under both labels, and only those", async () => {
+  const { SEASON_CREATE_BUTTON } = await import("./editors.mjs");
+  for (const label of ["Create Next Season", "Create 2028 season", "Create 2027 Season", "create 2030 season"]) assert.equal(SEASON_CREATE_BUTTON.test(label), true, label);
+  for (const label of ["Create season", "Create 28 season", "Create 20281 season", "Create 2028 seasons", "Create Next Season now", "Edit 2028 season", "Recreate 2028 season", ""]) assert.equal(SEASON_CREATE_BUTTON.test(label), false, label);
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  const row = spec.slice(spec.indexOf('{ key: "seasons"'), spec.indexOf('{ key: "roster"'));
+  assert.match(row, /getByRole\("button", \{ name: SEASON_CREATE_BUTTON \}\)/, "the seasons row uses the shared matcher");
+  assert.doesNotMatch(row, /visibleButton\(page, "Create Next Season"\)/, "no exact-label lookup is left in the row");
+});

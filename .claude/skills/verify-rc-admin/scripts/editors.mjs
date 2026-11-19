@@ -50,3 +50,9 @@ export function stepsPass(steps) {
   const entries = Object.entries(steps ?? {});
   return entries.length > 0 && entries.every(([name, outcome]) => outcome === "pass" || (OPTIONAL_STEPS.includes(name) && /^n\/a: \S/.test(outcome)));
 }
+
+/**
+ * The Seasons create button: the classic page says "Create Next Season", the rebuilt one says "Create 2028 season" (the year
+ * varies). Both are the same action for the `seasons` row. Anchored, so "Create season template" or a row's own Edit never match.
+ */
+export const SEASON_CREATE_BUTTON = /^(?:Create Next Season|Create \d{4} season)$/i;

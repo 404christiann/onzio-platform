@@ -8,3 +8,4 @@ export function isMutating(request: SaveShape): boolean;
 export function isEditorSave(editor: EditorShape, request: SaveShape): boolean;
 export function gate3Plan(editor: EditorShape | undefined): { applicable: boolean; reason: string | undefined; skipped: Record<string, string>; noStatus: string | undefined };
 export function stepsPass(steps: Record<string, string> | undefined): boolean;
+export const SEASON_CREATE_BUTTON: RegExp;
