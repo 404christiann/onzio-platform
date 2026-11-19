@@ -1,5 +1,40 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4a-contact: Rose City Contact editor on the editor kit (app code only)
+
+**Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4a-contact, branch `claude/rc-admin-4a-contact` off `1177645d`.
+**Status:** `in_progress`: PR open, verify-rc-admin PASS (6/6). No migration, schema, validator, RPC or env change. Merges only on Christian's word.
+
+**Completed work:**
+- `/admin/contact` for `cinematic@2` is rebuilt on the kit: `PageFrame` (breadcrumb, Open page, Save grey/blue/green check), six
+  `SectionCards` (Page heading, then Media, Tryouts, Tickets, Information, Partnerships, fixed in SQL: no add, remove, reorder or
+  show/hide), each opening an `EditorDialog` (two-pane on desktop, full-screen sheet on a phone).
+- Same `POST /api/admin/cinematic-contact` body, byte for byte (`buildContactSaveInput`, parsed by the same save schema). Same recovery
+  key and draft shape, so a draft saved by the old editor still restores.
+- Field messages now show the zod strings the old editor never surfaced ("Enter a title.", "Enter row text.", "Use an HTTPS URL, site
+  path, or email address."), after a refused save; the first card with a message opens. The Information card says "Link pending"
+  while its destination is blank.
+- Conflict now offers "Load latest and keep my edits" (the design had none) because verify-rc-admin gate 3 requires it. Client only:
+  it reloads the latest revision and keeps the draft.
+- No live preview on the page (design): the old preview frame is gone. Diverse City's Contact editor is untouched.
+
+**Files changed:** `components/admin/contact/CinematicContactEditor.tsx` (rewritten), new `contact-sections.ts`,
+`ContactSectionFields.tsx`, `ContactEditor.module.css`, new `tests/contracts/rc-admin-4a-contact-editor.test.ts`, this file, `HANDOFF.md`.
+Selector debt unchanged (same two `cinematic@2` literals and three `presentationTemplateKey` reads).
+
+**Verification:** `verify.sh run --route /admin/contact --package RC-ADMIN-4a-contact --touched contact`: gate 1 scope PASS; gate 2
+13/13 payloads identical; gate 3 clean/dirty/saving/saved/retry/conflict/discard PASS; gate 4 four visual samples, CLS under 0.001,
+new axe 0, reduced-motion offenders 0; gate 5 tsc, unit 4055/4055, architecture 152/152, selector debt unchanged; gate 6 Diverse City
+8/8 identical. Report: `test-results/rc-admin-verify/20261119-093026-RC-ADMIN-4a-contact/report.html` (gitignored). New contract test 24 tests. No gate flake rerun was needed.
+
+**Tooling notes (not fixed here):** the `rc-admin-verify` worktree copy of the skill loads a second `@playwright/test` against this
+worktree's Playwright CLI and fails with "test.describe() ... not expected here" (gates 2, 3, 4, 6 then never run). I ran the skill copy
+inside this worktree instead. A run also stops under 5 GB free disk; the orchestrator freed space before the passing run.
+
+**Blockers or unresolved decisions:** none.
+
+**Exact next step:** onzio-bot review, then Christian merges. Nothing to apply on production.
+
 ## 2026-11-19 - RC-ADMIN-4-0b: Partners/Injury Report card spacing, Registrations and Standings hidden for Rose City
 
 **Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4-0b, branch `claude/rc-admin-4-0b` off `1177645d`.

@@ -1,3 +1,12 @@
+## 2026-11-19 - RC-ADMIN-4a-contact: Rose City Contact editor on the editor kit (app code only)
+
+- **Status:** `in_progress`, PR open; verify-rc-admin PASS (6/6). No migration, schema, validator, RPC or env change. Merges only on
+  Christian's word. Record in `STATUS.md`.
+- **What:** `/admin/contact` for `cinematic@2` now uses `PageFrame`, six fixed `SectionCards` and an `EditorDialog`. The save body is
+  byte-identical to the old editor's. Field messages now show the schema's own strings. Conflict gains "Load latest and keep my edits".
+  Diverse City's Contact editor is unchanged.
+- **Exact next step:** onzio-bot review, then Christian merges.
+
 ## 2026-11-19 - Rose City admin wave 4: old editors onto the editor kit (plan), and RC-ADMIN-4-0b
 
 - **Status:** `in_progress`. Wave 4 moves the remaining classic Rose City editors onto the shared editor kit

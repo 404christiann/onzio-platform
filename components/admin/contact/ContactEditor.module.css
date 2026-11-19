@@ -1,0 +1,10 @@
+.notice { display: grid; gap: 10px; }
+.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 8px; }
+.keep { min-block-size: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--secondary)); }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.stack { display: grid; min-inline-size: 0; gap: 20px; }
+.fieldWrap { display: grid; gap: 8px; min-inline-size: 0; }
+.route { margin: 0; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+.route code { overflow-wrap: anywhere; }
+.start, .fixed { margin: 0; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+.fixed { margin-block-start: 14px; padding-inline: 2px; }
