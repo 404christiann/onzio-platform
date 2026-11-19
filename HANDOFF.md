@@ -1,3 +1,12 @@
+## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)
+
+- **Status:** `in_progress`; code, unit and contract tests done, verify-rc-admin not run yet. No migration, schema, validator, RPC or env
+  change. Record in `STATUS.md`.
+- **What:** `/admin/roster` for Rose City now shows a card per player styled like the public Squad card, Goalkeepers first, with a show/hide
+  switch on `players.active` and a two-pane dialog (full-screen sheet on phone) with its own Save for one player. Same write bodies as the
+  classic editor; no reorder (no column). Staff stays the classic list. Diverse City keeps the classic editor (one slug-keyed branch).
+- **Exact next step:** verify-rc-admin after RC-ADMIN-4b-0 is on main, then the PR.
+
 ## 2026-11-19 - RC-ADMIN-4a-policies: Rose City Policies editor on the editor kit
 
 - **Status:** `in_progress`, PR open; merges on Christian's word. App code only. Details and evidence in `STATUS.md`.

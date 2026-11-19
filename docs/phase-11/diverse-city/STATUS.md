@@ -1,5 +1,51 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)
+
+**Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4b-roster, branch `claude/rc-admin-4b-roster` off `3d52ab65`.
+**Status:** `in_progress`: code, tests and typecheck done; **verify-rc-admin not run yet** (waits for RC-ADMIN-4b-0 to be on main and the
+orchestrator's "Roster: go"). No PR yet. App code only: no migration, schema, RPC, validator or env change; selector debt and the
+`lib/code-site.ts` ceilings untouched.
+
+**Completed work:**
+- `/admin/roster` for Rose City (classic portal, club slug `rose-city`) is rebuilt on the editor kit: `PageFrame` (no page Save, as today),
+  a card per player styled like the public Squad card (portrait or crest, red number, flag, name, hometown, the three stats visitors see),
+  grouped **Goalkeepers first** (Christian, 2026-11-19; the public page lists Defenders first), by jersey number then name inside a group.
+  Search, position and status filters keep the classic labels (status says Shown / Hidden).
+- Each card has the show/hide switch on the existing `players.active` (the classic `restoreVisibility` path: `update({ active })`, with the
+  season stats row seeded first when showing) and an Undo toast. Each card's Edit button is a kit edit control (`KIT_EDIT_PROPS`).
+- The player editor is the kit `EditorDialog` (two panes on desktop, full-screen sheet on phone) with six sections: Photo and basics, Player
+  details, Background, Season stats and Action photos (saved players only) and Visibility. It has its own Save (the kit `PageSaveButton`, reads
+  "Save") and Cancel in a footer. Save writes this player only, then the season totals, exactly as the classic dialog does; leaving with
+  unsaved edits goes through the same unsaved guard. Validation keeps the classic messages and now shows on the field and on the section.
+- Staff is the classic Staff list and dialog, unchanged (`StaffTab classic`), as the design says.
+- Diverse City is untouched: `RosterPage` gains one guarded early return (`usesKitRoster(club.slug)`, `lib/admin-roster-variant.ts`, slug
+  list `["rose-city"]`, no template selector); the classic page, `ClassicRosterPage`, `PlayerFormFields` and `StaffTab` are not edited.
+- Kit: `EditorDialog` gains an optional `footer` prop (additive; a dialog that does not pass one renders as before) for an editor that saves
+  one item from its own dialog.
+- Payloads unchanged: players insert/update, `seedPlayer` upsert, `saveSeasonTotals`. No reorder is offered (no `sort_order` column).
+
+**Files changed:** `app/admin/(protected)/roster/page.tsx` (one branch + two imports); `components/admin/ui/editor-kit/EditorDialog.tsx` and
+`.module.css` (optional `footer`); `lib/admin-roster-variant.ts`; new `components/admin/roster/rose-city/` (`RoseCityRosterPage`,
+`RoseCityPlayerDialog`, `RosterPlayerCard`, `RosterPlayerFields`, `RosterStatsSection`, `RosterActionPhotos`, `useRosterSeasonStats`,
+`rose-city-roster-model.ts`, `rose-city-roster-save.ts`, `rose-city-roster.module.css`); new `tests/contracts/rc-admin-4b-roster.test.ts` (26
+tests: the same write bodies and order as the classic editor for new, edit, show, hide and photo replace; classic messages; Goalkeepers
+first; filters; card numbers; rendered card and fields; Diverse City branch pins; no template selector in new files).
+
+**Verification so far:** `npx tsc --noEmit` exit 0; `npm run test:unit` 350 files, 4138 tests pass (it prints the known
+`fatal: Not a valid object name origin/main`); contract test 26/26. **Not run:** verify-rc-admin (all six gates), a real-browser look at the
+page.
+
+**Blockers or unresolved decisions:**
+- The 4b-0 `roster` row (WIP) clicks a dialog button named `/^Save( changes)?$/`; this editor's button reads "Save", which matches.
+  The design said "Save player"; that label would need the regex to accept it.
+- Staff keeps the classic look inside the kit page. Restyling it to match is a later, separate change.
+- The player editor's stats keep the classic quirk: changing a player's position after creation does not move the season row between the
+  field and keeper tables (existing behaviour, not fixed here).
+
+**Exact next step:** orchestrator says 4b-0 is merged and "Roster: go"; rebase, run
+`verify.sh run --worktree <this worktree> --route /admin/roster --package RC-ADMIN-4b-roster --touched roster`, then open the PR.
+
 ## 2026-11-19 - RC-ADMIN-4b-0-2 verify-rc-admin: three small fixes for the Seasons, Roster and kit-editor rebuilds
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-2, branch `claude/rc-admin-4b-0-2` on `0a80031a`. **Status:** `in_progress`: PR

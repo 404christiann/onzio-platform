@@ -27,6 +27,8 @@ import rosterStyles from "@/components/admin/roster/classic-roster.module.css";
 import { ClassicStaffDialog } from "@/components/admin/roster/ClassicStaffDialog";
 import { AdminToastProvider } from "@/components/admin/ui/AdminToast";
 import ClassicRosterPage from "@/components/admin/roster/ClassicRosterPage";
+import RoseCityRosterPage from "@/components/admin/roster/rose-city/RoseCityRosterPage";
+import { usesKitRoster } from "@/lib/admin-roster-variant";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
 import guided from "@/components/admin/AdminGuided.module.css";
 import {
@@ -121,6 +123,11 @@ const ROSTER_TAB_ORDER: RosterTab[] = ["players", "staff"];
 
 export default function RosterPage() {
   const reimagined = useAdminPortal().portal === "reimagined";
+  const club = useClubContext();
+  // RC-ADMIN-4b-roster: Rose City's classic Roster is the editor-kit page; every other club keeps the classic editor below.
+  if (!reimagined && usesKitRoster(club.slug)) {
+    return <AdminToastProvider><RoseCityRosterPage StaffComponent={StaffTab} /></AdminToastProvider>;
+  }
   return reimagined ? <LegacyRosterPage /> : (
     <AdminToastProvider><ClassicRosterPage StaffComponent={StaffTab} PlayerFields={PlayerFormFields} /></AdminToastProvider>
   );

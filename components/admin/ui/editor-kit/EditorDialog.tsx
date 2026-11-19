@@ -91,6 +91,12 @@ export type EditorDialogProps = {
   /** The section as it looks on the public page, at the width of the preview column (about 380px). Rendered inert. */
   renderPreview?: (id: string) => ReactNode;
   previewHint?: ReactNode;
+  /**
+   * Replaces the default "Edits stay on the page" note and Done footer, on desktop and on a phone (where the default
+   * footer is not shown). For an editor that saves one item from its own dialog: status on the left, Cancel and Save on
+   * the right. Left out, the footer is unchanged.
+   */
+  footer?: ReactNode;
 };
 
 export function EditorDialog(props: EditorDialogProps) {
@@ -142,6 +148,7 @@ export function EditorDialogBody({
   mode = "fields",
   renderPreview,
   previewHint = "How this section looks on the page",
+  footer,
   labelId,
 }: EditorDialogProps & { labelId: string }) {
   const phone = useSyncExternalStore(subscribePhone, isPhone, serverPhone);
@@ -178,7 +185,7 @@ export function EditorDialogBody({
   const panelHeadingId = `${labelId}-panel`;
 
   return (
-    <div ref={shell} className={styles.shell} data-view={phone ? view : "split"} data-split={split || undefined} onKeyDown={trapTab} data-editor-dialog="">
+    <div ref={shell} className={styles.shell} data-view={phone ? view : "split"} data-split={split || undefined} data-footer={footer ? "" : undefined} onKeyDown={trapTab} data-editor-dialog="">
       <header className={styles.header}>
         {phone && view === "section" && (
           <button type="button" className={`admin-press ${styles.back}`} onClick={() => setView("list")} data-editor-dialog-back="">
@@ -251,7 +258,8 @@ export function EditorDialogBody({
         )}
       </div>
 
-      {!phone && (
+      {footer && <footer className={`${styles.footer} ${styles.customFooter}`} data-editor-dialog-footer="">{footer}</footer>}
+      {!phone && !footer && (
         <footer className={styles.footer}>
           <p className={styles.note}>{footerNote}</p>
           <button type="button" className={`admin-press ${styles.done}`} onClick={onClose} data-editor-dialog-done="">{doneLabel}</button>
