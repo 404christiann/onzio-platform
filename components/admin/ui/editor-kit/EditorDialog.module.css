@@ -196,6 +196,10 @@
   border-block-start: 1px solid hsl(var(--border));
 }
 
+.customFooter {
+  padding-inline-end: 20px;
+}
+
 .note {
   margin: 0;
   color: hsl(var(--muted-foreground));
@@ -251,6 +255,14 @@
 
   .shell {
     grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .shell[data-footer] {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .customFooter {
+    padding: 10px calc(12px + env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
   }
 
   .header {

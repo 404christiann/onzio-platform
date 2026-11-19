@@ -24,6 +24,8 @@ export type PageSaveButtonProps = {
   ref?: Ref<HTMLButtonElement>;
   /** Render the polite status announcement. Leave on unless the caller already announces. */
   announce?: boolean;
+  /** Replaces the plain "Save" wording (clean and dirty only) for a Save that saves one item, for example "Save player". */
+  saveLabel?: string;
 };
 
 /**
@@ -43,9 +45,10 @@ export function PageSaveButton({
   id,
   ref,
   announce = true,
+  saveLabel,
 }: PageSaveButtonProps) {
   const actionable = isPageSaveActionable(state);
-  const label = pageSaveLabel(state);
+  const label = saveLabel && (state === "clean" || state === "dirty") ? saveLabel : pageSaveLabel(state);
   const announcement = pageSaveAnnouncement(state);
 
   function press() {
