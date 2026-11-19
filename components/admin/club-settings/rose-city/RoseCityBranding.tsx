@@ -41,7 +41,7 @@ const TAGLINE_HINT = "Shown under the club name in the footer. Press Enter for a
 
 export function RoseCityBranding() {
   const club = useClubContext();
-  const { setClubLogoPath } = useClubBranding();
+  const { setClubLogoPath, refreshClubBranding } = useClubBranding();
   const [draft, setDraft] = useState<BrandingDraft | null>(null);
   const [confirmed, setConfirmed] = useState<BrandingDraft | null>(null);
   const [inversePath, setInversePath] = useState("");
@@ -184,9 +184,12 @@ export function RoseCityBranding() {
     if (!progress.current.stages.length) {
       const errors = roseCityBrandingErrors(current, baseline);
       if (roseCityBrandingInvalid(errors)) {
+        // The fields live in the dialog, which is closed or on another section: say it on the page and open the footer.
+        const message = "Check the highlighted footer fields, then try Save again.";
         setAttempted(true);
+        setError(message);
         dialog.openSection("footer");
-        throw new Error("Check the highlighted footer fields, then try Save again.");
+        throw new Error(message);
       }
     }
     busy.current = true;
@@ -216,6 +219,8 @@ export function RoseCityBranding() {
         if (mounted.current) setConfirmed(next);
         progress.current = advanceBrandingSave(progress.current);
         if (stage.kind === "logo") setClubLogoPath(stage.value);
+        // The admin layout's provider feeds other editors' footer previews; bring its tagline up to date.
+        if (stage.kind === "tagline") void refreshClubBranding();
       }
       setRetrying(false);
       setAttempted(false);
