@@ -55,6 +55,31 @@ Diverse City's classic Seasons page.
 
 **Exact next step:** onzio-bot review, then Christian merges.
 
+## 2026-11-19 - RC-ADMIN-4b-0-3 verify-rc-admin: Stats rows drive main's workspace and Rose City's dialog table
+
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-3, branch `claude/rc-admin-4b-0-3` on `313a63b1`. **Status:** `in_progress`: PR open,
+onzio-bot clean at `4787c48`. Skill only: no app code, no migration. Starting point: the Stats worker's patch, reviewed and changed (see below).
+
+**Completed work:**
+- Both stats rows open "Edit <player>" (Rose City's table, which opens a dialog whose number boxes edit the draft live) or "Select <player>" (main).
+- `closeDialog` / `reopenDialog` hooks on an editor row, used where the kit's Done is used (before Save, Discard and the gate 2 save; to pin the
+  field again). They do nothing where there is no dialog, so main's old workspace passes with the same row. Changed from the patch: its
+  `reopenDialog` clicked "Edit" unconditionally and would have timed out on main; the dialog is now the one holding a stat input, not any dialog.
+- `lacksOnAdminButton`: lacks that hold only while the page saves with the old AdminSaveButton (read from the page's own button). The patch dropped
+  `conflict`, `discard` and `status` from `lacks` for all builds, which would fail gate 3/4 on main's old Stats (no conflict control, no Discard, no
+  status line). Now the old button skips them with reasons and the kit's PageSaveButton runs them: conflict runs for real ("Load latest and keep my
+  edits", state `conflict`, a second session saving through the dialog hooks), Discard and the status check too.
+- `retry` is declared for both rows with the reason "re-sends the draft; /api/admin/data has no operationId, so there is no \"Retry same save\" pending state".
+- Gate 4 screenshots and axe-scans the open stats dialog (informational) and skips the discard dialog by the page's Save button kind.
+- 56 self-tests pass (2 new for the plan by button kind and the row/hook shape).
+
+**Verification** (`--touched none`, clean main; reports under `/Users/christianalcala/Downloads/onzio-platform/.claude/worktrees/rc-admin-4b-0-2/test-results/rc-admin-verify/`):
+- `/admin/stats?view=match`: all six gates pass (gate 3: retry, conflict, discard n/a through `lacksOnAdminButton`): `20261119-135030-RC-ADMIN-4b-0-3-t3m`.
+- `/admin/stats?view=season`: all six gates pass (gate 3: retry, conflict, discard n/a through `lacksOnAdminButton`; 20/20 payloads, Diverse City 15/15): `20261119-141735-RC-ADMIN-4b-0-3-t3s`.
+- Not exercised live: the new build path (PageSaveButton, dialog, real conflict). The Stats branch verifies against this after it lands.
+
+**Next step:** onzio-bot; then `verify.sh cleanup --worktree` on this worktree.
+
 ## 2026-11-19 - RC-ADMIN-4b-0-2 follow-up: seasons row reason text (onzio-bot Low on #188)
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-2 follow-up, branch `claude/rc-admin-4b-0-2-low` on `e8190f83`. **Status:** `in_progress`:

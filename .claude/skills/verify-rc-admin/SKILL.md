@@ -128,8 +128,8 @@ Base URLs: `http://rose-city.localhost:<port>/admin/...`, `http://diverse-city.l
 | members | /admin/members | POST /api/admin/members | no field: types `rcv-gate2@example.com` into "Administrator email" and presses "Add administrator" (the request is aborted, nobody is added) |
 | seasons | /admin/seasons | POST /api/admin/data, `insert` on `seasons` | no field: "Create Next Season" (classic) or "Create <year> season" (rebuilt) → confirm (aborted at the first write) |
 | roster | /admin/roster | POST /api/admin/data, `update` on `players` | no field: first `[data-player-id]` → Edit → "Name" → "Save changes" (or "Save player" on the rebuilt dialog) |
-| stats-match | /admin/stats?view=match | POST /api/admin/data, `upsert` on `player_match_stats` / `goalkeeper_match_stats` | first match in the "Match" select, first player, first stat input (+1) → header Save |
-| stats-season | /admin/stats?view=season | POST /api/admin/data, `upsert` on the `*_season_stats` / `*_season_adjustments` tables | first player, first stat input (+1) → header Save |
+| stats-match | /admin/stats?view=match | POST /api/admin/data, `upsert` on `player_match_stats` / `goalkeeper_match_stats` | first match in the "Match" select, first player ("Select <player>" on main; "Edit <player>" opens a dialog on Rose City's table), first stat input (+1), Done on that dialog (the dialog edits the draft live) → header Save |
+| stats-season | /admin/stats?view=season | POST /api/admin/data, `upsert` on the `*_season_stats` / `*_season_adjustments` tables | first player ("Select" on main, "Edit" dialog on Rose City), first stat input (+1), Done → header Save |
 
 Standings is not a Rose City editor (hidden for the club), so it has no row; `/admin/standings` is only in gate 6.
 
@@ -145,7 +145,16 @@ those parts as "not applicable" for that editor only, never for everyone:
 - `retry`, `conflict`, `discard`: that gate 3 step reports `n/a: <reason>` (the report and `stepsPass` accept it only for these three).
   `discard` also skips the discard dialog in gate 4's visuals and reduced-motion sample.
 - `status`: the old AdminSaveButton has no "Unsaved changes" line beside it; only that text check is skipped.
+- `lacksOnAdminButton`: the same four keys (not `pageSave`), but they hold only while the page still saves with the old AdminSaveButton, read
+  from the page's own Save button. With the kit's PageSaveButton those parts run for real. The Stats rows use it, so one row serves main's old
+  workspace (no conflict control, no Discard, no status line) and its rebuild (conflict, Discard and the page Save state run).
+- `retry`, for an editor on `/api/admin/data`: there is no operationId receipt, so a failed save only re-sends the draft ("Try again"); the Stats rows
+  declare it with that reason.
 `clean`, `dirty` (state and enabled Save), `saving` and `saved` can never be skipped.
+
+**Own dialogs.** An editor whose fields sit in its own dialog (Rose City's Stats "Edit <player>") gives `closeDialog` / `reopenDialog`, which gates 3
+and 4 use where they use the kit's Done (before Save, Discard and the gate 2 save; to pin the field again). Both do nothing on a build with no such dialog,
+so one row serves main and the rebuild. The open dialog is screenshotted and axe-scanned (informational) in gate 4.
 
 When a package changes how an editor opens (new section cards, dialogs, sheets), update its row in
 `EDITORS` in `rc-admin-verify.spec.ts` (`open`, `field`, `beforeSave`, `saveButton`) in the same
