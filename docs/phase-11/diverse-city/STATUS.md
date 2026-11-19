@@ -25,7 +25,7 @@ Selector debt unchanged (same two `cinematic@2` literals and three `presentation
 **Verification:** `verify.sh run --route /admin/contact --package RC-ADMIN-4a-contact --touched contact`: gate 1 scope PASS; gate 2
 13/13 payloads identical; gate 3 clean/dirty/saving/saved/retry/conflict/discard PASS; gate 4 four visual samples, CLS under 0.001,
 new axe 0, reduced-motion offenders 0; gate 5 tsc, unit 4055/4055, architecture 152/152, selector debt unchanged; gate 6 Diverse City
-8/8 identical. Report: `test-results/rc-admin-verify/20261119-093026-RC-ADMIN-4a-contact/report.html` (gitignored). New contract test 24 tests. No gate flake rerun was needed.
+8/8 identical. Report: `test-results/rc-admin-verify/20261119-100255-RC-ADMIN-4a-contact/report.html` (gitignored). New contract test 24 tests. Re-run on head `e413afd9` (rebased on #181, `2919a714`): the first run failed only gate 3 "saved" (colour sampled mid-transition, `rgb(43, 183, 110)`, the known skill flake); one identical rerun passed 6/6 (unit 4069/4069).
 
 **Tooling notes (not fixed here):** the `rc-admin-verify` worktree copy of the skill loads a second `@playwright/test` against this
 worktree's Playwright CLI and fails with "test.describe() ... not expected here" (gates 2, 3, 4, 6 then never run). I ran the skill copy
