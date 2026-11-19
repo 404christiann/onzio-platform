@@ -111,7 +111,7 @@ export const EDITORS: Editor[] = [
     lacks: { pageSave: "adding and removing an administrator act at once; there is no page Save" } },
   { key: "seasons", route: "/admin/seasons", save: /\/api\/admin\/data$/, ops: ["insert"], tables: ["seasons"],
     act: async (page) => { await page.getByRole("button", { name: SEASON_CREATE_BUTTON }).filter({ visible: true }).first().click(); await page.getByRole("dialog").getByRole("button", { name: /^Create/ }).click(); },
-    lacks: { pageSave: "Create Next Season, Set active and Delete act at once; there is no page Save" } },
+    lacks: { pageSave: "Create Next Season (or Create <year> season), Set active and Delete act at once; there is no page Save" } },
   { key: "roster", route: "/admin/roster", save: /\/api\/admin\/data$/, ops: ["update"], tables: ["players"],
     act: async (page) => {
       const row = page.locator("[data-player-id]").first();
