@@ -1,0 +1,125 @@
+.notice { display: grid; gap: 10px; }
+.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Partner-list note above the cards. */
+.partners {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card));
+}
+.partners p { margin: 0; flex: 1 1 280px; color: hsl(var(--muted-foreground)); font-size: .875rem; line-height: 1.45; }
+.partners a {
+  display: inline-flex;
+  min-block-size: 38px;
+  padding: 0 14px;
+  align-items: center;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+  font-size: .875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.partners a:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+@media (max-width: 767px) { .partners a { min-block-size: 44px; } }
+
+/* Preview cards: one fixed shape, so nothing moves when logos load. */
+.previewFrame { background: #fff; min-block-size: 507px; }
+.empty { display: flex; min-block-size: 507px; align-items: center; justify-content: center; margin: 0; color: #777; font-size: 14px; }
+.stripWrap { padding: 20px 16px; background: var(--color-black, #0d0d0d); min-block-size: 190px; box-sizing: border-box; min-block-size: 507px; }
+.stripTitle { margin: 0 0 22px; text-align: center; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--color-gray-mid, #9a9a9a); }
+.strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 28px 40px; }
+.stripLogo { position: relative; inline-size: 128px; block-size: 48px; }
+
+/* Dialog section. */
+.fields { display: grid; min-inline-size: 0; gap: 14px; }
+.note { margin: 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.45; }
+.countLine { display: flex; align-items: center; gap: 8px; margin: 0; font-size: .875rem; font-weight: 600; }
+.full { padding: 2px 8px; border-radius: 999px; background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); font-size: .75rem; font-weight: 500; }
+.rows { display: grid; margin: 0; padding: 0; gap: 10px; list-style: none; }
+.row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px 14px;
+  padding: 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--card));
+}
+.tile {
+  position: relative;
+  inline-size: 112px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  /* Mid-neutral on purpose, in both themes: white logos need a dark-ish ground and dark logos a light-ish one. */
+  background: #7d7d82;
+}
+.warn {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-start: 4px;
+  display: flex;
+  inline-size: 22px;
+  block-size: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: hsl(48 100% 56%);
+  color: hsl(40 90% 12%);
+}
+.body { display: grid; min-inline-size: 0; gap: 10px; }
+.field { display: grid; min-inline-size: 0; gap: 4px; }
+.label { font-size: .8125rem; font-weight: 600; }
+.input {
+  inline-size: 100%;
+  min-block-size: 40px;
+  padding: 8px 12px;
+  border: 1px solid hsl(var(--input));
+  border-radius: 10px;
+  background: hsl(var(--card));
+  color: inherit;
+  /* 16px so iOS does not zoom the page when a field takes focus. */
+  font-size: 1rem;
+}
+.input:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
+.input[aria-invalid="true"] { border-color: hsl(var(--destructive)); }
+.hint { margin: 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.4; }
+.error { margin: 0; color: hsl(var(--destructive)); font-size: .8125rem; line-height: 1.4; }
+.actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.also { display: inline-flex; min-block-size: 40px; align-items: center; gap: 8px; margin-inline-start: auto; font-size: .875rem; }
+.tool {
+  display: inline-flex;
+  min-block-size: 40px;
+  min-inline-size: 40px;
+  padding: 0 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tool:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.tool:disabled { opacity: .45; cursor: default; }
+.remove { color: hsl(var(--destructive)); }
+@media (max-width: 767px) {
+  .tool, .also { min-block-size: 44px; }
+  .tool { min-inline-size: 44px; }
+  .input { min-block-size: 44px; }
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .tile { inline-size: 100%; max-inline-size: 220px; }
+  .also { margin-inline-start: 0; inline-size: 100%; justify-content: space-between; }
+}

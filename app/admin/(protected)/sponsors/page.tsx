@@ -6,6 +6,7 @@ import { AdminPage, AdminPanel } from "@/components/admin/AdminPage";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { Sponsors } from "@/components/admin/reimagined/Sponsors";
 import { ClassicSponsorsPage } from "@/components/admin/sponsors/ClassicSponsorsPage";
+import RoseCitySponsorsEditor from "@/components/admin/sponsors/rose-city/RoseCitySponsorsEditor";
 
 // ADMIN-RE-15: a club on the new admin gets the one-list page (design
 // cd-sponsors-final, decision 0007); a classic club keeps this page, which edits
@@ -15,6 +16,8 @@ export default function AdminSponsorsPage() {
   const club = useClubContext();
   const page = portal === "reimagined" ? <Sponsors /> : <ClassicSponsorsPage />;
   if (club.presentationTemplateKey !== "cinematic@2") return page;
+  // RC-ADMIN-14: Rose City in the classic admin gets the Previews editor, which carries its own partner-list link.
+  if (portal === "classic") return <RoseCitySponsorsEditor />;
   // Rose City (cinematic@2): its Club Partners pages keep their own partner list.
   return (
     <>
