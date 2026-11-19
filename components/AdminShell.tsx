@@ -74,11 +74,12 @@ export function useAdminRouteAccess(isBillingAuthorized = false): AdminRouteAcce
     () => ({
       role: club.role,
       presentationTemplateKey: club.presentationTemplateKey,
+      clubSlug: club.slug,
       isBillingAuthorized,
       canMutateContent,
       storeEnabled: club.storeEnabled,
     }),
-    [canMutateContent, club.presentationTemplateKey, club.role, club.storeEnabled, isBillingAuthorized],
+    [canMutateContent, club.presentationTemplateKey, club.role, club.slug, club.storeEnabled, isBillingAuthorized],
   );
 }
 

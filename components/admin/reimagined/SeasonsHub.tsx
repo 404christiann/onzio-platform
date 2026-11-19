@@ -386,18 +386,21 @@ export function SeasonsHub({
       ) : viewed ? (
         <>
           <div className={styles.cards}>
-            <HubCard
-              icon={<IconStandings className="size-6" aria-hidden="true" />}
-              label="League table"
-              main={
-                data.league
-                  ? `You’re ${ordinal(data.league.rank)} of ${numbers.format(data.league.of)} · ${numbers.format(data.league.points)} ${noun(data.league.points, "point", "points")}`
-                  : "No league table yet"
-              }
-              note="Each season has its own table"
-              button="Update the table"
-              href={links.league}
-            />
+            {/* A club whose admin hides Standings (Rose City) gets no link, so no card either. */}
+            {links.league ? (
+              <HubCard
+                icon={<IconStandings className="size-6" aria-hidden="true" />}
+                label="League table"
+                main={
+                  data.league
+                    ? `You’re ${ordinal(data.league.rank)} of ${numbers.format(data.league.of)} · ${numbers.format(data.league.points)} ${noun(data.league.points, "point", "points")}`
+                    : "No league table yet"
+                }
+                note="Each season has its own table"
+                button="Update the table"
+                href={links.league}
+              />
+            ) : null}
             <HubCard
               icon={<IconRoster className="size-6" aria-hidden="true" />}
               label="Player totals"

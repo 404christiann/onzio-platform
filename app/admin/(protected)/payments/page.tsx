@@ -6,6 +6,7 @@ import { PaymentsPlan } from "@/components/admin/reimagined/PaymentsPlan";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import { buildPaymentsView } from "@/lib/admin-payments-view";
 import { readAdminPortal } from "@/lib/admin-portal";
+import { isAdminRouteHiddenForClub } from "@/lib/admin-route-manifest";
 import { getClubContext } from "@/lib/club-context";
 import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 import { getConfiguredStripePriceLabel } from "@/lib/stripe-price";
@@ -76,6 +77,7 @@ async function PaymentsPageContent() {
     return (
       <PaymentsPlan
         clubName={club.name}
+        showRegistrationMoney={!isAdminRouteHiddenForClub(club.slug, "registrations")}
         view={buildPaymentsView({
           uiState,
           priceLabel,

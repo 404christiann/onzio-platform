@@ -6,6 +6,11 @@ export type AdminRole = "owner" | "admin";
 export type AdminRouteAccessContext = Readonly<{
   role: AdminRole | null;
   presentationTemplateKey: string | null;
+  /**
+   * The club's slug, for the per-club hides in ADMIN_ROUTES_HIDDEN_BY_CLUB. Left
+   * out (or null) means no club-specific hide applies.
+   */
+  clubSlug?: string | null;
   isBillingAuthorized: boolean;
   canMutateContent: boolean;
   /**
@@ -646,6 +651,25 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   "programs-and-tryouts": ["programs", "tryouts", "sign-ups", "camps", "evaluations", "registration"],
 } as const satisfies Record<AdminRouteId, readonly string[]>;
 
+/**
+ * Rows a specific club never sees, keyed on the club's slug (not on its site
+ * design, so a future cinematic@2 club is unaffected). Rose City outsources
+ * tryouts, so its admin has no Registrations, and its public site never shows
+ * standings, so it has no Standings either: no sidebar row, hub row, search
+ * result, quick action, home job or More row, and /admin/registrations and
+ * /admin/standings answer 404. The code, data, API routes and public pages stay
+ * for the clubs that use them (Diverse City).
+ */
+export const ADMIN_ROUTES_HIDDEN_BY_CLUB: Readonly<Record<string, readonly AdminRouteId[]>> = {
+  "rose-city": ["registrations", "sign-ups", "standings"],
+};
+
+/** Whether this club's admin hides a row (see ADMIN_ROUTES_HIDDEN_BY_CLUB). */
+export function isAdminRouteHiddenForClub(clubSlug: string | null | undefined, routeId: AdminRouteId): boolean {
+  if (!clubSlug) return false;
+  return Object.hasOwn(ADMIN_ROUTES_HIDDEN_BY_CLUB, clubSlug) && ADMIN_ROUTES_HIDDEN_BY_CLUB[clubSlug].includes(routeId);
+}
+
 const ROUTE_BY_ID = new Map<AdminRouteId, AdminRouteDefinition>(
   ADMIN_ROUTE_MANIFEST.map((route) => [route.id, route]),
 );
@@ -662,6 +686,7 @@ export function isAdminRouteVisible(
 ): boolean {
   if (!isProtectedAdminRole(context.role)) return false;
   if (route.reimaginedOnly && context.adminPortal !== "reimagined") return false;
+  if (isAdminRouteHiddenForClub(context.clubSlug, route.id)) return false;
   const siteAdmin = codeSiteAdminFor(context);
   if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
   if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible) return false;

@@ -53,7 +53,16 @@ function StatusAction({ action, tone }: { action: PaymentsAction; tone: Payments
   );
 }
 
-export function PaymentsPlan({ view, clubName }: { view: PaymentsView; clubName: string }) {
+export function PaymentsPlan({
+  view,
+  clubName,
+  showRegistrationMoney = true,
+}: {
+  view: PaymentsView;
+  clubName: string;
+  /** False for a club whose admin hides Registrations (Rose City): the row would open a page that is not there. */
+  showRegistrationMoney?: boolean;
+}) {
   const { status, plan, website } = view;
   return (
     <div className={styles.page} data-testid="payments-plan">
@@ -132,13 +141,15 @@ export function PaymentsPlan({ view, clubName }: { view: PaymentsView; clubName:
           </div>
 
           <div className={styles.col}>
-            <Link href="/admin/registrations" className={styles.rowLink} data-testid="payments-registration-money">
-              <span className={styles.cardTitle}>Registration money</span>
-              <span className={styles.rowAside}>
-                Set up on Sign-up forms
-                <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
-              </span>
-            </Link>
+            {showRegistrationMoney ? (
+              <Link href="/admin/registrations" className={styles.rowLink} data-testid="payments-registration-money">
+                <span className={styles.cardTitle}>Registration money</span>
+                <span className={styles.rowAside}>
+                  Set up on Sign-up forms
+                  <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                </span>
+              </Link>
+            ) : null}
             {view.invoices ? (
               <BillingActionForm
                 endpoint="/api/stripe/portal"
