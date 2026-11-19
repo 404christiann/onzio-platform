@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -169,6 +170,14 @@ describe("/admin/registrations and /admin/standings routes (RC-ADMIN-4-0b)", () 
       const tree = await StandingsLayout({ children: createElement("p", null, "Standings editor") });
       expect(renderToStaticMarkup(tree)).toBe("<p>Standings editor</p>");
     }
+  });
+
+  it("gives the Seasons hub no League table card when the club has no Standings link", () => {
+    const hub = readFileSync("components/admin/reimagined/SeasonsHub.tsx", "utf8");
+    const seasons = readFileSync("app/admin/(protected)/seasons/page.tsx", "utf8");
+    // The page passes null for a club that hides Standings, and the hub drops the whole card for a null link.
+    expect(seasons).toContain('isAdminRouteHiddenForClub(club.slug, "standings") ? null : getAdminRouteHref("standings")');
+    expect(hub).toMatch(/\{links\.league \? \(\s*<HubCard[^>]*\n?[\s\S]*?label="League table"[\s\S]*?href=\{links\.league\}\s*\/>\s*\) : null\}/);
   });
 
   it("answers 404 for Rose City on the reimagined sign-ups list too", async () => {
