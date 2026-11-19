@@ -3,7 +3,7 @@
 ## 2026-11-19 - RC-ADMIN-4b-stats Rose City Stats on the editor kit
 
 **Agent/package:** Claude Code (Sonnet worker, orchestrated), RC-ADMIN-4b-stats, branch `claude/rc-admin-4b-stats` on `0a80031a`.
-**Status:** `in_progress`: built and tested locally, verify-rc-admin not run yet (waits for the orchestrator's slot). App code only. No
+**Status:** `in_progress`, PR open; verify-rc-admin PASS (6/6, both views). App code only. No
 migration, schema, validator, RPC or env change.
 
 **Completed work:**
@@ -30,10 +30,15 @@ migration, schema, validator, RPC or env change.
 `RoseCityMatchStats`, `RoseCitySeasonStats`, `StatsTables`, `StatsPlayerDialog`, `stats-model.ts`, `types.ts`, CSS module); new
 `tests/contracts/rc-admin-4b-stats-editor.test.ts` (26 tests).
 
-**Verification so far:** `tsc --noEmit` clean; `test:unit` 4138 and `test:contracts` 3177 pass; template-selectors, admin-sweep and
-platform-architecture pass. verify-rc-admin (match and season): not run.
+**Verification:** verify-rc-admin on head `f40218fb` (main `1bc4003d`), `--package RC-ADMIN-4b-stats --touched stats-match,stats-season`, run once per view; all six
+gates PASS on both: gate 2 18/18 identical, gate 3 clean, dirty, saving, saved, conflict and discard pass (retry n/a: declared, no operationId), gate 4 CLS <= 0.0003 and new axe 0
+at 390 and 1440 light and dark, gate 5 unit 4216 / architecture 152 / selector debt unchanged, gate 6 Diverse City 15/15. Reports (in the worktree, gitignored):
+`test-results/rc-admin-verify/20261119-152925-RC-ADMIN-4b-stats` (match) and `20261119-153650-RC-ADMIN-4b-stats` (season). Also `tsc` clean and `test:contracts` 3255.
+Manual check (real local stack, two browser contexts), 12/12: edit a player (dirty, then saved, persists after reload), a forced 500 save shows "Try again" and re-sends, a real
+second-tab conflict then "Load latest and keep my edits", then "Reload saved numbers", and Discard changes, in both views. It found and fixed a false conflict on Try
+again after a partly failed match save.
 
-**Next step:** orchestrator opens my verify slot; run `--route "/admin/stats?view=match"` then `?view=season`, both `--package RC-ADMIN-4b-stats --touched stats-match,stats-season` (as the skill's keys), then push, ready PR, onzio-bot.
+**Next step:** onzio-bot review, then Christian merges.
 
 ## 2026-11-19 - RC-ADMIN-4b-0-4 verify-rc-admin: conflict step bumps a number field by different amounts
 
