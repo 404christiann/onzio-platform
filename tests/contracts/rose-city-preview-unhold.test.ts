@@ -165,6 +165,18 @@ describe("RC-PREVIEW: Rose City preview unhold", () => {
       expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     });
 
+    // Self-hosted Next re-enters middleware with the internal path after a
+    // cross-host rewrite; the existing hold treats these as the public site.
+    it.each(["/_clubs/rose-city", "/_clubs/rose-city/roster", "/%5Fclubs/rose-city/schedule"])(
+      "lets GET %s through on the preview host with noindex",
+      async (pathname) => {
+        const response = await middleware(request(PREVIEW_HOST, pathname));
+        expect(response.status).toBe(200);
+        expect(response.headers.get("x-middleware-next")).toBe("1");
+        expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+      },
+    );
+
     it("matches the preview host case-insensitively", async () => {
       const response = await middleware(request(PREVIEW_HOST.toUpperCase(), "/"));
       expect(response.headers.get("x-middleware-rewrite")).toContain("/_clubs/rose-city");
@@ -181,8 +193,11 @@ describe("RC-PREVIEW: Rose City preview unhold", () => {
       ["POST", "/api/register"],
       ["POST", "/api/stripe/checkout"],
       ["POST", "/"],
-      ["GET", "/_clubs/rose-city"],
-      ["GET", "/_clubs/rose-city/roster"],
+      ["POST", "/_clubs/rose-city"],
+      ["POST", "/_clubs/rose-city/register/fall"],
+      ["GET", "/_clubs/diverse-city"],
+      ["GET", "/_clubs/diverse-city/roster"],
+      ["GET", "/_clubsX/rose-city"],
     ])("never opens %s %s on the preview host", async (method, pathname) => {
       const response = await middleware(request(PREVIEW_HOST, pathname, method));
       expect(response.status).toBe(404);

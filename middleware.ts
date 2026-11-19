@@ -43,11 +43,14 @@ export function isPublicTenantPath(pathname: string): boolean {
   );
 }
 
-function isHeldPublicSiteRequest(pathname: string, method: string, slug: string): boolean {
+function isInternalClubPath(pathname: string, slug: string): boolean {
   const internalPath = pathname.replace(/^\/%5fclubs(?=\/|$)/i, "/_clubs");
+  return internalPath === `/_clubs/${slug}` || internalPath.startsWith(`/_clubs/${slug}/`);
+}
+
+function isHeldPublicSiteRequest(pathname: string, method: string, slug: string): boolean {
   return isPublicTenantPath(pathname) ||
-    internalPath === `/_clubs/${slug}` ||
-    internalPath.startsWith(`/_clubs/${slug}/`) ||
+    isInternalClubPath(pathname, slug) ||
     (pathname === "/api/register" && method === "POST");
 }
 
@@ -142,7 +145,8 @@ export async function middleware(request: NextRequest) {
     isRoseCityPreviewRequest &&
     !(
       (request.method === "GET" || request.method === "HEAD") &&
-      isPublicTenantPath(request.nextUrl.pathname)
+      (isPublicTenantPath(request.nextUrl.pathname) ||
+        isInternalClubPath(request.nextUrl.pathname, ROSE_CITY_PREVIEW_SLUG))
     )
   ) {
     return applyTenantRobotsPolicy(notFound());
