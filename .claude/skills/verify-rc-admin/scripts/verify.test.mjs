@@ -668,3 +668,14 @@ test("4b-0-2: gate 6 treats a data-endpoint select still in flight as loading, a
   const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
   assert.match(spec, /if \(asset\(r\) \|\| dataRead\(r\)\) inflight\.add\(r\)/);
 });
+
+test("4b-0-2: the kit field walk goes Back to the list before every section on a phone, not just the first", () => {
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  const walk = spec.slice(spec.indexOf("async function findKitField"), spec.indexOf("\n}\n", spec.indexOf("async function findKitField")));
+  const loop = walk.slice(walk.indexOf("for (const index of sectionTryOrder"));
+  assert.match(loop, /await gotoSection\(page, index\)/, "every section step goes through gotoSection");
+  assert.doesNotMatch(loop, /sectionButtons\(page\)\.nth\(index\)\.click\(\)/, "no bare section click is left in the loop");
+  const goto = spec.slice(spec.indexOf("async function gotoSection"), spec.indexOf("\n}\n", spec.indexOf("async function gotoSection")));
+  assert.match(goto, /back\.count\(\) && await back\.first\(\)\.isVisible\(\)\) await back\.first\(\)\.click\(\)/, "Back is pressed only when it is showing");
+  assert.ok(goto.indexOf("isVisible()") < goto.indexOf("sectionButtons(page).nth(index).click()"), "Back comes before the section click");
+});

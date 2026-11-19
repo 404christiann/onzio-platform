@@ -220,7 +220,7 @@ async function waitForPanel(page: Page) {
 async function gotoSection(page: Page, index: number) {
   const dialog = kitDialog(page);
   const back = dialog.locator("[data-editor-dialog-back]");
-  if (await back.count()) await back.click();
+  if (await back.count() && await back.first().isVisible()) await back.first().click(); // inside a section the list is hidden: Back shows it
   await sectionButtons(page).nth(index).click();
   await waitForPanel(page);
 }
@@ -260,8 +260,9 @@ async function findKitField(page: Page): Promise<{ index: number; section: numbe
   const count = await sectionButtons(page).count();
   const active = phone ? -1 : await sectionButtons(page).evaluateAll((els) => els.findIndex((el) => el.getAttribute("aria-current") === "true"));
   for (const index of sectionTryOrder(count, active)) {
-    await sectionButtons(page).nth(index).click();
-    await waitForPanel(page);
+    // Every step goes through gotoSection: after a section with no text field (an image-only Club logo) the phone sheet is still inside
+    // that section with the list hidden, so Back must be pressed again before the next section button can be clicked.
+    await gotoSection(page, index);
     if (await hasEnabledField(page, 1_000)) return { index: await pinFirstEnabled(page), section: index };
   }
   throw new Error(`no section of the editor dialog has an enabled text field (${count} sections)`);
