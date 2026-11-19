@@ -1,3 +1,16 @@
+## 2026-11-19 - RC-PREVIEW follow-up: preview fonts, and the rc-sam rollout for Sam
+
+- **Status:** `in_progress`, PR open. The preview for Sam is live on branch `rc-sam`, behind Deployment Protection,
+  with a 14-day Shareable Link (expires 2026-12-03). Production env and the hold are unchanged.
+- **Correction:** the general Preview Supabase env does not point at production. `rc-sam` has branch-only
+  overrides for `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public key) and
+  `ONZIO_ENVIRONMENT=production`.
+- **Fix in this PR:** the preview-host guard 404'd the fonts in `public/fonts`; GET/HEAD static files now pass.
+- **Content gap, not code:** Rose City's production homepage has no hero video or hero poster, and two other
+  artwork slots are empty.
+- **Teardown when Sam is done:** revoke the Shareable Link, delete the six `rc-sam` env vars, and delete branch
+  `rc-sam`. Details are in `STATUS.md`.
+
 ## 2026-11-19 - RC-ADMIN-10c: staging upload needs a live reservation
 
 - **Status:** `in_progress`. PR #178: the migration is on production (2026-11-19, after Christian's "push"); the

@@ -1,5 +1,42 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-PREVIEW follow-up: static fonts on the preview host, and the rc-sam rollout
+
+**Agent/package:** Claude Code (Opus 5.5), RC-PREVIEW (follow-up), branch `claude/rc-preview-static` on
+`90c459d6`. **Status:** `in_progress`, PR open; merges only on Christian's word. App code only.
+
+**Rollout done with Christian's approval (2026-11-19, Vercel only, no database or Stripe change):**
+- Branch `rc-sam`, cut from main after #175. Its branch URL is
+  `onzio-platform-git-rc-sam-404christianns-projects.vercel.app`.
+- Preview env vars scoped to branch `rc-sam` only: `RC_PREVIEW_UNHOLD`, `RC_PREVIEW_HOST`,
+  `NEXT_PUBLIC_FONT_BASE_URL` (Christian added these three), and `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY` (production's public publishable key) and `ONZIO_ENVIRONMENT=production`
+  (added on his "yes"). Production env is unchanged, with no `RC_PREVIEW_*`.
+- **Correction:** the project's general Preview Supabase env (2026-08-10) does not point at production, contrary to
+  the earlier assumption. The `rc-sam` overrides were needed for the preview to find Rose City and its primary
+  domain.
+- Deployment Protection stays on (Vercel Authentication, `all_except_custom_domains`).
+- A Shareable Link on the `rc-sam` alias (TTL 14 days, expires 2026-12-03) lets Sam in without a Vercel account.
+- Checked signed-out: 12 Rose City pages return 200 with noindex; admin, API and POST return 404; production stays
+  held; Diverse City returns 200.
+
+**Found in a real browser:**
+- The middleware matcher skips only images, so the fonts in `public/fonts` (`.otf`, `.ttf`, `.woff2`) went
+  through the preview-host guard and got 404.
+- Fix: on the preview host, GET/HEAD for static files (`otf|ttf|woff|woff2|mp4|webm|txt|json`) outside `/api`,
+  `/admin` and `/_clubs` passes. A POST, or the same extensions under admin or API paths, still returns 404.
+- Not code: Rose City's production homepage has an empty hero video GUID and four empty artwork slots (hero
+  poster, header partner, seats background, episode poster), so the hero is black. That is production content.
+  It was left untouched.
+
+**Files changed:** `middleware.ts`, `tests/contracts/rose-city-preview-unhold.test.ts` (77 tests).
+
+**Verification:** new tests red first (5), then 77/77; hold, robots, routing and cinematic-routing contracts
+133/133; tsc ok; legacy 788/788. verify-rc-admin (hub route): PASS. Gate 1: 2 app files; gate 2: 14/14; unit 3979/3979; architecture 152; gate 6: Diverse City admin 8/8 identical.
+
+**Next step:** onzio-bot review, then Christian merges. After that, rebuild `rc-sam` from main and re-check the fonts
+in a browser. Teardown when Sam is done: revoke the link, delete the six `rc-sam` env vars, and delete the branch.
+
 ## 2026-11-19 - RC-ADMIN-10c staging upload needs a live reservation
 
 **Agent/package:** Claude Code (Opus), RC-ADMIN-10c, branch `claude/rc-admin-10c` on `84142ca3`.
