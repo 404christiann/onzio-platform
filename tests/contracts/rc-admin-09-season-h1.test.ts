@@ -7,9 +7,9 @@ import { seasonMembershipReferenceContent } from "@/lib/ticket-pages-reference-c
 vi.mock("@/components/ResilientNativeImage", () => ({ default: (props: Record<string, unknown>) => createElement("img", props) }));
 import CinematicSeasonMembership from "@/components/cinematic/CinematicSeasonMembership";
 
-function html(change: (heading: { visible?: boolean }) => void) {
+function html(change: (heading: { visible?: boolean; title?: string }) => void) {
   const content = structuredClone(seasonMembershipReferenceContent);
-  change(content.heading as { visible?: boolean });
+  change(content.heading as { visible?: boolean; title?: string });
   return renderToStaticMarkup(createElement(CinematicSeasonMembership, { content: hydrateTicketPage("season-membership", content as SeasonMembershipContent, []) }));
 }
 const h1s = (markup: string) => [...markup.matchAll(/<h1[^>]*>/g)].map(match => match[0]);
@@ -29,5 +29,19 @@ describe("RC-ADMIN-09 Season page keeps its h1", () => {
     expect(h1s(off)).toEqual(['<h1 class="sr-only">']);
     expect(off).toContain('<h1 class="sr-only">Season Ticket Membership</h1>');
     expect(off).not.toContain("tp-heading");
+  });
+
+  it("falls back to the default text when the heading is off and the title is blank", () => {
+    for (const title of ["", "   "]) {
+      const off = html(heading => { heading.visible = false; heading.title = title; });
+      expect(h1s(off)).toEqual(['<h1 class="sr-only">']);
+      expect(off).toContain('<h1 class="sr-only">Season Ticket Membership</h1>');
+      expect(off).not.toContain("tp-heading");
+    }
+  });
+
+  it("keeps a non-blank hidden title as written", () => {
+    const off = html(heading => { heading.visible = false; heading.title = "Season Pass"; });
+    expect(off).toContain('<h1 class="sr-only">Season Pass</h1>');
   });
 });

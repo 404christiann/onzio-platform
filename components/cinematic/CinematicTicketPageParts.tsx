@@ -21,7 +21,7 @@ export function TicketRichText({ text }: { text: string }) {
 
 /** `visuallyHidden` keeps the page's only h1 for screen readers and search engines while the banner is switched off. */
 export function TicketPageHeading({ title, subtitle, visuallyHidden = false }: { title: string; subtitle: string; visuallyHidden?: boolean }) {
-  if (visuallyHidden) return <h1 className="sr-only">{title}</h1>;
+  if (visuallyHidden) return <h1 className="sr-only">{title.trim() ? title : "Season Ticket Membership"}</h1>;
   return <header className="tp-heading"><div><h1>{title}</h1>{subtitle.trim() && <p>{subtitle}</p>}</div></header>;
 }
 

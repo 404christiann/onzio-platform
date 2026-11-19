@@ -8,7 +8,7 @@ import { FoothillSectionFields, type FoothillFieldsApi } from "@/components/admi
 import { PreviewCards } from "@/components/admin/ui/editor-kit/PreviewCards";
 import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import { DISCARD_CONFIRM } from "@/components/admin/editor-copy";
-import { scopePreviewIds } from "@/components/admin/ui/editor-kit/scopePreviewIds";
+import { SCOPED_PREVIEW_ATTRIBUTES, scopePreviewIds } from "@/components/admin/ui/editor-kit/scopePreviewIds";
 
 vi.mock("next/link", () => ({ default: (props: Record<string, unknown>) => createElement("a", props) }));
 vi.mock("@/components/ResilientNativeImage", () => ({ default: (props: Record<string, unknown>) => createElement("img", props) }));
@@ -153,5 +153,57 @@ describe("RC-ADMIN-09 inline preview ids are unique per card", () => {
     a.all().find(el => el.tag === "section")!.setAttribute("aria-labelledby", "perks-title");
     scopePreviewIds(a as unknown as Element, "pva-");
     expect(a.all().find(el => el.tag === "section")!.getAttribute("aria-labelledby")).toBe("pva-perks-title");
+  });
+});
+
+describe("RC-ADMIN-09 SVG references and the observer list", () => {
+  const svg = () => new FakeEl("div", {}, [new FakeEl("svg", {}, [
+    new FakeEl("defs", {}, [new FakeEl("linearGradient", { id: "g" }), new FakeEl("clipPath", { id: "c" }), new FakeEl("path", { id: "shape" })]),
+    new FakeEl("rect", { fill: "url(#g)", stroke: "url('#g')", "clip-path": 'url("#c")', mask: "url(#outside)", style: "fill:url(#g); filter: url( #c )" }),
+    new FakeEl("use", { href: "#shape" }), new FakeEl("use", { "xlink:href": "#shape" }), new FakeEl("use", { href: "#outside" }),
+    new FakeEl("line", { "marker-end": "url(#g)", filter: "url(#c)" }), new FakeEl("p", { "aria-errormessage": "g", "aria-flowto": "c shape" }),
+  ])]);
+  const find = (root: FakeEl, tag: string, n = 0) => root.all().filter(el => el.tag === tag)[n];
+  const dump = (root: FakeEl) => JSON.stringify(root.all().map(el => [...el.attrs]));
+
+  it("rewrites url(#id), style, href and xlink:href inside their own preview only", () => {
+    const a = svg(), b = svg();
+    scopePreviewIds(a as unknown as Element, "pva-"); scopePreviewIds(b as unknown as Element, "pvb-");
+    for (const [root, p] of [[a, "pva-"], [b, "pvb-"]] as const) {
+      const rect = find(root, "rect");
+      expect(rect.getAttribute("fill")).toBe(`url(#${p}g)`);
+      expect(rect.getAttribute("stroke")).toBe(`url('#${p}g')`);
+      expect(rect.getAttribute("clip-path")).toBe(`url("#${p}c")`);
+      expect(rect.getAttribute("style")).toBe(`fill:url(#${p}g); filter: url(#${p}c)`);
+      expect(find(root, "use", 0).getAttribute("href")).toBe(`#${p}shape`);
+      expect(find(root, "use", 1).getAttribute("xlink:href")).toBe(`#${p}shape`);
+      expect(find(root, "line").getAttribute("marker-end")).toBe(`url(#${p}g)`);
+      expect(find(root, "line").getAttribute("filter")).toBe(`url(#${p}c)`);
+      expect(find(root, "p").getAttribute("aria-errormessage")).toBe(`${p}g`);
+      expect(find(root, "p").getAttribute("aria-flowto")).toBe(`${p}c ${p}shape`);
+    }
+    expect(find(a, "linearGradient").id).toBe("pva-g");
+    expect(find(b, "linearGradient").id).toBe("pvb-g");
+  });
+
+  it("leaves references to ids outside the preview alone", () => {
+    const a = svg();
+    scopePreviewIds(a as unknown as Element, "pva-");
+    expect(find(a, "rect").getAttribute("mask")).toBe("url(#outside)");
+    expect(find(a, "use", 2).getAttribute("href")).toBe("#outside");
+  });
+
+  it("is idempotent", () => {
+    const a = svg();
+    scopePreviewIds(a as unknown as Element, "pva-");
+    const snapshot = dump(a);
+    scopePreviewIds(a as unknown as Element, "pva-");
+    expect(dump(a)).toBe(snapshot);
+  });
+
+  it("the observer watches id and every attribute the rewrite touches", () => {
+    for (const name of ["id", "aria-labelledby", "aria-describedby", "aria-controls", "aria-owns", "aria-details", "aria-activedescendant", "aria-errormessage", "aria-flowto", "for",
+      "fill", "stroke", "clip-path", "mask", "filter", "marker-start", "marker-mid", "marker-end", "style", "href", "xlink:href"]) expect(SCOPED_PREVIEW_ATTRIBUTES, name).toContain(name);
+    expect(read("components/admin/ui/editor-kit/PreviewCards.tsx")).toContain("attributeFilter: SCOPED_PREVIEW_ATTRIBUTES");
   });
 });

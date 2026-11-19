@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent
 import { AdminSwitch } from "../AdminSwitch";
 import { Shimmer } from "../Shimmer";
 import { KIT_EDIT_PROPS } from "./kitEdit";
-import { scopePreviewIds } from "./scopePreviewIds";
+import { SCOPED_PREVIEW_ATTRIBUTES, scopePreviewIds } from "./scopePreviewIds";
 import { hasVisibilityControl, type SectionCardItem } from "./SectionCards";
 import styles from "./PreviewCards.module.css";
 
@@ -64,7 +64,7 @@ function PreviewBox({ children, width, scale, lazy }: { children: ReactNode; wid
     if (!node || !near) return;
     scopePreviewIds(node, scope);
     const observer = new MutationObserver(() => scopePreviewIds(node, scope));
-    observer.observe(node, { subtree: true, childList: true, attributes: true, attributeFilter: ["id", "aria-labelledby", "aria-describedby", "for", "href"] });
+    observer.observe(node, { subtree: true, childList: true, attributes: true, attributeFilter: SCOPED_PREVIEW_ATTRIBUTES });
     return () => observer.disconnect();
   }, [ref, near, scope]);
   return (
