@@ -12,7 +12,7 @@ import { createClient } from "@/lib/admin-client";
 import type { StatsPlayer } from "../types";
 import { StatsPlayerDialog } from "./StatsPlayerDialog";
 import { StatsTables, StatsTablesSkeleton } from "./StatsTables";
-import { buildMatchSaveRows, dirtyPlayers, matchRowsFromData, type MatchRow, type MatchRows } from "./stats-model";
+import { buildMatchSaveRows, changedSince, dirtyPlayers, keepEditsOver, matchRowsFromData, versionsFrom, type MatchRow, type MatchRows, type Versions } from "./stats-model";
 import type { RoseCityStatsViewProps } from "./types";
 import styles from "./rose-city-stats.module.css";
 
@@ -35,6 +35,8 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
   const selectedMatch = selectedMatchId ?? null;
   const [stats, setStats] = useState<MatchRows>({});
   const [baselineStats, setBaselineStats] = useState<MatchRows>({});
+  /** When each player's saved row last changed, as loaded. Null once unknown (a refresh after a save failed): the next save then skips the check. */
+  const [versions, setVersions] = useState<Versions | null>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
 
   useEffect(() => {
     if (!selectedMatch || !matchBelongsToSeason || playersPending) {
-      setStatsLoadFailed(false); setStats({}); setBaselineStats({}); setLoading(false); setLoadedMatchId(null);
+      setStatsLoadFailed(false); setStats({}); setBaselineStats({}); setVersions({}); setLoading(false); setLoadedMatchId(null);
       return;
     }
     if (players.length === 0) {
@@ -121,8 +123,9 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
       setLoadedMatchId(selectedMatch);
       const queryError = fieldResult.error ?? keeperResult.error;
       if (queryError) { setStatsLoadFailed(true); setError(queryError.message); setLoading(false); return; }
-      const map = matchRowsFromData(players, (fieldResult.data ?? []) as Record<string, unknown>[], (keeperResult.data ?? []) as Record<string, unknown>[]);
-      setStats(map); setBaselineStats(map); setLoading(false);
+      const fieldData = (fieldResult.data ?? []) as Record<string, unknown>[], keeperData = (keeperResult.data ?? []) as Record<string, unknown>[];
+      const map = matchRowsFromData(players, fieldData, keeperData);
+      setStats(map); setBaselineStats(map); setVersions(versionsFrom(fieldData, keeperData)); setLoading(false);
     }).catch((loadError: unknown) => {
       if (cancelled) return;
       setLoadedMatchId(selectedMatch); setStatsLoadFailed(true); setLoading(false);
@@ -138,12 +141,13 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasChanges]);
 
+  
   const setFailure = onFailureChange;
 
   function changeRow(playerId: string, row: Record<string, number | boolean>) {
     if (saving || saveLock.current || !statsReady) return;
     setStats(previous => ({ ...previous, [playerId]: row as MatchRow }));
-    setFailure(false);
+    setFailure(null);
   }
   function openDialog(playerId: string, event: MouseEvent<HTMLButtonElement>) {
     opener.current = event.currentTarget;
@@ -155,27 +159,68 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
     if (target) setTimeout(() => { if (target.isConnected && target.offsetParent) target.focus(); }, 0);
   }
 
-  /** Whole-match save: a row for every player, like the classic editor. */
+  /** The saved rows of this match as they are now: full rows, and when each last changed. */
+  async function fetchLatest(matchId: string) {
+    const supabase = createClient();
+    const [fieldResult, keeperResult] = await Promise.all([
+      supabase.from("player_match_stats").select("*").eq("match_id", matchId),
+      supabase.from("goalkeeper_match_stats").select("*").eq("match_id", matchId),
+    ]);
+    const queryError = fieldResult.error ?? keeperResult.error;
+    if (queryError) throw new Error(queryError.message);
+    const fieldData = (fieldResult.data ?? []) as Record<string, unknown>[], keeperData = (keeperResult.data ?? []) as Record<string, unknown>[];
+    return { rows: matchRowsFromData(players, fieldData, keeperData), versions: versionsFrom(fieldData, keeperData) };
+  }
+
+  /** Whole-match save: a row for every player, like the classic editor. Before writing, it checks nobody saved this match since the page loaded. */
   async function handleSave(): Promise<boolean> {
     if (!statsReady || saving || saveLock.current || !selectedMatch || !hasChanges) return false;
     saveLock.current = true;
     setSaving(true);
     setError(null);
     try {
+      if (versions) {
+        const latest = await fetchLatest(selectedMatch).catch((checkError: unknown) => { throw new Error(checkError instanceof Error ? `Could not check for newer changes: ${checkError.message}` : "Could not check for newer changes. Your changes are still here."); });
+        if (changedSince(players.map(player => player.id), versions, latest.versions).length > 0) {
+          setFailure({ kind: "conflict", message: `Someone saved stats for ${matchLabel} after you opened this page. Load the latest numbers and keep your edits, or reload the saved numbers.` });
+          return false;
+        }
+      }
       const supabase = createClient();
       const { fieldRows, keeperRows } = buildMatchSaveRows(players, stats, selectedMatch);
       const [{ error: fieldError }, { error: keeperError }] = await Promise.all([
         fieldRows.length > 0 ? supabase.from("player_match_stats").upsert(fieldRows, { onConflict: "player_id,match_id" }) : Promise.resolve({ error: null }),
         keeperRows.length > 0 ? supabase.from("goalkeeper_match_stats").upsert(keeperRows, { onConflict: "player_id,match_id" }) : Promise.resolve({ error: null }),
       ]);
-      if (fieldError || keeperError) { setError(fieldError?.message ?? keeperError?.message ?? "Unknown error"); setFailure(true); return false; }
+      if (fieldError || keeperError) { setFailure({ kind: "error", message: fieldError?.message ?? keeperError?.message ?? "Unknown error" }); return false; }
       setBaselineStats(stats);
-      setFailure(false);
+      setFailure(null);
+      // The save moved every row's `updated_at`; learn the new ones so the next save does not mistake this one for someone else's.
+      fetchLatest(selectedMatch).then(latest => setVersions(latest.versions), () => setVersions(null));
       return true;
     } catch (saveError: unknown) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save match stats. Your changes are still here.");
-      setFailure(true);
+      setFailure({ kind: "error", message: saveError instanceof Error ? saveError.message : "Failed to save match stats. Your changes are still here." });
       return false;
+    } finally {
+      saveLock.current = false;
+      setSaving(false);
+    }
+  }
+
+  /** Conflict resolution: take the saved numbers as the new base. With keepEdits the players the person edited keep their edit. */
+  async function loadLatest(keepEdits: boolean) {
+    if (!selectedMatch || saving || saveLock.current) return;
+    saveLock.current = true;
+    setSaving(true);
+    try {
+      const latest = await fetchLatest(selectedMatch);
+      setStats(keepEdits ? keepEditsOver(players, latest.rows, stats, baselineStats) : latest.rows);
+      setBaselineStats(latest.rows);
+      setVersions(latest.versions);
+      setError(null);
+      setFailure(null);
+    } catch (loadError: unknown) {
+      setFailure({ kind: "conflict", message: loadError instanceof Error ? `Could not load the latest numbers: ${loadError.message}` : "Could not load the latest numbers." });
     } finally {
       saveLock.current = false;
       setSaving(false);
@@ -187,7 +232,7 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
 
   function applyScope(next: PendingScope) {
     if (next.kind === "view") { onViewChange(next.view); return; }
-    setError(null); setStats({}); setBaselineStats({}); setLoadedMatchId(null); setFailure(false);
+    setError(null); setStats({}); setBaselineStats({}); setLoadedMatchId(null); setFailure(null);
     if (next.kind === "season") { setSelectedSeasonId(next.id); onSelectedMatchChange?.(null); }
     else onSelectedMatchChange?.(next.id);
   }
@@ -200,13 +245,14 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
     requestNavigation({ kind: "switch", label: target, continue: () => applyScope(next) });
   }
   const save = useSaveState({ isDirty: statsReady && hasChanges, onSave: async () => { if (!(await handleSave())) throw new Error("Match stats were not saved"); } });
-  const requestNavigation = useUnsavedGuard({ dirty: hasChanges, edited: `match stats for ${matchLabel}`, onSave: handleSave, onDiscard: () => { setStats(baselineStats); setFailure(false); } });
+  const requestNavigation = useUnsavedGuard({ dirty: hasChanges, edited: `match stats for ${matchLabel}`, onSave: handleSave, onDiscard: () => { setStats(baselineStats); setFailure(null); } });
 
   useImperativeHandle(controlsRef, () => ({
     changeSeason: (id: string) => requestScope({ kind: "season", id }),
     changeView: () => requestScope({ kind: "view", view: "season" }),
     save: () => { void save.save().catch(() => undefined); },
-    discard: () => { setStats(baselineStats); setError(null); setFailure(false); },
+    discard: () => { setStats(baselineStats); setError(null); setFailure(null); },
+    loadLatest: (keepEdits: boolean) => { void loadLatest(keepEdits); },
   }));
   useEffect(() => { onSaveStateChange(save.state); }, [save.state, onSaveStateChange]);
   useEffect(() => { onSavingChange(saving); }, [saving, onSavingChange]);

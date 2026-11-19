@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SeasonSelect from "@/components/admin/SeasonSelect";
+import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import lists from "@/components/admin/list-cards/ListEditor.module.css";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { PageFrame, derivePageSaveState } from "@/components/admin/ui/editor-kit";
 import type { SaveState } from "@/components/admin/ui/useSaveState";
 import { useSeasons } from "@/lib/use-seasons";
 import type { StatsView } from "../types";
+import type { StatsFailure } from "./stats-model";
 import { RoseCityMatchStats } from "./RoseCityMatchStats";
 import { RoseCitySeasonStats } from "./RoseCitySeasonStats";
 import type { RoseCityStatsControls, RoseCityStatsViewProps } from "./types";
@@ -31,7 +34,8 @@ export function RoseCityStatsPage() {
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("clean");
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<StatsFailure | null>(null);
+  const keepRef = useRef<HTMLButtonElement>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [switching, startTransition] = useTransition();
   const controls = useRef<RoseCityStatsControls>(null);
@@ -66,13 +70,26 @@ export function RoseCityStatsPage() {
 
   const viewProps: RoseCityStatsViewProps = {
     seasonState, selectedMatchId, onSelectedMatchChange: setSelectedMatchId,
-    onViewChange: changeView, controlsRef: controls, onSavingChange: setSaving, onSaveStateChange: setSaveState, onFailureChange: setFailed,
+    onViewChange: changeView, controlsRef: controls, onSavingChange: setSaving, onSaveStateChange: setSaveState, onFailureChange: setFailure,
   };
-  const pageState = derivePageSaveState(saveState, failed && saveState !== "clean" ? "error" : null);
+  const pageState = derivePageSaveState(saveState, failure && saveState !== "clean" ? failure.kind : null);
+
+  const notice = failure ? <div className={lists.notice} data-stats-notice={failure.kind}>
+    <EditorNotice failed>{failure.message}
+      <span className={lists.noticeActions}>
+        {failure.kind === "error" && <button type="button" className={`admin-press ${lists.keep}`} disabled={saving} onClick={() => controls.current?.save()}>Try again</button>}
+        {failure.kind === "conflict" && <>
+          <button ref={keepRef} type="button" className={`admin-press ${lists.keep}`} disabled={saving} onClick={() => controls.current?.loadLatest(true)}>Load latest and keep my edits</button>
+          <EditorSecondaryButton disabled={saving} onClick={() => controls.current?.loadLatest(false)}>Reload saved numbers</EditorSecondaryButton>
+        </>}
+      </span>
+    </EditorNotice>
+  </div> : null;
 
   return <>
     <PageFrame title="Stats" breadcrumb={[{ label: "Competition" }]} description="Enter one match’s stats, or adjust the season’s totals."
-      state={pageState} onSave={() => controls.current?.save()} onDiscard={() => setConfirmDiscard(true)}>
+      state={pageState} onSave={() => controls.current?.save()} onRetry={() => controls.current?.save()} onConflict={() => keepRef.current?.focus()}
+      onDiscard={() => setConfirmDiscard(true)} notice={notice}>
       <div className="flex min-w-0 flex-col gap-6">
         <div className={styles.bar}>
           <SeasonSelect seasons={seasonState.seasons} loading={seasonState.loading} value={seasonState.selectedSeasonId}

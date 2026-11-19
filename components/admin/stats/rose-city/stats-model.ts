@@ -216,3 +216,26 @@ export function parseCount(text: string, max?: number): number {
   if (!Number.isFinite(parsed)) return 0;
   return Math.min(max ?? Infinity, Math.max(0, parsed));
 }
+
+/** When a saved row last changed, by player (the tables' own `updated_at`). A player with no saved row has no entry. */
+export type Versions = Record<string, string>;
+
+export function versionsFrom(...lists: readonly (readonly DataRow[])[]): Versions {
+  const versions: Versions = {};
+  for (const list of lists) for (const row of list) if (typeof row.player_id === "string" && row.updated_at != null) versions[row.player_id] = String(row.updated_at);
+  return versions;
+}
+
+/** Players whose saved row is not what the page loaded: changed, added or removed by someone else since. */
+export function changedSince(playerIds: Iterable<string>, loaded: Versions, latest: Versions): string[] {
+  return [...playerIds].filter(id => loaded[id] !== latest[id]);
+}
+
+/** After loading the latest numbers: a player the person edited keeps the edit, everyone else takes the latest. */
+export function keepEditsOver<T extends object>(players: readonly StatsPlayer[], latest: Record<string, T>, current: Record<string, T>, baseline: Record<string, T>): Record<string, T> {
+  const merged: Record<string, T> = { ...latest };
+  for (const player of players) if (JSON.stringify(current[player.id]) !== JSON.stringify(baseline[player.id]) && current[player.id]) merged[player.id] = current[player.id];
+  return merged;
+}
+
+export type StatsFailure = { kind: "error" | "conflict"; message: string };

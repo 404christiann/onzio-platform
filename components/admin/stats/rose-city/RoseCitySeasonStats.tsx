@@ -10,7 +10,7 @@ import { loadSeasonGames, saveSeasonTotals, type SeasonGames } from "@/lib/seaso
 import type { StatsPlayer } from "../types";
 import { StatsPlayerDialog } from "./StatsPlayerDialog";
 import { StatsTables, StatsTablesSkeleton } from "./StatsTables";
-import { dirtyPlayers, seasonRowsFromData, seasonSaveInput, type SeasonRow, type SeasonRows } from "./stats-model";
+import { changedSince, dirtyPlayers, keepEditsOver, seasonRowsFromData, seasonSaveInput, versionsFrom, type SeasonRow, type SeasonRows, type Versions } from "./stats-model";
 import type { RoseCityStatsViewProps } from "./types";
 import styles from "./rose-city-stats.module.css";
 
@@ -27,6 +27,8 @@ export function RoseCitySeasonStats({ seasonState, onViewChange, controlsRef, on
   const [stats, setStats] = useState<SeasonRows>({});
   const [baselineStats, setBaselineStats] = useState<SeasonRows>({});
   const [games, setGames] = useState<SeasonGames | null>(null);
+  /** When each player's hand-added numbers last changed, as loaded. Null once unknown (a refresh after a save failed): the next save then skips the check. */
+  const [versions, setVersions] = useState<Versions | null>({});
   const [loading, setLoading] = useState(true);
   const [loadedSeasonId, setLoadedSeasonId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -40,42 +42,52 @@ export function RoseCitySeasonStats({ seasonState, onViewChange, controlsRef, on
   const hasChanges = dirtyIds.size > 0;
   const statsPending = seasonsLoading || loading || Boolean(selectedSeasonId && loadedSeasonId !== selectedSeasonId);
 
+  /** The season as saved now: who is shown, their totals, the added-up games and when each hand-added row last changed. */
+  async function fetchSeason(seasonId: string) {
+    const supabase = createClient();
+    const [playersResult, fieldResult, keeperResult, seasonGames, fieldAdjustments, keeperAdjustments] = await Promise.all([
+      supabase.from("players").select("id, number, name, position, active").order("number"),
+      supabase.from("player_season_totals").select("*").eq("season_id", seasonId),
+      supabase.from("goalkeeper_season_totals").select("*").eq("season_id", seasonId),
+      loadSeasonGames(supabase, seasonId),
+      supabase.from("player_season_adjustments").select("player_id, updated_at").eq("season_id", seasonId),
+      supabase.from("goalkeeper_season_adjustments").select("player_id, updated_at").eq("season_id", seasonId),
+    ]);
+    const queryError = playersResult.error ?? fieldResult.error ?? keeperResult.error ?? fieldAdjustments.error ?? keeperAdjustments.error;
+    if (queryError) throw new Error(queryError.message);
+    const fieldRows = (fieldResult.data ?? []) as Record<string, unknown>[];
+    const keeperRows = (keeperResult.data ?? []) as Record<string, unknown>[];
+    const inSeason = new Set([...fieldRows.map(row => row.player_id as string), ...keeperRows.map(row => row.player_id as string)]);
+    const isActiveSeason = seasonId === activeSeasonId;
+    const shown = ((playersResult.data ?? []) as (StatsPlayer & { active: boolean })[])
+      .filter(player => inSeason.has(player.id) || (isActiveSeason && player.active))
+      .map(({ active: _active, ...player }) => player);
+    return {
+      shown, inSeason, games: seasonGames, rows: seasonRowsFromData(shown, fieldRows, keeperRows),
+      versions: versionsFrom((fieldAdjustments.data ?? []) as Record<string, unknown>[], (keeperAdjustments.data ?? []) as Record<string, unknown>[]),
+    };
+  }
+
   useEffect(() => {
     if (!selectedSeasonId) {
       if (!seasonsLoading) setLoading(false);
       return;
     }
     let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      const supabase = createClient();
-      const [playersResult, fieldResult, keeperResult, seasonGames] = await Promise.all([
-        supabase.from("players").select("id, number, name, position, active").order("number"),
-        supabase.from("player_season_totals").select("*").eq("season_id", selectedSeasonId),
-        supabase.from("goalkeeper_season_totals").select("*").eq("season_id", selectedSeasonId),
-        loadSeasonGames(supabase, selectedSeasonId),
-      ]);
+    setLoading(true);
+    setError(null);
+    fetchSeason(selectedSeasonId).then(season => {
       if (cancelled) return;
       setLoadedSeasonId(selectedSeasonId);
-      const queryError = playersResult.error ?? fieldResult.error ?? keeperResult.error;
-      if (queryError) { setError(queryError.message); setPlayers([]); setStats({}); setGames(null); setLoading(false); return; }
-      const fieldRows = (fieldResult.data ?? []) as Record<string, unknown>[];
-      const keeperRows = (keeperResult.data ?? []) as Record<string, unknown>[];
-      const inSeason = new Set([...fieldRows.map(row => row.player_id as string), ...keeperRows.map(row => row.player_id as string)]);
-      const isActiveSeason = selectedSeasonId === activeSeasonId;
-      const shown = ((playersResult.data ?? []) as (StatsPlayer & { active: boolean })[])
-        .filter(player => inSeason.has(player.id) || (isActiveSeason && player.active))
-        .map(({ active: _active, ...player }) => player);
-      const map = seasonRowsFromData(shown, fieldRows, keeperRows);
-      setPlayers(shown); setStats(map); setBaselineStats(map); setSeasonRowIds(inSeason); setGames(seasonGames); setLoading(false);
-    }
-    load().catch((loadError: unknown) => {
+      setPlayers(season.shown); setStats(season.rows); setBaselineStats(season.rows); setSeasonRowIds(season.inSeason);
+      setGames(season.games); setVersions(season.versions); setLoading(false);
+    }).catch((loadError: unknown) => {
       if (cancelled) return;
       setLoadedSeasonId(selectedSeasonId); setPlayers([]); setStats({}); setGames(null); setLoading(false);
       setError(loadError instanceof Error ? loadError.message : "Failed to load season stats");
     });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchSeason only reads the ids below
   }, [activeSeasonId, selectedSeasonId, seasonsLoading]);
 
   useEffect(() => {
@@ -85,10 +97,12 @@ export function RoseCitySeasonStats({ seasonState, onViewChange, controlsRef, on
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasChanges]);
 
+  const setFailure = onFailureChange;
+
   function changeRow(playerId: string, row: Record<string, number | boolean>) {
     if (saving || saveLock.current || statsPending) return;
     setStats(previous => ({ ...previous, [playerId]: row as SeasonRow }));
-    onFailureChange(false);
+    setFailure(null);
   }
   function openDialog(playerId: string, event: MouseEvent<HTMLButtonElement>) {
     opener.current = event.currentTarget;
@@ -106,23 +120,59 @@ export function RoseCitySeasonStats({ seasonState, onViewChange, controlsRef, on
     setSaving(true);
     setError(null);
     try {
+      if (versions) {
+        const latest = await readVersions(selectedSeasonId).catch((checkError: unknown) => { throw new Error(checkError instanceof Error ? `Could not check for newer changes: ${checkError.message}` : "Could not check for newer changes. Your changes are still here."); });
+        if (changedSince(dirtyIds, versions, latest).length > 0) {
+          setFailure({ kind: "conflict", message: `Someone changed these season totals after you opened this page. Load the latest numbers and keep your edits, or reload the saved numbers.` });
+          return false;
+        }
+      }
       const { entries, join } = seasonSaveInput(players, stats, dirtyIds, seasonRowIds);
       const problem = await saveSeasonTotals(createClient(), selectedSeasonId, entries, join);
-      if (problem) { setError(problem); onFailureChange(true); return false; }
+      if (problem) { setFailure({ kind: "error", message: problem }); return false; }
       setSeasonRowIds(new Set(players.map(player => player.id)));
       setBaselineStats(stats);
-      onFailureChange(false);
+      setFailure(null);
+      // The save moved the written rows' `updated_at`; learn the new ones so the next save does not mistake this one for someone else's.
+      readVersions(selectedSeasonId).then(setVersions, () => setVersions(null));
       return true;
     } catch (saveError: unknown) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save season stats. Your changes are still here.");
-      onFailureChange(true);
+      setFailure({ kind: "error", message: saveError instanceof Error ? saveError.message : "Failed to save season stats. Your changes are still here." });
       return false;
+    } finally { saveLock.current = false; setSaving(false); }
+  }
+
+  async function readVersions(seasonId: string): Promise<Versions> {
+    const supabase = createClient();
+    const [field, keeper] = await Promise.all([
+      supabase.from("player_season_adjustments").select("player_id, updated_at").eq("season_id", seasonId),
+      supabase.from("goalkeeper_season_adjustments").select("player_id, updated_at").eq("season_id", seasonId),
+    ]);
+    const queryError = field.error ?? keeper.error;
+    if (queryError) throw new Error(queryError.message);
+    return versionsFrom((field.data ?? []) as Record<string, unknown>[], (keeper.data ?? []) as Record<string, unknown>[]);
+  }
+
+  /** Conflict resolution: take the saved totals as the new base. With keepEdits the players the person edited keep their edit. */
+  async function loadLatest(keepEdits: boolean) {
+    if (!selectedSeasonId || saving || saveLock.current) return;
+    saveLock.current = true;
+    setSaving(true);
+    try {
+      const season = await fetchSeason(selectedSeasonId);
+      setPlayers(season.shown);
+      setStats(keepEdits ? keepEditsOver(season.shown, season.rows, stats, baselineStats) : season.rows);
+      setBaselineStats(season.rows); setSeasonRowIds(season.inSeason); setGames(season.games); setVersions(season.versions);
+      setError(null);
+      setFailure(null);
+    } catch (loadError: unknown) {
+      setFailure({ kind: "conflict", message: loadError instanceof Error ? `Could not load the latest numbers: ${loadError.message}` : "Could not load the latest numbers." });
     } finally { saveLock.current = false; setSaving(false); }
   }
 
   function applyScope(next: Scope) {
     setError(null);
-    onFailureChange(false);
+    setFailure(null);
     if (next.kind === "season") setSelectedSeasonId(next.id);
     else onViewChange(next.view);
   }
@@ -133,12 +183,13 @@ export function RoseCitySeasonStats({ seasonState, onViewChange, controlsRef, on
   }
   const save = useSaveState({ isDirty: !statsPending && hasChanges && Boolean(selectedSeasonId), onSave: async () => { if (!(await handleSave())) throw new Error("Season totals were not saved"); } });
   const seasonLabel = seasons.find(season => season.id === selectedSeasonId)?.label ?? "this season";
-  const requestNavigation = useUnsavedGuard({ dirty: hasChanges, edited: `season totals for ${seasonLabel}`, onSave: handleSave, onDiscard: () => { setStats(baselineStats); onFailureChange(false); } });
+  const requestNavigation = useUnsavedGuard({ dirty: hasChanges, edited: `season totals for ${seasonLabel}`, onSave: handleSave, onDiscard: () => { setStats(baselineStats); setFailure(null); } });
   useImperativeHandle(controlsRef, () => ({
     changeSeason: (id: string) => requestScope({ kind: "season", id }),
     changeView: () => requestScope({ kind: "view", view: "match" }),
     save: () => { void save.save().catch(() => undefined); },
-    discard: () => { setStats(baselineStats); setError(null); onFailureChange(false); },
+    discard: () => { setStats(baselineStats); setError(null); setFailure(null); },
+    loadLatest: (keepEdits: boolean) => { void loadLatest(keepEdits); },
   }));
   useEffect(() => { onSaveStateChange(save.state); }, [save.state, onSaveStateChange]);
   useEffect(() => { onSavingChange(saving); }, [saving, onSavingChange]);

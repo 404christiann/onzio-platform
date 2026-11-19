@@ -2,7 +2,7 @@
 
 - **Status:** `in_progress`, built and tested locally; verify-rc-admin not run yet. No migration, schema, validator, RPC or env change. Record in `STATUS.md`.
 - **What:** `/admin/stats` for Rose City (slug `rose-city`, classic portal) now shows read-only tables per match or season with an Edit dialog per
-  player and one page Save. The match save still sends every player's row; the season save is the classic `saveSeasonTotals`. The season dialog
+  player and one page Save. The match save still sends every player's row; the season save is the classic `saveSeasonTotals`. Both check the rows' `updated_at` first (stale-edit conflict) and offer Try again after a failed save. The season dialog
   shows "From matches N · added by hand +M". Diverse City keeps `CombinedStatsPage`, unchanged.
 - **Exact next step:** verify (both views) when the orchestrator opens the slot, then ready PR and onzio-bot.
 

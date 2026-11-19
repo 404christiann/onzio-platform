@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { StatsPlayer } from "@/components/admin/stats/types";
 import {
-  buildMatchSaveRows, cellText, defaultMatchRow, defaultSeasonRow, dirtyPlayers, matchRowsFromData, parseCount, seasonRowsFromData, seasonSaveInput,
+  buildMatchSaveRows, cellText, changedSince, keepEditsOver, versionsFrom, defaultMatchRow, defaultSeasonRow, dirtyPlayers, matchRowsFromData, parseCount, seasonRowsFromData, seasonSaveInput,
   seasonSplit, seasonTotalsProblem, splitPlayers, statsColumns, statsFieldGroups, statsSummary, type MatchRows, type SeasonRows,
 } from "@/components/admin/stats/rose-city/stats-model";
 import { StatsTables } from "@/components/admin/stats/rose-city/StatsTables";
@@ -200,6 +200,50 @@ describe("RC-ADMIN-4b Stats: tables and dialog fields", () => {
     expect(dialog).toContain("Edits stay on the page until you press Save.");
     expect(dialog).not.toMatch(/upsert|saveSeasonTotals|createClient/);
     expect(source("components/admin/stats/rose-city/RoseCityStatsPage.tsx")).toContain("onSave={() => controls.current?.save()}");
+  });
+});
+
+describe("RC-ADMIN-4b Stats: stale-edit conflict and retry", () => {
+  it("reads when saved rows last changed, by player, from the tables' own updated_at", () => {
+    expect(versionsFrom([{ player_id: "f1", updated_at: "2026-11-19T10:00:00Z" }], [{ player_id: "gk", updated_at: "2026-11-19T10:01:00Z" }, { player_id: "x" }])).toEqual({ f1: "2026-11-19T10:00:00Z", gk: "2026-11-19T10:01:00Z" });
+  });
+
+  it("flags a player whose row changed, appeared or vanished since the page loaded, and no one else", () => {
+    const loaded = { f1: "t1", gk: "t1" };
+    expect(changedSince(["f1", "gk", "d1"], loaded, { f1: "t1", gk: "t1" })).toEqual([]);
+    expect(changedSince(["f1", "gk", "d1"], loaded, { f1: "t2", gk: "t1" })).toEqual(["f1"]);
+    expect(changedSince(["f1", "gk", "d1"], loaded, { f1: "t1", gk: "t1", d1: "t3" })).toEqual(["d1"]);
+    expect(changedSince(["f1", "gk"], loaded, { f1: "t1" })).toEqual(["gk"]);
+  });
+
+  it("load latest and keep my edits: edited players keep their edit, everyone else takes the latest", () => {
+    const baseline = matchRowsFromData(players, fieldData, keeperData);
+    const latest = matchRowsFromData(players, [{ ...fieldData[0], goals: 7 }, { player_id: "d1", starts: true, mins: 60, goals: 0, assists: 0, tackles: 2, offsides: 0, fouls: 0, fouls_suffered: 0, yellow: 0, red: 0 }], keeperData);
+    const mine: MatchRows = { ...baseline, gk: { ...baseline.gk, saves: 9 } };
+    const merged = keepEditsOver(players, latest, mine, baseline);
+    expect((merged.gk as { saves: number }).saves).toBe(9);
+    expect((merged.f1 as { goals: number }).goals).toBe(7);
+    expect((merged.d1 as { mins: number }).mins).toBe(60);
+    expect(keepEditsOver(players, latest, baseline, baseline)).toEqual(latest);
+  });
+
+  it("both views check for newer saves before writing, send the same writes, and refresh their versions after", () => {
+    const match = source("components/admin/stats/rose-city/RoseCityMatchStats.tsx");
+    expect(match.indexOf("changedSince(players.map")).toBeGreaterThan(0);
+    expect(match.indexOf("changedSince(players.map")).toBeLessThan(match.indexOf('.upsert(fieldRows, { onConflict: "player_id,match_id" })'));
+    expect(match).toContain("fetchLatest(selectedMatch).then(latest => setVersions(latest.versions), () => setVersions(null))");
+    const season = source("components/admin/stats/rose-city/RoseCitySeasonStats.tsx");
+    expect(season.indexOf("changedSince(dirtyIds")).toBeLessThan(season.indexOf("saveSeasonTotals(createClient()"));
+    expect(season).toContain("readVersions(selectedSeasonId).then(setVersions, () => setVersions(null))");
+  });
+
+  it("the page offers Try again after a failed save and the two conflict ways out", () => {
+    const page = source("components/admin/stats/rose-city/RoseCityStatsPage.tsx");
+    expect(page).toContain("Try again</button>");
+    expect(page).toContain("Load latest and keep my edits");
+    expect(page).toContain("Reload saved numbers");
+    expect(page).toContain("onRetry={() => controls.current?.save()}");
+    expect(page).toContain("failure.kind");
   });
 });
 
