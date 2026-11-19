@@ -76,7 +76,10 @@ where c.id = '32ceba0b-4e25-52c2-bb6b-d82fb87637a7'
 on conflict do nothing;
 
 -- Columns that hold media paths inside larger values (JSON or free text). Add a row here when a
--- new such column ships; the catalog test enforces it for json/jsonb columns.
+-- new such column ships; the catalog test enforces it for json/jsonb columns. This registry feeds
+-- only the retire-side check: a new column also needs its write-side guard trigger
+-- (onzio_private.guard_media_reference), as 20260924154404 created for these three, so a new link
+-- is serialized against retirement.
 create table onzio_private.media_reference_columns (
   table_name text not null,
   column_name text not null,
@@ -166,6 +169,8 @@ declare
   v_referenced integer;
   v_since timestamptz;
   v_stray bigint;
+  v_set uuid[] := '{}';
+  v_clear uuid[] := '{}';
 begin
   if p_grace is null or p_grace < interval '0' then
     raise exception 'INVALID_GRACE' using errcode = '22023';
@@ -193,19 +198,15 @@ begin
                  where pin.club_id = v_club.id and pin.object_path = a.storage_path) then
         v_pinned := v_pinned || pg_catalog.jsonb_build_array(
           pg_catalog.jsonb_build_object('assetId', a.id, 'path', a.storage_path));
-        if a.unreferenced_since is not null then
-          update onzio.media_assets set unreferenced_since = null where id = a.id;
-        end if;
+        if a.unreferenced_since is not null then v_clear := v_clear || a.id; end if;
       elsif onzio_private.media_asset_has_references(v_club.id, a.id, a.storage_path) then
         v_referenced := v_referenced + 1;
-        if a.unreferenced_since is not null then
-          update onzio.media_assets set unreferenced_since = null where id = a.id;
-        end if;
+        if a.unreferenced_since is not null then v_clear := v_clear || a.id; end if;
       else
         v_since := a.unreferenced_since;
         if v_since is null then
           v_since := v_now;
-          update onzio.media_assets set unreferenced_since = v_now where id = a.id;
+          v_set := v_set || a.id;
         end if;
         if v_since <= v_now - p_grace and a.published_at <= v_now - p_grace then
           v_candidates := v_candidates || pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
@@ -223,6 +224,20 @@ begin
       'published', v_published, 'referencedCount', v_referenced,
       'pinned', v_pinned, 'waiting', v_waiting, 'candidates', v_candidates));
   end loop;
+
+  -- The clock is written in two set-based statements after every reference has been computed.
+  -- media_assets' statement trigger (serialize_homepage_write) takes lock 734901281, which homepage
+  -- saves and retirements also take, so it is held only for these two updates, not the whole scan.
+  -- A link added after its asset was read only means a clock set one scan too early; the next scan
+  -- clears it, and retirement re-checks references under that lock anyway.
+  if pg_catalog.cardinality(v_clear) > 0 then
+    update onzio.media_assets set unreferenced_since = null
+      where id = any(v_clear) and unreferenced_since is not null;
+  end if;
+  if pg_catalog.cardinality(v_set) > 0 then
+    update onzio.media_assets set unreferenced_since = v_now
+      where id = any(v_set) and unreferenced_since is null;
+  end if;
 
   -- Report-only: onzio-media objects that have no media_assets row at all. The sweep never
   -- touches these. Null when Storage is not readable from here.

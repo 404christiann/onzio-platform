@@ -212,10 +212,25 @@ describe("enforce", () => {
     expect(result).toMatchObject({ retired: 0, failed: 1 });
   });
 
-  it("treats an existing trash copy as copied", async () => {
+  it("replaces a stale trash copy with a fresh one before retiring", async () => {
+    silence();
+    const c = club("a", { published: 100, candidates: 1 });
+    const path = c.candidates[0].path;
+    let copies = 0;
+    const h = harness([c], { copyError: () => (copies++ === 0 ? { message: "The resource already exists" } : null) });
+    expect((await runMediaOrphanSweep({ ...h.deps, mode: "enforce" })).retired).toBe(1);
+    expect(h.calls.filter((call) => !call.startsWith("insert:") && !call.startsWith("list:") && call !== "rpc:media_orphan_sweep_scan")).toEqual([
+      `copy:${path}`, `remove:onzio-media-trash:${path}`, `copy:${path}`, "rpc:retire_unreferenced_media_asset", `remove:onzio-media:${path}`,
+    ]);
+  });
+
+  it("does not retire when the stale trash copy cannot be replaced", async () => {
     silence();
     const h = harness([club("a", { published: 100, candidates: 1 })], { copyError: () => ({ message: "The resource already exists" }) });
-    expect((await runMediaOrphanSweep({ ...h.deps, mode: "enforce" })).retired).toBe(1);
+    const result = await runMediaOrphanSweep({ ...h.deps, mode: "enforce" });
+    expect(result.retired).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(h.calls).not.toContain("rpc:retire_unreferenced_media_asset");
   });
 
   it("queues the removal for retry when the public object cannot be removed", async () => {

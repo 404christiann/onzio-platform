@@ -52,8 +52,24 @@ dry-run until Christian has reviewed 7+ days of reports and says "enforce".
   the three migration-order pins gain the new file; the architecture test approves the new service-role file.
 
 **Verification (local; reset with this branch's migrations inside one DB lock hold):** full `test:db` 79 files,
-1355 tests; `db:types:check`; `test:unit` 344 files, 3990 tests; architecture 18 files, 432 passed, 1 skipped
+1355 tests (1356 after round 1); `db:types:check`; `test:unit` 344 files, 3990 tests; architecture 18 files, 432 passed, 1 skipped
 (existing); the two new contract tests 6/6; `tsc`; `next build` (subagent run).
+
+**onzio-bot round 1 (no High or Medium; Christian asked for every Low fixed):**
+- Low 1, fixed: enforce treated an existing trash copy as copied, and the 30-day purge later in the same run could
+  delete a stale copy of a file retired that day. Now a stale copy is removed and the file copied again, and a
+  failed replacement means no retirement. Two unit tests.
+- Low 2, fixed: the scan now computes every reference first and writes the clock in two set-based statements at
+  the end, so lock `734901281` (taken by `media_assets`' `serialize_homepage_write`) is held only for those two
+  updates, not the whole scan. The scan's speed against production is timed read-only at the gate.
+- Low 3, fixed: a new DB test fails when a `media_reference_columns` row has no `guard_media_reference` trigger
+  (write-side lock against retirement); the migration comment says so. Mutation check: with the social-icon guard
+  dropped, the test fails.
+- Note 5, fixed: the cron test no longer claims it runs after the staging cleanup (Hobby may fire anywhere in the
+  hour; nothing depends on the order).
+- Note 4, left: `unreferenced_since` is readable by anon/authenticated through `media_assets`' table-level grant.
+  Hiding it means moving the clock off `media_assets`, against the approved design; low sensitivity.
+- Re-verified: full `test:db` 79 files, 1356 tests; `db:types:check`; sweep unit and cron tests 21/21; `tsc`.
 
 **Known limit:** cinematic JSON content stores asset ids that are mirrored into `*_media_asset_id` FK columns or
 child tables; the catalog test forces a decision on any new JSON column but cannot prove a mirror exists.

@@ -17,7 +17,7 @@ const request = (authorization?: string) =>
   new Request("https://onzio.example/api/cron/media-orphan-sweep", { headers: authorization ? { authorization } : undefined });
 
 describe("orphan media sweep cron", () => {
-  it("is scheduled once daily, after the staging cleanup", () => {
+  it("is scheduled once daily in the 10:00 UTC hour (Hobby may fire any time in it; nothing depends on running after the staging cleanup)", () => {
     const config = JSON.parse(readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")) as { crons: Array<{ path: string; schedule: string }> };
     expect(config.crons).toContainEqual({ path: "/api/cron/media-orphan-sweep", schedule: "30 10 * * *" });
   });

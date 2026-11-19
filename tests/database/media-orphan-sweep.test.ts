@@ -421,4 +421,20 @@ describe("json column classification", () => {
       "onzio.site_social_links.icon",
     ]);
   });
+
+  it("gives every registered column a write-side guard trigger, so a new link is serialized against retirement", async () => {
+    const { rows } = await db.query<{ name: string; guarded: boolean }>(
+      `select reg.table_name || '.' || reg.column_name as name,
+         exists (
+           select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
+           join pg_namespace n on n.oid = p.pronamespace
+           where t.tgrelid = to_regclass(reg.table_name) and not t.tgisinternal
+             and n.nspname = 'onzio_private' and p.proname = 'guard_media_reference'
+             and split_part(encode(t.tgargs, 'escape'), '\\000', 1) = reg.column_name
+         ) as guarded
+       from onzio_private.media_reference_columns reg order by 1`,
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.filter((row) => !row.guarded).map((row) => row.name), "registered columns without a guard_media_reference trigger").toEqual([]);
+  });
 });

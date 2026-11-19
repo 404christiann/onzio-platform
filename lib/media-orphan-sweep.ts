@@ -262,8 +262,15 @@ async function retireCandidate(
   const media = service.storage.from("onzio-media");
   const trash = service.storage.from(SWEEP_TRASH_BUCKET);
 
-  const { error: copyError } = await media.copy(asset.path, asset.path, { destinationBucket: SWEEP_TRASH_BUCKET });
-  if (copyError && !isDuplicateCopy(copyError)) {
+  let { error: copyError } = await media.copy(asset.path, asset.path, { destinationBucket: SWEEP_TRASH_BUCKET });
+  if (copyError && isDuplicateCopy(copyError)) {
+    // A copy left by an earlier failed run may be close to the 30-day purge, which runs later in
+    // this same run. Replace it so the trash always holds a fresh copy of a file retired today.
+    const { error: staleError } = await trash.remove([asset.path]);
+    if (staleError) return { status: "failed", reason: "TRASH_COPY_FAILED" };
+    ({ error: copyError } = await media.copy(asset.path, asset.path, { destinationBucket: SWEEP_TRASH_BUCKET }));
+  }
+  if (copyError) {
     return { status: "failed", reason: "TRASH_COPY_FAILED" };
   }
 
