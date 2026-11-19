@@ -47,7 +47,7 @@ before the final rebase (this branch on `5358951b`): branding `test-results/rc-a
 `20261119-140919-RC-ADMIN-4c/report.html`; all six gates pass (gate 3 on members N/A, declared; gate 4 CLS 0.00000 at 390 on both, 0.00001 at 1440;
 Diverse City 15/15 identical; gate 2 18/18 identical). Earlier runs: the first branding run failed gate 4 at 390 because the skill's phone walk did not
 press Back between sections (fixed on main by RC-ADMIN-4b-0-2, #188) and gate 2 on a Shop load flake. The final rebase onto `9e1dee1c` (#187 changed
-`PageSaveButton` and `EditorDialog`, which Branding uses) was re-verified: see the PR body for the report.
+`PageSaveButton` and `EditorDialog`, which Branding uses) was re-verified: branding on `9e1dee1c` + this branch, report `test-results/rc-admin-verify/20261119-142904-RC-ADMIN-4c/report.html`, all six gates PASS (gate 2 18/18, gate 4 CLS 0.00000 at 390, unit 4157, Diverse City 15/15).
 - `npx tsc --noEmit` clean; `npm run test:unit` 4130 passed.
 
 **Blockers or unresolved decisions:** none. Questions for Christian are in the PR body (Payments link on the Team tab; tagline shown as "not set" for Rose City).
