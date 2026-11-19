@@ -276,6 +276,22 @@ async function detectOpenPath(page: Page, editor: Editor) {
   return chooseOpenPath(winner === "row" && await kitEditLocator(page).isVisible() ? "kit" : winner);
 }
 
+// Does origin/main's page offer anything to open (a kit Edit control, or the row's text field)? Short wait, on a throwaway page.
+async function baseOpensEditor(context: BrowserContext, editor: Editor) {
+  const page = await context.newPage();
+  try {
+    await page.goto(BASE + editor.route);
+    await expect(page.locator("h1").first()).toBeVisible();
+    const kit = kitEditLocator(page).waitFor({ state: "visible", timeout: 8_000 }).then(() => true, () => false);
+    const row = (editor.field ?? genericField)(page).waitFor({ state: "visible", timeout: 8_000 }).then(() => true, () => false);
+    return await new Promise<boolean>((done) => {
+      void kit.then((found) => found && done(true));
+      void row.then((found) => found && done(true));
+      void Promise.all([kit, row]).then(() => done(false));
+    });
+  } finally { await page.close(); }
+}
+
 // `settle`: on the kit path, let the page sit 1.5 s and read the layout shift BEFORE the dialog opens (kitState.clsBeforeOpen).
 // Opening a modal locks page scroll, which can drop the scrollbar and move the page behind it; that is the dialog's, not the page load's.
 async function openEditor(page: Page, base: string, editor: Editor, options: { settle?: boolean } = {}) {
@@ -706,28 +722,35 @@ test.describe("gate 4: visual", () => {
       await commitKit(page);
       // Same checks on origin/main: only violations main does not have fail (a ratchet); the
       // rest are reported as existing debt.
-      const basePage = await context.newPage();
-      const baseField = await openEditor(basePage, BASE, editor);
-      await basePage.waitForTimeout(1_500);
-      await commitKit(basePage); // origin/main may already be a kit page: scan its page, not the dialog over it
-      const baseForm = await axe(basePage, ["main"]);
-      await revealKit(basePage);
-      await mark(baseField, "v1");
-      await commitKit(basePage);
-      // An older editor on origin/main may have no discard control at all (the old Shop): then there is no baseline dialog, so every
-      // violation in the package's discard dialog counts as new.
-      let baseDialog: AxeViolation[] = [];
-      if (await discardTrigger(basePage).waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false)) {
-        await discardTrigger(basePage).click();
-        await expect(basePage.getByRole("dialog")).toBeVisible();
-        await basePage.waitForTimeout(400);
-        baseDialog = await axe(basePage, ["[role=dialog]"]);
-        await basePage.getByRole("dialog").getByRole("button", { name: DISCARD_CONFIRM }).click();
+      // origin/main's page may have no editable field and no kit control at all (the old Schedule opens its editor from a side panel
+      // after Add match): there is then nothing to open and no baseline, so every violation in the package's page and dialog counts as new.
+      // Only a route with no `open` step is probed; a route that needs one keeps the old path untouched. Never loosens anything.
+      let baseForm: AxeViolation[] = [], baseDialog: AxeViolation[] = [], baseline = "origin/main";
+      if (!editor.open && !(await baseOpensEditor(context, editor))) {
+        baseline = "none (origin/main's page has no editor to open)";
+      } else {
+        const basePage = await context.newPage();
+        const baseField = await openEditor(basePage, BASE, editor);
+        await basePage.waitForTimeout(1_500);
+        await commitKit(basePage); // origin/main may already be a kit page: scan its page, not the dialog over it
+        baseForm = await axe(basePage, ["main"]);
+        await revealKit(basePage);
+        await mark(baseField, "v1");
+        await commitKit(basePage);
+        // An older editor on origin/main may have no discard control at all (the old Shop): then there is no baseline dialog, so every
+        // violation in the package's discard dialog counts as new.
+        if (await discardTrigger(basePage).waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false)) {
+          await discardTrigger(basePage).click();
+          await expect(basePage.getByRole("dialog")).toBeVisible();
+          await basePage.waitForTimeout(400);
+          baseDialog = await axe(basePage, ["[role=dialog]"]);
+          await basePage.getByRole("dialog").getByRole("button", { name: DISCARD_CONFIRM }).click();
+        }
       }
       await context.close();
       const newForm = fresh(formViolations, baseForm);
       const newDialog = fresh(dialogViolations, baseDialog);
-      record(`visual-${slug}`, { gate: 4, width, scheme, applicable: true, saveBar, cls, clsAfterOpen, shifts, overflow, formViolations, dialogViolations, kitDialogViolations, sheetProblems, newFormViolations: newForm, newDialogViolations: newDialog });
+      record(`visual-${slug}`, { gate: 4, width, scheme, applicable: true, baseline, saveBar, cls, clsAfterOpen, shifts, overflow, formViolations, dialogViolations, kitDialogViolations, sheetProblems, newFormViolations: newForm, newDialogViolations: newDialog });
       expect.soft(cls, "layout shift on load (CLS)").toBeLessThan(CLS_LIMIT);
       expect.soft(overflow, "page scrolls sideways").toBeLessThanOrEqual(1);
       if (saveBar) expect.soft(saveBar.problems, "phone Save bar").toEqual([]);
