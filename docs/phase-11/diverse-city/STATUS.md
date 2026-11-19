@@ -1,5 +1,57 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4c: Rose City Club settings on the editor kit (app code only)
+
+**Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4c, branch `claude/rc-admin-4c` off `9e1dee1c`.
+**Status:** `in_progress`, PR open; verify-rc-admin PASS on `/admin/branding` and `/admin/members`. Merges only on Christian's word. App code only: no
+migration, schema, RPC, validator or env change; the cinematic-2 selector debt, the template-selector allowlist and the `lib/code-site.ts` ceilings are
+untouched; nothing under `components/cinematic/` changes.
+
+**Completed work:**
+- `/admin/branding` and `/admin/members` for Rose City are rebuilt on the editor kit inside one frame (`RoseCityFrame`: `PageFrame`, title "Club
+  settings", the same two tabs, the unsaved guard on a tab switch). Branding has two section cards (Club logo; Footer and social links) and one
+  two-pane `EditorDialog` with the real footer preview and one page Save. The save is the existing `persist()` (up to three sequential
+  `/api/admin/data` upserts: `site_branding` logo, `site_social_links`, `site_branding` tagline), same retry, cleanup and guard logic.
+  Team access is the same `ClassicMembersPage` (add and remove act at once, roles and emailed sign-in code unchanged) inside the Rose City frame;
+  its Payments link card is a plain link to `/admin/payments` (no billing logic). Club name, colours, domain, favicon and inverse logo stay
+  operator-only; no domain field.
+- Legacy social links (Christian's decision): Rose City's five links are stored under old UUID ids and loaded blank. One mapper,
+  `canonicalizeSocialRows` (`lib/social-links.ts`), is used by the load (`draftFromRows`) and the save (`socialStagePayload`): rows map to the standard
+  ids by id or icon, a standard-id row wins over a legacy row (blank included), unknown rows are left out and never written or deleted. A no-op save
+  writes nothing; any social edit writes all five platforms under standard ids. The legacy rows stay in the table: the public footer and Know Before
+  You Go already prefer the standard id, and Rose City's contact page and editor never read social links (blast-radius run, 2026-11-19). The public
+  footer keeps its own function; a contract test pins that both agree on the five legacy and five standard ids.
+- Footer tagline for Rose City (existing column, same 160 cap as Diverse City). The branding read turns a blank column into the academy wording, so
+  the editor shows that default as "not set" (it is not Rose City's own line), and a saved tagline cannot be cleared back to it. Saving a tagline refreshes
+  `ClubBrandingProvider` so other editors' footer previews update.
+- Selection without a selector (Christian, 2026-11-19): `lib/site-for.ts` (`siteFor(club)?.adminEditors?.<page> ?? default`) with the Rose City
+  site package `components/sites/rose-city/site-definition.ts` exporting `branding` and `clubSettingsFrame`. Rose City is keyed by slug inside the
+  registry; the two shared pages hold no club or template conditional, and Diverse City resolves to no package editor, so it runs the classic one.
+- Layout shift: on main, Team access shifts at about 270 ms (CLS 0.01378 at 390) because its skeleton is taller than the loaded list. The Rose City
+  frame reserves that height on the Team tab only (`RoseCity.module.css`); Diverse City's frame is not touched.
+
+**Files changed:** `app/admin/(protected)/branding/page.tsx` and `members/page.tsx` (one `siteFor` lookup each); `components/admin/club-settings/branding-draft.ts`
+(`draftFromRows`, `socialStagePayload`, the save uses the same mapper; Diverse City payload bytes unchanged); `lib/social-links.ts` (mapper);
+new `lib/site-for.ts`, `components/sites/rose-city/site-definition.ts`, `components/admin/club-settings/rose-city/` (`RoseCityFrame`, `RoseCityBranding`,
+`rose-city-branding.ts`, `RoseCity.module.css`); new `tests/contracts/rc-admin-4c-social-links.test.ts` (17 tests: legacy rows load filled, no-op save
+writes nothing, forced payload = same five URLs under standard ids, no duplicates, none lost, standard id wins, unknown rows dropped, Diverse City payload
+bytes identical, tagline rules, footer agreement, site-package lookup, no selector in the pages).
+
+**Interrogation (opus and sonnet, 2026-11-19, findings proven by runs):** selector ratchet (fixed by the site package); the Rose City tagline column is `''` so
+the editor would pre-fill the academy slogan (fixed); a bad link or an empty tagline failed silently once the fields moved into the dialog (the page now shows
+the message and opens the footer section); closing the dialog during an upload (the upload is tracked on the page, not in the field, so the guard holds);
+a saved tagline never reached the provider (refreshed).
+
+**Verification:** verify-rc-admin `--route /admin/branding` and `--route /admin/members`, `--package RC-ADMIN-4c --touched branding,members`, on the head
+before the final rebase (this branch on `5358951b`): branding `test-results/rc-admin-verify/20261119-135131-RC-ADMIN-4c/report.html`, members
+`20261119-140919-RC-ADMIN-4c/report.html`; all six gates pass (gate 3 on members N/A, declared; gate 4 CLS 0.00000 at 390 on both, 0.00001 at 1440;
+Diverse City 15/15 identical; gate 2 18/18 identical). Earlier runs: the first branding run failed gate 4 at 390 because the skill's phone walk did not
+press Back between sections (fixed on main by RC-ADMIN-4b-0-2, #188) and gate 2 on a Shop load flake. The final rebase onto `9e1dee1c` (#187 changed
+`PageSaveButton` and `EditorDialog`, which Branding uses) was re-verified: see the PR body for the report.
+- `npx tsc --noEmit` clean; `npm run test:unit` 4130 passed.
+
+**Blockers or unresolved decisions:** none. Questions for Christian are in the PR body (Payments link on the Team tab; tagline shown as "not set" for Rose City).
+**Exact next step:** onzio-bot review, then Christian merges.
 ## 2026-11-19 - RC-ADMIN-4b-0-2 follow-up: seasons row reason text (onzio-bot Low on #188)
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-2 follow-up, branch `claude/rc-admin-4b-0-2-low` on `e8190f83`. **Status:** `in_progress`:
