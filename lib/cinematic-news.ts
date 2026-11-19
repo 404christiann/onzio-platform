@@ -16,7 +16,8 @@ export function newsCategory(key: NewsCategory) {
   return NEWS_CATEGORIES.find(item => item.key === key) ?? NEWS_CATEGORIES[4];
 }
 
-export const NEWS_LIMITS = { cardHeading: 40, title: 140, subtitle: 200, coverAlt: 200, paragraphs: 40, paragraph: 4000, actionLabel: 40, actionHref: 2000 } as const;
+/** liveArticles: articles a club shows at once; removed ones do not count (RC-ADMIN-10a, NEWS_LIMIT_REACHED in SQL). */
+export const NEWS_LIMITS = { cardHeading: 40, title: 140, subtitle: 200, coverAlt: 200, paragraphs: 40, paragraph: 4000, actionLabel: 40, actionHref: 2000, liveArticles: 200 } as const;
 
 /** A button link: https on a public host, or a path on this site. */
 export function isSafeNewsHref(value: string): boolean {

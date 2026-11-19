@@ -1,5 +1,6 @@
 import type { TemplateKey } from "@/packages/presentation";
 import { codeSiteFor, codeSiteForTemplateKey } from "@/lib/code-site";
+import { HOMEPAGE_SLIDESHOW_PHOTO_LIMITS } from "@/lib/homepage-content";
 import type { HomepageSaveRequest } from "./contract";
 import type { HeroFields, HomepageSection, PieceId } from "./model";
 
@@ -55,7 +56,7 @@ export function resolveHomepageCapabilities(input: HomepageRenderer) {
   }
   return {
     editableSections, heroEditableFields,
-    maxPhotos: cinematic ? 7 : 6,
+    maxPhotos: cinematic ? HOMEPAGE_SLIDESHOW_PHOTO_LIMITS.cinematic : HOMEPAGE_SLIDESHOW_PHOTO_LIMITS.other,
     photoCaptionEditable: siteHomepage?.photoCaptionEditable ?? (input.slideshowVariant === "legacy"),
     videoSourceEditable: false as const,
     sharedTargets: {

@@ -1,5 +1,66 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-10a sponsor and news caps in SQL
+
+**Agent/package:** Claude Code (Opus), RC-ADMIN-10a, branch `claude/rc-admin-10a` on `c75496c3`.
+**Status:** `in_progress`: PR open and marked ready; production gate run up to the dry run; waiting for
+Christian's "push". It merges only after the migration is on production. Christian approved the caps on
+2026-11-19 (UTC): news 200 live, sponsors 30 / 10 / 6, increases only, slideshow constant only.
+
+**Completed work:**
+- Migration `20261119010000_sponsor_and_news_caps.sql`:
+  - A guard stops the migration, changing nothing, if any club is already over a cap.
+  - `onzio_private.enforce_sponsor_caps()` on `site_sponsor_logos` (insert, or update of either switch), under a
+    per-club advisory lock (734901502). `SPONSOR_LIMIT_TOTAL` 30, `SPONSOR_LIMIT_HOMEPAGE` 10,
+    `SPONSOR_LIMIT_FOOTER` 6, errcode 23514. The trigger fires after `site_sponsor_logo_placement_switches`,
+    so an insert that writes only the old `placement` column is counted with its switch.
+  - `onzio_private.enforce_cinematic_news_cap()` on `cinematic_news_articles` (insert, or update of
+    `removed_at`), under the News lock 734901401. `NEWS_LIMIT_REACHED` at 200 live articles (removed ones do
+    not count), errcode 23514.
+  - Both refuse increases only: an edit that adds no row and turns no switch on always passes.
+- App:
+  - `diffSponsorList` (the one-list Sponsors page) writes every change that turns nothing on first, then the
+    switches turned on (`switchesOnLast`), so a swap at a full place never passes through a state over the cap.
+    The classic and Rose City diffs already never turn a switch on in an update.
+  - The three sponsor codes get plain copy (`sponsorLimitMessage`) on all three sponsor pages. News maps
+    `NEWS_LIMIT_REACHED` to 409 with plain copy; `NEWS_LIMITS.liveArticles = 200`.
+  - Slideshow: the stale `MAX_HOMEPAGE_SLIDESHOW_PHOTOS = 6` and the test-only `canAddHomepageSlideshowPhoto`
+    are replaced by `HOMEPAGE_SLIDESHOW_PHOTO_LIMITS = { cinematic: 7, other: 6 }`, used by `capabilities.ts`
+    and `model.ts`. A DB test pins the same 7 / 6 in `save_homepage`. No SQL change.
+  - Not done from the plan: disabling News "Add article" and "Restore" at 200 in the editor. No club has any
+    article yet, the server now refuses with plain copy, and it would be a visual change to the RC-ADMIN-12
+    editor needing a verify-rc-admin run. It can follow when a club nears 200.
+
+**Files changed:** the migration; `lib/sponsor-content.ts`; `components/admin/sponsors/classic-sponsors-save.ts`;
+`components/admin/reimagined/Sponsors.tsx`; `app/api/admin/cinematic-news/route.ts`; `lib/cinematic-news.ts`;
+`lib/homepage-content.ts`; `lib/homepage-editor/capabilities.ts`; `lib/homepage-editor/model.ts`. Tests: new
+`tests/database/sponsor-news-caps.test.ts` (14); `lib/__tests__/sponsor-content.test.ts` (3 new);
+`lib/__tests__/homepage-content.test.ts`; migration-order pins in `admin-reimagined-league`,
+`admin-reimagined-sponsors` and `cinematic-shop-jersey-options-migration` (the new file appended, as for 10b).
+
+**Verification (local; reset with this branch's migrations inside one DB lock hold):**
+DB_RESULTS_PLACEHOLDER
+- `tsc` clean; `test:unit` 340 files, 3902 tests; architecture suite passes (the template-selector ratchet
+  caught a first draft that added a template check in `lib/homepage-content.ts`; the limit is now a constant
+  and the check stays in `capabilities.ts`); `next build` passed; `db:types:check` passed (no type change);
+  eslint clean on the changed files.
+
+**Production gate (2026-11-19 UTC, from Christian's Mac, Supabase CLI 2.122.0), up to the dry run:**
+1. Ledger: every main migration is on production; the only local-only file is
+   `20261119010000_sponsor_and_news_caps.sql`.
+2. Snapshot (read-only): 2 clubs, 4 active domains, audit events `1027:1034`, 582 published assets.
+   Diverse City sponsors 3 / 3 / 1, news 0, slideshow 0; Rose City sponsors 7 / 6 / 6 (footer at the cap),
+   news 0, slideshow 6. No club is over a cap, so the guard passes. Neither trigger exists yet.
+3. Backup: `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-<time>-pre-rcadmin10a.dump`, run in the
+   "10a prod backup" Terminal tab; it waits for Christian to type the database password.
+4. Dry run: exactly `20261119010000_sponsor_and_news_caps.sql`, no seeds, no roles.
+
+**Blockers or unresolved decisions:** Christian's "push" (after the backup finishes).
+
+**Exact next step:** on "push": `db push --linked --skip-vault`, then the read-only check (both triggers in
+`pg_trigger`, the ledger matches, the snapshot unchanged), then ask Christian to merge. Then RC-ADMIN-10c, not
+before 2026-11-20 04:00 UTC and only after its three checks.
+
 ## 2026-11-19 - RC-ADMIN-13-seed verify seed gives Rose City a season, roster and matches
 
 **Agent/package:** Claude Code (Sonnet worker W13s, orchestrated), RC-ADMIN-13-seed, branch `claude/rc-admin-13-seed` on

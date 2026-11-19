@@ -38,6 +38,7 @@ import {
   diffSponsorList,
   normalizeSponsorWebsite,
   sponsorDraftFromRow,
+  sponsorLimitMessage,
   sponsorListCounts,
   sponsorListProblems,
   sponsorNameFromFile,
@@ -337,6 +338,7 @@ function Editor({ club, initialRows }: { club: ClubContext; initialRows: DBSiteS
     const supabase = createClient();
     const { toDelete, toInsert, toUpdate } = diff;
     let failed = false;
+    let limitMessage: string | null = null;
     let nextDrafts = drafts;
     try {
       if (toDelete.length) {
@@ -355,8 +357,9 @@ function Editor({ club, initialRows }: { club: ClubContext; initialRows: DBSiteS
         let at = 0;
         nextDrafts = drafts.map((sponsor) => (sponsor.id === null && ids[at] ? { ...sponsor, id: ids[at++] } : sponsor));
       }
-    } catch {
+    } catch (cause) {
       failed = true;
+      limitMessage = cause instanceof Error ? sponsorLimitMessage(cause.message) : null;
     }
 
     const replaced = toUpdate.flatMap((update) => {
@@ -385,7 +388,7 @@ function Editor({ club, initialRows }: { club: ClubContext; initialRows: DBSiteS
 
     if (failed) {
       setSave("idle");
-      setMessage("Some changes could not be saved. Check your internet connection and try again.");
+      setMessage(limitMessage ?? "Some changes could not be saved. Check your internet connection and try again.");
       return false;
     }
     setSave("done");
