@@ -2,9 +2,10 @@
 
 ## 2026-11-19 - RC-ADMIN-10a sponsor and news caps in SQL
 
-**Agent/package:** Claude Code (Opus), RC-ADMIN-10a, branch `claude/rc-admin-10a` on `c75496c3`.
-**Status:** `in_progress`: PR open and marked ready; production gate run up to the dry run; waiting for
-Christian's "push". It merges only after the migration is on production. Christian approved the caps on
+**Agent/package:** Claude Code (Opus), RC-ADMIN-10a, PR #176, branch `claude/rc-admin-10a` (rebased onto `44796089`).
+**Status:** `in_progress`: the migration is on production (2026-11-19, after Christian's "push") and the
+read-only check passed; onzio-bot found no High or Medium issues at `6cc96b9` and again at `7d30bd1`. It waits
+only for Christian's merge. Christian approved the caps on
 2026-11-19 (UTC): news 200 live, sponsors 30 / 10 / 6, increases only, slideshow constant only.
 
 **Completed work:**
@@ -61,13 +62,36 @@ Christian's "push". It merges only after the migration is on production. Christi
    `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-20261118-2313-pre-rcadmin10a.dump`, 1,303,548 bytes,
    94 table-data entries (10b's dump had 92; 10b added two tables), SHA-256
    `2d45aa0e1e49520633fb941aded52f0016b12b998cd42104831bbcffb04c2ac2`. Kept; deleting it is Christian's call.
-4. Dry run: exactly `20261119010000_sponsor_and_news_caps.sql`, no seeds, no roles.
+4. Dry run: exactly `20261119010000_sponsor_and_news_caps.sql`, no seeds, no roles. Repeated right before the
+   apply: the same single file.
+5. Christian said "push". Applied with `db push --linked --skip-vault`.
+6. Read-only check:
+   - No local-only or remote-only versions; a second dry run says "Remote database is up to date"; the history
+     row is `20261119010000 sponsor_and_news_caps`.
+   - `site_sponsor_logos_caps` → `enforce_sponsor_caps` and `cinematic_news_live_cap` → `enforce_cinematic_news_cap`,
+     both enabled; both functions `security definer` with `search_path=""`.
+   - Snapshot unchanged: 2 clubs, 4 active domains, audit `1027:1034`, 582 published assets; Diverse City 3 / 3 / 1,
+     Rose City 7 / 6 / 6, news 0, slideshow 0 and 6.
+   - `diversecityfc.com` and Rose City `/admin/login` load (200 after their usual redirects).
+7. No-op save at Rose City's shape, on the local DB with the migrated schema (no production writes): 7 sponsors,
+   6 homepage, 6 footer, saved as the club owner through the real `persistSponsorAttempt` and editor diffs, in a
+   rolled-back transaction:
+   - Rose City editor, Save with nothing changed: 0 writes, succeeds.
+   - Rose City editor, rename one and reorder two at the footer cap: 3 writes, succeeds.
+   - One-list page, Save with nothing changed: 7 writes of `sort_order` only (it renumbers positions from 0),
+     succeeds; a second Save then makes 0 writes.
+   - Both switches written back unchanged on all 7 rows: succeeds.
+   - One-list footer swap at 6 / 6: `{show_in_footer:false}` written before `{show_in_footer:true}`, succeeds.
+   - Control, a 7th footer switch turned on: refused with `SPONSOR_LIMIT_FOOTER`.
+8. The copied link files and the temporary script were deleted.
 
-**Blockers or unresolved decisions:** onzio-bot review, then Christian's "push".
+**Follow-ups (on the Notion "Things left to do" Post-launch list):** the onzio-bot Low, that a `club_id` change
+isn't counted by the sponsor trigger (not reachable from the admin); and persisting `MEDIA_QUOTA_*` refusals.
 
-**Exact next step:** on "push": `db push --linked --skip-vault`, then the read-only check (both triggers in
-`pg_trigger`, the ledger matches, the snapshot unchanged), then ask Christian to merge. Then RC-ADMIN-10c, not
-before 2026-11-20 04:00 UTC and only after its three checks.
+**Blockers or unresolved decisions:** Christian's merge of #176.
+
+**Exact next step:** Christian merges #176. Then RC-ADMIN-10c: build, fresh B1-a for his review, re-run check (a)
+and the log hour, dry run, his "push", apply, then a real photo and graphic upload.
 
 ## 2026-11-19 - RC-ADMIN-13-seed verify seed gives Rose City a season, roster and matches
 

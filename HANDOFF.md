@@ -1,14 +1,16 @@
 ## 2026-11-19 - RC-ADMIN-10a: sponsor and news caps in SQL
 
-- **Status:** `in_progress`. PR open and ready; production gate run up to the dry run; waiting for Christian's
-  "push". The migration goes to production before the merge. Record in `STATUS.md`.
+- **Status:** `in_progress`. PR #176: the migration is on production (2026-11-19, after Christian's "push") and the
+  read-only check passed; onzio-bot clean. Waiting for Christian's merge. Record in `STATUS.md`.
 - **What:** migration `20261119010000_sponsor_and_news_caps.sql` adds two row triggers that refuse increases
   past the caps: sponsors 30 total / 10 homepage / 6 footer (`SPONSOR_LIMIT_*`) and News 200 live articles
   (`NEWS_LIMIT_REACHED`), errcode 23514. The one-list Sponsors save now turns switches off before turning any on.
   Slideshow stays 7 / 6 with the stale constant replaced.
-- **Order (Christian, 2026-11-19):** 10a, then 10c (not before 2026-11-20 04:00 UTC, after its three checks and
-  his B1-a review), then 10d (dry-run until he says "enforce"). This replaces the 2026-11-18 order (10c before 10a).
-- **Exact next step:** Christian's "push", apply, read-only check, then his merge.
+- **Order (Christian, 2026-11-19):** 10a, then 10c, then 10d (dry-run until he says "enforce"). This replaces the
+  2026-11-18 order (10c before 10a). He lifted 10c's time gate; it keeps three checks: (a) passed on DB evidence and
+  is re-run with the then-available log hour before the dry run, (b) a fresh B1-a he reviews before the dry run,
+  (c) a real photo and graphic upload right after apply.
+- **Exact next step:** Christian merges #176, then RC-ADMIN-10c.
 
 ## 2026-11-18 - RC-ADMIN-10b: media upload quota, rate limit and one-time reservations
 
