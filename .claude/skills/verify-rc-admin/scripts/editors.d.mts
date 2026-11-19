@@ -1,0 +1,10 @@
+export const ADMIN_DATA_PATH: string;
+export const WRITE_OPERATIONS: string[];
+export const OPTIONAL_STEPS: string[];
+export type SaveShape = { method: string; pathname: string; body?: string };
+export type EditorShape = { key: string; save: RegExp; ops?: string[]; tables?: string[]; lacks?: Partial<Record<"pageSave" | "retry" | "conflict" | "discard" | "status", string>> };
+export function parseBody(text: string | undefined): Record<string, unknown> | undefined;
+export function isMutating(request: SaveShape): boolean;
+export function isEditorSave(editor: EditorShape, request: SaveShape): boolean;
+export function gate3Plan(editor: EditorShape | undefined): { applicable: boolean; reason: string | undefined; skipped: Record<string, string>; noStatus: string | undefined };
+export function stepsPass(steps: Record<string, string> | undefined): boolean;

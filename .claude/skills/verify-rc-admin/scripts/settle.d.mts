@@ -1,4 +1,5 @@
 export const BUSY_SELECTOR: string;
+export const LOADING_TEXT: RegExp;
 export const SETTLE_TIMEOUT_MS: number;
 export const SETTLE_INTERVAL_MS: number;
 export const SETTLE_STABLE_READS: number;

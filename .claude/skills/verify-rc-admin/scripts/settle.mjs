@@ -14,6 +14,10 @@ export const BUSY_SELECTOR = [
   '[role=status][aria-label^="Loading"]',
 ].join(", ");
 
+/** A live region that says it is loading ("Loading About page", "Loading content"): matched on its text, not its label. Counted even
+ *  when visually hidden (sr-only): it is the page announcing that it is not ready. Added after gate 6 compared About mid-load (4b-0). */
+export const LOADING_TEXT = /^\s*Loading\b/i;
+
 export const SETTLE_TIMEOUT_MS = 20_000;
 export const SETTLE_INTERVAL_MS = 100;
 export const SETTLE_STABLE_READS = 3;

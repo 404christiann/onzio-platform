@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Builds <run>/report.html and <run>/summary.json from <run>/results/*.json, screenshots and the
 // Playwright JSON. Exit 0 only when every gate passed.  Usage: node report.mjs <run-dir>
+import { stepsPass } from "./editors.mjs";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -27,8 +28,8 @@ const untouched = payloads.filter((p) => !p.touched);
 gate(2, "Payload identity (untouched editors vs origin/main)", !setup && untouched.length > 0 && untouched.every((p) => p.identical),
   setup ? setup.error : `${untouched.filter((p) => p.identical).length}/${untouched.length} identical; touched: ${payloads.filter((p) => p.touched).map((p) => p.editor).join(", ") || "none"}`);
 const saveNa = !!save && save.applicable === false;
-gate(3, "Save behaviour", !!save && !saveNa && Object.values(save.steps).every((s) => s === "pass"),
-  saveNa ? save.reason : save ? `${save.saveButton ? `${save.saveButton} Save button: ` : ""}${Object.entries(save.steps).map(([k, v]) => `${k}: ${v === "pass" ? "pass" : "FAIL"}`).join(", ")}` : "not run", saveNa);
+gate(3, "Save behaviour", !!save && !saveNa && stepsPass(save.steps),
+  saveNa ? save.reason : save ? `${save.saveButton ? `${save.saveButton} Save button: ` : ""}${Object.entries(save.steps).map(([k, v]) => `${k}: ${v === "pass" ? "pass" : String(v).startsWith("n/a:") ? "n/a" : "FAIL"}`).join(", ")}` : "not run", saveNa);
 // Gate 4 is not applicable only when every visual sample and the reduced-motion sample say so;
 // a mix (some ran, some did not) is a failure.
 const ranVisuals = visuals.filter((v) => v.applicable !== false);

@@ -4,7 +4,7 @@
 #   verify.sh doctor  --worktree <pkg>
 #   verify.sh run     --worktree <pkg> --route /admin/<editor> --package RC-ADMIN-0N \
 #                     [--touched key,key] [--shared-fix] [--base origin/main]
-#   verify.sh cleanup
+#   verify.sh cleanup [--worktree <pkg>]   (with --worktree: also removes THAT worktree's own base-build cache)
 #
 # run = gate 1 (scope; a failure exits here, before anything else), doctor (including the env
 # target check), gate 5 (typecheck, unit/architecture, selector debt), both production builds,
@@ -128,7 +128,12 @@ run() {
 cleanup() { # servers this skill started (pid files), never by process name; evidence is kept
   for f in "$CACHE"/server-*.pid; do [[ -f "$f" ]] && { pkill -P "$(cat "$f")" 2>/dev/null; kill "$(cat "$f")" 2>/dev/null; rm -f "$f"; }; done
   rm -f "$CACHE"/auth-*.json
-  echo "cleanup: servers stopped, auth state removed; base build caches kept in $CACHE/wt-*/; evidence kept under <worktree>/test-results/rc-admin-verify/"
+  if [[ -n "$WT" ]]; then # opt-in: only this worktree's own cache, refused while a run of it is live
+    node "$SKILL/scripts/holders.mjs" own-cache "$WT" || echo "cleanup: its own cache was not removed (see above)"
+    echo "cleanup: servers stopped, auth state removed; other worktrees' caches untouched; evidence kept under <worktree>/test-results/rc-admin-verify/"
+    return 0
+  fi
+  echo "cleanup: servers stopped, auth state removed; base build caches kept in $CACHE/wt-*/ (pass --worktree <pkg> to remove that worktree's own); evidence kept under <worktree>/test-results/rc-admin-verify/"
 }
 
 case "$CMD" in doctor) doctor;; run) run;; cleanup) cleanup;; *) sed -n 2,12p "$0"; exit 64;; esac

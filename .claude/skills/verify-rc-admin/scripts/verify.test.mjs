@@ -200,7 +200,7 @@ test("01b: the spec maps the page Save states and checks the phone bottom bar", 
 test("01b: not applicable needs a route outside EDITORS with no field and no Save button, and records it for gates 3 and 4", () => {
   assert.match(spec, /if \(editorFor\(ROUTE\)\) return \{ applicable: true \}/, "a listed editor is always applicable");
   assert.match(spec, /if \(await saveLocator\(page\)\.count\(\)\) return \{ applicable: true \}/, "a Save button without a field is a broken editor, not N/A");
-  assert.equal([...spec.matchAll(/record\([^\n]*applicable: false/g)].length, 3, "save behaviour, visual and reduced-motion each record it");
+  assert.equal([...spec.matchAll(/record\([^\n]*applicable: false/g)].length, 4, "gate 3 (a declared lack, then the probe), visual and reduced-motion each record it");
 });
 
 // --- RC-ADMIN-01c: kit editors have no text field on the page, so the spec opens them through their Edit control.
@@ -519,4 +519,115 @@ test("4-0a: a sign-in that gets no code waits out the one-code-per-minute window
   const src = readFileSync(join(here, "sign-in.mjs"), "utf8");
   assert.match(src, /nextSignInWait\(/);
   assert.match(src, /askedAt - 2_000/, "each attempt only accepts mail sent after its own request");
+});
+
+// ---- RC-ADMIN-4b-0: editors that save through POST /api/admin/data ------------------------------------------------------
+import { ADMIN_DATA_PATH, gate3Plan, isEditorSave, isMutating, parseBody, stepsPass } from "./editors.mjs";
+
+const dataBody = (operation, table = "site_branding") => JSON.stringify({ table, operation, payload: {} });
+const branding = { key: "branding", save: /\/api\/admin\/data$/, ops: ["upsert"], tables: ["site_branding", "site_social_links"] };
+
+test("4b-0: on /api/admin/data a read is not a mutation and not a save, even though it is a POST", () => {
+  const read = { method: "POST", pathname: ADMIN_DATA_PATH, body: dataBody("select") };
+  assert.equal(isMutating(read), false, "the editors' reads must never be aborted or captured");
+  assert.equal(isEditorSave(branding, read), false);
+  for (const op of ["insert", "update", "upsert", "delete"]) assert.equal(isMutating({ ...read, body: dataBody(op) }), true, op);
+  assert.equal(isMutating({ method: "GET", pathname: ADMIN_DATA_PATH, body: "" }), false);
+  assert.equal(isMutating({ method: "POST", pathname: "/api/admin/members", body: "{}" }), true, "other endpoints stay mutating by method");
+  assert.equal(isMutating({ method: "POST", pathname: ADMIN_DATA_PATH, body: "not json" }), false, "an unreadable body on the data endpoint is not treated as a write");
+  assert.equal(parseBody("[1]") !== undefined, true);
+  assert.equal(parseBody(undefined), undefined);
+});
+
+test("4b-0: a shared-endpoint save is matched by operation and table; no declared ops matches nothing", () => {
+  const save = (operation, table) => ({ method: "POST", pathname: ADMIN_DATA_PATH, body: dataBody(operation, table) });
+  assert.equal(isEditorSave(branding, save("upsert", "site_branding")), true);
+  assert.equal(isEditorSave(branding, save("upsert", "site_social_links")), true, "branding saves up to three upserts across two tables");
+  assert.equal(isEditorSave(branding, save("upsert", "players")), false, "another editor's table");
+  assert.equal(isEditorSave(branding, save("delete", "site_branding")), false, "an operation the editor does not declare");
+  assert.equal(isEditorSave({ key: "x", save: /\/api\/admin\/data$/ }, save("upsert", "players")), false, "no ops declared on the shared endpoint");
+  assert.equal(isEditorSave({ key: "members", save: /\/api\/admin\/members$/ }, { method: "POST", pathname: "/api/admin/members", body: "{}" }), true, "a dedicated endpoint needs no ops");
+  assert.equal(isEditorSave(branding, { method: "GET", pathname: ADMIN_DATA_PATH, body: dataBody("upsert") }), false);
+});
+
+test("4b-0: gate 3 reports not applicable only from a declared lack; the first four steps can never be skipped", () => {
+  assert.deepEqual(gate3Plan({ key: "stadium" }), { applicable: true, reason: undefined, skipped: {}, noStatus: undefined }, "an editor that declares nothing is checked in full");
+  const members = gate3Plan({ key: "members", lacks: { pageSave: "adding and removing act at once" } });
+  assert.equal(members.applicable, false);
+  assert.match(members.reason, /members has no page Save button \(declared in EDITORS\): adding and removing act at once/);
+  const plan = gate3Plan({ key: "branding", lacks: { retry: "no retry control", conflict: "no conflict control", clean: "ignored", saved: "ignored" } });
+  assert.deepEqual(plan.skipped, { retry: "no retry control", conflict: "no conflict control" }, "clean and saved are not skippable");
+  assert.equal(plan.applicable, true);
+});
+
+test("4b-0: a gate 3 step may say n/a only if it is optional and gives its reason; anything else must pass", () => {
+  const ok = { clean: "pass", dirty: "pass", saving: "pass", saved: "pass", retry: "n/a: no retry control", conflict: "n/a: no conflict control", discard: "pass" };
+  assert.equal(stepsPass(ok), true);
+  assert.equal(stepsPass({ ...ok, saved: "n/a: skipped" }), false, "saved can never be n/a");
+  assert.equal(stepsPass({ ...ok, retry: "n/a:" }), false, "n/a needs a reason");
+  assert.equal(stepsPass({ ...ok, discard: "FAIL: x" }), false);
+  assert.equal(stepsPass({}), false, "no steps is not a pass");
+});
+
+test("4b-0: a declared missing status line skips only the status text check; a missing page Save skips gate 3 whole", () => {
+  assert.equal(gate3Plan({ key: "stats-match", lacks: { status: "no Unsaved changes line" } }).noStatus, "no Unsaved changes line");
+  assert.deepEqual(gate3Plan({ key: "stats-match", lacks: { status: "x" } }).skipped, {}, "the dirty step still runs");
+  assert.equal(gate3Plan({ key: "x" }).noStatus, undefined, "an editor that declares nothing is held to the status line");
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /kind === "admin" && !plan\.noStatus/);
+  assert.match(spec, /editor\.lacks\?\.discard/, "gate 4 skips the discard dialog only for an editor that declares no discard control");
+});
+
+test("4b-0: every page-load h1 wait is bounded at 45 s, not the 15 s expect default that a loaded machine overran three times", () => {
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /const LOAD_MS = 45_000;/);
+  const waits = [...spec.matchAll(/expect\((?:page|basePage)\.locator\("h1"\)\.first\(\)\)\.toBeVisible\([^)]*\)/g)].map((m) => m[0]);
+  assert.ok(waits.length >= 7, "the h1 waits exist");
+  for (const wait of waits) assert.match(wait, /timeout: LOAD_MS/, wait);
+});
+
+test("4b-0: cleanup --worktree removes only that worktree's own cache and never while a live run of it holds it", async () => {
+  const { removeOwnCache } = await import("./holders.mjs");
+  const root = mkdtempSync(join(tmpdir(), "rcv-cache-"));
+  const wtA = mkdtempSync(join(tmpdir(), "rcv-wt-a-")), wtB = mkdtempSync(join(tmpdir(), "rcv-wt-b-"));
+  const keyA = worktreeKey(wtA), keyB = worktreeKey(wtB);
+  for (const key of [keyA, keyB]) mkdirSync(join(root, key, "base-abc"), { recursive: true });
+  const live = (worktree) => ({ record: { runPid: 4242, worktree, runStart: "t", startedAt: new Date().toISOString() } });
+  const alive = () => "t", dead = () => null;
+  const busy = removeOwnCache(wtA, { root, holders: [live(wtA)], startOf: alive });
+  assert.equal(busy.removed, false);
+  assert.match(busy.why, /still going/);
+  assert.equal(existsSync(join(root, keyA)), true, "a live run's cache is kept");
+  const other = removeOwnCache(wtA, { root, holders: [live(wtB)], startOf: alive }); // a live run of ANOTHER worktree does not block it
+  assert.equal(other.removed, true);
+  assert.equal(existsSync(join(root, keyA)), false);
+  assert.equal(existsSync(join(root, keyB, "base-abc")), true, "another worktree's cache is never touched");
+  const stale = removeOwnCache(wtB, { root, holders: [live(wtB)], startOf: dead }); // its run is dead: not a live holder
+  assert.equal(stale.removed, true);
+  const none = removeOwnCache(wtB, { root, holders: [] });
+  assert.equal(none.removed, false);
+  assert.match(none.why, /no cache/);
+  const sh = readFileSync(join(here, "verify.sh"), "utf8");
+  assert.match(sh, /own-cache "\$WT"/, "verify.sh cleanup calls it only when --worktree is given");
+});
+
+test("4b-0: an editor with no page Save is not applicable only for gate 3; gate 4's visuals and reduced-motion load still run on it", () => {
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /const declaredPlan = gate3Plan\(editor\);\n\s+if \(!declaredPlan\.applicable\)/, "gate 3 reads the declaration before probing");
+  // gate 4 visual: the declared branch records applicable: true with the save parts marked n/a, and keeps CLS, overflow and axe verdicts
+  const branch = spec.slice(spec.indexOf("if (editor.lacks?.pageSave) {\n        // No page Save to edit through"), spec.indexOf("const field = await openEditor(page, HEAD, editor, { settle: true });"));
+  assert.match(branch, /applicable: true, baseline: "origin\/main", saveParts: `n\/a: \$\{editor\.lacks\.pageSave\}`/);
+  for (const verdict of ["CLS_LIMIT", "noSaveOverflow", "axe(page, [\"main\"])", "axe(basePage, [\"main\"])", "fresh(headForm, baseForm)"]) assert.ok(branch.includes(verdict), verdict);
+  assert.match(spec, /record\("reduced-motion", \{ gate: 4, applicable: true, saveParts:/, "reduced motion samples the load");
+  // the report counts those samples as ran, not as n/a: only applicable:false is n/a
+  const report = readFileSync(join(here, "report.mjs"), "utf8");
+  assert.match(report, /v\.applicable !== false && v\.cls < 0\.001/);
+});
+
+test("4b-0: a live region that says 'Loading ...' counts as still loading, whatever its label (About's sr-only status)", async () => {
+  const { LOADING_TEXT } = await import("./settle.mjs");
+  for (const text of ["Loading About page", "  Loading content", "loading…"]) assert.equal(LOADING_TEXT.test(text), true, text);
+  for (const text of ["About page loaded", "", "Unloading", "Page is not loading"]) assert.equal(LOADING_TEXT.test(text), false, text);
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /querySelectorAll\("\[role=status\]"\)\]\.filter\(\(el\) => new RegExp\(loadingText, "i"\)/);
 });
