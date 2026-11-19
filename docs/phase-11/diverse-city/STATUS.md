@@ -1,5 +1,35 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4b-stats Rose City Stats on the editor kit
+
+**Agent/package:** Claude Code (Sonnet worker, orchestrated), RC-ADMIN-4b-stats, branch `claude/rc-admin-4b-stats` on `0a80031a`.
+**Status:** `in_progress`: built and tested locally, verify-rc-admin not run yet (waits for the orchestrator's slot). App code only. No
+migration, schema, validator, RPC or env change.
+
+**Completed work:**
+- `/admin/stats` (both `?view=match` and `?view=season`) for Rose City (club slug `rose-city`, classic portal) is rebuilt on the kit:
+  `PageFrame` (Save, Discard changes), a Season picker, Match stats / Season totals tabs, read-only tables (field players, then
+  goalkeepers) with an Edit button per player, and a phone list. Diverse City and the reimagined portal keep `CombinedStatsPage`
+  untouched; the switch is `RoseCityStatsSwitch` (slug-keyed, no template selector, selector debt unchanged).
+- Edit opens a dialog whose number boxes change the page draft at once; Done closes it; the page Save publishes. The stepper
+  Workspace is gone. The season dialog shows "From matches N · added by hand +M" (one extra read of the season's saved matches,
+  `loadSeasonGames`), and refuses over-9,999 hand-added numbers in the classic words.
+- Payloads unchanged: the match save still upserts a row for every player (same keys, same order, `onConflict player_id,match_id`);
+  the season save is the classic `saveSeasonTotals`. Today's page has no revision, retry or conflict control, so none was added; a failed save
+  shows the kit's error state and Save sends the draft again.
+- Copy: the stale "Enter these separately from match stats" is gone. `/admin/season-stats` and `/admin/seasons/totals` still redirect.
+- verify-rc-admin: the two stats keys now click "Edit <player>" (or "Select" on main); new optional `closeDialog` / `reopenDialog` row hooks
+  let gates 3 and 4 close and reopen a non-kit dialog. Skill-only commit (`.claude/**`).
+
+**Files changed:** `app/admin/(protected)/stats/page.tsx`; new `components/admin/stats/rose-city/` (`RoseCityStatsSwitch`, `RoseCityStatsPage`,
+`RoseCityMatchStats`, `RoseCitySeasonStats`, `StatsTables`, `StatsPlayerDialog`, `stats-model.ts`, `types.ts`, CSS module); new
+`tests/contracts/rc-admin-4b-stats-editor.test.ts` (21 tests); `.claude/skills/verify-rc-admin/{SKILL.md,rc-admin-verify.spec.ts}`.
+
+**Verification so far:** `tsc --noEmit` clean; `test:unit` 4132 pass; `test:contracts` 3171 pass; template-selectors, admin-sweep and
+platform-architecture pass; verify `verify.test.mjs` 50/50. Full `test:architecture` rerun pending. verify-rc-admin (match and season): not run.
+
+**Next step:** orchestrator opens my verify slot; run `--route "/admin/stats?view=match"` then `?view=season`, both `--package RC-ADMIN-4b-stats --touched stats-match,stats-season` (as the skill's keys), then push, ready PR, onzio-bot.
+
 ## 2026-11-19 - RC-ADMIN-4b-0-4 verify-rc-admin: conflict step bumps a number field by different amounts
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-4, branch `claude/rc-admin-4b-0-4` on `84fba705`. **Status:** `in_progress`: PR open, waiting for
