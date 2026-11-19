@@ -42,7 +42,8 @@ import { aboutEditorSaveSchema, type AboutEditorSaveRequest, type AboutEditorSna
 import { newAboutValue, newLogoFeature, newLogoColorCard, removeCollectionItem } from "@/lib/about-editor/collections";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
 import { usePageEditorScrollport } from "@/components/admin/usePageEditorScrollport";
-import { createClient } from "@/lib/admin-client";
+import { uploadAboutImage } from "@/lib/about-editor/upload";
+import RoseCityAboutEditor from "@/components/admin/about/rose-city/RoseCityAboutEditor";
 import "@/components/admin/about/about-editor.css";
 
 type PendingAboutSave = { request: AboutEditorSaveRequest; version: number };
@@ -86,26 +87,11 @@ function toLogoDraft(content: DBClubLogoPageContent): DBClubLogoPageContent {
   };
 }
 
-async function uploadAboutImage(
-  file: File,
-  stablePath?: string,
-  kind: "photo" | "graphic" = "photo",
-): Promise<string> {
-  const supabase = createClient();
-  const bucket = kind === "graphic" ? "Aboutassets" : "about-page";
-  const extension = file.name.split(".").pop() ?? "jpg";
-  const path = stablePath ?? `content/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    cacheControl: stablePath ? "0" : undefined,
-    upsert: Boolean(stablePath),
-  });
-  if (error) throw new Error(error.message);
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return stablePath ? `${data.publicUrl}?v=${Date.now()}` : data.publicUrl;
-}
-
 export default function AdminAboutPage() {
   const { portal } = useAdminPortal();
+  const club = useClubContext();
+  // Rose City's classic admin edits About on the editor kit; every other club keeps the editor below.
+  if (portal === "classic" && club.presentationTemplateKey === "cinematic@2") return <RoseCityAboutEditor />;
   return portal === "classic"
     ? <ClassicAboutToastBoundary><AboutEditor classic /></ClassicAboutToastBoundary>
     : <AboutEditor />;
@@ -592,7 +578,7 @@ function AboutEditor({ classic = false }: { classic?: boolean }) {
           </section>
           {classic && !isLogoSection && hasClubLogoPage && <button type="button" className="aep-external" onClick={() => selectPage("logo")}>Edited elsewhere: Club Logo page <AdminLinkArrow size={14} /></button>}
 
-          <AboutTools opener={editorOpener} classic={classic && !isLogoSection} open={selectedTarget !== null} onClose={() => setSelectedTarget(null)} label={classic ? selectedTarget === "fixed-hero" ? club.presentationTemplateKey === "cinematic@2" ? "Crest page heading" : "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "About section tools"} breakpoint={767} className="aep-inspector" data-open={selectedTarget !== null}>
+          <AboutTools opener={editorOpener} classic={classic && !isLogoSection} open={selectedTarget !== null} onClose={() => setSelectedTarget(null)} label={classic ? selectedTarget === "fixed-hero" ? "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "About section tools"} breakpoint={767} className="aep-inspector" data-open={selectedTarget !== null}>
             {(!classic || isLogoSection) && <div className="aep-inspector-head"><div><p className={ADMIN_LABEL_CLASS}>{isLogoSection ? "Club Logo page" : "About page"}</p><h2>{selectedTarget ? selectedTarget === "fixed-hero" ? club.presentationTemplateKey === "cinematic@2" ? "Crest page heading" : "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "Select a section"}</h2></div>{selectedTarget && <button type="button" onClick={() => setSelectedTarget(null)}>Done</button>}</div>}
             {selectedTarget === null ? <p className="aep-empty">Tap a section in the public page to open its tools.</p> : selectedTarget === "fixed-hero" ? <p className="aep-ownership">{club.presentationTemplateKey === "cinematic@2" ? "This heading is part of the Crest page template. Contact Onzio to change its wording." : "This heading is part of the Clubhouse template. Contact Onzio to change its wording."}</p> : selectedTarget === "sponsors" ? <div className="aep-ownership"><p>These partners are shared content, managed in Sponsors.</p><a href="/admin/sponsors">Open Sponsors <AdminLinkArrow size={12} className="inline-block align-middle" /></a></div> : <div className="aep-field-scrollport"><fieldset disabled={(!classic && saving) || uploading || draftLocked} className="aep-fields">
             <SlidingPanel activeKey={activeSection} direction={sectionDirection}>

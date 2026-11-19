@@ -1,0 +1,23 @@
+.stack { display: grid; min-inline-size: 0; gap: 20px; }
+.fieldWrap { display: grid; gap: 8px; min-inline-size: 0; }
+.row2 { display: grid; min-inline-size: 0; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
+.note { margin: 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.45; }
+.notice { display: grid; gap: 10px; }
+.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 8px; }
+.keep { min-block-size: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--secondary)); }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool { display: inline-flex; min-block-size: 40px; min-inline-size: 40px; padding: 0 12px; align-items: center; justify-content: center; gap: 8px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); font-size: .875rem; font-weight: 500; cursor: pointer; }
+.tool:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.tool:disabled { opacity: .45; cursor: default; }
+@media (max-width: 767px) { .tool { min-block-size: 44px; min-inline-size: 44px; } }
+.pages { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block-end: 18px; }
+.switch { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--secondary)); }
+.switch button { display: inline-flex; min-block-size: 40px; align-items: center; gap: 8px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; color: hsl(var(--muted-foreground)); font-size: .9375rem; font-weight: 500; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px hsl(var(--foreground) / .12); }
+.switch button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.switch button:disabled { opacity: .55; cursor: default; }
+.dot { inline-size: 8px; block-size: 8px; border-radius: 999px; background: hsl(var(--warning, 38 92% 50%)); }
+.hint { color: hsl(var(--muted-foreground)); font-size: .8125rem; }
+.fixed { margin: 14px 2px 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.5; }
+@media (max-width: 767px) { .switch button { min-block-size: 44px; } }
