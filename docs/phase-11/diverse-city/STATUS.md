@@ -35,11 +35,17 @@ Christian's "push". It merges only after the migration is on production. Christi
 `components/admin/reimagined/Sponsors.tsx`; `app/api/admin/cinematic-news/route.ts`; `lib/cinematic-news.ts`;
 `lib/homepage-content.ts`; `lib/homepage-editor/capabilities.ts`; `lib/homepage-editor/model.ts`. Tests: new
 `tests/database/sponsor-news-caps.test.ts` (14); `lib/__tests__/sponsor-content.test.ts` (3 new);
-`lib/__tests__/homepage-content.test.ts`; migration-order pins in `admin-reimagined-league`,
+`lib/__tests__/homepage-content.test.ts`; `tests/database/sponsors-one-list.test.ts` (step-back); migration-order pins in `admin-reimagined-league`,
 `admin-reimagined-sponsors` and `cinematic-shop-jersey-options-migration` (the new file appended, as for 10b).
 
 **Verification (local; reset with this branch's migrations inside one DB lock hold):**
-DB_RESULTS_PLACEHOLDER
+- Full `test:db`: 78 files, 1332 tests passed, including the new `sponsor-news-caps.test.ts` (14): each cap at
+  the limit and one over, a 31-row single insert, the old `placement` path, swap at the cap, increase-only
+  behaviour for a club already over (triggers disabled to build it), the 23514 code, NEWS through the save
+  RPC, restore at the cap, two parallel inserts per cap on separate connections (exactly one wins), and the
+  7 / 6 pin in `save_homepage`.
+- `sponsors-one-list.test.ts` undoes RE-15 by dropping the switch columns; its step-back now drops the cap
+  trigger first (inside its rolled-back transaction).
 - `tsc` clean; `test:unit` 340 files, 3902 tests; architecture suite passes (the template-selector ratchet
   caught a first draft that added a template check in `lib/homepage-content.ts`; the limit is now a constant
   and the check stays in `capabilities.ts`); `next build` passed; `db:types:check` passed (no type change);
@@ -51,11 +57,13 @@ DB_RESULTS_PLACEHOLDER
 2. Snapshot (read-only): 2 clubs, 4 active domains, audit events `1027:1034`, 582 published assets.
    Diverse City sponsors 3 / 3 / 1, news 0, slideshow 0; Rose City sponsors 7 / 6 / 6 (footer at the cap),
    news 0, slideshow 6. No club is over a cap, so the guard passes. Neither trigger exists yet.
-3. Backup: `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-<time>-pre-rcadmin10a.dump`, run in the
-   "10a prod backup" Terminal tab; it waits for Christian to type the database password.
+3. Backup (Christian typed the password): a restricted dump of `onzio` and `onzio_private`,
+   `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-20261118-2313-pre-rcadmin10a.dump`, 1,303,548 bytes,
+   94 table-data entries (10b's dump had 92; 10b added two tables), SHA-256
+   `2d45aa0e1e49520633fb941aded52f0016b12b998cd42104831bbcffb04c2ac2`. Kept; deleting it is Christian's call.
 4. Dry run: exactly `20261119010000_sponsor_and_news_caps.sql`, no seeds, no roles.
 
-**Blockers or unresolved decisions:** Christian's "push" (after the backup finishes).
+**Blockers or unresolved decisions:** onzio-bot review, then Christian's "push".
 
 **Exact next step:** on "push": `db push --linked --skip-vault`, then the read-only check (both triggers in
 `pg_trigger`, the ledger matches, the snapshot unchanged), then ask Christian to merge. Then RC-ADMIN-10c, not
