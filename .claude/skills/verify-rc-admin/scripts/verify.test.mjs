@@ -631,3 +631,18 @@ test("4b-0: a live region that says 'Loading ...' counts as still loading, whate
   const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
   assert.match(spec, /querySelectorAll\("\[role=status\]"\)\]\.filter\(\(el\) => new RegExp\(loadingText, "i"\)/);
 });
+
+test("4b-0: every EDITORS row that saves through /api/admin/data names both ops and tables, outside any comment (bot M1: a tables list had slipped into a // comment)", () => {
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  const block = spec.slice(spec.indexOf("export const EDITORS: Editor[] = ["), spec.indexOf("const editorFor ="));
+  const rows = block.split(/\n(?=  \{ key: ")/).slice(1);
+  assert.ok(rows.length >= 20, `the EDITORS rows were found (${rows.length})`);
+  const code = (row) => row.split("\n").map((line) => line.replace(/\/\/.*$/, "")).join("\n"); // no row here has a // inside a string
+  const shared = rows.filter((row) => /save: \/\\\/api\\\/admin\\\/data\$\//.test(code(row)));
+  assert.deepEqual(shared.map((row) => row.match(/key: "([^"]+)"/)[1]), ["branding", "seasons", "roster", "stats-match", "stats-season"], "the rows on the shared endpoint");
+  for (const row of shared) {
+    const key = row.match(/key: "([^"]+)"/)[1];
+    assert.match(code(row), /\bops: \[("[a-z]+"(, )?)+\]/, `${key} names its operations`);
+    assert.match(code(row), /\btables: \[("[a-z_]+"(, )?)+\]/, `${key} names its tables`);
+  }
+});

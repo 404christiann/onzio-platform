@@ -133,7 +133,8 @@ export const EDITORS: Editor[] = [
     field: (page) => page.locator("[data-slot=stat-input]").filter({ visible: true }).first(),
     lacks: { retry: "Stats has no \"Retry same save\" control", conflict: "Stats has no conflict control: its writes are upserts with no revision check", discard: "Stats has no Reload or Discard control", status: "the header Save button has no \"Unsaved changes\" line beside it" } },
   { key: "stats-season", route: "/admin/stats?view=season", save: /\/api\/admin\/data$/, ops: ["upsert"],
-    open: async (page) => { await page.getByRole("button", { name: /^Select / }).filter({ visible: true }).first().click(); }, // on a phone the player list shows first tables: ["player_season_stats", "goalkeeper_season_stats", "player_season_adjustments", "goalkeeper_season_adjustments"],
+    open: async (page) => { await page.getByRole("button", { name: /^Select / }).filter({ visible: true }).first().click(); }, // on a phone the player list shows first
+    tables: ["player_season_stats", "goalkeeper_season_stats", "player_season_adjustments", "goalkeeper_season_adjustments"],
     field: (page) => page.locator("[data-slot=stat-input]").filter({ visible: true }).first(),
     lacks: { retry: "Stats has no \"Retry same save\" control", conflict: "Stats has no conflict control: its writes are upserts with no revision check", discard: "Stats has no Reload or Discard control", status: "the header Save button has no \"Unsaved changes\" line beside it" } },
 ];
