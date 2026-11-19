@@ -1,3 +1,13 @@
+## 2026-11-19 - RC-ADMIN-4a-about: Rose City About editor on the editor kit (app code only)
+
+- **Status:** `in_progress`, PR open; verify-rc-admin PASS (6/6). No migration, schema, validator, RPC or env change. Merges only on
+  Christian's word. Record in `STATUS.md`.
+- **What:** `/admin/about` for Rose City now uses section cards and a two-pane dialog for the About page and the Club Logo page, with a
+  page switch (Save publishes the page you are on; each save body is byte-identical to the old editor's). Crest features and color
+  cards gain move earlier/later (Values keep up/down); Story is a paragraph list (fixes the stripped trailing Enter); the closing
+  button list shows only the 13 routes the server accepts. Diverse City's About editor is unchanged; selector debt stays 3/3.
+- **Exact next step:** onzio-bot review, then Christian merges.
+
 ## 2026-11-19 - RC-ADMIN-4a-contact: Rose City Contact editor on the editor kit (app code only)
 
 - **Status:** `in_progress`, PR open; verify-rc-admin PASS (6/6). No migration, schema, validator, RPC or env change. Merges only on
