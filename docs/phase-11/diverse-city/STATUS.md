@@ -1,5 +1,105 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-10b media upload quota, rate limit and one-time reservations
+
+**Agent/package:** Claude Code (Opus), RC-ADMIN-10b, branch `claude/rc-admin-10b`, rebased onto `9e563d79` (SEC-01 merged).
+**Status:** `in_progress`: built and verified locally, committed locally only. Not pushed, no PR,
+production not touched. Christian approved the schema and RPC change and the defaults on 2026-11-18.
+It now waits only for the full production migration gate, then his merge.
+
+**Completed work:**
+
+- Migration `20261118200000_media_upload_quota.sql`, additive only:
+  - `onzio_private.club_media_limits`: per-club override rows. A null column keeps the default.
+  - `onzio_private.media_upload_reservations`: one row per authorized upload. It expires after 5 minutes
+    and is used once.
+  - Defaults live in one function, `onzio_private.media_limits`: 2 GiB, 2,000 files, 60 uploads per
+    rolling hour, 300 per rolling day, 40 open reservations.
+  - Service-role-only RPCs: `onzio.reserve_media_upload` (takes a per-club advisory lock, checks the
+    quota before the rate, then reserves), `onzio.consume_media_upload_reservation` (one-time use, and
+    refuses staged bytes larger than the size claimed at authorize) and `onzio.media_usage`.
+  - A club's reservations older than 48 hours are deleted when it next reserves, so no cleanup job is
+    needed and `lib/media-cleanup.ts` is untouched (SEC-01 owns it).
+  - The migration aborts if any club is already over a default.
+  - Both tables are in `onzio_private` with RLS on and no rights for anon or authenticated. They cascade
+    with the club, so the archived-club purge needs no change.
+- Authorize (`app/api/admin/media/authorize/route.ts`) reserves before Storage signs. It fails closed:
+  `MEDIA_QUOTA_BYTES_EXCEEDED` / `MEDIA_QUOTA_FILES_EXCEEDED` (409), `MEDIA_RATE_LIMITED` (429 with
+  Retry-After) and `MEDIA_QUOTA_UNAVAILABLE` (503), each with a plain message. The token expiry now comes
+  from the reservation.
+- Finalize (`lib/media-processing.ts` `publishAuthorizedMedia`) consumes the reservation after download
+  and before validation. A staged file larger than the claim is removed (`MEDIA_SIZE_MISMATCH`). The
+  idempotent re-finalize path is unchanged. The finalize route adds plain messages for the new codes.
+- `getMediaUsageByClub` now returns `onzio.media_usage` (published plus open, and the limits).
+- New sharp-free module `lib/media-quota.ts`, added to the architecture test's approved service-role
+  files.
+
+**Files changed:** the migration; `lib/media-quota.ts`; `lib/media-processing.ts`; the authorize and
+finalize routes; `lib/database.generated.ts` (regenerated). Tests: `tests/database/media-upload-quota.test.ts`
+(new, 23); `lib/__tests__/media-quota.test.ts` (new, 4); `tests/database/program-media.test.ts` (reserves
+before publishing); `tests/database/purge-archived-club.test.ts` (fixture rows for the two new tables);
+`tests/architecture/platform-architecture.test.ts` (one approved file). Migration-order pins:
+`tests/contracts/admin-reimagined-league.test.ts` and `admin-reimagined-sponsors.test.ts` (the new file
+appended to their list of later main migrations), and `cinematic-shop-jersey-options-migration.test.ts`
+(the new file named as an allowed later main package; the check that no later file redefines its
+functions is unchanged). Christian should confirm that last pin edit.
+
+**Verification (local only, one DB lock hold per run, reset with this branch's migrations):**
+- Media DB tests: 84/84. Covers the quota, file and rate limits, an exact count under 12 parallel
+  reserves, retry-after values, one-time consume, mismatch/expired/too-large, the grants, finalize
+  consume and idempotency, purge, storage policies, and media retirement.
+- Full `test:db`: 77 files, 1318 tests passed. `test:unit`: 333 files, 3738 tests passed. `tsc` clean,
+  `next build` passed, `db:types:check` passed.
+- End to end against the local production build at alpha.localhost:3110, signed in as the Alpha owner,
+  through the real authorize and finalize routes, with a synthetic 6000x4000 JPEG of 11,454,951 bytes on
+  the roster surface:
+  - authorize 200: the reservation is open, claimed 11,454,951.
+  - finalize 200 in 851 ms: stored WebP 306,868 bytes, 2400x1600, no EXIF; the reservation shows
+    `consumed`.
+  - A second finalize returned 200, idempotent.
+  - With an override of 1 upload per hour, the next authorize returned 429, Retry-After 3594, with
+    "Too many uploads in a short time. Try again in about 60 minutes."
+  - The script removed what it added.
+- The photo was generated (a gradient plus noise), not a real player photo.
+- After rebasing onto `9e563d79` (SEC-01): `tsc` clean; `test:unit` 334 files, 3747 tests; media quota
+  DB test 23/23; full `test:db` 77 files, 1318 tests; `db:types:check` passed. The end-to-end run was not
+  repeated: SEC-01 changed only the staging cleanup, and finalize is covered by the DB suite.
+
+**Production B1-a (read-only, run by Christian 2026-11-18):** four buckets only.
+- `onzio-media`: 582 objects, 64 MB, newest 2026-08-27.
+- `onzio-upload-staging`: 5 objects, 7.8 MB, all from 2026-08-09, so abandoned.
+- `onzio-branding`: 1 object.
+- `onzio-fonts`: 2 objects (the documented 2026-11-17 one-off).
+
+The old named buckets (sponsors, news, shop and so on) do not exist in production; they are only
+aliases in `lib/admin-client.ts`, so no legacy-bucket cleanup is needed. Storage has exactly the four
+policies from the migrations, with none on `storage.buckets`, so 10c can recreate
+`onzio_staging_member_insert` from 20260808160000 as planned. Even if one club held every object, it
+would be at 3% of the bytes default and 29% of the files default, so the 50% bytes/files headroom holds
+for every club. Rate peaks still need B1-b.
+
+**Production B1-b (read-only, run by Christian 2026-11-18):** two clubs. Both are well under 50% of
+every default, so no override rows are needed and the defaults stay as approved.
+
+| Club | Published assets | Bytes | Peak uploads/hour (90 days) | Peak uploads/day (90 days) | Orphaned assets | Stray objects |
+|---|---|---|---|---|---|---|
+| Diverse City | 67 (3.4% of 2,000) | 17,667,914 (0.8% of 2 GiB) | 1 | 1 | 0 | 0 |
+| Rose City | 515 (25.8%) | 49,834,337 (2.3%) | 0 | 0 | 0 | 0 |
+
+- Diverse City holds the 5 abandoned staging objects; SEC-01's cleanup should remove them.
+- For 10a: Diverse City has sponsors 3 total / 3 homepage / 1 footer, slideshow 0, news 0. Rose City has
+  sponsors 7 / 6 / 6 (footer exactly at the cap of 6), slideshow 6 (within 7), news 0.
+  `cinematic_news_articles` exists on production. No live content is over a planned cap.
+
+**Blockers or unresolved decisions:**
+- None for the code. The production gate needs Christian's go for each step.
+- Uploads authorized by the old code in the 5 minutes before the deploy fail at finalize with
+  `MEDIA_RESERVATION_MISSING`, and the admin uploads again.
+
+**Exact next step:** with Christian's go, the production gate (backup, `migration list --linked`, a dry run listing exactly
+`20261118200000_media_upload_quota.sql`, Christian's "push", apply, read-only check of
+`onzio.media_usage` for every club). Then open the PR for his merge.
+
 ## 2026-11-18 - RC-ADMIN-SEC-01 staging cleanup deletes every abandoned upload
 
 **Agent/package:** Claude Code (nested Sonnet session, orchestrated), RC-ADMIN-SEC-01, branch

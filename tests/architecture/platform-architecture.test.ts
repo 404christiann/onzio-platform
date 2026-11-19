@@ -236,6 +236,9 @@ describe("tenant and privileged-boundary architecture contract", () => {
       // constructs a service-role client.
       /^lib\/media-authorization-token\.ts$/,
       /^lib\/media-processing\.ts$/,
+      // RC-ADMIN-10b: sharp-free quota and reservation calls, used by the
+      // authorize route and by media-processing.ts.
+      /^lib\/media-quota\.ts$/,
       /^lib\/billing-lifecycle\.ts$/,
       /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,

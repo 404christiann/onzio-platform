@@ -109,8 +109,10 @@ describe("Rose City shop and homepage migration, reconciled with main", () => {
     // Main's newest migration at the merge (6b9a7d07).
     expect(others).toContain("20261111080000_purge_archived_club.sql");
     const later = others.filter((file) => file > NAME);
-    // Only Rose City's own later migrations may sort after it (today: the archived-club purge tables).
-    expect(later.every((file) => file.includes("_cinematic_")), later.join(", ")).toBe(true);
+    // Only Rose City's own later migrations may sort after it (today: the archived-club purge tables),
+    // plus main packages named here, which the loop below checks do not redefine its functions.
+    const laterMainPackages = ["20261118200000_media_upload_quota.sql"]; // RC-ADMIN-10b
+    expect(later.every((file) => file.includes("_cinematic_") || laterMainPackages.includes(file)), later.join(", ")).toBe(true);
     const ours = /function (onzio_private\.validate_cinematic_shop_section|onzio\.save_shop_page|onzio_private\.validate_cinematic_shop_content|onzio_private\.homepage_binding_identity|onzio_private\.homepage_snapshot|onzio\.save_homepage)\(/;
     for (const file of later) expect(ours.test(readFileSync(resolve(MIGRATIONS, file), "utf8")), file).toBe(false);
   });

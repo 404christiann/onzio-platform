@@ -3,6 +3,11 @@ import sharp from "sharp";
 import { failContract } from "@/lib/contract-error";
 import type { MediaAuthorization } from "@/lib/media-authorization-token";
 import { queueMediaCleanup } from "@/lib/media-cleanup";
+import {
+  consumeMediaUploadReservation,
+  getMediaUsage,
+  type MediaUsage,
+} from "@/lib/media-quota";
 import { validateMediaUpload } from "@/lib/media-validation";
 import {
   buildStoragePath,
@@ -240,6 +245,33 @@ export async function publishAuthorizedMedia(
     failContract("STAGING_OBJECT_MISSING", downloadError?.message);
   }
   const sourceBytes = Buffer.from(await stagingBlob.arrayBuffer());
+  // One-time use (RC-ADMIN-10b): the reservation authorize recorded must
+  // match this club, actor and path, be unexpired and unused, and cover the
+  // staged size. A file larger than the size claimed at authorize is removed.
+  try {
+    await consumeMediaUploadReservation({
+      uploadId: authorization.uploadId,
+      clubId: authorization.clubId,
+      actorId: authorization.actorId,
+      stagingPath: authorization.stagingPath,
+      actualSize: sourceBytes.length,
+    });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "MEDIA_SIZE_MISMATCH") {
+      const { error: removeError } = await service.storage
+        .from("onzio-upload-staging")
+        .remove([authorization.stagingPath]);
+      if (removeError) {
+        await queueMediaCleanup({
+          clubId: authorization.clubId,
+          storageBucket: "onzio-upload-staging",
+          storagePath: authorization.stagingPath,
+          reason: "abandoned-staging-object",
+        });
+      }
+    }
+    throw error;
+  }
   await validateMediaUpload({
     bytes: sourceBytes,
     metadata: {
@@ -399,25 +431,9 @@ export async function deleteRetiredHomepageUpload(input: {
   return { cleanupQueued: Boolean(error) };
 }
 
-export async function getMediaUsageByClub(clubId: string): Promise<{
-  assetCount: number;
-  totalBytes: number;
-}> {
-  const service = createServiceRoleClient();
-  const { data, error } = await service
-    .schema("onzio")
-    .from("media_assets")
-    .select("byte_size")
-    .eq("club_id", clubId)
-    .eq("status", "published");
-  if (error) throw new Error(`Unable to read media usage: ${error.message}`);
-  return {
-    assetCount: data?.length ?? 0,
-    totalBytes: (data ?? []).reduce(
-      (total, asset) => total + Number(asset.byte_size),
-      0,
-    ),
-  };
+/** Published media plus open upload reservations, and the club's limits. */
+export async function getMediaUsageByClub(clubId: string): Promise<MediaUsage> {
+  return getMediaUsage(clubId);
 }
 
 function assertFinalizationAuthorized(input: FinalizeMediaInput): void {

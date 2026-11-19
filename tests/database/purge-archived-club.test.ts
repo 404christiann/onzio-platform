@@ -158,6 +158,9 @@ begin
   insert into onzio_private.shop_page_revisions (club_id, surface) values (c, 'shop') on conflict do nothing;
   insert into onzio_private.tryouts_page_revisions (club_id) values (c) on conflict do nothing;
   insert into onzio_private.tryouts_page_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+  insert into onzio_private.club_media_limits (club_id, max_assets) values (c, 2000) on conflict do nothing;
+  insert into onzio_private.media_upload_reservations (id, club_id, actor_id, surface, kind, staging_path, claimed_size, expires_at)
+    select r, c, owner, 'homepage', 'photo', c::text || '/homepage/' || r::text || '.jpg', 1000, now() + interval '5 minutes' from gen_random_uuid() r;
 
   -- Rose City (cinematic@2) tables, with each page's starter content. Ticket
   -- page images must be published Homepage graphics.

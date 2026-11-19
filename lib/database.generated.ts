@@ -4158,6 +4158,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      consume_media_upload_reservation: {
+        Args: {
+          p_actor_id: string
+          p_actual_size: number
+          p_club_id: string
+          p_staging_path: string
+          p_upload_id: string
+        }
+        Returns: Json
+      }
       copy_program: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
@@ -4269,6 +4279,7 @@ export type Database = {
         Args: { p_club_id: string; p_registration_id: string }
         Returns: undefined
       }
+      media_usage: { Args: { p_club_id: string }; Returns: Json }
       purge_archived_club: {
         Args: {
           p_actor_id: string
@@ -4293,6 +4304,18 @@ export type Database = {
       registration_form_accepting: {
         Args: { p_club_id: string; p_form_id: string }
         Returns: boolean
+      }
+      reserve_media_upload: {
+        Args: {
+          p_actor_id: string
+          p_claimed_size: number
+          p_club_id: string
+          p_kind: string
+          p_staging_path: string
+          p_surface: string
+          p_upload_id: string
+        }
+        Returns: Json
       }
       resolve_verified_tenant: {
         Args: { p_environment: string; p_hostname: string }
