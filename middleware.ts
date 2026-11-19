@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { normalizeHostname } from "@/lib/tenant";
 import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
+import { ROSE_CITY_PREVIEW_SLUG, roseCityPreviewHost } from "@/lib/rose-city-preview";
 import { CINEMATIC_PLACEHOLDER_ROUTES } from "@/lib/cinematic-routes";
 import { parsePresentationDocument, templateKey } from "@/packages/presentation";
 
@@ -134,24 +135,37 @@ export async function middleware(request: NextRequest) {
     return notFound();
   }
 
+  // RC-PREVIEW: on the declared Preview host only, Rose City's public pages are
+  // readable despite the hold. Admin, API and every non-GET/HEAD stay closed.
+  const isRoseCityPreviewRequest = hostname === roseCityPreviewHost();
+  if (
+    isRoseCityPreviewRequest &&
+    !(
+      (request.method === "GET" || request.method === "HEAD") &&
+      isPublicTenantPath(request.nextUrl.pathname)
+    )
+  ) {
+    return applyTenantRobotsPolicy(notFound());
+  }
+
   const onzio = supabase.schema("onzio");
 
   const resolveTenant = async (): Promise<ResolvedTenant | null> => {
     let resolved: ResolvedTenant | null = null;
 
-    if (
-      hostname.endsWith(".localhost") ||
-      (hostname === "localhost" &&
-        process.env.NODE_ENV === "development" &&
-        process.env.ONZIO_LOCAL_TENANT_SLUG)
-    ) {
-      const slug = hostname.endsWith(".localhost")
+    const directSlug = isRoseCityPreviewRequest
+      ? ROSE_CITY_PREVIEW_SLUG
+      : hostname.endsWith(".localhost")
         ? hostname.slice(0, -".localhost".length)
-        : process.env.ONZIO_LOCAL_TENANT_SLUG!;
+        : hostname === "localhost" && process.env.NODE_ENV === "development"
+          ? process.env.ONZIO_LOCAL_TENANT_SLUG
+          : undefined;
+
+    if (directSlug) {
       const { data } = await onzio
         .from("clubs")
         .select("id, slug, lifecycle, public_access")
-        .eq("slug", slug)
+        .eq("slug", directSlug)
         .maybeSingle();
       if (data) {
         resolved = {
@@ -259,6 +273,7 @@ export async function middleware(request: NextRequest) {
 
   if (
     PUBLIC_SITE_HOLD_SLUGS.has(tenant.slug) &&
+    !isRoseCityPreviewRequest &&
     isHeldPublicSiteRequest(request.nextUrl.pathname, request.method, tenant.slug)
   ) {
     return applyTenantRobotsPolicy(notFound());
