@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import legacy from "../../assets/rose-city-2027/existing-social-links.json";
 import { cinematicDisplaySocialLinks, cinematicSocialPlatform } from "@/components/cinematic/social-platform";
 import { brandingDirty, brandingStages, draftFromRows, socialStagePayload, type BrandingDraft } from "@/components/admin/club-settings/branding-draft";
@@ -142,10 +142,32 @@ describe("Rose City footer tagline (RC-ADMIN-4c)", () => {
   });
 });
 
-describe("club settings editor choice (RC-ADMIN-4c)", () => {
-  it("picks the kit editor for Rose City by slug and the classic one for everyone else", async () => {
-    const { clubSettingsEditorFor } = await import("@/lib/admin-club-editors");
-    expect(clubSettingsEditorFor({ slug: "rose-city" })).toBe("kit");
-    for (const slug of ["diverse-city", "alpha", "constructor", "toString", "__proto__"]) expect(clubSettingsEditorFor({ slug })).toBe("classic");
+vi.mock("@/lib/supabase-browser", () => ({ createClient: () => ({ schema: () => ({}) }) }));
+vi.mock("@/lib/admin-client", () => ({ createClient: () => ({}) }));
+
+describe("club settings editors come from the site package (RC-ADMIN-4c)", () => {
+  const diverse = { slug: "diverse-city", presentationTemplateKey: "academy@1" };
+  const rose = { slug: "rose-city", presentationTemplateKey: "cinematic@2" };
+  const other = { slug: "alpha", presentationTemplateKey: null };
+
+  it("resolves Rose City to its package editors and Diverse City (and any other club) to none, so the page default runs", async () => {
+    const { siteFor } = await import("@/lib/site-for");
+    const { RoseCityBranding } = await import("@/components/admin/club-settings/rose-city/RoseCityBranding");
+    const { RoseCityFrame } = await import("@/components/admin/club-settings/rose-city/RoseCityFrame");
+    expect(siteFor(rose)?.adminEditors?.branding).toBe(RoseCityBranding);
+    expect(siteFor(rose)?.adminEditors?.clubSettingsFrame).toBe(RoseCityFrame);
+    expect(siteFor(diverse)?.adminEditors?.branding).toBeUndefined();
+    expect(siteFor(diverse)?.adminEditors?.clubSettingsFrame).toBeUndefined();
+    for (const club of [other, { slug: "toString", presentationTemplateKey: null }, { slug: "__proto__", presentationTemplateKey: null }]) expect(siteFor(club)).toBeNull();
+  });
+
+  it("the shared pages do one siteFor lookup with the classic editor as the fallback, and no club or template conditional", async () => {
+    const { readFileSync } = await import("node:fs");
+    const branding = readFileSync("app/admin/(protected)/branding/page.tsx", "utf8");
+    const members = readFileSync("app/admin/(protected)/members/page.tsx", "utf8");
+    expect(branding).toContain("siteFor(club)?.adminEditors?.branding ?? ClassicBranding");
+    expect(members).toContain("siteFor(club)?.adminEditors?.clubSettingsFrame");
+    expect(members).toContain('<ClubSettingsFrame active="team">{body}</ClubSettingsFrame>');
+    for (const page of [branding, members]) expect(page).not.toMatch(/presentationTemplateKey|cinematic@2|\.slug|rose-city/);
   });
 });

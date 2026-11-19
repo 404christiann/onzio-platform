@@ -8,6 +8,7 @@ import { AdminTabs } from "@/components/admin/AdminTabs";
 import { PageFrame, type PageFrameProps } from "@/components/admin/ui/editor-kit";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import styles from "../ClubSettings.module.css";
+import rose from "./RoseCity.module.css";
 
 const brandingTab = { id: "branding", label: "Branding" };
 const ownerTabs = [brandingTab, { id: "team", label: "Team access" }];
@@ -48,6 +49,18 @@ export function RoseCityFrame({ active, children, ...save }: { active: "branding
         tabIndex={visiblePanel ? 0 : undefined}
       >
         {children}
+        {active === "team" && owner && (
+          // A link only: Payments (Stripe checkout and portal) is untouched.
+          <section className={rose.card} aria-labelledby="payments-link-heading">
+            <div className={rose.payments}>
+              <div>
+                <h2 id="payments-link-heading">Payments</h2>
+                <p>Your Onzio subscription and billing are on the Payments page.</p>
+              </div>
+              <Link className={rose.paymentsLink} href="/admin/payments">Open Payments</Link>
+            </div>
+          </section>
+        )}
       </div>
       {owner && <div hidden id={`club-settings-panel-${active === "branding" ? "team" : "branding"}`} />}
     </PageFrame>
