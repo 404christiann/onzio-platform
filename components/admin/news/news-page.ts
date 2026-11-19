@@ -44,7 +44,7 @@ export function entryTitle(entry: NewsEntry): string {
 
 /**
  * One request per changed article, built by the same builder the old editor used, so the same edits give the
- * same payload. Existing articles come first in the list's order, then new ones. Any invalid article stops the
+ * same payload. Existing articles come first in the list's order (`order` lists existing articles only), then new ones. Any invalid article stops the
  * whole plan before anything is sent.
  */
 export function buildSavePlan(
@@ -127,4 +127,60 @@ export function newsPageFailure(flags: { pending: boolean; conflict: boolean; sa
   if (flags.pending) return "retry";
   if (flags.conflict) return "conflict";
   return flags.saveFailed ? "error" : null;
+}
+
+/** Closing the dialog drops an article nobody changed, but never while a photo is still uploading into it. */
+export const dropOnClose = (entry: NewsEntry | undefined, uploading: boolean) => !!entry && !uploading && !entryChanged(entry);
+
+/** Puts a finished upload into its article. `landed` is false when the article is gone, so the caller retires the asset. */
+export function landCover(entries: Readonly<Record<string, NewsEntry>>, key: string, coverAssetId: string, coverUrl: string):
+  { entries: Record<string, NewsEntry>; landed: boolean } {
+  const entry = entries[key];
+  if (!entry) return { entries: { ...entries }, landed: false };
+  return { entries: { ...entries, [key]: { ...entry, draft: { ...entry.draft, coverAssetId, coverUrl } } }, landed: true };
+}
+
+/** What one save request came back as, reduced to what the page needs. */
+export type NewsSendResult =
+  | { status: "committed"; article: NewsEditorArticle }
+  | { status: "uncertain" | "conflict" | "rejected"; message: string };
+
+/**
+ * The requests for one page Save. A pending request (an earlier save that was not confirmed, or an immediate
+ * remove/restore) goes first, exactly as it was built, so Retry reuses its operation id. An unconfirmed save's
+ * own article is left out of the rebuilt plan; after a pending remove or restore nothing else is sent.
+ */
+export function planPageSave(
+  pending: NewsSaveItem | null, changed: readonly NewsEntry[], order: readonly string[], timeZone: string, operationId: () => string,
+): { ok: true; items: NewsSaveItem[] } | { ok: false; key: string; title: string; problems: NewsDraftProblems } {
+  const rest = pending ? (pending.request.action === "save" ? changed.filter(entry => entry.key !== pending.key) : []) : changed;
+  const plan = buildSavePlan(rest, order, timeZone, operationId);
+  if (!plan.ok) return plan;
+  return { ok: true, items: [...(pending ? [pending] : []), ...plan.items] };
+}
+
+/** Sends the items one after another and stops at the first that is not committed. Earlier ones stay saved. */
+export async function runSaveItems(
+  items: readonly NewsSaveItem[], send: (item: NewsSaveItem) => Promise<NewsSendResult>, onCommitted: (item: NewsSaveItem, article: NewsEditorArticle) => void,
+): Promise<{ done: number; total: number; failure: { item: NewsSaveItem; result: Exclude<NewsSendResult, { status: "committed" }> } | null }> {
+  let done = 0;
+  for (const item of items) {
+    const result = await send(item);
+    if (result.status !== "committed") return { done, total: items.length, failure: { item, result } };
+    onCommitted(item, result.article);
+    done += 1;
+  }
+  return { done, total: items.length, failure: null };
+}
+
+/** "Saved 1 of 3. " in front of the failure notice when some articles went through first. */
+export const savedPrefix = (done: number, total: number) => (done ? `Saved ${done} of ${total}. ` : "");
+
+/** After "Load latest and keep my edits": only each article and its baseline change; the edits stay as typed. */
+export function rebaseEntries(entries: Readonly<Record<string, NewsEntry>>, latest: readonly NewsEditorArticle[], timeZone: string): Record<string, NewsEntry> {
+  const byId = new Map(latest.map(article => [article.id, article]));
+  return Object.fromEntries(Object.entries(entries).map(([key, entry]) => {
+    const fresh = entry.article ? byId.get(entry.article.id) : undefined;
+    return [key, fresh ? { ...entry, article: fresh, original: draftFingerprint(newsDraftFromArticle(fresh, timeZone)) } : entry];
+  }));
 }

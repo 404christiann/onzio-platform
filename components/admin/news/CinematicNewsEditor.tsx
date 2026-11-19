@@ -25,10 +25,10 @@ import { NEWS_CATEGORIES, newsCategory, newsInstantToLocal, newsLocalToInstant, 
 import { loadNewsEditor, newsDraftFromArticle, saveNewsArticle, type NewsDraft, type NewsDraftProblems } from "@/lib/cinematic-news-editor";
 import "@/components/admin/homepage/homepage-editor.css";
 import { NewsArticleFields, type NewsFieldsApi } from "./NewsArticleFields";
-import { NewsCards } from "./NewsCards";
+import { NewsCards, NewsEmpty } from "./NewsCards";
 import {
-  DEFAULT_NEWS_FILTER, NEWS_SECTIONS, buildSavePlan, changedEntries, entryChanged, entryForArticle, entryForNew, entryTitle, filterNewsCards, newsCards,
-  newsPageFailure, previewArticle, draftParagraphs, type NewsCardItem, type NewsEntry, type NewsFilter, type NewsSaveItem, type NewsSectionId,
+  DEFAULT_NEWS_FILTER, NEWS_SECTIONS, landCover, changedEntries, dropOnClose, entryForArticle, entryForNew, entryTitle, filterNewsCards, newsCards,
+  newsPageFailure, planPageSave, previewArticle, rebaseEntries, runSaveItems, savedPrefix, draftParagraphs, type NewsCardItem, type NewsEntry, type NewsFilter, type NewsSaveItem, type NewsSectionId, type NewsSendResult,
 } from "./news-page";
 import styles from "./NewsEditor.module.css";
 
@@ -70,8 +70,10 @@ export default function CinematicNewsEditor() {
   const uploadClub = useRef(club.id);
   const keepRef = useRef<HTMLButtonElement>(null);
   const lastShown = useRef<NewsEntry | null>(null);
+  const entriesRef = useRef<Record<string, NewsEntry>>({});
   const dialog = useEditorDialog<NewsSectionId>();
 
+  entriesRef.current = entries;
   const changed = useMemo(() => changedEntries(entries), [entries]);
   const locked = busy || uploading || !!pending;
   const unsaved = changed.length > 0 || !!pending;
@@ -129,7 +131,7 @@ export default function CinematicNewsEditor() {
     if (!key) return;
     const entry = entries[key];
     if (entry) lastShown.current = entry;
-    if (entry && !entryChanged(entry)) dropEntry(key);
+    if (dropOnClose(entry, uploading)) dropEntry(key);
   }
 
   const entry = openKey ? entries[openKey] ?? (lastShown.current?.key === openKey ? lastShown.current : null) : null;
@@ -159,8 +161,9 @@ export default function CinematicNewsEditor() {
       const publicResult = client.storage.from("news").getPublicUrl(path);
       if (publicResult.error || !publicResult.data.publicUrl) throw new Error("Could not prepare the photo.");
       if (uploadClub.current !== clubId) return;
-      const key = entry.key;
-      setEntries(current => current[key] ? { ...current, [key]: { ...current[key], draft: { ...current[key].draft, coverAssetId: result.data.assetId, coverUrl: publicResult.data.publicUrl } } } : current);
+      const key = entry.key, assetId = result.data.assetId;
+      if (!entriesRef.current[key]) { await discardUnsavedCover(assetId, null); setStatus("The photo was not added because the article was closed."); return; }
+      setEntries(current => landCover(current, key, assetId, publicResult.data.publicUrl).entries);
       setStatus("Photo ready. Save to use it.");
       await discardUnsavedCover(previous, saved);
     } catch (error) { if (uploadClub.current === clubId) { setMessage(error instanceof Error ? error.message : "Could not upload the photo."); setFailed(true); } }
@@ -173,22 +176,29 @@ export default function CinematicNewsEditor() {
     await discardUnsavedCover(previous, entry.article);
   }
 
-  /** Sends one request. Resolves true when the server committed it; otherwise the notices say why. */
-  async function sendItem(item: NewsSaveItem, generation: number): Promise<boolean> {
+  /** Sends one request through the existing save call and receipt lookup. */
+  async function sendItem(item: NewsSaveItem): Promise<NewsSendResult> {
     setPending(item);
     const result = await saveNewsArticle(item.request);
-    if (generation !== epoch.current) return false;
-    if (result.status === "committed") {
-      replaceArticle(result.result.article);
-      if (item.request.action === "save") dropEntry(item.key);
-      setPending(null);
-      return true;
+    return result.status === "committed" ? { status: "committed", article: result.result.article } : result;
+  }
+  function committed(item: NewsSaveItem, article: NewsEditorArticle) {
+    replaceArticle(article);
+    if (item.request.action === "save") dropEntry(item.key);
+    else if (item.request.action === "remove") {
+      // A removed article keeps no unsaved edits, however the remove was confirmed (first try or a retry).
+      const edited = entriesRef.current[item.key];
+      if (edited) { dropEntry(item.key); void discardUnsavedCover(edited.draft.coverAssetId, article); }
     }
-    if (result.status === "uncertain") { setFailed(true); setMessage(`“${item.title}” could not be confirmed. Retry the same save: it won’t publish twice.`); return false; }
     setPending(null);
-    if (result.status === "conflict") { setConflict({ key: item.key, title: item.title }); setFailed(true); setMessage(`“${item.title}” was changed elsewhere. Your edits are not lost.`); }
-    else { setSaveFailed(true); setFailed(true); setMessage(`“${item.title}”: ${result.message}`); }
-    return false;
+  }
+  /** Notices for the first request that did not commit. `item` stays pending only when the outcome is unknown. */
+  function failedItem(item: NewsSaveItem, result: Exclude<NewsSendResult, { status: "committed" }>) {
+    setFailed(true);
+    if (result.status === "uncertain") { setMessage(`“${item.title}” could not be confirmed. Retry the same save: it won’t publish twice.`); return; }
+    setPending(null);
+    if (result.status === "conflict") { setConflict({ key: item.key, title: item.title }); setMessage(`“${item.title}” was changed elsewhere. Your edits are not lost.`); }
+    else { setSaveFailed(true); setMessage(`“${item.title}”: ${result.message}`); }
   }
 
   /**
@@ -197,30 +207,26 @@ export default function CinematicNewsEditor() {
    */
   async function saveAll(): Promise<boolean> {
     if (busy || uploading || !articles) return false;
-    const rest = pending ? (pending.request.action === "save" ? changed.filter(item => item.key !== pending.key) : []) : changed;
-    const plan = buildSavePlan(rest, cards.map(card => card.key), timeZone, () => crypto.randomUUID());
+    const plan = planPageSave(pending, changed, cards.filter(card => card.article).map(card => card.key), timeZone, () => crypto.randomUUID());
     if (!plan.ok) {
       setProblems(current => ({ ...current, [plan.key]: plan.problems }));
       setInvalid({ key: plan.key, title: plan.title }); setSaveFailed(true);
       return false;
     }
-    const items = [...(pending ? [pending] : []), ...plan.items];
+    const items = plan.items;
     if (!items.length) return true;
     const generation = epoch.current;
     clearNotices(); setConflict(null); setBusy(true); setStatus(`Saving ${plural(items.length, "article", "articles")}…`);
-    let done = 0;
-    for (const item of items) {
-      if (!(await sendItem(item, generation))) {
-        if (generation === epoch.current) {
-          setBusy(false);
-          if (done) setMessage(current => `Saved ${done} of ${items.length}. ${current}`);
-        }
-        return false;
-      }
-      done += 1;
-    }
+    const run = await runSaveItems(items, async item => (generation === epoch.current ? sendItem(item) : { status: "uncertain", message: "" }),
+      (item, article) => { if (generation === epoch.current) committed(item, article); });
     if (generation !== epoch.current) return false;
     setBusy(false);
+    if (run.failure) {
+      failedItem(run.failure.item, run.failure.result);
+      const prefix = savedPrefix(run.done, run.total);
+      if (prefix) setMessage(current => prefix + current);
+      return false;
+    }
     const only = items.length === 1 ? items[0] : null;
     const text = only?.request.action === "remove" ? "Article removed from the site. Restore it any time."
       : only?.request.action === "restore" ? "Article restored to the site."
@@ -236,12 +242,11 @@ export default function CinematicNewsEditor() {
     const generation = epoch.current;
     clearNotices(); setConflict(null); setBusy(true);
     const item: NewsSaveItem = { key: article.id, title: card.title, request: { operationId: crypto.randomUUID(), action: remove ? "remove" : "restore", articleId: article.id, expectedRevision: article.revision } };
-    const entryOfArticle = entries[article.id];
-    const ok = await sendItem(item, generation);
+    const result = await sendItem(item);
     if (generation !== epoch.current) return;
     setBusy(false);
-    if (!ok) return;
-    if (remove && entryOfArticle) { dropEntry(article.id); await discardUnsavedCover(entryOfArticle.draft.coverAssetId, article); }
+    if (result.status !== "committed") { failedItem(item, result); return; }
+    committed(item, result.article);
     const text = remove ? "Article removed from the site. Restore it any time." : "Article restored to the site.";
     setMessage(text); setStatus(text);
   }
@@ -269,12 +274,8 @@ export default function CinematicNewsEditor() {
       const loaded = await loadNewsEditor();
       if (generation !== epoch.current) return;
       if (keepEdits) {
-        const byId = new Map(loaded.articles.map(article => [article.id, article]));
         setArticles(loaded.articles);
-        setEntries(current => Object.fromEntries(Object.entries(current).map(([key, item]) => {
-          const latest = item.article ? byId.get(item.article.id) : null;
-          return [key, latest ? { ...item, article: latest, original: JSON.stringify(newsDraftFromArticle(latest, timeZone)) } : item];
-        })));
+        setEntries(current => rebaseEntries(current, loaded.articles, timeZone));
         setMessage("Latest articles loaded. Your edits were kept."); setFailed(false);
       } else {
         const covers = changed.map(item => discardUnsavedCover(item.draft.coverAssetId, item.article));
@@ -363,7 +364,7 @@ export default function CinematicNewsEditor() {
           ? <NewsCards cards={visibleCards} shared={shared} timeZone={timeZone} locked={locked} onEdit={(card, event) => open(card, event)}
             onRemove={card => void setRemoved(card, true)} onRestore={card => void setRemoved(card, false)}
             onDiscard={card => setConfirm({ kind: "discard", card })} />
-          : <div className={styles.empty}>{cards.length ? <p>No articles match.</p> : <p>No articles yet. The News page shows “News is coming soon.” until you add one.</p>}</div>}
+          : <NewsEmpty hasArticles={cards.length > 0} />}
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-news-status="">{status}</p>

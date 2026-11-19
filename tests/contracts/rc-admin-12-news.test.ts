@@ -6,9 +6,9 @@ vi.hoisted(() => {
 });
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { NewsCards } from "@/components/admin/news/NewsCards";
+import { NewsCards, NewsEmpty } from "@/components/admin/news/NewsCards";
 import {
-  DEFAULT_NEWS_FILTER, buildSavePlan, changedEntries, entryChanged, entryForArticle, entryForNew, filterNewsCards, newsCards, newsPageFailure, overlongParagraph,
+  DEFAULT_NEWS_FILTER, buildSavePlan, changedEntries, dropOnClose, entryChanged, entryForArticle, entryForNew, filterNewsCards, landCover, newsCards, planPageSave, rebaseEntries, runSaveItems, savedPrefix, type NewsSendResult, newsPageFailure, overlongParagraph,
 } from "@/components/admin/news/news-page";
 import { NEWS_LIMITS, type NewsEditorArticle } from "@/lib/cinematic-news";
 import { newsSaveRequest } from "@/lib/cinematic-news-editor";
@@ -110,5 +110,94 @@ describe("RC-ADMIN-12 News cards", () => {
   it("holds every control while a save runs", () => {
     const html = renderToStaticMarkup(createElement(NewsCards, { cards, shared: null, timeZone: LA, locked: true, onEdit: () => {}, onRemove: () => {}, onRestore: () => {}, onDiscard: () => {} }));
     expect(html).not.toMatch(/<button(?![^>]*disabled)[^>]*aria-label="(Edit|Restore|More actions)/);
+  });
+});
+
+describe("RC-ADMIN-12 closing the dialog during a cover upload", () => {
+  it("keeps an unchanged article while a photo is uploading, and drops it otherwise", () => {
+    const entry = entryForArticle(A, LA);
+    expect(dropOnClose(entry, true)).toBe(false);
+    expect(dropOnClose(entry, false)).toBe(true);
+    expect(dropOnClose(undefined, false)).toBe(false);
+    const changed = { ...entry, draft: { ...entry.draft, title: "Edited" } };
+    expect(dropOnClose(changed, false)).toBe(false);
+  });
+
+  it("lands the photo in its article, which then counts as changed", () => {
+    const entry = entryForArticle(A, LA);
+    const landed = landCover({ [A.id]: entry }, A.id, "44444444-4444-4444-8444-444444444444", "http://x/cover.jpg");
+    expect(landed.landed).toBe(true);
+    expect(entryChanged(landed.entries[A.id])).toBe(true);
+    expect(landed.entries[A.id].draft).toMatchObject({ coverAssetId: "44444444-4444-4444-8444-444444444444", coverUrl: "http://x/cover.jpg" });
+  });
+
+  it("reports an upload that lands after its article is gone, so the asset is retired", () => {
+    const result = landCover({}, A.id, "44444444-4444-4444-8444-444444444444", "http://x/cover.jpg");
+    expect(result).toEqual({ entries: {}, landed: false });
+  });
+});
+
+describe("RC-ADMIN-12 empty states", () => {
+  it("says no articles yet when there are none, and no match when a filter hides them", () => {
+    expect(renderToStaticMarkup(createElement(NewsEmpty, { hasArticles: false }))).toContain("No articles yet.");
+    expect(renderToStaticMarkup(createElement(NewsEmpty, { hasArticles: true }))).toContain("No articles match.");
+  });
+});
+
+describe("RC-ADMIN-12 the page Save loop", () => {
+  const edited = (a: NewsEditorArticle, title: string) => { const e = entryForArticle(a, LA); e.draft = { ...e.draft, title }; return e; };
+  const order = [C.id, A.id];
+
+  it("Retry reuses the pending request as it was built and leaves its own article out of the rebuilt plan", () => {
+    const first = buildSavePlan([edited(A, "A2"), edited(C, "C2")], order, LA, ids(1));
+    expect(first.ok).toBe(true);
+    const pending = first.ok ? first.items[0] : null;
+    const retry = planPageSave(pending, [edited(A, "A2"), edited(C, "C2")], order, LA, ids(100));
+    expect(retry.ok && retry.items[0]).toBe(pending);
+    expect(retry.ok && retry.items[0].request.operationId).toBe(pending!.request.operationId);
+    expect(retry.ok && retry.items.map(item => item.key)).toEqual([pending!.key, pending!.key === C.id ? A.id : C.id]);
+    expect(retry.ok && retry.items.filter(item => item.key === pending!.key)).toHaveLength(1);
+  });
+
+  it("a pending remove or restore is retried alone", () => {
+    const pending = { key: A.id, title: "Alpha", request: { operationId: "00000000-0000-4000-8000-0000000000aa", action: "remove" as const, articleId: A.id, expectedRevision: "3" } };
+    const retry = planPageSave(pending, [edited(C, "C2")], order, LA, ids(1));
+    expect(retry.ok && retry.items).toEqual([pending]);
+  });
+
+  it("stops at the first failure, keeps earlier saves and names how many went through", async () => {
+    const plan = buildSavePlan([edited(C, "C2"), edited(A, "A2")], order, LA, ids(1));
+    const items = plan.ok ? plan.items : [];
+    const sent: string[] = [], committed: string[] = [];
+    const run = await runSaveItems(items, async item => {
+      sent.push(item.key);
+      return item.key === A.id ? { status: "uncertain", message: "lost" } as NewsSendResult : { status: "committed", article: C };
+    }, item => committed.push(item.key));
+    expect(sent).toEqual([C.id, A.id]);
+    expect(committed).toEqual([C.id]);
+    expect(run).toMatchObject({ done: 1, total: 2, failure: { item: { key: A.id }, result: { status: "uncertain" } } });
+    expect(savedPrefix(run.done, run.total)).toBe("Saved 1 of 2. ");
+    expect(savedPrefix(0, 2)).toBe("");
+  });
+
+  it("does not send anything after a conflict on the first article", async () => {
+    const plan = buildSavePlan([edited(C, "C2"), edited(A, "A2")], order, LA, ids(1));
+    const sent: string[] = [];
+    const run = await runSaveItems(plan.ok ? plan.items : [], async item => { sent.push(item.key); return { status: "conflict", message: "stale" }; }, () => undefined);
+    expect(sent).toEqual([C.id]);
+    expect(run).toMatchObject({ done: 0, failure: { result: { status: "conflict" } } });
+  });
+
+  it("Load latest and keep my edits re-bases only the article and its baseline", () => {
+    const mine = edited(A, "My edit");
+    const fresh = { ...A, revision: "4", content: { ...A.content, title: "Someone else's title" } };
+    const next = rebaseEntries({ [A.id]: mine, "new-1": entryForNew("new-1", "2026-11-21T12:00") }, [fresh, C], LA);
+    expect(next[A.id].draft).toBe(mine.draft);
+    expect(next[A.id].article).toBe(fresh);
+    expect(next[A.id].original).toBe(entryForArticle(fresh, LA).original);
+    expect(entryChanged(next[A.id])).toBe(true);
+    expect(next["new-1"].article).toBeNull();
+    const request = buildSavePlan([next[A.id]], [A.id], LA, ids(1));
+    expect(request.ok && request.items[0].request).toMatchObject({ expectedRevision: "4" });
   });
 });

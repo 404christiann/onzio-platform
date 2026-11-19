@@ -34,7 +34,16 @@ schema, RPC, data or production change, and nothing under `components/cinematic/
 - Gate 5 (repo): tsc ok; unit 338 files, 3785 tests; architecture 152; selector debt unchanged.
 - Gate 6: Diverse City 8/8 identical.
 
-**Next step:** onzio-bot review, then Christian merges.
+**Bot fix round 1 (#171 review at `1582dab`):**
+- M1: the article dialog no longer drops an article while its cover is still uploading. An upload that lands after
+  its article is gone is retired (`discardUnsavedCover`) and reported, instead of saying "Photo ready".
+- L1: save order is pulled into `planPageSave` (existing articles first, then new ones, as documented).
+- L2: a remove that was retried finishes the same post-commit clean-up.
+- L3: the empty-state copy is tested.
+- L4: the save loop has tests: pending reuse, stop on first failure with "Saved N of M", and keep-my-edits re-base.
+- Re-verified on `0fa2b2ef`: all six gates pass. Unit: 338 files, 3794 tests.
+
+**Next step:** onzio-bot re-review, then Christian merges.
 
 ## 2026-11-18 - RC-ADMIN-10e local seed scripts reserve uploads (fix for the 10b regression)
 

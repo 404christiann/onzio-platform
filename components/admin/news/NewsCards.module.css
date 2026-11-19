@@ -41,3 +41,5 @@
 .danger { color: hsl(var(--destructive)); }
 @media (hover: hover) and (pointer: fine) { .action:hover:not(:disabled), .iconButton:hover:not(:disabled) { background: hsl(var(--accent)); } }
 @media (prefers-reduced-motion: reduce) { .menu { transition: opacity 140ms linear; } .menu[data-starting-style], .menu[data-ending-style] { transform: none; } }
+.empty { padding: 28px; border: 1px dashed hsl(var(--border)); border-radius: 14px; color: hsl(var(--muted-foreground)); text-align: center; }
+.empty p { margin: 0; }

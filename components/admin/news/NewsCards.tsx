@@ -138,3 +138,7 @@ export function NewsCards({ cards, shared, timeZone, locked, onEdit, onRemove, o
     })}
   </ul>;
 }
+
+export function NewsEmpty({ hasArticles }: { hasArticles: boolean }) {
+  return <div className={styles.empty} data-news-empty="">{hasArticles ? <p>No articles match.</p> : <p>No articles yet. The News page shows “News is coming soon.” until you add one.</p>}</div>;
+}
