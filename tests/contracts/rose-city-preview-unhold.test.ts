@@ -177,6 +177,35 @@ describe("RC-PREVIEW: Rose City preview unhold", () => {
       },
     );
 
+    // Fonts and other static files in public/ reach middleware (its matcher
+    // only skips images); the preview host must not 404 them.
+    it.each([
+      ["GET", "/fonts/lemon-milk/LEMONMILK-BoldItalic.otf"],
+      ["GET", "/fonts/museomoderno/MuseoModerno.ttf"],
+      ["GET", "/fonts/figtree/figtree-latin-wght-normal.woff2"],
+      ["HEAD", "/fonts/figtree/figtree-latin-wght-normal.woff2"],
+      ["GET", "/videos/hero.mp4"],
+    ])("lets %s %s static file through on the preview host", async (method, pathname) => {
+      const response = await middleware(request(PREVIEW_HOST, pathname, method));
+      expect(response.status).toBe(200);
+      expect(response.headers.get("x-middleware-next")).toBe("1");
+      expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    });
+
+    it.each([
+      ["POST", "/fonts/lemon-milk/LEMONMILK-BoldItalic.otf"],
+      ["GET", "/api/admin/data.json"],
+      ["GET", "/api/register/status.txt"],
+      ["GET", "/admin/export.json"],
+      ["GET", "/admin/fonts/x.otf"],
+      ["GET", "/_clubs/diverse-city/x.woff2"],
+      ["GET", "/fonts/x.otf.php"],
+    ])("still closes %s %s on the preview host", async (method, pathname) => {
+      const response = await middleware(request(PREVIEW_HOST, pathname, method));
+      expect(response.status).toBe(404);
+      expect(response.headers.get("x-middleware-next")).toBeNull();
+    });
+
     it("matches the preview host case-insensitively", async () => {
       const response = await middleware(request(PREVIEW_HOST.toUpperCase(), "/"));
       expect(response.headers.get("x-middleware-rewrite")).toContain("/_clubs/rose-city");

@@ -43,6 +43,10 @@ export function isPublicTenantPath(pathname: string): boolean {
   );
 }
 
+// Static files in public/ that the matcher below does not already skip
+// (it only skips images). Never under /api or /admin.
+const STATIC_PUBLIC_FILE = /^\/(?!api(?:\/|$)|admin(?:\/|$)|_clubs(?:\/|$)|%5fclubs(?:\/|$))[^?#]*\.(?:otf|ttf|woff2?|mp4|webm|txt|json)$/i;
+
 function isInternalClubPath(pathname: string, slug: string): boolean {
   const internalPath = pathname.replace(/^\/%5fclubs(?=\/|$)/i, "/_clubs");
   return internalPath === `/_clubs/${slug}` || internalPath.startsWith(`/_clubs/${slug}/`);
@@ -146,7 +150,8 @@ export async function middleware(request: NextRequest) {
     !(
       (request.method === "GET" || request.method === "HEAD") &&
       (isPublicTenantPath(request.nextUrl.pathname) ||
-        isInternalClubPath(request.nextUrl.pathname, ROSE_CITY_PREVIEW_SLUG))
+        isInternalClubPath(request.nextUrl.pathname, ROSE_CITY_PREVIEW_SLUG) ||
+        STATIC_PUBLIC_FILE.test(request.nextUrl.pathname))
     )
   ) {
     return applyTenantRobotsPolicy(notFound());
