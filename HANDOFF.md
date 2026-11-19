@@ -1,3 +1,19 @@
+## 2026-11-18 - RC-PREVIEW: Rose City public-site preview for Sam (app code only)
+
+- **Status:** `in_progress`, PR open; merges only on Christian's word. No migration, env, data or production change.
+  The production hold stays.
+- **What:** on one declared `*.vercel.app` Preview host, Rose City's public pages (GET/HEAD only) resolve and skip
+  the hold. This needs all three: `RC_PREVIEW_UNHOLD=1`, `VERCEL_ENV=preview` and `RC_PREVIEW_HOST`.
+  Admin, API and POST return 404 on that host, noindex stays on, Rose City's own domains stay held, and Diverse
+  City is unchanged. Code: `lib/rose-city-preview.ts`, `middleware.ts`.
+- **Why a host variable:** preview hosts have no `club_domains` row, so the hold bypass alone could never be
+  reached. Christian picked this over adding a production domain row, confirmed Preview's Supabase env is
+  production, and wants Sam limited to the public site.
+- **Verification:** contract 59/59, verify-rc-admin PASS (Diverse City admin 8/8), unit 3962, legacy 789. The
+  real-server smoke is recorded in `STATUS.md`.
+- **Exact next step:** onzio-bot review, Christian merges, then the Vercel steps (Preview-only, branch-scoped
+  env; Deployment Protection stays on; a Shareable Link for Sam), each approved by Christian.
+
 ## 2026-11-18 - RC-ADMIN-10b: media upload quota, rate limit and one-time reservations
 
 - **Status:** `done`. PR #168 was merged as `5d6649d6` on 2026-11-19 after onzio-bot found no High or Medium
