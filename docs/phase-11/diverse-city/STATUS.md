@@ -2,10 +2,11 @@
 
 ## 2026-11-18 - RC-ADMIN-10b media upload quota, rate limit and one-time reservations
 
-**Agent/package:** Claude Code (Opus), RC-ADMIN-10b, branch `claude/rc-admin-10b`, rebased onto `9e563d79` (SEC-01 merged).
-**Status:** `in_progress`: built and verified locally, committed locally only. Not pushed, no PR,
-production not touched. Christian approved the schema and RPC change and the defaults on 2026-11-18.
-It now waits only for the full production migration gate, then his merge.
+**Agent/package:** Claude Code (Opus), RC-ADMIN-10b, PR #168, merged as `5d6649d6` (squash of the
+reviewed `289572c`, identical tree) on 2026-11-19 03:54 UTC.
+**Status:** `done`. The migration is on production and the code is merged; production deploy
+`dpl_214PuG244DUc26kusHhKfGEf1vvS`. Christian approved the schema and RPC change and the defaults on
+2026-11-18; onzio-bot found no High or Medium issues.
 
 **Completed work:**
 
@@ -91,14 +92,37 @@ every default, so no override rows are needed and the defaults stay as approved.
   sponsors 7 / 6 / 6 (footer exactly at the cap of 6), slideshow 6 (within 7), news 0.
   `cinematic_news_articles` exists on production. No live content is over a planned cap.
 
-**Blockers or unresolved decisions:**
-- None for the code. The production gate needs Christian's go for each step.
-- Uploads authorized by the old code in the 5 minutes before the deploy fail at finalize with
-  `MEDIA_RESERVATION_MISSING`, and the admin uploads again.
+**Production migration gate (2026-11-19 UTC, run from Christian's Mac, Supabase CLI 2.122.0):**
+1. Ledger: every main migration was on production; the only local-only file was
+   `20261118200000_media_upload_quota.sql`.
+2. Rollback target: `dpl_8kCBVJP9c76hF694wF4CoUt1oTtm` (the SEC-01 deploy; the old code never calls the
+   new RPCs).
+3. Snapshot: 2 clubs, 4 active and 6 verified domains, audit events `1025:1032` (newest 2026-11-18
+   04:20 UTC), 582 published assets.
+4. Backups: physical backup 2026-11-18 11:24 UTC, completed. A fresh restricted dump of `onzio` and
+   `onzio_private` (Christian typed the password):
+   `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-20261118-1948-pre-rcadmin10b.dump`, 1,283,525
+   bytes, 92 table-data entries, SHA-256 `ccdd833d0925eaf2be5d408d9717cf6f0cae7e363ed068f959663b6ac71a8c39`.
+   Kept; deleting it is Christian's call.
+5. Dry run listed exactly that file, with no seeds or roles. Christian said "push".
+6. Applied with `db push --linked --skip-vault`.
+7. Verification:
+   - No local-only or remote-only versions, and a second dry run said "up to date".
+   - The history row is `20261118200000 media_upload_quota`, and the snapshot is unchanged.
+   - `media_usage`: Diverse City 67 assets / 17,667,914 bytes; Rose City 515 / 49,834,337. Both on
+     the defaults, with 0 reservations and 0 override rows.
+   - Production types match `lib/database.generated.ts`, apart from the newer CLI's formatting.
+8. Merged by onzio-bot, pinned to `289572c`.
 
-**Exact next step:** with Christian's go, the production gate (backup, `migration list --linked`, a dry run listing exactly
-`20261118200000_media_upload_quota.sql`, Christian's "push", apply, read-only check of
-`onzio.media_usage` for every club). Then open the PR for his merge.
+**Follow-ups:**
+- onzio-bot Low: a reserve landing during the roughly one second while finalize normalizes can overshoot
+  the byte or file cap by the uploads finalizing then. The fix, if wanted, is to count consumed
+  reservations that have no `media_assets` row yet.
+- Uploads authorized by the old code in the 5 minutes before the deploy fail at finalize with
+  `MEDIA_RESERVATION_MISSING`; the admin uploads again.
+
+**Exact next step:** RC-ADMIN-10c (the staging INSERT policy requires a reservation), no sooner than one day
+after this deploy, per Christian's order.
 
 ## 2026-11-18 - RC-ADMIN-SEC-01 staging cleanup deletes every abandoned upload
 
