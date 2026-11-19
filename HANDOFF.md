@@ -1,8 +1,8 @@
-## 2026-11-18 - RC-ADMIN-10b: media upload quota, rate limit and one-time reservations (local only)
+## 2026-11-18 - RC-ADMIN-10b: media upload quota, rate limit and one-time reservations
 
-- **Status:** `in_progress`: built and verified locally on `claude/rc-admin-10b` (from `574bf145`),
-  committed locally, rebased onto `9e563d79` after SEC-01 merged and re-verified. Not pushed, no PR,
-  production untouched. Next: the production migration gate, then Christian's merge.
+- **Status:** `done`. PR #168 was merged as `5d6649d6` on 2026-11-19 after onzio-bot found no High or Medium
+  issues. Migration `20261118200000_media_upload_quota.sql` was applied to production first, through the
+  full gate (backup, ledger, dry run, Christian's "push", verify); the record is in `STATUS.md`.
 - **What:** migration `20261118200000_media_upload_quota.sql` adds per-club limits (defaults 2 GiB, 2,000
   files, 60 per hour, 300 per day, 40 open, with an override table) and one-time upload reservations,
   reached only through service-role RPCs.
@@ -15,7 +15,8 @@
 - **Order agreed with Christian (2026-11-18):** 10b, then 10c (the staging policy requires a reservation,
   at least one day after 10b is live), then 10a (sponsor 30/10/6 and news 200 caps; slideshow constant
   only), then 10d (orphan sweep, at least 7 days of dry run before enforce).
-- **Exact next step:** Christian's B1-b output for the 50% headroom check. Details in `STATUS.md`.
+- **Production headroom:** both clubs are under 50% of every default, so no override rows were needed.
+- **Exact next step:** RC-ADMIN-10c, no sooner than one day after the 10b deploy.
 
 ## 2026-11-18 - Rose City admin design phase: settled design and build order (design only)
 
