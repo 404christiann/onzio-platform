@@ -2251,6 +2251,7 @@ export type Database = {
           storage_bucket: string
           storage_path: string
           surface: string
+          unreferenced_since: string | null
           width: number
         }
         Insert: {
@@ -2269,6 +2270,7 @@ export type Database = {
           storage_bucket: string
           storage_path: string
           surface: string
+          unreferenced_since?: string | null
           width: number
         }
         Update: {
@@ -2287,6 +2289,7 @@ export type Database = {
           storage_bucket?: string
           storage_path?: string
           surface?: string
+          unreferenced_since?: string | null
           width?: number
         }
         Relationships: [
@@ -4279,6 +4282,7 @@ export type Database = {
         Args: { p_club_id: string; p_registration_id: string }
         Returns: undefined
       }
+      media_orphan_sweep_scan: { Args: { p_grace?: string }; Returns: Json }
       media_usage: { Args: { p_club_id: string }; Returns: Json }
       purge_archived_club: {
         Args: {

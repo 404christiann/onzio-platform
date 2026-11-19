@@ -239,6 +239,8 @@ describe("tenant and privileged-boundary architecture contract", () => {
       // RC-ADMIN-10b: sharp-free quota and reservation calls, used by the
       // authorize route and by media-processing.ts.
       /^lib\/media-quota\.ts$/,
+      // RC-ADMIN-10d: the orphan-media sweep (dry-run by default).
+      /^lib\/media-orphan-sweep\.ts$/,
       /^lib\/billing-lifecycle\.ts$/,
       /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
