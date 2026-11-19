@@ -118,6 +118,7 @@ describe("the migration", () => {
       "20261110220000_season_totals_add_up.sql",
       "20261111080000_purge_archived_club.sql",
       "20261118200000_media_upload_quota.sql",
+      "20261119010000_sponsor_and_news_caps.sql",
     ]);
   });
 

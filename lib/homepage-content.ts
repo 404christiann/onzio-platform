@@ -11,7 +11,11 @@ import {
 } from "@/lib/homepage-story-content";
 import { onzioMediaStoragePathFromPublicUrl } from "@/lib/media-url";
 
-export const MAX_HOMEPAGE_SLIDESHOW_PHOTOS = 6;
+/**
+ * Slideshow photos a homepage holds: 7 on cinematic@2, 6 on every other template. The same
+ * numbers save_homepage enforces in SQL (RC-ADMIN-10a pins them in tests/database).
+ */
+export const HOMEPAGE_SLIDESHOW_PHOTO_LIMITS = { cinematic: 7, other: 6 } as const;
 
 export const DEFAULT_HOMEPAGE_HERO_CONTENT: DBHomepageHeroContent = {
   id: 1,
@@ -189,10 +193,6 @@ export type HomepagePhotoDiff = {
   toInsert: Array<{ url: string; alt: string; sort_order: number }>;
   toUpdate: Array<{ id: string; alt: string; sort_order: number }>;
 };
-
-export function canAddHomepageSlideshowPhoto(count: number): boolean {
-  return count < MAX_HOMEPAGE_SLIDESHOW_PHOTOS;
-}
 
 export function normalizeYouTubeEmbedUrl(url: string): string {
   const trimmed = url.trim();

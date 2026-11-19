@@ -1,25 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { DBHomepageSlideshowPhoto } from "@/lib/db-types";
 import {
-  canAddHomepageSlideshowPhoto,
   diffHomepageSlideshowPhotos,
   homepageStoragePathFromPublicUrl,
-  MAX_HOMEPAGE_SLIDESHOW_PHOTOS,
+  HOMEPAGE_SLIDESHOW_PHOTO_LIMITS,
   normalizeYouTubeEmbedUrl,
 } from "@/lib/homepage-content";
 
-describe("canAddHomepageSlideshowPhoto", () => {
-  it("caps homepage slideshow photos at six", () => {
-    expect(MAX_HOMEPAGE_SLIDESHOW_PHOTOS).toBe(6);
-  });
-
-  it.each([
-    [0, true],
-    [5, true],
-    [6, false],
-    [7, false],
-  ])("returns %s at %i photos", (count, expected) => {
-    expect(canAddHomepageSlideshowPhoto(count as number)).toBe(expected);
+describe("HOMEPAGE_SLIDESHOW_PHOTO_LIMITS", () => {
+  it("caps cinematic@2 at seven photos and every other template at six", () => {
+    expect(HOMEPAGE_SLIDESHOW_PHOTO_LIMITS).toEqual({ cinematic: 7, other: 6 });
   });
 });
 

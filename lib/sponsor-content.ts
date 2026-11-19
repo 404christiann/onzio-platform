@@ -3,6 +3,8 @@ import { onzioMediaStoragePathFromPublicUrl } from "@/lib/media-url";
 
 export const MAX_CAROUSEL_SPONSORS = 10;
 export const MAX_FOOTER_SPONSORS = 6;
+/** Every sponsor a club lists, shown or resting (RC-ADMIN-10a: SPONSOR_LIMIT_TOTAL in SQL). */
+export const MAX_LISTED_SPONSORS = 30;
 
 const SPONSOR_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/sponsors`;
@@ -295,7 +297,40 @@ export function diffSponsorList(
     if (Object.keys(changes).length) toUpdate.push({ id: row.id, changes });
   });
 
-  return { toDelete, toInsert, toUpdate };
+  return { toDelete, toInsert, toUpdate: switchesOnLast(toUpdate) };
+}
+
+/**
+ * SQL refuses a write that turns a switch on past its cap (RC-ADMIN-10a), and a save writes one
+ * row at a time. So every change that turns nothing on goes first, and the switches turned on go
+ * in a second pass: a swap at a full place never passes through a state over the cap.
+ */
+export function switchesOnLast(updates: SponsorLogoDiff["toUpdate"]): SponsorLogoDiff["toUpdate"] {
+  const first: SponsorLogoDiff["toUpdate"] = [];
+  const last: SponsorLogoDiff["toUpdate"] = [];
+  for (const { id, changes } of updates) {
+    const { show_on_homepage, show_in_footer, ...rest } = changes;
+    const off: SponsorRowChanges = { ...rest };
+    const on: SponsorRowChanges = {};
+    if (show_on_homepage === true) on.show_on_homepage = true;
+    else if (show_on_homepage === false) off.show_on_homepage = false;
+    if (show_in_footer === true) on.show_in_footer = true;
+    else if (show_in_footer === false) off.show_in_footer = false;
+    if (Object.keys(off).length) first.push({ id, changes: off });
+    if (Object.keys(on).length) last.push({ id, changes: on });
+  }
+  return [...first, ...last];
+}
+
+const SPONSOR_LIMIT_MESSAGES: Record<string, string> = {
+  SPONSOR_LIMIT_TOTAL: `You can list ${MAX_LISTED_SPONSORS} sponsors. Remove one before adding another.`,
+  SPONSOR_LIMIT_HOMEPAGE: `Your homepage can show ${MAX_CAROUSEL_SPONSORS} sponsors. Turn Homepage off for one first.`,
+  SPONSOR_LIMIT_FOOTER: `Your footer can show ${MAX_FOOTER_SPONSORS} sponsors. Turn Footer off for one first.`,
+};
+
+/** The plain message for a cap the database refused (RC-ADMIN-10a), or null for any other error. */
+export function sponsorLimitMessage(message: string): string | null {
+  return SPONSOR_LIMIT_MESSAGES[message.trim()] ?? null;
 }
 
 export function sponsorStoragePathFromPublicUrl(url: string): string | null {
