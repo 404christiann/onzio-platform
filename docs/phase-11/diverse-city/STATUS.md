@@ -1,5 +1,28 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4b-0-2 verify-rc-admin: seasons row accepts both create labels
+
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-2, branch `claude/rc-admin-4b-0-2` on `0a80031a` (local commit only).
+**Status:** `paused`: committed locally, **not pushed, no PR** (Christian paused work to launch the Rose City public site).
+Skill only: no app code, no migration.
+
+**Completed work:** the `seasons` row finds the create button as "Create Next Season" (classic) or "Create <year> season"
+(the rebuilt Seasons page). The matcher is `SEASON_CREATE_BUTTON` in `scripts/editors.mjs` (anchored, case-insensitive);
+a self-test covers both labels and near-misses and checks the row uses it. 51 self-tests pass.
+
+**Verification** (`/admin/seasons --touched none`, clean main `0a80031a`; report `/Users/christianalcala/Downloads/onzio-platform/.claude/worktrees/rc-admin-4b-0-2/test-results/rc-admin-verify/20261119-130307-RC-ADMIN-4b-0-2-seasons/report.html`):
+- Gates 1, 2 (20/20) and 5 pass; gate 3 n/a (declared `pageSave`). The new label itself is proven by the self-test only: main's
+  Seasons still says "Create Next Season", which the run exercised.
+- Gate 4 fails on the documented Seasons CLS: 0.00111 at 390 light (from `div.font-body.font-semibold`); this run's 390 dark was
+  0.00000, so the shift is intermittent, not fixed. 1440 0.00018, axe 0 new, reduced motion clean.
+- Gate 6 failed 14/15 on `/admin/stats?view=match`: the head page was snapshotted with the "Match" select still `disabled`
+  (the matches were loading) while origin/main's was enabled. That is a gap in the skill's settle signal, not an app difference,
+  and it is **not fixed** here. Likely fix: count in-flight `/api/admin/data` `select` requests as busy in the gate 6 settle
+  (check that no page polls through it, or it will fail "never finished loading").
+
+**Next step:** when Christian resumes: fix the gate 6 settle gap above, rerun `/admin/seasons`, open the PR, onzio-bot loop, then
+`verify.sh cleanup --worktree` on this worktree.
+
 ## 2026-11-19 - RC-ADMIN-4b-0 verify-rc-admin: keys for roster, seasons, stats, branding, members
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0, branch `claude/rc-admin-4b-0` on `3d52ab65`. **Status:** `in_progress`:
