@@ -271,7 +271,7 @@ and writes its gitignored `test-results/`; nothing else there changes.
   `/schedule`, `/sponsors`, `/roster`, `/seasons`, `/stats?view=match`, `/stats?view=season`, `/standings`, `/branding`, `/members` on both builds: status < 400, an h1, no console error that origin/main
   does not also log, and an identical `main` aria snapshot. Each page is compared only once it has **settled**
   (`scripts/settle.mjs`, pinned by `verify.test.mjs`): document complete, no showing loading marker (`aria-busy`,
-  loading region outside the `content` phase, visible skeleton or shimmer, a live region reading "Loading ...", an image, font, script or style still in flight), no unfinished animation, and the `main`
+  loading region outside the `content` phase, visible skeleton or shimmer, a live region reading "Loading ...", an image, font, script or style still in flight, a `select` through `/api/admin/data` still in flight), no unfinished animation, and the `main`
   aria tree unchanged for three reads 100 ms apart. A page that does not settle in 20 s fails with the reason (a
   hidden skeleton kept in the DOM does not count). The one console error ignored on both builds is the 404 of
   Vercel's `/_vercel/insights/script.js` (it only exists on Vercel and is requested late). Screenshots of the package build.

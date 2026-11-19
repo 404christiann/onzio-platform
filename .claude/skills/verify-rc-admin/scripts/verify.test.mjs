@@ -656,3 +656,15 @@ test("4b-0-2: the seasons row finds the create button under both labels, and onl
   assert.match(row, /getByRole\("button", \{ name: SEASON_CREATE_BUTTON \}\)/, "the seasons row uses the shared matcher");
   assert.doesNotMatch(row, /visibleButton\(page, "Create Next Season"\)/, "no exact-label lookup is left in the row");
 });
+
+test("4b-0-2: gate 6 treats a data-endpoint select still in flight as loading, and nothing else on that endpoint", async () => {
+  const { isAdminDataRead } = await import("./editors.mjs");
+  const body = (operation) => JSON.stringify({ table: "matches", operation });
+  assert.equal(isAdminDataRead({ method: "POST", pathname: "/api/admin/data", body: body("select") }), true);
+  for (const operation of ["insert", "update", "upsert", "delete"]) assert.equal(isAdminDataRead({ method: "POST", pathname: "/api/admin/data", body: body(operation) }), false, operation);
+  assert.equal(isAdminDataRead({ method: "GET", pathname: "/api/admin/data", body: body("select") }), false);
+  assert.equal(isAdminDataRead({ method: "POST", pathname: "/api/admin/members", body: body("select") }), false, "other endpoints (polling) are not counted");
+  assert.equal(isAdminDataRead({ method: "POST", pathname: "/api/admin/data", body: "not json" }), false);
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /if \(asset\(r\) \|\| dataRead\(r\)\) inflight\.add\(r\)/);
+});

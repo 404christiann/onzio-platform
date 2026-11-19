@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { KIT_ANY_FIELD_SELECTOR, KIT_DIALOG_SELECTOR, KIT_DONE_SELECTOR, KIT_EDIT_SELECTOR, KIT_ENABLED_FIELD_SELECTOR, KIT_LIST_SELECTOR, KIT_WAIT_MS, chooseOpenPath, firstMarkableIndex, isPhoneWidth, listProblems, retryLockCheck, sectionTryOrder, sheetBarProblems } from "./scripts/kit-path.mjs";
-import { SEASON_CREATE_BUTTON, gate3Plan, isEditorSave, isMutating, stepsPass } from "./scripts/editors.mjs";
+import { SEASON_CREATE_BUTTON, gate3Plan, isAdminDataRead, isEditorSave, isMutating, stepsPass } from "./scripts/editors.mjs";
 import { BUSY_SELECTOR, LOADING_TEXT, isEnvironmentNoise, savedColourProblems, waitUntilSettled } from "./scripts/settle.mjs";
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type Request } from "@playwright/test";
 
@@ -953,7 +953,10 @@ async function dcSnapshot(context: BrowserContext, base: string, path: string, s
   const failed: string[] = [];
   const inflight = new Set<Request>();
   const asset = (r: Request) => ["image", "font", "stylesheet", "script", "media"].includes(r.resourceType());
-  page.on("request", (r) => { if (asset(r)) inflight.add(r); });
+  // Also the editors' own loads through /api/admin/data (operation "select"): Stats compared with its Match select still disabled
+  // because the matches had not arrived. Other XHR/fetch (polling) stays out of it, or a polling page would never settle.
+  const dataRead = (r: Request) => isAdminDataRead({ method: r.method(), pathname: new URL(r.url()).pathname, body: r.postData() ?? "" });
+  page.on("request", (r) => { if (asset(r) || dataRead(r)) inflight.add(r); });
   page.on("requestfinished", (r) => inflight.delete(r));
   page.on("requestfailed", (r) => inflight.delete(r));
   page.on("response", (r) => { if (r.status() >= 400) failed.push(`${r.status()} ${r.request().method()} ${r.url().replace(/\?.*$/, "")}`); });

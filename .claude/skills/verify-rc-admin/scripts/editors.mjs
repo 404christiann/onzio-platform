@@ -56,3 +56,8 @@ export function stepsPass(steps) {
  * varies). Both are the same action for the `seasons` row. Anchored, so "Create season template" or a row's own Edit never match.
  */
 export const SEASON_CREATE_BUTTON = /^(?:Create Next Season|Create \d{4} season)$/i;
+
+/** A read through the shared data endpoint (a POST whose operation is "select"): the editors load their lists this way (stats matches, players). */
+export function isAdminDataRead({ method, pathname, body }) {
+  return method === "POST" && pathname === ADMIN_DATA_PATH && parseBody(body)?.operation === "select";
+}
