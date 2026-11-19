@@ -13,10 +13,15 @@
 # main: the shop seed already writes them), partners (it reuses a Woodmen logo that only the
 # rehearsal stack has), injury-report (it needs roster player #4; both editors open on their
 # starter content), form-links (the tickets seed already sets other destinations), roster and
-# schedule: roster needs a production-derived JSON and schedule
-# writes into the Rose City revamp folder. No editor in RC-ADMIN-01..06 needs either.
+# schedule: the repo roster seed needs a production-derived JSON and fetches production media, and
+# the repo schedule seed also fetches production media, makes only 4 matches and writes receipts
+# into the Rose City revamp folder. They are never used. Instead scripts/seed-rose-city-schedule.sql
+# (synthetic, plain text, local only) gives Rose City an active 2027 season, 10 players with zero-stat
+# rows, and 5 matches (home and away, played and unplayed), so the Roster, Injury Report and Schedule
+# pages have something to open. It fails loudly if Rose City already has any season, player or match.
 set -euo pipefail
 SRC="$(cd "$1" && pwd)"
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REVAMP="/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp"
 cd "$SRC"
 [[ -f .env.local && -d node_modules ]] || { echo "seed: $SRC lacks .env.local or node_modules" >&2; exit 1; }
@@ -69,3 +74,11 @@ done
 # with another default cannot change what is verified).
 docker exec supabase_db_onzio-platform-contracts psql -U postgres -v ON_ERROR_STOP=1 -Atc \
   "update onzio.clubs set admin_portal='classic' where slug in ('rose-city','diverse-city') returning slug, admin_portal;"
+
+# Synthetic 2027 season, roster and schedule (loopback-only guard: API_URL was checked above, and the
+# DB URL is checked here). Applied inside the DB container, so no file leaves the repo.
+[[ "$SUPABASE_DB_URL" == postgresql://postgres:postgres@127.0.0.1:54322/* ]] || { echo "seed: DB URL is not loopback 54322" >&2; exit 1; }
+echo "seed: seed-rose-city-schedule.sql (synthetic 2027 season, roster, schedule)"
+docker exec -i supabase_db_onzio-platform-contracts psql -U postgres -v ON_ERROR_STOP=1 -q \
+  < "$SKILL_DIR/seed-rose-city-schedule.sql" > output/rcv-seed-rose-city-schedule.log 2>&1 \
+  || { echo "seed: seed-rose-city-schedule.sql failed" >&2; tail -20 output/rcv-seed-rose-city-schedule.log >&2; exit 1; }

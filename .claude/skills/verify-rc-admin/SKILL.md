@@ -69,7 +69,11 @@ Inside one lock hold (`scripts/locked-run.sh`):
 5. `scripts/seed-local.sh <base-copy>`: Diverse City via `scripts/import-diverse-city-local.ts`,
    then the Rose City seeds copied into `<base-copy>/scripts/_rcv/`, re-pointed 55321→54321 and
    55322→54322 (the recipe from the 2026-11-17 audit), run from the base copy so their receipt
-   writes land there, never in a git checkout. Both clubs set to `admin_portal='classic'`.
+   writes land there, never in a git checkout. Both clubs set to `admin_portal='classic'`. Last,
+   `scripts/seed-rose-city-schedule.sql` (synthetic, plain text, no media) is piped into the DB
+   container: Rose City gets an active 2027 season, 10 players (numbers, positions, zero-stat
+   season rows, no photos) and 5 matches (home and away, 2 played with scores, 3 unplayed). It
+   fails loudly and writes nothing if Rose City already has a season, player or match.
 6. `next start` for HEAD on :3110 and origin/main on :3111, both `ONZIO_ENVIRONMENT=staging`
    (the seeded domain rows are `staging`; `.env.local` says production and would refuse the
    tenant). Ready = `/admin/login` renders "Send sign-in code" on `rose-city.localhost`.
@@ -298,9 +302,11 @@ the next session that needs a clean stack resets it under the lock (that is norm
 - Rose City seeds not run, because they cannot work from the repo on main: `shop-update` (its
   precondition no longer holds once `shop` ran), `partners` (reuses a Woodmen logo only the
   rehearsal stack has), `injury-report` (needs roster player #4), `form-links` (tickets already set
-  other destinations), `roster` (production-derived JSON), `schedule` (writes into the revamp
-  folder). Partners and Injury Report editors therefore open on starter content; Schedule has no
-  fixtures. Fine for RC-ADMIN-01..06; a package that needs roster or fixtures must seed them by SQL.
+  other destinations). The repo `roster` and `schedule` seeds are never used: roster needs a
+  production-derived JSON and both fetch production media, schedule makes only 4 matches and both
+  write receipts into the revamp folder. `seed-rose-city-schedule.sql` replaces them with synthetic
+  rows (see step 5). The Partners editor still opens on starter content. Extend that SQL, not the
+  repo seeds, if a package needs more roster or fixture states.
 - The whole browser run shares one session. If a context's clock passes the access-token expiry
   (1 h) supabase-js refreshes and rotates the one refresh token, signing every later context out.
   That is why the clock is pinned to the run's start; keep a run under an hour.

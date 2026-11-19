@@ -1,5 +1,35 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-13-seed verify seed gives Rose City a season, roster and matches
+
+**Agent/package:** Claude Code (Sonnet worker W13s, orchestrated), RC-ADMIN-13-seed, branch `claude/rc-admin-13-seed` on
+`c75496c3`. **Status:** `in_progress`, PR open. It merges only on Christian's word. Skill only, local only: no app code,
+migration, schema, RPC, data or production change.
+
+**Why:** the verify seed never gave Rose City a season or matches, so `/admin/schedule` was empty and gates 3 and 4
+could not drive the RC-ADMIN-13 Schedule editor. The repo's roster and schedule seeds were not usable: they fetch
+media from production storage, insert only 4 matches, and write receipts into the Revamp folder. Christian approved a
+synthetic seed instead.
+
+**Completed work:**
+- New `.claude/skills/verify-rc-admin/scripts/seed-rose-city-schedule.sql`: synthetic, plain text, no media. It finds the
+  club by slug `rose-city` and refuses to write anything if Rose City already has a season, player or match. It creates:
+  - an active 2027 season;
+  - 10 players (1 GK, 3 DF, 3 MF, 3 FW) with zero-stat season rows;
+  - 5 matches (2 played, 2-1 and 0-0; 3 upcoming), mixing home and away.
+- `seed-local.sh` runs it after the existing seeds, behind a loopback guard on `SUPABASE_DB_URL`, with `ON_ERROR_STOP`.
+  `SKILL.md` documents it.
+
+**Verification (on current main):**
+- `/admin/schedule`: PASS. Payloads 14/14 identical; Diverse City 8/8 identical; repo gates ok (unit 3903). The page shows
+  "2027 (Active)" and all 5 matches. Gates 3 and 4 report not applicable on today's ClassicSchedulePage, which has no
+  editable field and no page Save. They run for real once RC-ADMIN-13 lands on top.
+- `/admin/injury-report` (regression, now with seeded Roster players): PASS on all six gates, including all 7 save states.
+- `verify.test.mjs`: 30/30.
+- The first schedule attempt hit a one-off sign-in timeout ("Enter your code" not shown in 30 s); the rerun passed.
+
+**Next step:** onzio-bot review and Christian's merge. Then RC-ADMIN-13 rebases onto it and runs the full verify.
+
 ## 2026-11-18 - RC-ADMIN-11 Rose City Partners and Injury Report editors on the editor kit (Previews layout)
 
 **Agent/package:** Claude Code (Sonnet worker W11, orchestrated), RC-ADMIN-11, branch `claude/rc-admin-11` on
