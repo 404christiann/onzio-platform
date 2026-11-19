@@ -46,7 +46,15 @@ PASS on all six gates.
 It is darkened only inside the Rose City dialog through a scoped CSS override; `LeagueLogoUpload` itself is unchanged.
 Re-verified: all six gates pass, the kit-dialog axe scan is empty at 390 and 1440 in light and dark, and unit is 3925.
 
-**Next step:** onzio-bot review, then Christian merges.
+**Bot fix round 1 (#177, Medium):** a reload no longer moves the baseline or `updated_at` stamp of an open draft.
+- Each draft keeps its own anchor, `{ stamp, baseline }`, from when it was opened. The conflict re-read and dirty check use it.
+- A quick result moves only its own match's anchor, and only if the server had not moved on.
+- A regression test covers the bot's scenario: a stale draft after a reload gives a conflict and sends no write.
+- Re-verified: all six gates pass. Unit: 342 files, 3992 tests.
+- Skill flake noted: one run's gate 6 caught Contact and Shop still loading (6/8). The immediate re-run was 8/8
+  identical with no code change.
+
+**Next step:** onzio-bot re-review, then Christian merges.
 
 ## 2026-11-19 - RC-ADMIN-10c staging upload needs a live reservation
 

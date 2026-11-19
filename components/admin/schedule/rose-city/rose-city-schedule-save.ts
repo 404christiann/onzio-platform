@@ -100,3 +100,21 @@ export function rebaseForm(loaded: FormState, mine: FormState, fresh: FormState)
   }
   return next as FormState;
 }
+
+/** What an open draft started from: the saved match as it was when the draft was opened, and its updated_at. A reload never moves it. */
+export type Anchor = { stamp?: string; baseline: FormState };
+
+/** The updated_at each edited match is checked against: the one its draft opened with, never a later reload's. */
+export function anchorStamps(keys: readonly string[], anchors: Record<string, Anchor>): Record<string, string> {
+  return Object.fromEntries(keys.flatMap(key => { const stamp = anchors[key]?.stamp; return stamp ? [[key, stamp]] : []; }));
+}
+
+/**
+ * After a quick result on a match that has an open draft. If the server still held the version the draft opened with
+ * (`unchanged`), the draft's start takes the new score and the new updated_at, so the quick write is not read as someone
+ * else's change. If the server had moved on, the start stays as it was and the page Save reports the conflict.
+ */
+export function anchorAfterQuick(anchor: Anchor, unchanged: boolean, stamp: string | undefined, home: number, away: number): Anchor {
+  if (!unchanged || !stamp) return anchor;
+  return { stamp, baseline: { ...anchor.baseline, rose_city_score: home, opponent_score: away } };
+}

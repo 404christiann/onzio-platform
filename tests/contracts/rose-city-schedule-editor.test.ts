@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { rebaseForm, saveMatches, type MatchesApi, type SavedMatchRow } from "@/components/admin/schedule/rose-city/rose-city-schedule-save";
+import { anchorAfterQuick, anchorStamps, rebaseForm, saveMatches, type MatchesApi, type SavedMatchRow } from "@/components/admin/schedule/rose-city/rose-city-schedule-save";
 import { emptyForm, matchTooLong, normalizeScore, MAX_MATCH_SCORE, type FormState, type Match } from "@/components/admin/schedule/schedule-model";
 import {
   MATCH_SECTIONS, buildMatchWrite, changedKeys, fixtureFromForm, formFromMatch, isNewKey, matchRowAfterSave, summaryLine, validateMatchForm,
@@ -304,6 +304,35 @@ describe("Rose City Schedule editor: conflict and retry", () => {
     const api = fakeApi([row()], { update: vi.fn(async () => ({ error: "check violated" })) });
     const outcome = await saveMatches({ keys: ["m1"], drafts: { m1: mine }, pending: {}, stamps: { m1: "t1" }, originals: [savedMatch], api });
     expect(outcome).toMatchObject({ kind: "done", pending: {}, failed: [{ key: "m1", message: "check violated" }] });
+  });
+  it("a reload after a quick result on another match never hides someone else's change to a match with an open draft", async () => {
+    // Draft for A opened at stamp t1. Another admin then changes A (t2). A quick result on B reloads the page: matches and stamps move on.
+    const anchors = { A: { stamp: "t1", baseline: loaded } };
+    const afterReload = [row({ id: "A", updated_at: "t2", venue: "Venue A" }), row({ id: "B", updated_at: "t5" })];
+    const api = fakeApi(afterReload);
+    const draftA = { ...loaded, competition: "Mine" };
+    const outcome = await saveMatches({ keys: ["A"], drafts: { A: draftA }, pending: {}, stamps: anchorStamps(["A"], anchors), originals: afterReload, api });
+    expect(outcome).toMatchObject({ kind: "conflict", keys: ["A"] });
+    expect(api.update).not.toHaveBeenCalled();
+    expect(api.insert).not.toHaveBeenCalled();
+    // Checked against the reloaded stamp instead, the stale full row would have gone out: this is what the anchor prevents.
+    const wrong = fakeApi(afterReload);
+    expect((await saveMatches({ keys: ["A"], drafts: { A: draftA }, pending: {}, stamps: { A: "t2" }, originals: afterReload, api: wrong })).kind).toBe("done");
+  });
+  it("a quick result on the match itself moves its own start only if the server had not moved on", () => {
+    const anchor = { stamp: "t1", baseline: loaded };
+    const same = anchorAfterQuick(anchor, true, "t2", 3, 0);
+    expect(same.stamp).toBe("t2");
+    expect(same.baseline).toMatchObject({ rose_city_score: 3, opponent_score: 0, venue: loaded.venue });
+    expect(anchorAfterQuick(anchor, false, "t2", 3, 0)).toBe(anchor);
+    expect(anchorAfterQuick(anchor, true, undefined, 3, 0)).toBe(anchor);
+    expect(anchorStamps(["A", "new:1"], { A: anchor, "new:1": { baseline: loaded } })).toEqual({ A: "t1" });
+  });
+  it("keeps each draft's start in the editor: opened once, never moved by load()", () => {
+    expect(editor).toContain("setAnchors(current => ({ ...current, [key]: { stamp: stamps.current[key]");
+    expect(editor).toContain("const draftBaselines");
+    expect(editor).toContain("stamps: anchorStamps(keys, anchors)");
+    expect(editor).not.toContain("stamps: stamps.current");
   });
   it("wires conflict and retry to the page Save and the notice buttons", () => {
     expect(editor).toContain('setFailure("conflict")');

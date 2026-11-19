@@ -33,7 +33,7 @@ import {
   matchRowAfterSave, matchTitle, sameForm, summaryLine, validateMatchForm, type MatchSectionId,
 } from "./rose-city-schedule-model";
 import { RoseCityMatchFields } from "./RoseCityMatchFields";
-import { rebaseForm, saveMatches, type MatchesApi, type PendingWrite, type SavedMatchRow } from "./rose-city-schedule-save";
+import { anchorAfterQuick, anchorStamps, rebaseForm, saveMatches, type Anchor, type MatchesApi, type PendingWrite, type SavedMatchRow } from "./rose-city-schedule-save";
 import { MatchLive, MatchThumb, fixturesSignature, THUMB_SIZE } from "./MatchPreview";
 import styles from "./RoseCityScheduleEditor.module.css";
 
@@ -79,6 +79,7 @@ export default function RoseCityScheduleEditor() {
   const savingRef = useRef(false);
   // updated_at of each match as the page loaded it; the re-read before a save compares against it.
   const stamps = useRef<Record<string, string>>({});
+  const [anchors, setAnchors] = useState<Record<string, Anchor>>({});
   const [conflict, setConflict] = useState<Conflict | null>(null);
   // Writes that were sent and never answered. Resent exactly as they were by Retry.
   const [pending, setPending] = useState<Record<string, PendingWrite>>({});
@@ -87,18 +88,18 @@ export default function RoseCityScheduleEditor() {
   const [unconfirmed, setUnconfirmed] = useState(false);
   const locked = Object.keys(pending).length > 0 || unconfirmed;
 
-  async function load(): Promise<boolean> {
+  async function load(): Promise<SavedMatchRow[] | null> {
     try {
       const { data, error } = await createClient().from("matches").select(COLUMNS).order("date").order("time");
-      if (error) { setLoadError(error.message); return false; }
+      if (error) { setLoadError(error.message); return null; }
       const rows = (data ?? []) as SavedMatchRow[];
       stamps.current = Object.fromEntries(rows.flatMap(row => row.updated_at ? [[row.id, row.updated_at]] : []));
       setMatches(rows);
       setReady(true); setLoadError(null);
-      return true;
+      return rows;
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Failed to load schedule");
-      return false;
+      return null;
     } finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
@@ -112,7 +113,9 @@ export default function RoseCityScheduleEditor() {
   const allBaselines = useMemo(() => ({ ...baselines, ...newBaselines }), [baselines, newBaselines]);
   const newKeys = useMemo(() => Object.keys(newBaselines), [newBaselines]);
   const order = useMemo(() => [...matches.map(match => match.id), ...newKeys], [matches, newKeys]);
-  const dirtyKeys = useMemo(() => changedKeys(order, drafts, allBaselines), [order, drafts, allBaselines]);
+  // A draft is dirty against what it started from, not against the latest reload.
+  const draftBaselines = useMemo(() => Object.fromEntries(Object.keys(drafts).flatMap(key => { const base = anchors[key]?.baseline ?? allBaselines[key]; return base ? [[key, base]] : []; })), [drafts, anchors, allBaselines]);
+  const dirtyKeys = useMemo(() => changedKeys(order, drafts, draftBaselines), [order, drafts, draftBaselines]);
   const unsaved = dirtyKeys.length > 0;
   const formOf = useCallback((key: string): FormState | undefined => drafts[key] ?? allBaselines[key], [drafts, allBaselines]);
 
@@ -122,7 +125,10 @@ export default function RoseCityScheduleEditor() {
 
   function openMatch(key: string, event?: React.MouseEvent<HTMLElement>) {
     setEditingKey(key);
-    setDrafts(current => current[key] || !allBaselines[key] ? current : { ...current, [key]: structuredClone(allBaselines[key]) });
+    if (!drafts[key] && allBaselines[key]) {
+      setDrafts(current => ({ ...current, [key]: structuredClone(allBaselines[key]) }));
+      setAnchors(current => ({ ...current, [key]: { stamp: stamps.current[key], baseline: structuredClone(allBaselines[key]) } }));
+    }
     dialog.openSection("match", event);
   }
   function openNew(event: React.MouseEvent<HTMLElement>) {
@@ -130,6 +136,7 @@ export default function RoseCityScheduleEditor() {
     const form = { ...emptyForm(selectedSeasonId), ...carrySponsor(selectedSeasonId) };
     setNewBaselines(current => ({ ...current, [key]: form }));
     setDrafts(current => ({ ...current, [key]: structuredClone(form) }));
+    setAnchors(current => ({ ...current, [key]: { baseline: structuredClone(form) } }));
     setEditingKey(key);
     dialog.openSection("match", event);
   }
@@ -139,11 +146,13 @@ export default function RoseCityScheduleEditor() {
     if (uploadRef.current > 0 || !editingKey) return;
     const key = editingKey;
     const form = drafts[key];
-    if (form && allBaselines[key] && sameForm(form, allBaselines[key])) {
+    const start = anchors[key]?.baseline ?? allBaselines[key];
+    if (form && start && sameForm(form, start)) {
       setDrafts(current => { const { [key]: _drop, ...rest } = current; return rest; });
+      setAnchors(current => { const { [key]: _drop, ...rest } = current; return rest; });
       if (isNewKey(key)) setNewBaselines(current => { const { [key]: _drop, ...rest } = current; return rest; });
     }
-  }, [dialog, editingKey, drafts, allBaselines]);
+  }, [dialog, editingKey, drafts, anchors, allBaselines]);
 
   const formChange = useCallback((key: string): Dispatch<SetStateAction<FormState>> => update => {
     setDrafts(current => {
@@ -195,7 +204,7 @@ export default function RoseCityScheduleEditor() {
     savingRef.current = true;
     setFailure(null); setNotice(null); setConflict(null); setUnconfirmed(false); setStatus("Saving the schedule…");
     let outcome;
-    try { outcome = await saveMatches({ keys, drafts, pending, stamps: stamps.current, originals: matchesRef.current, api }); }
+    try { outcome = await saveMatches({ keys, drafts, pending, stamps: anchorStamps(keys, anchors), originals: matchesRef.current, api }); }
     finally { savingRef.current = false; }
     if (outcome.kind === "unverified") {
       setUnconfirmed(outcome.noAnswer);
@@ -221,10 +230,11 @@ export default function RoseCityScheduleEditor() {
         return next;
       });
       setDrafts(current => { const next = { ...current }; for (const item of saved) delete next[item.key]; return next; });
+      setAnchors(current => { const next = { ...current }; for (const item of saved) delete next[item.key]; return next; });
       setNewBaselines(current => { const next = { ...current }; for (const item of saved) delete next[item.key]; return next; });
       if (editingKey && saved.some(item => item.key === editingKey)) setEditingKey(null);
     }
-    const reloaded = saved.length ? await load() : true;
+    const reloaded = saved.length ? (await load()) !== null : true;
     const waiting = Object.keys(unknown);
     if (waiting.length) {
       const form = unknown[waiting[0]].form;
@@ -252,13 +262,19 @@ export default function RoseCityScheduleEditor() {
     setDrafts(current => {
       const next = { ...current };
       for (const key of conflict.keys) {
-        const fresh = freshForms[key], mine = current[key], loaded = allBaselines[key];
+        const fresh = freshForms[key], mine = current[key], loaded = anchors[key]?.baseline ?? allBaselines[key];
         if (!fresh) delete next[key];
         else if (mine && loaded) next[key] = rebaseForm(loaded, mine, fresh);
       }
       return next;
     });
     stamps.current = conflict.stamps;
+    // A conflicted draft now starts from the fresh row; a draft that did not conflict keeps its own start.
+    setAnchors(current => {
+      const next = { ...current };
+      for (const key of conflict.keys) { if (freshForms[key]) next[key] = { stamp: conflict.stamps[key], baseline: freshForms[key] }; else delete next[key]; }
+      return next;
+    });
     setMatches(conflict.rows);
     setConflict(null); setFailure(null);
     const gone = conflict.keys.filter(key => !freshForms[key]).length;
@@ -275,7 +291,7 @@ export default function RoseCityScheduleEditor() {
   const pageState = derivePageSaveState(baseState, failure);
 
   function discardAll() {
-    setDrafts({}); setNewBaselines({}); setEditingKey(null); setFailure(null); setNotice(null); setQuick(null); setConflict(null); setPending({}); setUnconfirmed(false);
+    setDrafts({}); setAnchors({}); setNewBaselines({}); setEditingKey(null); setFailure(null); setNotice(null); setQuick(null); setConflict(null); setPending({}); setUnconfirmed(false);
     void load();
   }
   /** Discard asks first; while a save is unconfirmed it waits, so the retry is never lost. */
@@ -306,13 +322,24 @@ export default function RoseCityScheduleEditor() {
     quickBusy.current = true;
     setQuick({ ...quick, saving: true, error: null });
     try {
+      // An edit open on this match started from a saved version. If the server has moved on since, it stays stale, so the page Save reports the conflict.
+      const anchor = anchors[key];
+      let unchanged = false;
+      if (anchor?.stamp) {
+        const seen = await api.readAll().catch(() => null);
+        unchanged = seen?.rows.find(row => row.id === key)?.updated_at === anchor.stamp;
+      }
       const { error } = await createClient().from("matches").update({ rose_city_score: home, opponent_score: away }).eq("id", key);
       if (error) throw new Error(error.message);
       setMatches(current => current.map(row => row.id === key ? { ...row, rose_city_score: home, opponent_score: away } : row));
       // An edit already open on this match keeps its other changes and takes the saved score.
       setDrafts(current => current[key] ? { ...current, [key]: { ...current[key], rose_city_score: home, opponent_score: away } } : current);
       setQuick(null); setStatus("Result saved.");
-      void load(); // a fresh updated_at for the match, so the next page Save does not read this write as someone else's
+      // Only this match's own start takes its new score and updated_at; every other open draft keeps the stamp and baseline it opened with.
+      void load().then(rows => {
+        const stamp = rows?.find(row => row.id === key)?.updated_at;
+        if (anchor) setAnchors(current => current[key] ? { ...current, [key]: anchorAfterQuick(current[key], unchanged, stamp, home, away) } : current);
+      });
       requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-match-edit="${CSS.escape(key)}"]`)?.focus());
     } catch (error) {
       setQuick(current => current && { ...current, saving: false, error: error instanceof Error ? error.message : "The result could not be saved. Try again." });
@@ -334,6 +361,7 @@ export default function RoseCityScheduleEditor() {
         setMatches(current => current.filter(match => match.id !== key));
       }
       setDrafts(current => { const { [key]: _drop, ...rest } = current; return rest; });
+      setAnchors(current => { const { [key]: _drop, ...rest } = current; return rest; });
       setEditingKey(null); setDeleteKey(null); setStatus("Match deleted.");
     } catch { setDeleteError("This match could not be deleted. Check the connection and try again."); }
     finally { setDeleting(false); }
