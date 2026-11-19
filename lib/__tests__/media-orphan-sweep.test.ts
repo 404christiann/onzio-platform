@@ -251,13 +251,28 @@ describe("enforce", () => {
     const path = c.candidates[0].path;
     const h = harness([c], {
       retire: () => ({ data: null, error: { message: "fetch failed" } }),
-      assetRow: { status: "orphaned", deleted_at: "2026-11-19T10:30:00Z" },
+      assetRow: { status: "orphaned", deleted_at: "2026-11-19T10:30:05Z" },
     });
-    const result = await runMediaOrphanSweep({ ...h.deps, mode: "enforce" });
+    const result = await runMediaOrphanSweep({ ...h.deps, mode: "enforce", now: () => new Date("2026-11-19T10:30:00Z") });
     expect(result.retired).toBe(1);
     expect(result.failed).toBe(0);
     expect(h.calls).toContain("select:media_assets");
     expect(h.calls).toContain(`remove:onzio-media:${path}`);
+  });
+
+  it("does not count or remove an asset another path retired before this run, when the retire call errors", async () => {
+    silence();
+    const c = club("a", { published: 100, candidates: 1 });
+    const path = c.candidates[0].path;
+    const h = harness([c], {
+      retire: () => ({ data: null, error: { message: "fetch failed" } }),
+      assetRow: { status: "orphaned", deleted_at: "2026-11-19T09:00:00Z" },
+    });
+    const result = await runMediaOrphanSweep({ ...h.deps, mode: "enforce", now: () => new Date("2026-11-19T10:30:00Z") });
+    expect(result.retired).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(h.calls).not.toContain(`remove:onzio-media:${path}`);
+    expect(h.calls).toContain(`remove:onzio-media-trash:${path}`);
   });
 
   it("keeps the public object and the trash copy when a failed retire call did not commit", async () => {

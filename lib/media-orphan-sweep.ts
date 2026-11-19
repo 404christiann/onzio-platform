@@ -111,6 +111,7 @@ export async function runMediaOrphanSweep(deps: SweepDeps = {}): Promise<SweepRe
   const mode = deps.mode ?? resolveSweepMode();
   const runId = deps.runId ?? crypto.randomUUID();
   const now = deps.now ?? (() => new Date());
+  const runStartedAt = now();
   const empty: SweepResult = {
     mode, runId, graceHours: SWEEP_GRACE_HOURS, clubs: 0, published: 0, pinned: 0, waiting: 0,
     candidates: 0, wouldHaltRun: false, strayObjects: null, retired: 0, skipped: 0, failed: 0,
@@ -169,7 +170,7 @@ export async function runMediaOrphanSweep(deps: SweepDeps = {}): Promise<SweepRe
         continue;
       }
       const ref = { assetId: candidate.assetId, path: candidate.path };
-      const outcome = await retireCandidate(service, club.clubId, ref, queueCleanup);
+      const outcome = await retireCandidate(service, club.clubId, ref, queueCleanup, runStartedAt);
       if (outcome.status === "retired") {
         report.retired.push(ref);
         clubRetired += 1;
@@ -258,6 +259,7 @@ async function retireCandidate(
   clubId: string,
   asset: PinnedAsset,
   queueCleanup: typeof queueMediaCleanup,
+  runStartedAt: Date,
 ): Promise<Outcome> {
   const media = service.storage.from("onzio-media");
   const trash = service.storage.from(SWEEP_TRASH_BUCKET);
@@ -289,6 +291,11 @@ async function retireCandidate(
     if (readError || retiredRow?.status !== "orphaned" || !retiredRow.deleted_at) {
       // The outcome is unknown, so keep the trash copy; it expires with the rest of the trash.
       return { status: "failed", reason: "RETIRE_FAILED" };
+    }
+    if (new Date(retiredRow.deleted_at).getTime() < runStartedAt.getTime()) {
+      // Another path retired it before this run; that path owns the public object's removal.
+      await trash.remove([asset.path]);
+      return { status: "skipped", reason: "already-retired" };
     }
     status = "retired";
   }
