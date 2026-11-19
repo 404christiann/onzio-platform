@@ -191,6 +191,11 @@ describe("Rose City Schedule editor: scope", () => {
     expect(fields).toContain('label="Stream or replay video (YouTube link)"');
     expect(fields).toContain("<SponsorLogoUpload");
   });
+  it("darkens the league logo's \"No logo\" text for this dialog only, leaving the shared component alone", () => {
+    expect(read("components/admin/schedule/rose-city/RoseCityScheduleEditor.module.css")).toContain(".leagueLogo :global(.text-black\\/50) { color: #595959; }");
+    expect(fields).toContain("<div className={styles.leagueLogo}>");
+    expect(read("components/admin/schedule/LeagueLogoUpload.tsx")).toContain("text-black/50");
+  });
   it("uses the page frame, one Save and the shared discard words", () => {
     expect(editor).toContain("<PageFrame");
     expect(editor).toContain('breadcrumb={CRUMBS}');

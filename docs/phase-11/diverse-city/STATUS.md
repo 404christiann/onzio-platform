@@ -42,10 +42,11 @@ PASS on all six gates.
 - Gate 6: Diverse City 8/8 identical.
 - `verify.test.mjs`: 30/30.
 
-**Known, being fixed:** the informational kit-dialog axe scan reports one `color-contrast` issue in the dialog, from the
-reused `LeagueLogoUpload` (`text-black/50`).
+**Contrast fix:** the dialog's "No logo" text from the reused `LeagueLogoUpload` (`text-black/50`) was under 4.5:1.
+It is darkened only inside the Rose City dialog through a scoped CSS override; `LeagueLogoUpload` itself is unchanged.
+Re-verified: all six gates pass, the kit-dialog axe scan is empty at 390 and 1440 in light and dark, and unit is 3925.
 
-**Next step:** onzio-bot review and the contrast fix, then Christian merges.
+**Next step:** onzio-bot review, then Christian merges.
 
 ## 2026-11-19 - RC-ADMIN-10c staging upload needs a live reservation
 

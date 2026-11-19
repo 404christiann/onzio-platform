@@ -76,11 +76,13 @@ export function RoseCityMatchFields({ section, form, onChange, seasons, clubName
             <input id="match-competition" type="text" placeholder="e.g. UPSL Premier Division" value={form.competition ?? ""} onChange={e => set("competition", e.target.value)} maxLength={MATCH_TEXT_LIMITS.competition} className={input} />
           </Field>
           <Field id="match-league-logo" label="League logo" optional>
-            <LeagueLogoUpload
-              inputId="match-league-logo" logoUrl={form.league_logo_url} leagueName={form.competition ?? ""}
-              onUploaded={async url => { await cleanup("league-logos", "league_logo_url", form.league_logo_url, "match-leagues/"); onChange(current => ({ ...current, league_logo_url: url })); }}
-              onRemove={async () => { await cleanup("league-logos", "league_logo_url", form.league_logo_url, "match-leagues/"); onChange(current => ({ ...current, league_logo_url: null })); }}
-            />
+            <div className={styles.leagueLogo}>
+              <LeagueLogoUpload
+                inputId="match-league-logo" logoUrl={form.league_logo_url} leagueName={form.competition ?? ""}
+                onUploaded={async url => { await cleanup("league-logos", "league_logo_url", form.league_logo_url, "match-leagues/"); onChange(current => ({ ...current, league_logo_url: url })); }}
+                onRemove={async () => { await cleanup("league-logos", "league_logo_url", form.league_logo_url, "match-leagues/"); onChange(current => ({ ...current, league_logo_url: null })); }}
+              />
+            </div>
           </Field>
         </Group>
         <Group title="Opponent">

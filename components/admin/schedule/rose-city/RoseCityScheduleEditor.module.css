@@ -76,3 +76,6 @@
 
 /* The live card in the dialog: one real, narrow viewport (an iframe), so the page's own phone layout applies. */
 .live :global(.hp-preview-frame) { block-size: min(520px, calc(100dvh - 260px)); min-block-size: 300px; }
+
+/* LeagueLogoUpload (shared with the classic Schedule page, so left alone) prints "No logo" in text-black/50 on its always-white box: under 4.5:1. Darkened here, for this dialog only. */
+.leagueLogo :global(.text-black\/50) { color: #595959; }
