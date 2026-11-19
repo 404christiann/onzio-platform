@@ -34,7 +34,9 @@ first; filters; card numbers; rendered card and fields; Diverse City branch pins
 **Verification:** verify-rc-admin `--route /admin/roster --package RC-ADMIN-4b-roster --touched roster`, final run on the review-fix head
 (this branch on `0a80031a`, with #186), report `test-results/rc-admin-verify/20261119-131413-RC-ADMIN-4b-roster/report.html`: PASS. The
 first run (`69de5a64`, report `20261119-125409-...`) passed too; the rerun followed the orchestrator's review (label "Save player", card
-numbers by current position) and a one-line widening of the skill's roster save regex to `/^Save( changes| player)?$/`.
+numbers by current position). That rerun used a one-line widening of the skill's roster save regex to `/^Save( changes| player)?$/`, taken out of
+this PR (package PRs never change the skill); it goes in the skill-only PR RC-ADMIN-4b-0-2. **The final verify runs after that PR merges**,
+because on main's skill the roster row cannot click "Save player".
 - Gate 1: 15 app files, 2 doc warnings, 0 forbidden. Gate 2: 19/19 identical, touched `roster`. Gate 3: n/a, declared in `EDITORS`
   (a player is saved from its own dialog; there is no page Save). Gate 4: CLS at most 0.00003 at 390 and 1440, light and dark; new axe 0;
   reduced motion 0 offenders. Gate 5: tsc ok; unit 350 files, 4138 tests; architecture 152; selector debt unchanged.
