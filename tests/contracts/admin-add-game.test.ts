@@ -239,10 +239,11 @@ describe("classic Games page writes", () => {
   };
 
   it("sends exactly the fields these payloads pin", () => {
-    // Attendance and the Match Summary are in the form, but summaryColumnsFor
-    // sends them only for cinematic@2 clubs.
+    // Attendance and the Match Summary are in the form, but this page never sends them: a cinematic@2 club
+    // is handled by RoseCityScheduleEditor.
     expect(formKeys()).toEqual([...Object.keys(CLASSIC_FIELDS), "attendance", "summary"].sort());
-    expect(classic).toContain("return isCinematic ? { ...rest, attendance, ...matchSummaryColumns(summary) } : rest;");
+    expect(classic).toContain("const { summary, attendance, ...rest } = form;");
+    expect(classic).toMatch(/function summaryColumnsFor\(form: FormState\) \{[\s\S]*?return rest;\s*\}/);
     expect(classic).toContain('import { createClient } from "@/lib/admin-client";');
     expect(classic).toMatch(/supabase\.from\("matches"\)\.insert\(\[\{\s*\.\.\.summaryColumnsFor\(addForm\),/);
     expect(classic).toMatch(/supabase\.from\("matches"\)\.update\(\{\s*\.\.\.summaryColumnsFor\(editForm\),/);
