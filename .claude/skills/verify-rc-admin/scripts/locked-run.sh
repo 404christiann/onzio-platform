@@ -44,11 +44,32 @@ for p in "$RCV_HEAD_PORT" "$RCV_BASE_PORT"; do
   ! lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1 || fail "port $p is in use inside the lock; something outside the lock owns it"
 done
 
+# `supabase db reset` restarts the auth, storage and realtime containers and returns before they answer; a seed started at once
+# got the gateway's "An invalid response was received from the upstream server" (3 of 5 runs on 2026-11-19, under load).
+# Wait until the gateway answers for auth, storage and PostgREST three times in a row (up to RCV_STACK_WAIT s, default 180).
+stack_ready() {
+  local API_URL="" SERVICE_ROLE_KEY="" ok=0 i waited=${RCV_STACK_WAIT:-180}
+  eval "$(cd "$RCV_WT" && supabase status -o env 2>/dev/null | grep -E '^(API_URL|SERVICE_ROLE_KEY)=')"
+  [[ -n "$API_URL" && -n "$SERVICE_ROLE_KEY" ]] || return 1
+  for ((i = 0; i < waited; i += 2)); do
+    if curl -sf -o /dev/null -H "apikey: $SERVICE_ROLE_KEY" "$API_URL/auth/v1/health" \
+      && curl -sf -o /dev/null -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" "$API_URL/storage/v1/bucket" \
+      && curl -sf -o /dev/null -H "apikey: $SERVICE_ROLE_KEY" "$API_URL/rest/v1/"; then
+      ok=$((ok + 1)); [[ $ok -ge 3 ]] && return 0
+    else ok=0; fi
+    sleep 2
+  done
+  return 1
+}
+
 echo "locked-run: db reset (package worktree migrations, supabase CLI $(supabase --version 2>/dev/null | tail -1))"
 (cd "$RCV_WT" && supabase db reset --local > "$LOG/db-reset.log" 2>&1) || fail "supabase db reset failed (see logs/db-reset.log)"
 ledger="$(docker exec supabase_db_onzio-platform-contracts psql -U postgres -Atc 'select max(version) from supabase_migrations.schema_migrations')"
 newest="$(ls "$RCV_WT/supabase/migrations" | tail -1 | cut -d_ -f1)"
 [[ "$ledger" == "$newest" ]] || fail "ledger $ledger != newest migration $newest after reset"
+
+echo "locked-run: waiting for the local stack (auth, storage, rest) to answer after the reset"
+stack_ready || fail "the local stack did not answer through the gateway within ${RCV_STACK_WAIT:-180}s after the reset"
 
 echo "locked-run: seed Rose City + Diverse City"
 # Right after a reset PostgREST can still serve the old schema cache ("Could not query the database for the schema cache"):

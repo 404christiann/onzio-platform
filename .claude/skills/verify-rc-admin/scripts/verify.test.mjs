@@ -399,3 +399,124 @@ test("01d: the disk check refuses a build under 5 GB free and says so", () => {
   assert.equal(diskRoomCheck(NaN).ok, false, "unreadable free space refuses rather than builds");
   assert.equal(diskRoomCheck(gb(8), 10).ok, false, "the minimum is a parameter");
 });
+
+// ---- RC-ADMIN-4-0a: deterministic readiness and settled-state signals --------------------------------------------------
+import { BUSY_SELECTOR, describeBusy, isEnvironmentNoise, isSettled, readIsQuiet, savedColourProblems, waitUntilSettled } from "./settle.mjs";
+
+const quiet = (key = "main") => ({ ready: true, busy: 0, running: 0, key });
+
+test("4-0a: a read is quiet only when loaded, with no loading marker and no finite animation running", () => {
+  assert.equal(readIsQuiet(quiet()), true);
+  assert.equal(readIsQuiet({ ...quiet(), ready: false }), false);
+  assert.equal(readIsQuiet({ ...quiet(), busy: 1 }), false, "a skeleton or aria-busy region");
+  assert.equal(readIsQuiet({ ...quiet(), running: 1 }), false, "a crossfade still playing");
+  assert.equal(readIsQuiet(undefined), false);
+});
+
+test("4-0a: settled needs three quiet reads in a row with the same content; the Contact/Shop case (still loading, then content) is not settled early", () => {
+  const loading = { ready: true, busy: 2, running: 1, key: "skeleton" };
+  assert.equal(isSettled([quiet(), quiet()]), false, "two reads are not enough");
+  assert.equal(isSettled([loading, loading, loading]), false);
+  assert.equal(isSettled([quiet("skeleton"), quiet("skeleton"), quiet("content")]), false, "content still changing");
+  assert.equal(isSettled([loading, quiet("content"), quiet("content")]), false, "the skeleton was gone for only two reads");
+  assert.equal(isSettled([loading, quiet("content"), quiet("content"), quiet("content")]), true);
+  assert.equal(isSettled([quiet(), quiet(), quiet()], 2), true, "the stable count is a parameter");
+});
+
+test("4-0a: waitUntilSettled keeps polling past a slow load instead of giving up after a fixed sleep", async () => {
+  let t = 0, i = 0;
+  const reads = [
+    ...Array(30).fill({ ready: true, busy: 1, running: 0, key: "skeleton" }), // 3 s of skeleton: longer than the old 2 s sleep
+    quiet("content"), quiet("content"), quiet("content"),
+  ];
+  const out = await waitUntilSettled(async () => reads[Math.min(i++, reads.length - 1)], { sleep: async (ms) => { t += ms; }, now: () => t });
+  assert.equal(out.settled, true);
+  assert.equal(out.reads.length, 33);
+  assert.equal(out.reads.at(-1).key, "content");
+});
+
+test("4-0a: a page that never finishes loading is reported with the reason, not passed and not hung", async () => {
+  let t = 0;
+  const stuck = { ready: true, busy: 3, running: 0, key: "skeleton" };
+  const out = await waitUntilSettled(async () => stuck, { timeoutMs: 1000, intervalMs: 100, sleep: async (ms) => { t += ms; }, now: () => t });
+  assert.equal(out.settled, false);
+  assert.equal(out.why, "3 loading markers");
+  assert.equal(describeBusy({ ready: false, busy: 1, running: 2, key: "" }), "document not loaded, 1 loading marker, 2 animations running");
+  const churn = (() => { let n = 0; return async () => quiet(`v${n++}`); })();
+  t = 0;
+  assert.equal((await waitUntilSettled(churn, { timeoutMs: 500, sleep: async (ms) => { t += ms; }, now: () => t })).why, "content kept changing");
+});
+
+test("4-0a: the loading markers cover the admin's skeletons, busy regions and shimmer", () => {
+  for (const marker of ['[aria-busy="true"]', "data-admin-loading-region", "data-admin-skeleton-layer", "data-admin-shimmer", "data-slot=skeleton", 'aria-label^="Loading"']) {
+    assert.ok(BUSY_SELECTOR.includes(marker), `BUSY_SELECTOR names ${marker}`);
+  }
+});
+
+test("4-0a: the saved colour is judged only after the transition ended; a mid-fade sample is a wait, not a verdict", () => {
+  const greens = ["rgb(52, 199, 89)", "rgb(48, 209, 88)"];
+  assert.deepEqual(savedColourProblems({ state: "saved", colour: "rgb(52, 199, 89)", running: 0 }, greens), []);
+  assert.deepEqual(savedColourProblems({ state: "saved", colour: "rgb(48, 209, 88)", running: 0 }, greens), [], "dark-mode green");
+  // The 2026-11-19 flake: rgb(52, 199, 90) was the colour mid-transition. It is reported as "still animating", never as a wrong green.
+  const mid = savedColourProblems({ state: "saved", colour: "rgb(52, 199, 90)", running: 1 }, greens);
+  assert.equal(mid.length, 1);
+  assert.match(mid[0], /still animating/);
+  // A settled colour that is genuinely wrong still fails.
+  assert.match(savedColourProblems({ state: "saved", colour: "rgb(0, 122, 255)", running: 0 }, greens)[0], /settled "saved" colour is rgb\(0, 122, 255\)/);
+  assert.match(savedColourProblems({ state: "clean", colour: "rgb(242, 242, 247)", running: 0 }, greens)[0], /left "saved" \(now "clean"\)/);
+});
+
+test("4-0a: the spec waits on settle signals and no longer sleeps 2 s before the Diverse City compare or samples the saved colour once", () => {
+  const spec = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /from "\.\/scripts\/settle\.mjs"/);
+  assert.match(spec, /waitUntilSettled\(/);
+  assert.match(spec, /savedColourProblems\(/);
+  assert.doesNotMatch(spec, /waitForTimeout\(2_000\)/, "gate 6 no longer sleeps a fixed 2 s");
+  assert.doesNotMatch(spec, /expect\(SAVED_GREENS\)\.toContain/, "the saved colour is not sampled once");
+  assert.match(spec, /\.finished/, "gate 3 waits for the transitions to finish");
+  assert.match(spec, /playState !== "finished"/, "a finished fill-forward animation (the check draw) is not 'still animating'");
+  assert.match(spec, /checkVisibility\(/, "a hidden skeleton kept in the DOM (Programs) is not 'still loading'");
+});
+
+test("4-0a: only Vercel's analytics script 404 is ignored as local noise, by URL; any other failed resource still counts", () => {
+  assert.equal(isEnvironmentNoise("http://diverse-city.localhost:3110/_vercel/insights/script.js"), true);
+  assert.equal(isEnvironmentNoise("http://diverse-city.localhost:3111/_vercel/speed-insights/script.js?v=1"), true);
+  assert.equal(isEnvironmentNoise("http://diverse-city.localhost:3110/_next/static/chunks/app.js"), false);
+  assert.equal(isEnvironmentNoise("http://diverse-city.localhost:3110/images/team.jpg"), false);
+  assert.equal(isEnvironmentNoise("http://x/_vercel/insights/script.js.map"), false);
+  assert.equal(isEnvironmentNoise(undefined), false);
+  const spec = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /isEnvironmentNoise\(m\.location\(\)\.url\)/);
+});
+
+test("4-0a: the stack is waited for after a db reset: three answers in a row from auth, storage and rest, and a stack that never answers fails", () => {
+  const dir = mkdtempSync(join(tmpdir(), "rcv-stack-"));
+  const bin = join(dir, "bin"); mkdirSync(bin);
+  const stub = (name, body) => { writeFileSync(join(bin, name), `#!/bin/bash\n${body}\n`); chmodSync(join(bin, name), 0o755); };
+  stub("supabase", 'echo "API_URL=http://stub"; echo "SERVICE_ROLE_KEY=k"');
+  stub("sleep", "true");
+  // curl fails the first N calls (the containers restarting), then answers; counter in a file
+  stub("curl", `n=$(cat "${dir}/n" 2>/dev/null || echo 0); echo $((n+1)) > "${dir}/n"; [ "$n" -ge "$STUB_FAIL_FIRST" ]`);
+  const fn = readFileSync(join(here, "locked-run.sh"), "utf8").match(/^stack_ready\(\) \{[\s\S]*?^\}$/m)[0];
+  const run = (failFirst, wait) => {
+    writeFileSync(join(dir, "n"), "0");
+    return spawnSync("bash", ["-c", `RCV_WT=${dir}\n${fn}\nstack_ready; echo "exit=$?"; cat "${dir}/n"`], { encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, STUB_FAIL_FIRST: String(failFirst), RCV_STACK_WAIT: String(wait) } });
+  };
+  const slow = run(7, 60); // 7 failing curls = three loops lost to the gateway error, then it answers
+  assert.match(slow.stdout, /exit=0/, slow.stderr);
+  const never = run(1e9, 6);
+  assert.match(never.stdout, /exit=1/, "a stack that never answers is a failure, not a pass");
+  const src = readFileSync(join(here, "locked-run.sh"), "utf8");
+  assert.ok(src.indexOf("stack_ready ||") > src.indexOf("supabase db reset --local") && src.indexOf("stack_ready ||") < src.indexOf('"$RCV_SKILL/scripts/seed-local.sh"'), "the wait sits between the reset and the seed");
+});
+
+test("4-0a: a sign-in that gets no code waits out the one-code-per-minute window and retries, at most three times", async () => {
+  const { SIGN_IN_MAX_ATTEMPTS, SIGN_IN_CODE_WINDOW_MS, nextSignInWait } = await import("./sign-in-retry.mjs");
+  assert.equal(SIGN_IN_MAX_ATTEMPTS, 3);
+  assert.deepEqual(nextSignInWait({ attempt: 1, elapsedMs: 31_000 }), { retry: true, waitMs: SIGN_IN_CODE_WINDOW_MS - 31_000 }, "30 s already spent on the code screen: wait the rest of the window");
+  assert.deepEqual(nextSignInWait({ attempt: 2, elapsedMs: 70_000 }), { retry: true, waitMs: 0 }, "the window already passed");
+  assert.deepEqual(nextSignInWait({ attempt: 3, elapsedMs: 1 }), { retry: false, waitMs: 0 }, "never forever");
+  const src = readFileSync(join(here, "sign-in.mjs"), "utf8");
+  assert.match(src, /nextSignInWait\(/);
+  assert.match(src, /askedAt - 2_000/, "each attempt only accepts mail sent after its own request");
+});

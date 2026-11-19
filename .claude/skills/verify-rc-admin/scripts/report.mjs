@@ -38,9 +38,9 @@ gate(4, "Visual: 390/1440 light/dark, CLS, reduced motion, axe", visualPass && !
   visualNa ? visuals[0].reason : visuals.length ? visuals.map((v) => v.applicable === false ? `${v.width} ${v.scheme}: NOT RUN (${v.reason})` : `${v.width} ${v.scheme}: CLS ${v.cls.toFixed(5)}, new axe ${v.newFormViolations.length + v.newDialogViolations.length} (existing on main ${v.formViolations.length + v.dialogViolations.length - v.newFormViolations.length - v.newDialogViolations.length} rules)`).join("; ") + (motion ? `; reduced-motion offenders ${motion.samples.filter((s) => s.moving.length).length}` : "; reduced motion not run") + visuals.flatMap((v) => (v.saveBar?.problems ?? []).map((p) => `; phone Save bar (${v.scheme}): ${p}`)).join("") : "not run", visualNa);
 gate(5, "Repo gates", !!repo && repo.typecheck && repo.unit && repo.architecture && repo.selectorDebtIdentical,
   repo ? `typecheck ${repo.typecheck ? "ok" : "FAIL"}; unit ${repo.unitSummary}; architecture ${repo.architectureSummary}; selector debt ${repo.selectorDebtIdentical ? "unchanged" : "CHANGED"}` : "not run");
-const dcPass = !!dc && dc.pages.every((p) => p.status < 400 && p.h1 && p.errors.length === 0 && (dc.sharedFix || p.sameAsMain));
+const dcPass = !!dc && dc.pages.every((p) => p.settled !== false && p.status < 400 && p.h1 && p.errors.length === 0 && (dc.sharedFix || p.sameAsMain));
 gate(6, "Diverse City admin unchanged", dcPass,
-  dc ? `${dc.pages.filter((p) => p.sameAsMain).length}/${dc.pages.length} pages identical to origin/main${dc.sharedFix ? " (shared fix: differences allowed)" : ""}` : "not run");
+  dc ? `${dc.pages.filter((p) => p.sameAsMain).length}/${dc.pages.length} pages identical to origin/main${dc.sharedFix ? " (shared fix: differences allowed)" : ""}${dc.pages.some((p) => p.settled === false) ? `; never finished loading: ${dc.pages.filter((p) => p.settled === false).map((p) => `${p.path} (${p.notSettled})`).join(", ")}` : ""}` : "not run");
 
 const pass = gates.every((g) => g.pass);
 const shots = existsSync(join(out, "screenshots")) ? readdirSync(join(out, "screenshots")).filter((f) => f.endsWith(".png")).sort() : [];

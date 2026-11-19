@@ -1,0 +1,12 @@
+export const BUSY_SELECTOR: string;
+export const SETTLE_TIMEOUT_MS: number;
+export const SETTLE_INTERVAL_MS: number;
+export const SETTLE_STABLE_READS: number;
+export type PageRead = { ready: boolean; busy: number; running: number; key: string };
+export function readIsQuiet(read: PageRead | undefined): boolean;
+export function isSettled(reads: PageRead[], stable?: number): boolean;
+export function describeBusy(read: PageRead | undefined): string;
+export function waitUntilSettled(read: () => Promise<PageRead>, options?: { timeoutMs?: number; intervalMs?: number; stable?: number; sleep?: (ms: number) => Promise<void>; now?: () => number }): Promise<{ settled: boolean; reads: PageRead[]; why?: string }>;
+export function savedColourProblems(seen: { state: string | null; colour: string; running: number }, greens: string[]): string[];
+export const ENVIRONMENT_NOISE: RegExp[];
+export function isEnvironmentNoise(url: string | undefined): boolean;

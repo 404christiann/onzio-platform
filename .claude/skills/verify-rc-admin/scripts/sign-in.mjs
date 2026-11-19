@@ -7,6 +7,7 @@
 //   node sign-in.mjs <base-url, e.g. http://rose-city.localhost:3110> <out.json>
 import { chromium } from "@playwright/test";
 import { chmod, readFile, writeFile } from "node:fs/promises";
+import { nextSignInWait } from "./sign-in-retry.mjs";
 
 const [baseURL, out] = process.argv.slice(2);
 if (!baseURL || !out) throw new Error("usage: sign-in.mjs <base-url> <out.json>");
@@ -16,25 +17,36 @@ const email = "owner-aal2@alpha.local";
 const mailpit = "http://127.0.0.1:54324";
 
 process.umask(0o077); // the storage state holds session cookies: owner-only from the first write
-const sentAfter = Date.now() - 2_000;
 const browser = await chromium.launch();
 try {
   const context = await browser.newContext();
   const page = await context.newPage();
-  await page.goto(`${baseURL}/admin/login`);
-  await page.getByLabel("Email address", { exact: true }).fill(email);
-  await page.getByRole("button", { name: "Send sign-in code" }).click();
-  await page.getByRole("heading", { name: "Enter your code" }).waitFor({ timeout: 30_000 });
+  // One code per address per ~60 s: if another run just signed this address in, the code screen or the mail does not come.
+  // Wait out the window and ask again (bounded, see sign-in-retry.mjs) instead of failing the whole run.
   let code;
-  for (let attempt = 0; attempt < 30 && !code; attempt++) {
-    const { messages = [] } = await (await fetch(`${mailpit}/api/v1/messages`)).json();
-    const fresh = messages
-      .filter((m) => m.To?.some((to) => to.Address === email) && Date.parse(m.Created) >= sentAfter)
-      .sort((a, b) => Date.parse(b.Created) - Date.parse(a.Created));
-    code = fresh[0]?.Subject?.match(/^(\d{6,10})\b/)?.[1];
-    if (!code) await new Promise((resolve) => setTimeout(resolve, 1_000));
+  for (let attempt = 1; !code; attempt++) {
+    const askedAt = Date.now();
+    try {
+      await page.goto(`${baseURL}/admin/login`);
+      await page.getByLabel("Email address", { exact: true }).fill(email);
+      await page.getByRole("button", { name: "Send sign-in code" }).click();
+      await page.getByRole("heading", { name: "Enter your code" }).waitFor({ timeout: 30_000 });
+      for (let poll = 0; poll < 30 && !code; poll++) {
+        const { messages = [] } = await (await fetch(`${mailpit}/api/v1/messages`)).json();
+        const fresh = messages
+          .filter((m) => m.To?.some((to) => to.Address === email) && Date.parse(m.Created) >= askedAt - 2_000)
+          .sort((a, b) => Date.parse(b.Created) - Date.parse(a.Created));
+        code = fresh[0]?.Subject?.match(/^(\d{6,10})\b/)?.[1];
+        if (!code) await new Promise((resolve) => setTimeout(resolve, 1_000));
+      }
+      if (!code) throw new Error("no fresh code in Inbucket");
+    } catch (error) {
+      const plan = nextSignInWait({ attempt, elapsedMs: Date.now() - askedAt });
+      if (!plan.retry) throw new Error(`sign-in: no code after ${attempt} attempts (${String(error).split("\n")[0]}; local auth sends one code per address per ~60 s)`);
+      console.error(`sign-in: attempt ${attempt} got no code (${String(error).split("\n")[0]}); waiting ${Math.round(plan.waitMs / 1000)} s for the one-code-per-minute window`);
+      await new Promise((resolve) => setTimeout(resolve, plan.waitMs));
+    }
   }
-  if (!code) throw new Error("sign-in: no fresh code in Inbucket (rate limit is one code per address per ~60 s)");
   await page.getByLabel("Sign-in code", { exact: true }).fill(code);
   await page.waitForURL((url) => url.pathname === "/admin", { timeout: 60_000 });
   await context.storageState({ path: out });
