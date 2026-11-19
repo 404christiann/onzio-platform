@@ -1,5 +1,50 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4-0a verify-rc-admin flake cleanup
+
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4-0a, branch `claude/rc-admin-4-0a` on `1177645d`.
+**Status:** `in_progress`: PR open, waiting for onzio-bot. Skill only: no app code, no migration.
+
+**Flakes fixed:**
+- Gate 6 compared Diverse City pages after a fixed 2 s sleep, so a slow fetch left Contact and Shop still loading
+  (6/8; an identical rerun was 8/8). It now waits for a deterministic settled signal (`scripts/settle.mjs`): document
+  complete, no showing loading marker (`aria-busy`, loading region not in `content` phase, skeleton or shimmer that is
+  actually visible), no unfinished animation, and the `main` aria tree unchanged for three reads. A page that never
+  settles in 20 s fails with the reason instead of being compared half-loaded.
+- Gate 3 "saved" read the Save button colour once, when `data-state` flipped, in the middle of its 220 ms fade
+  (`rgb(52, 199, 90)` on Shop). It now waits for every unfinished animation and transition on the button to finish
+  (`Animation.finished`), then reads the settled colour once; mid-fade is never judged.
+- Gate 6 also failed once (homepage run, 8/8 identical) on a console 404 seen on the package page but not yet on
+  origin/main's: Vercel's `/_vercel/insights/script.js`, requested late on every page and 404ing on `next start`. It is
+  now ignored by URL on both builds (`isEnvironmentNoise`); every other failed resource still counts. The result file
+  now records each page's failed responses with URLs.
+- Runs failed at the seed step in 3 of 8 (gateway "invalid response" while the reset's containers were still
+  restarting). `locked-run.sh` now waits for auth, storage and PostgREST to answer three times in a row after the
+  reset, before seeding; a stack that never answers fails the run.
+- Sign-in had no retry: a run starting inside another run's one-code-per-address-per-~60 s window got no code screen
+  and failed (reported on Policies' run 5). `sign-in.mjs` now waits out the window and asks again, at most 3 attempts,
+  each accepting only mail sent after its own request (`scripts/sign-in-retry.mjs`). Not proven by a live rate-limit hit;
+  the decision logic is unit-tested.
+- Two bugs in my first version, found by the first real run and fixed: a finished fill-forward animation (the check
+  draw) still shows in `getAnimations()`, and Programs keeps 13 hidden skeleton shimmers in the DOM after loading.
+
+**Files changed:** `.claude/skills/verify-rc-admin/rc-admin-verify.spec.ts`, `scripts/settle.mjs`, `scripts/settle.d.mts`, `scripts/sign-in.mjs`, `scripts/sign-in-retry.mjs`, `scripts/locked-run.sh`,
+`scripts/report.mjs` (gate 6 also needs `settled`), `scripts/verify.test.mjs` (10 new tests), `SKILL.md`.
+
+**Verification** (`--touched none`, reports under `test-results/rc-admin-verify/`, local only):
+- `/admin/shop`: `20261119-081935-...-shop2`, `082807-...-shop3` and `094514-...-shop5`: all six gates passed (14/14
+  payloads, Diverse City 8/8). Shop 1 failed on the two bugs above and Shop 4 on the seed race.
+- `/admin/homepage`: `085935-...-home3` and `091124-...-home4` passed all six gates. `101619-...-home6` (final code):
+  gates 1, 2, 3, 5, 6 passed; gate 4 failed once (below). `083929-...-home1` failed gate 6 on the Vercel 404 (fixed).
+  Shop 5 and Homepage 6 ran on the final gate 3, 6 and stack-wait code; the sign-in retry is unit-tested, not exercised live.
+- Skill self-tests: `node --test .claude/skills/verify-rc-admin/scripts/verify.test.mjs`: 40 pass.
+
+**Not fixed, moved to RC-ADMIN-4-0a-2:** a page occasionally stays on its loading skeleton for more than 15 s and never
+shows its `h1`: origin/main's Chick-fil-A in gate 2 (run `075435-...-shop1`) and the package's Homepage at 390 light in
+gate 4 (run `101619-...-home6`, screenshot in its `playwright/` folder). Both passed on an identical rerun. It may be a
+real intermittent hang in the editors' data load rather than a skill problem, so the skill does not retry around it.
+Next: on the next occurrence capture the pending and failed requests at that moment.
+
 ## 2026-11-19 - RC-ADMIN-4a-contact: Rose City Contact editor on the editor kit (app code only)
 
 **Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4a-contact, branch `claude/rc-admin-4a-contact` off `1177645d`.

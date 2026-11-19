@@ -65,7 +65,9 @@ and if the lock is still busy the run logs who holds it (`lsof` on the lock file
 Inside one lock hold (`scripts/locked-run.sh`):
 
 4. `supabase db reset --local` from the package worktree (project `onzio-platform-contracts`),
-   then the ledger's newest version must equal the newest file in `supabase/migrations`.
+   then the ledger's newest version must equal the newest file in `supabase/migrations`, then the run waits until
+   the gateway answers for auth, storage and PostgREST three times in a row (up to 180 s; the reset restarts those
+   containers and a seed started at once got "An invalid response was received from the upstream server").
 5. `scripts/seed-local.sh <base-copy>`: Diverse City via `scripts/import-diverse-city-local.ts`,
    then the Rose City seeds copied into `<base-copy>/scripts/_rcv/`, re-pointed 55321→54321 and
    55322→54322 (the recipe from the 2026-11-17 audit), run from the base copy so their receipt
@@ -205,7 +207,9 @@ and writes its gitignored `test-results/`; nothing else there changes.
   no status line and is the enabled "Save" button); saving (request held 1.5 s:
   state saving, aria-busy); saved (state saved, the check mark `[data-admin-save-check]` or
   `[data-page-save-check]` visible, background
-  rgb(52,199,89) or rgb(48,209,88), and the page never contains "All changes saved", then clean);
+  rgb(52,199,89) or rgb(48,209,88) **read once every unfinished animation and transition on the button has
+  finished** (`Animation.finished`; sampling when `data-state` flips caught the 220 ms fade), and the page never
+  contains "All changes saved", then clean);
   retry (first POST and the `?operationId=` receipt lookup aborted → "Retry same save", field
   disabled, or on a kit editor every Edit control disabled or the reopened dialog's field disabled →
   retry resends the identical body → saved); conflict (a second signed-in context
@@ -243,7 +247,12 @@ and writes its gitignored `test-results/`; nothing else there changes.
   140 ms transform.)
 - **Gate 6 (Diverse City).** `/admin`, `/homepage`, `/programs`, `/contact`, `/shop`, `/about`,
   `/schedule`, `/sponsors` on both builds: status < 400, an h1, no console error that origin/main
-  does not also log, and an identical `main` aria snapshot. Screenshots of the package build.
+  does not also log, and an identical `main` aria snapshot. Each page is compared only once it has **settled**
+  (`scripts/settle.mjs`, pinned by `verify.test.mjs`): document complete, no showing loading marker (`aria-busy`,
+  loading region outside the `content` phase, visible skeleton or shimmer), no unfinished animation, and the `main`
+  aria tree unchanged for three reads 100 ms apart. A page that does not settle in 20 s fails with the reason (a
+  hidden skeleton kept in the DOM does not count). The one console error ignored on both builds is the 404 of
+  Vercel's `/_vercel/insights/script.js` (it only exists on Vercel and is requested late). Screenshots of the package build.
 
 Self-tests (hermetic: temp git repos and stub binaries, no database):
 
@@ -312,8 +321,8 @@ the next session that needs a clean stack resets it under the lock (that is norm
   (1 h) supabase-js refreshes and rotates the one refresh token, signing every later context out.
   That is why the clock is pinned to the run's start; keep a run under an hour.
 - Editors poll, so `networkidle` never settles: wait on elements, not network.
-- One email code per address per ~60 s. A failed run that already signed in needs a minute
-  before the next run's sign-in.
+- One email code per address per ~60 s. `sign-in.mjs` waits out that window and retries (3 attempts at most); a
+  failed run that already signed in can still need a minute before the next run's sign-in.
 - Other sessions reset the shared database between their runs. Never trust a failure from data
   outside this lock hold; re-run instead.
 - The axe ratchet compares rule + target with CSS-module hashes stripped. If a package renames

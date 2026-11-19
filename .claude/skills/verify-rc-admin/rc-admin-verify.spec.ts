@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { KIT_ANY_FIELD_SELECTOR, KIT_DIALOG_SELECTOR, KIT_DONE_SELECTOR, KIT_EDIT_SELECTOR, KIT_ENABLED_FIELD_SELECTOR, KIT_LIST_SELECTOR, KIT_WAIT_MS, chooseOpenPath, firstMarkableIndex, isPhoneWidth, listProblems, retryLockCheck, sectionTryOrder, sheetBarProblems } from "./scripts/kit-path.mjs";
+import { BUSY_SELECTOR, isEnvironmentNoise, savedColourProblems, waitUntilSettled } from "./scripts/settle.mjs";
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type Request } from "@playwright/test";
 
 const HEAD = process.env.RCV_HEAD_URL!;            // http://rose-city.localhost:3110
@@ -449,7 +450,16 @@ test.describe("gate 3: save behaviour", () => {
     await step("saved", async () => {
       await expect(button).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
       await expect(button.locator(SAVE_CHECK)).toBeVisible();
-      expect(SAVED_GREENS).toContain(await button.evaluate((el) => getComputedStyle(el).backgroundColor));
+      // The colour fades in over 220 ms and the button pops for 320 ms: wait until every animation and transition on it has
+      // finished, then read the settled colour once. Sampling at the moment data-state flips caught rgb(52, 199, 90) mid-fade.
+      const settledSave = await button.evaluate(async (el) => {
+        // A finished animation with fill-mode "both" (the check mark's draw) stays listed forever: only unfinished ones count.
+        const finite = () => el.getAnimations({ subtree: true }).filter((a) => a.playState !== "finished" && a.playState !== "idle" && a.effect?.getComputedTiming().iterations !== Infinity);
+        for (let round = 0; round < 10 && finite().length; round++) await Promise.allSettled(finite().map((a) => a.finished));
+        return { state: el.getAttribute("data-state"), colour: getComputedStyle(el).backgroundColor, running: finite().length };
+      });
+      const savedProblems = savedColourProblems(settledSave, SAVED_GREENS);
+      if (savedProblems.length) throw new Error(savedProblems.join("; "));
       await page.screenshot({ path: join(OUT, "screenshots", "save-saved.png") });
       await forbiddenCopy(page);
       await expect(button).toHaveAttribute("data-state", "clean", { timeout: 5_000 });
@@ -806,16 +816,36 @@ const DC_PAGES = ["/admin", "/admin/homepage", "/admin/programs", "/admin/contac
 async function dcSnapshot(context: BrowserContext, base: string, path: string, shot?: string) {
   const page = await context.newPage();
   const errors: string[] = [];
-  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
+  page.on("console", (m) => { if (m.type() === "error" && !isEnvironmentNoise(m.location().url)) errors.push(m.text().slice(0, 200)); });
   page.on("pageerror", (e) => errors.push(String(e).slice(0, 200)));
+  // Which request a console "Failed to load resource" was (the message has no URL), and which asset loads are still in flight.
+  const failed: string[] = [];
+  const inflight = new Set<Request>();
+  const asset = (r: Request) => ["image", "font", "stylesheet", "script", "media"].includes(r.resourceType());
+  page.on("request", (r) => { if (asset(r)) inflight.add(r); });
+  page.on("requestfinished", (r) => inflight.delete(r));
+  page.on("requestfailed", (r) => inflight.delete(r));
+  page.on("response", (r) => { if (r.status() >= 400) failed.push(`${r.status()} ${r.request().method()} ${r.url().replace(/\?.*$/, "")}`); });
   const response = await page.goto(dcUrl(base) + path);
-  await page.waitForTimeout(2_000); // editors keep polling, so networkidle never settles
+  // Compare a page only once it finished loading: document complete, no skeleton or aria-busy marker, no animation still playing,
+  // and the main aria tree unchanged across consecutive reads. (A fixed sleep lost to a slow fetch: Contact and Shop were
+  // compared while still loading.) Editors keep polling, so networkidle never settles.
+  const settle = await waitUntilSettled(async () => {
+    const seen = await page.evaluate((busySelector) => ({
+      ready: document.readyState === "complete",
+      // Only markers that are showing count: Programs keeps its (hidden) skeleton in the DOM after it loaded.
+      busy: [...document.querySelectorAll(busySelector)].filter((el) => el.checkVisibility({ opacityProperty: true, visibilityProperty: true })).length,
+      running: document.getAnimations().filter((a) => a.playState === "running" && a.effect?.getComputedTiming().iterations !== Infinity).length,
+    }), BUSY_SELECTOR);
+    // Asset loads (images, fonts, scripts, styles) still in flight count as loading too; XHR/fetch do not (editors poll).
+    return { ...seen, busy: seen.busy + inflight.size, key: await page.locator("main").first().ariaSnapshot({ timeout: 2_000 }).catch((e) => `ERROR ${String(e).slice(0, 80)}`) };
+  });
   const status = response?.status() ?? 0;
   const h1 = await page.locator("h1").first().textContent().catch(() => null);
   const aria = await page.locator("main").first().ariaSnapshot().catch((e) => `ERROR ${e}`);
   if (shot) await page.screenshot({ path: shot, fullPage: true });
   await page.close();
-  return { status, h1, aria, errors };
+  return { status, h1, aria, errors, failed, settled: settle.settled, notSettled: settle.settled ? undefined : settle.why };
 }
 test("gate 6: Diverse City admin smoke", async ({ browser }) => {
   const context = await browser.newContext({ storageState: STORAGE, viewport: { width: 1440, height: 900 } });
@@ -824,11 +854,12 @@ test("gate 6: Diverse City admin smoke", async ({ browser }) => {
     const head = await dcSnapshot(context, HEAD, path, join(OUT, "screenshots", `diverse-city${path.replace(/\//g, "-")}.png`));
     const base = await dcSnapshot(context, BASE, path);
     const newErrors = head.errors.filter((e) => !base.errors.includes(e));
-    pages.push({ path, status: head.status, h1: head.h1, errors: newErrors, baseErrors: base.errors.length, sameAsMain: head.aria === base.aria, headAria: head.aria === base.aria ? undefined : head.aria, baseAria: head.aria === base.aria ? undefined : base.aria });
+    pages.push({ path, status: head.status, h1: head.h1, errors: newErrors, failed: head.failed, baseFailed: base.failed, settled: head.settled && base.settled, notSettled: [head.notSettled && `package: ${head.notSettled}`, base.notSettled && `origin/main: ${base.notSettled}`].filter(Boolean).join("; ") || undefined, baseErrors: base.errors.length, sameAsMain: head.aria === base.aria, headAria: head.aria === base.aria ? undefined : head.aria, baseAria: head.aria === base.aria ? undefined : base.aria });
   }
   await context.close();
   record("diverse-city", { gate: 6, sharedFix: SHARED_FIX, pages });
   for (const p of pages) {
+    expect.soft(p.settled, `${p.path} never finished loading (${p.notSettled})`).toBe(true);
     expect.soft(p.status, `${p.path} status`).toBeLessThan(400);
     expect.soft(p.h1, `${p.path} has a heading`).toBeTruthy();
     expect.soft(p.errors, `${p.path} console errors not present on origin/main`).toEqual([]);
