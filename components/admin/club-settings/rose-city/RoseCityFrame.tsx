@@ -42,7 +42,7 @@ export function RoseCityFrame({ active, children, ...save }: { active: "branding
         }}
       /> : <nav aria-label="Club settings"><Link href="/admin/branding" className={styles.action}>Branding</Link></nav>}
       <div
-        className={styles.panels}
+        className={active === "team" ? `${styles.panels} ${rose.team}` : styles.panels}
         role={visiblePanel ? "tabpanel" : undefined}
         id={visiblePanel ? `club-settings-panel-${active}` : undefined}
         aria-labelledby={visiblePanel ? `club-settings-tab-${active}` : undefined}

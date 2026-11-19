@@ -10,3 +10,9 @@
 .paymentsLink:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) { .paymentsLink:hover { background: hsl(var(--accent)); } }
 @media (max-width: 639px) { .payments { grid-template-columns: minmax(0, 1fr); } }
+
+/* Team access loads in a ShimmerRegion whose skeleton is taller than the loaded list, so the content below it
+   (the ownership note, the Payments card) moved when the list arrived. Reserve the skeleton's height here, on the
+   Rose City frame only (the region's own min-height is inline, hence !important). */
+.team [data-admin-loading-region] { min-height: 410px !important; }
+@media (max-width: 820px) { .team [data-admin-loading-region] { min-height: 460px !important; } }
