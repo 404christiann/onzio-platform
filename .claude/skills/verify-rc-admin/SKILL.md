@@ -128,8 +128,8 @@ Base URLs: `http://rose-city.localhost:<port>/admin/...`, `http://diverse-city.l
 | members | /admin/members | POST /api/admin/members | no field: types `rcv-gate2@example.com` into "Administrator email" and presses "Add administrator" (the request is aborted, nobody is added) |
 | seasons | /admin/seasons | POST /api/admin/data, `insert` on `seasons` | no field: "Create Next Season" (classic) or "Create <year> season" (rebuilt) → confirm (aborted at the first write) |
 | roster | /admin/roster | POST /api/admin/data, `update` on `players` | no field: first `[data-player-id]` → Edit → "Name" → "Save changes" (or "Save player" on the rebuilt dialog) |
-| stats-match | /admin/stats?view=match | POST /api/admin/data, `upsert` on `player_match_stats` / `goalkeeper_match_stats` | first match in the "Match" select, first player ("Select <player>" on main; "Edit <player>" opens a dialog on Rose City's table), first stat input (+1), Done on that dialog (the dialog edits the draft live) → header Save |
-| stats-season | /admin/stats?view=season | POST /api/admin/data, `upsert` on the `*_season_stats` / `*_season_adjustments` tables | first player ("Select" on main, "Edit" dialog on Rose City), first stat input (+1), Done → header Save |
+| stats-match | /admin/stats?view=match | POST /api/admin/data, `upsert` on `player_match_stats` / `goalkeeper_match_stats` | first match in the "Match" select, first player ("Select <player>" on main; "Edit <player>" opens a dialog on Rose City's table), first stat input (+1; the conflict step's other session adds +2, so the kept edit stays dirty), Done on that dialog (the dialog edits the draft live) → header Save |
+| stats-season | /admin/stats?view=season | POST /api/admin/data, `upsert` on the `*_season_stats` / `*_season_adjustments` tables | first player ("Select" on main, "Edit" dialog on Rose City), first stat input (+1; the conflict step's other session adds +2, so the kept edit stays dirty), Done → header Save |
 
 Standings is not a Rose City editor (hidden for the club), so it has no row; `/admin/standings` is only in gate 6.
 

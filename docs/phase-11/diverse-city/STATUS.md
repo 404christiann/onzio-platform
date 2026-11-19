@@ -1,5 +1,23 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4b-0-4 verify-rc-admin: conflict step bumps a number field by different amounts
+
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-4, branch `claude/rc-admin-4b-0-4` on `84fba705`. **Status:** `in_progress`: PR open, waiting for
+onzio-bot. Skill only: no app code, no migration.
+
+**Completed work:** in gate 3's conflict step both sessions added 1 to the same number field, so the other session saved V+1 and the first
+session's draft was also V+1. After "Load latest and keep my edits" the draft equalled the latest, the page was rightly clean, and the step then
+wrongly expected `dirty` (found on Rose City's Stats; the real conflict UI works). `mark()` now adds `numberBump(marker)`: 2 for the conflict step's
+other session (`c2`), 1 for every other marker, so the kept edit stays dirty. Text and URL fields already differ by marker. One self-test covers the
+bump, the Stats scenario and that the spec uses it. 58 self-tests pass.
+
+**Verification** (`--touched none`, clean main `0123acd4`; reports under `/Users/christianalcala/Downloads/onzio-platform/.claude/worktrees/rc-admin-4b-0-4/test-results/rc-admin-verify/`):
+- `/admin/stadium` (kit editor, runs conflict): all six gates pass, conflict and discard included: `20261119-150055-RC-ADMIN-4b-0-4-f4stadium`.
+- `/admin/stats?view=match` (main's old workspace): all six pass: `20261119-150856-RC-ADMIN-4b-0-4-f4stats`.
+- Not exercised live: conflict on Rose City's rebuilt Stats (the Stats branch verifies against this).
+
+**Next step:** onzio-bot, then `verify.sh cleanup --worktree` on this worktree.
+
 ## 2026-11-19 - RC-ADMIN-4c: Rose City Club settings on the editor kit (app code only)
 
 **Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4c, branch `claude/rc-admin-4c` off `9e1dee1c`.
