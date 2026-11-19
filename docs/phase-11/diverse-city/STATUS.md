@@ -2,7 +2,7 @@
 
 ## 2026-11-19 - RC-ADMIN-4b-0-4 verify-rc-admin: conflict step bumps a number field by different amounts
 
-**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-4, branch `claude/rc-admin-4b-0-4` on `0123acd4`. **Status:** `in_progress`: PR open, waiting for
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-4, branch `claude/rc-admin-4b-0-4` on `84fba705`. **Status:** `in_progress`: PR open, waiting for
 onzio-bot. Skill only: no app code, no migration.
 
 **Completed work:** in gate 3's conflict step both sessions added 1 to the same number field, so the other session saved V+1 and the first
