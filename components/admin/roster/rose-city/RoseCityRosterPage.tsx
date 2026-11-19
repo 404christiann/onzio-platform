@@ -28,19 +28,21 @@ const DESCRIPTION = "Players and staff. Each player saves on their own.";
 
 type Editor = { key: number; player: Player | null };
 
-async function loadTotals(clubId: string): Promise<Record<string, SeasonLine> | null> {
+/** Season totals per table. Like the classic editor's stats panel, a player's numbers come from the table for their current position. */
+type SeasonTotals = { field: Record<string, SeasonLine>; keeper: Record<string, SeasonLine> };
+
+async function loadTotals(clubId: string): Promise<SeasonTotals | null> {
   try {
     const season = await fetchActiveSeason(clubId);
-    if (!season) return {};
+    if (!season) return { field: {}, keeper: {} };
     const client = createClient();
     const [field, keepers] = await Promise.all([
       client.from("player_season_totals").select("player_id, goals, assists, mins").eq("season_id", season.id),
       client.from("goalkeeper_season_totals").select("player_id, saves, clean_sheets, mins").eq("season_id", season.id),
     ]);
     if (field.error || keepers.error) return null;
-    const map: Record<string, SeasonLine> = {};
-    for (const row of [...(field.data ?? []), ...(keepers.data ?? [])] as Array<SeasonLine & { player_id: string }>) map[row.player_id] = row;
-    return map;
+    const index = (rows: unknown) => Object.fromEntries((rows as Array<SeasonLine & { player_id: string }>).map(row => [row.player_id, row]));
+    return { field: index(field.data ?? []), keeper: index(keepers.data ?? []) };
   } catch {
     return null;
   }
@@ -57,7 +59,7 @@ export default function RoseCityRosterPage({ StaffComponent }: { StaffComponent:
   const [tab, setTab] = useState("players");
   const [staffAdd, setStaffAdd] = useState(0);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [totals, setTotals] = useState<Record<string, SeasonLine> | null>(null);
+  const [totals, setTotals] = useState<SeasonTotals | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<RosterFilters>(DEFAULT_ROSTER_FILTERS);
@@ -174,7 +176,7 @@ export default function RoseCityRosterPage({ StaffComponent }: { StaffComponent:
                 <h2 id={`roster-group-${group.position}`} className={styles.groupHead}>{group.position}s <span className={styles.groupCount}>{group.players.length}</span></h2>
                 <ul className={styles.grid} aria-label={`${group.position}s`}>
                   {group.players.map(player => (
-                    <RosterPlayerCard key={player.id} player={player} totals={totals ? totals[player.id] ?? {} : undefined} flash={flash === player.id}
+                    <RosterPlayerCard key={player.id} player={player} totals={totals ? (player.position === "Goalkeeper" ? totals.keeper : totals.field)[player.id] ?? {} : undefined} flash={flash === player.id}
                       switching={switching.has(player.id)} onEdit={event => openPlayer(player, event)} onVisibleChange={active => void toggleCard(player, active)} />
                   ))}
                 </ul>

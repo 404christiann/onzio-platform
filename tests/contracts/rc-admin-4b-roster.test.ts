@@ -243,7 +243,14 @@ describe("RC-ADMIN-4b-roster: page shape", () => {
     expect(page).not.toMatch(/onSave=|state=\{/);
     expect(page).not.toMatch(/sort_order|reorder|moveUp|moveDown/i);
     expect(dialog).toContain("<PageSaveButton");
+    expect(dialog).toContain('saveLabel="Save player"');
     expect(dialog).toContain("footer={footer}");
+  });
+
+  it("reads a player's card numbers from the table for their current position, as the classic stats panel does", () => {
+    expect(page).toContain('(player.position === "Goalkeeper" ? totals.keeper : totals.field)[player.id]');
+    const classic = read("app/admin/(protected)/roster/page.tsx");
+    expect(classic).toContain('const table = isGK ? "goalkeeper_season_totals" : "player_season_totals";');
   });
 
   it("keeps Staff as the classic list and dialog", () => {

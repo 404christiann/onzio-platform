@@ -121,7 +121,11 @@ export const EDITORS: Editor[] = [
       const name = page.locator("#player-name");
       await expect(name).toBeVisible();
       await mark(name, "rcv");
+<<<<<<< HEAD
       await page.getByRole("dialog").getByRole("button", { name: ROSTER_SAVE_BUTTON }).click();
+=======
+      await page.getByRole("dialog").getByRole("button", { name: /^Save( changes| player)?$/ }).click();
+>>>>>>> 2c97b33d (RC-ADMIN-4b-roster: Save player label; card numbers by current position)
     },
     lacks: { pageSave: "a player is saved from its own dialog; the stats tab's Save is not covered here" } },
   { key: "stats-match", route: "/admin/stats?view=match", save: /\/api\/admin\/data$/, ops: ["upsert"], tables: ["player_match_stats", "goalkeeper_match_stats"],

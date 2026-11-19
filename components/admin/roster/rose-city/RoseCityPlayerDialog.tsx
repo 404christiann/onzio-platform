@@ -221,7 +221,7 @@ export function RoseCityPlayerDialog({ original, open, activeId, onActiveChange,
       </p>
       <div className={styles.actions}>
         <button type="button" className={`admin-press ${styles.cancel}`} disabled={busy} onClick={close}>Cancel</button>
-        <PageSaveButton state={pageState} onSave={() => { void attemptSave(); }} />
+        <PageSaveButton state={pageState} saveLabel="Save player" onSave={() => { void attemptSave(); }} />
       </div>
     </div>
   );
