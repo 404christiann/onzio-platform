@@ -1,0 +1,7 @@
+/* One partner drawn by the real public card: the public page's own heading and bottom bar are not part of a card. */
+.single.single :global(.partner-heading),
+.single.single :global(.partner-action) { display: none; }
+.single.single :global(.partner-body) { padding: 18px 20px; }
+.single.single :global(.partner-grid) { grid-template-columns: minmax(0, 1fr); margin-top: 0; gap: 0; }
+.skeletonHead { display: flex; align-items: baseline; gap: 12px; margin-block: 8px 12px; }
+.skeletonTitle { inline-size: 96px; block-size: calc(1.0625rem * 1.5); }

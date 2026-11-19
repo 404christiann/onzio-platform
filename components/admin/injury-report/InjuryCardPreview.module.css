@@ -1,0 +1,19 @@
+/* Cards preview the real public page with only the part they edit showing. */
+.head.head :global(.injury-body),
+.head.head :global(.injury-band),
+.head.head :global(.injury-rehab),
+.head.head :global(.injury-quote),
+.head.head :global(.injury-video) { display: none; }
+.head.head :global(.injury-heading) { padding-block-end: 28px; }
+.rehab.rehab :global(.injury-heading),
+.rehab.rehab :global(.injury-body) { display: none; }
+.single.single :global(.injury-heading),
+.single.single :global(.injury-rehab),
+.single.single :global(.injury-band),
+.single.single :global(.injury-quote),
+.single.single :global(.injury-video),
+.single.single :global(.injury-cross) { display: none; }
+.single.single :global(.injury-body) { display: block; padding: 14px 18px; }
+.single.single :global(.injury-list) { inline-size: 100%; margin: 0; }
+.skeletonHead { display: flex; align-items: baseline; gap: 12px; margin-block: 8px 12px; }
+.skeletonTitle { inline-size: 96px; block-size: calc(1.0625rem * 1.5); }
