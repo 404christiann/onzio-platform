@@ -7,10 +7,10 @@
 migration, schema, validator, RPC or env change.
 
 **Completed work:**
-- `/admin/stats` (both `?view=match` and `?view=season`) for Rose City (a raw `slug === "rose-city"` in `RoseCityStatsSwitch`, classic portal) is rebuilt on the kit:
+- `/admin/stats` (both `?view=match` and `?view=season`) for Rose City (chosen by slug through `siteFor` in `lib/site-for.ts`: new `adminEditors.stats` slot filled by `roseCitySite`; classic portal only) is rebuilt on the kit:
   `PageFrame` (Save, Discard changes), a Season picker, Match stats / Season totals tabs, read-only tables (field players, then
   goalkeepers) with an Edit button per player, and a phone list. Diverse City and the reimagined portal keep `CombinedStatsPage`
-  untouched; the switch is `RoseCityStatsSwitch` (slug-keyed, no template selector, selector debt unchanged).
+  untouched; the switch is `RoseCityStatsSwitch` (`siteFor(club)?.adminEditors?.stats`, no template selector, selector debt unchanged).
 - Edit opens a dialog whose number boxes change the page draft at once; Done closes it; the page Save publishes. The stepper
   Workspace is gone. The season dialog shows "From matches N · added by hand +M" (one extra read of the season's saved matches,
   `loadSeasonGames`), and refuses over-9,999 hand-added numbers in the classic words.

@@ -260,8 +260,9 @@ describe("RC-ADMIN-4b Stats: stale-edit conflict and retry", () => {
 describe("RC-ADMIN-4b Stats: who gets the new page", () => {
   it("Rose City is chosen by slug and the reimagined portal keeps the shared page", () => {
     const src = source("components/admin/stats/rose-city/RoseCityStatsSwitch.tsx");
-    expect(src).toContain('const ROSE_CITY_SLUG = "rose-city"');
-    expect(src).toContain("club.slug === ROSE_CITY_SLUG && classic");
+    expect(src).toContain("classic ? siteFor(club)?.adminEditors?.stats : undefined");
+    expect(source("components/sites/rose-city/site-definition.ts")).toContain("stats: RoseCityStatsPage");
+    expect(source("lib/site-for.ts")).toContain("stats?: ComponentType;");
     expect(src).not.toContain("presentationTemplateKey");
     expect(src).not.toContain("cinematic@2");
   });
@@ -279,19 +280,19 @@ describe("RC-ADMIN-4b Stats: who gets the new page", () => {
 
   it("renders the shared page for another club", async () => {
     vi.resetModules();
-    vi.doMock("@/components/ClubContextProvider", () => ({ useClubContext: () => ({ slug: "diverse-city" }) }));
+    vi.doMock("@/components/ClubContextProvider", () => ({ useClubContext: () => ({ slug: "diverse-city", presentationTemplateKey: null }) }));
     vi.doMock("@/components/admin/AdminPortalProvider", () => ({ useAdminPortal: () => ({ portal: "classic" }) }));
     vi.doMock("@/components/admin/stats/CombinedStatsPage", () => ({ CombinedStatsPage: () => createElement("p", null, "shared-page") }));
-    vi.doMock("@/components/admin/stats/rose-city/RoseCityStatsPage", () => ({ RoseCityStatsPage: () => createElement("p", null, "rose-city-page") }));
+    vi.doMock("@/lib/site-for", () => ({ siteFor: (club: { slug: string }) => club.slug === "rose-city" ? { adminEditors: { stats: () => createElement("p", null, "rose-city-page") } } : null }));
     const { StatsPageForClub } = await import("@/components/admin/stats/rose-city/RoseCityStatsSwitch");
     expect(renderToStaticMarkup(createElement(StatsPageForClub))).toContain("shared-page");
-    vi.doMock("@/components/ClubContextProvider", () => ({ useClubContext: () => ({ slug: "rose-city" }) }));
+    vi.doMock("@/components/ClubContextProvider", () => ({ useClubContext: () => ({ slug: "rose-city", presentationTemplateKey: "cinematic@2" }) }));
     vi.resetModules();
     const again = await import("@/components/admin/stats/rose-city/RoseCityStatsSwitch");
     expect(renderToStaticMarkup(createElement(again.StatsPageForClub))).toContain("rose-city-page");
     vi.doUnmock("@/components/ClubContextProvider");
     vi.doUnmock("@/components/admin/AdminPortalProvider");
     vi.doUnmock("@/components/admin/stats/CombinedStatsPage");
-    vi.doUnmock("@/components/admin/stats/rose-city/RoseCityStatsPage");
+    vi.doUnmock("@/lib/site-for");
   });
 });

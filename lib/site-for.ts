@@ -12,6 +12,8 @@ export type SiteAdminEditors = {
   branding?: ComponentType;
   /** The frame around Club settings (title, tabs, Save). Branding supplies its own; Team access renders inside it. */
   clubSettingsFrame?: ComponentType<{ active: "branding" | "team"; children: ReactNode }>;
+  /** The Stats editor (/admin/stats, both views). Classic portal only: the reimagined portal keeps the shared page. */
+  stats?: ComponentType;
 };
 export type SiteDefinition = { id: string; adminEditors?: SiteAdminEditors };
 
