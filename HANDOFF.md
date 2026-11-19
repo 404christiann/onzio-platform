@@ -1,3 +1,13 @@
+## 2026-11-19 - RC-ADMIN-4b-seasons: Rose City Seasons on the editor kit (app code only)
+
+- **Status:** `in_progress`, PR open; verify-rc-admin PASS (gate 3 declared n/a, Diverse City 15/15 identical). No migration, schema, validator, RPC,
+  env or skill change. Record in `STATUS.md`.
+- **What:** `/admin/seasons` for Rose City is a kit list: "Make active" asks first and names the pages that switch, "Delete" has a real confirm,
+  "Create <next> season" names the season. Same writes as the classic page. The list is read on the server, so the 390 px layout shift main had
+  (CLS 0.00111) is gone. No Standings link or text for Rose City. Diverse City keeps the classic page unchanged (its "Standings ... does not change
+  with the season" copy is still wrong; Christian decides). One slug-keyed branch in `seasons/page.tsx` (`"rose-city"`), to fold into `lib/site-for.ts` after 4c.
+- **Exact next step:** onzio-bot review, then Christian merges.
+
 ## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)
 
 - **Status:** `in_progress`, PR open; verify-rc-admin PASS (gate 3 declared n/a, Diverse City 15/15 identical). No migration, schema, validator, RPC or env
