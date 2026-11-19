@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_PARTNERS, starterCinematicPartnersContent, type CinematicPartnersSnapshot } from "@/lib/cinematic-partners-content";
+import { ADMIN_ROUTE_MANIFEST, getWebsiteHubSections } from "@/lib/admin-route-manifest";
 import { addPartner, movePartner, removePartner, unusedUploads } from "@/lib/cinematic-partners-editor";
 
 const mocks = vi.hoisted(() => ({
@@ -34,6 +35,17 @@ beforeEach(() => {
   mocks.retirePublishedMedia.mockResolvedValue({ status: "retired" });
   mocks.createClient.mockResolvedValue({ schema: () => ({ rpc: mocks.rpc }) });
 });
+
+const CINEMATIC_OWNER = { role: "owner", presentationTemplateKey: "cinematic@2", isBillingAuthorized: true, canMutateContent: true, storeEnabled: true } as const;
+const hubRouteIds = (presentationTemplateKey: string) =>
+  getWebsiteHubSections({ ...CINEMATIC_OWNER, presentationTemplateKey }).flatMap((section) => section.routes.map((route) => route.id));
+/** The editor is a cinematicOnly Website route: visible in the Hub for cinematic@2, and not for another design. */
+function expectHubRoute(id: string, href: string) {
+  const route = ADMIN_ROUTE_MANIFEST.find((candidate) => candidate.id === id);
+  expect(route, id).toMatchObject({ href, groupId: "website", cinematicOnly: true });
+  expect(hubRouteIds("cinematic@2")).toContain(id);
+  expect(hubRouteIds("academy@1")).not.toContain(id);
+}
 
 describe("Partners editor save route", () => {
   it("saves through the atomic database call and retires logos no partner uses any more", async () => {
@@ -105,12 +117,8 @@ describe("Partners editor draft", () => {
     expect(unusedUploads(["kept", "replaced", "removed"], content)).toEqual(["replaced", "removed"]);
   });
 
-  it("is reachable from Homepage and Sponsors for cinematic@2 owners", () => {
-    // The cinematic@2 shortcut list moved to lib/cinematic-editor-shortcuts.ts (RC2027-ROBINSON-EDITOR).
-    const homepage = readFileSync(resolve(process.cwd(), "components/admin/homepage/HomepageEditor.tsx"), "utf8");
-    expect(homepage).toContain('if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push(...CINEMATIC_PAGE_SHORTCUTS);');
-    const shortcuts = readFileSync(resolve(process.cwd(), "lib/cinematic-editor-shortcuts.ts"), "utf8");
-    expect(shortcuts).toContain('{ label: "Edit in Partners", short: "Partners", href: "/admin/partners" }');
+  it("is reachable from the Website Hub and Sponsors for cinematic@2 owners", () => {
+    expectHubRoute("partners", "/admin/partners");
     const sponsors = readFileSync(resolve(process.cwd(), "app/admin/(protected)/sponsors/page.tsx"), "utf8");
     // Every other design returns the plain Sponsors page before the Partners link.
     expect(sponsors).toMatch(/if \(club\.presentationTemplateKey !== "cinematic@2"\) return page;[^]*href="\/admin\/partners"/);

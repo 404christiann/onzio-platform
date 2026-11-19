@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
+import { Shimmer } from "../Shimmer";
 import { KIT_EDIT_PROPS } from "./kitEdit";
 import { hasVisibilityControl, type SectionCardItem } from "./SectionCards";
 import styles from "./PreviewCards.module.css";
@@ -56,7 +57,9 @@ function useNearViewport(enabled: boolean) {
 function PreviewBox({ children, width, scale, lazy }: { children: ReactNode; width: number; scale: number; lazy: boolean }) {
   const { ref, near } = useNearViewport(lazy);
   return (
-    <div ref={ref} className={styles.box} aria-hidden="true" inert data-preview-box="">
+    <div ref={ref} className={styles.box} aria-hidden="true" inert data-preview-box="" data-preview-mounted={near}>
+      {/* Placeholder under the preview: shown until it mounts, and while a consumer keeps the mounted content visibility:hidden until it settles (see the CSS). */}
+      <Shimmer className={styles.placeholder} data-preview-placeholder="" />
       {near && (
         <div className={styles.scaled} style={{ "--preview-width": `${width}px`, "--preview-scale": scale } as CSSProperties}>
           {children}
@@ -72,7 +75,9 @@ function PreviewBox({ children, width, scale, lazy }: { children: ReactNode; wid
  * footer holds the title, an unsaved-edits dot, the show/hide switch or the
  * "Always shown" chip, and Edit. The preview box has a fixed size and is
  * scaled with transform and clipped, so loading or editing a preview never
- * moves the page.
+ * moves the page. Until a preview mounts (lazy) or settles (a consumer hiding
+ * its content with visibility:hidden, like Stadium's SettledPreview), the box
+ * shows the kit's shimmer instead of an empty white box.
  */
 export function PreviewCards({
   sections,

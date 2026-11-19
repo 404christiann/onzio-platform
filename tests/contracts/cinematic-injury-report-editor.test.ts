@@ -17,6 +17,7 @@ vi.mock("@/lib/club-context", () => ({ getClubContext: mocks.getClubContext }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/lib/media-processing", () => ({ retirePublishedMedia: mocks.retirePublishedMedia }));
 import { GET, POST } from "@/app/api/admin/cinematic-injury-report/route";
+import { ADMIN_ROUTE_MANIFEST, getWebsiteHubSections } from "@/lib/admin-route-manifest";
 
 const clubId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222222";
@@ -42,6 +43,17 @@ beforeEach(() => {
   mocks.retirePublishedMedia.mockResolvedValue({ status: "retired" });
   mocks.createClient.mockResolvedValue({ schema: () => ({ rpc: mocks.rpc }) });
 });
+
+const CINEMATIC_OWNER = { role: "owner", presentationTemplateKey: "cinematic@2", isBillingAuthorized: true, canMutateContent: true, storeEnabled: true } as const;
+const hubRouteIds = (presentationTemplateKey: string) =>
+  getWebsiteHubSections({ ...CINEMATIC_OWNER, presentationTemplateKey }).flatMap((section) => section.routes.map((route) => route.id));
+/** The editor is a cinematicOnly Website route: visible in the Hub for cinematic@2, and not for another design. */
+function expectHubRoute(id: string, href: string) {
+  const route = ADMIN_ROUTE_MANIFEST.find((candidate) => candidate.id === id);
+  expect(route, id).toMatchObject({ href, groupId: "website", cinematicOnly: true });
+  expect(hubRouteIds("cinematic@2")).toContain(id);
+  expect(hubRouteIds("academy@1")).not.toContain(id);
+}
 
 describe("Injury Report save route", () => {
   it("saves through the atomic database call under the Roster permission and retires a replaced logo or band", async () => {
@@ -170,12 +182,8 @@ describe("Injury Report editor draft", () => {
     expect(unusedInjuryUploads(["logo", "old-band", "band", "old-logo"], content)).toEqual(["old-band", "old-logo"]);
   });
 
-  it("is an admin page reached from the Homepage editor for cinematic@2 owners", () => {
-    // The cinematic@2 shortcut list moved to lib/cinematic-editor-shortcuts.ts (RC2027-ROBINSON-EDITOR).
-    const homepage = readFileSync(resolve(process.cwd(), "components/admin/homepage/HomepageEditor.tsx"), "utf8");
-    expect(homepage).toContain('if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push(...CINEMATIC_PAGE_SHORTCUTS);');
-    const shortcuts = readFileSync(resolve(process.cwd(), "lib/cinematic-editor-shortcuts.ts"), "utf8");
-    expect(shortcuts).toContain('{ label: "Edit in Injury Report", short: "Injury Report", href: "/admin/injury-report" }');
+  it("is an admin page reached from the Website Hub for cinematic@2 owners", () => {
+    expectHubRoute("injury-report", "/admin/injury-report");
     const page = readFileSync(resolve(process.cwd(), "app/admin/(protected)/injury-report/page.tsx"), "utf8");
     expect(page).toContain("CinematicInjuryReportEditor");
   });

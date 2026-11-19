@@ -344,7 +344,8 @@
 }
 
 .remove {
-  color: hsl(var(--destructive));
+  /* Pulled toward the foreground so the red keeps 4.5:1 on the card and hover fills in both themes. */
+  color: color-mix(in srgb, hsl(var(--destructive)) 75%, hsl(var(--foreground)));
 }
 
 .iconAction {
