@@ -1,5 +1,61 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-04 Tickets, Season Membership, Know Before You Go on the Previews layout
+
+**Agent/package:** Claude Code (Sonnet worker W4, orchestrated), RC-ADMIN-04, branch `claude/rc-admin-04`
+on `bfc296ba`. **Status:** `in_progress`, PR open. It merges only on Christian's word. App code only:
+no migration, schema, RPC, data or production change, and nothing under `components/cinematic/` or
+`lib/`. It uses RC-ADMIN-07's flags, whose migration is already on production.
+
+**Completed work:**
+
+- **Kit shells:** the three editors follow Stadium's pattern: PageFrame, PreviewCards with the real
+  public section, split dialog, phone sheet, `useSaveState` with Retry through `saveAction.save()`,
+  conflict "Load latest and keep my edits" plus "Reload saved page", "Discard and reload", and
+  `useUnsavedGuard`. Save routes, schemas, receipts, recovery keys, upload buckets and the retire rules
+  are unchanged.
+- **Tickets:**
+  - "Page and purchase link" is always shown. It holds the banner, its height slider, the partner logo
+    and the `purchaseVisible` switch, whose copy says it hides the Buy button on the Tickets page only.
+  - Four cards have switches: Perks (`perksVisible`, with the three perk images), Ticket includes
+    (`includesVisible`), Bus and map (`transitVisible`), and Directions and parking
+    (`directionsVisible`).
+  - Each image sits with its own section, as in the approved prototype. All 7 slots are covered.
+- **Season Membership:**
+  - Page heading, Intro and Buy button use the new optional `visible` flags. The button flag hides both
+    Buy buttons.
+  - Price table: the kit TableEditor, section name plus three prices, with editable headings.
+  - Member Benefits and the Closing call to action keep their existing flags.
+  - Each price row and benefit keeps exactly one image slot.
+- **Know Before You Go:** Page heading is always shown. Next home match carries a read-only note that
+  Schedule feeds it. The match-day tiles are a grid of up to 24. Halftime raffle and Raffle donor keep
+  their existing flags.
+- **Flags:** a missing flag means shown, and loading never adds one. A flag is written only when
+  toggled, and turning an optional flag back to shown drops it if the saved page never had it. An
+  untouched save is byte-identical.
+
+**Files changed:**
+- `components/admin/tickets/`: `TicketsEditor.tsx` (rewritten), plus new `TicketsSectionFields.tsx`
+  and `tickets-sections.ts`.
+- `components/admin/ticket-pages/`: `TicketPageEditor.tsx`, `SeasonMembershipEditor.tsx` and
+  `KnowBeforeYouGoEditor.tsx` (rewritten), plus new `editor-parts.tsx`, `ticket-editors.module.css` and
+  `ticket-page-sections.ts`.
+- Test: `tests/contracts/rc-admin-04-ticket-editors.test.ts` (32 tests).
+
+**Verification:** verify-rc-admin `--touched tickets,season-membership,know-before-you-go` passed all
+six gates on `/admin/tickets`, `/admin/season-membership` and `/admin/know-before-you-go`. Season was
+re-run after rebasing onto `bfc296ba` and still passed all six.
+- Payloads: the 11 untouched editors are identical.
+- Save states: 7/7.
+- CLS: up to 0.00026 at 1440 and 0 at 390, light and dark.
+- 0 new axe violations, and Diverse City 8/8.
+- `tsc` clean; unit 3711; architecture 152; selector debt unchanged.
+
+**Blockers or unresolved decisions:** none. The Season h1 fix (keep the h1 visually hidden when the
+heading is off) is approved for the post-Wave-2 polish batch.
+
+**Exact next step:** bot review; Christian decides the merge.
+
 ## 2026-11-18 - RC-ADMIN-08 Wave 1 follow-ups (discard wording, preview shimmer, kit Remove contrast)
 
 **Agent/package:** Claude Code (Sonnet worker W8, orchestrated), RC-ADMIN-08, branch `claude/rc-admin-08`

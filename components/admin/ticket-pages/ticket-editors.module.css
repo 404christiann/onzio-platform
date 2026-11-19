@@ -1,0 +1,55 @@
+.fields { display: grid; min-inline-size: 0; gap: 18px; }
+.showRow { display: flex; min-block-size: 44px; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 12px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--secondary) / .5); font-size: .9375rem; font-weight: 500; }
+.showCopy { display: grid; gap: 2px; padding-block: 6px; }
+.showCopy small { color: hsl(var(--muted-foreground)); font-size: .8125rem; font-weight: 400; line-height: 1.4; }
+.note { margin: 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.45; }
+.fieldWithLimit { display: grid; min-inline-size: 0; gap: 6px; }
+.two { display: grid; min-inline-size: 0; gap: 20px; }
+@media (min-width: 768px) { .two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.three { display: grid; min-inline-size: 0; gap: 16px; }
+@media (min-width: 768px) { .three { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Tiles and benefits: a grid of compact cards, never a tall stack. */
+.grid { display: grid; min-inline-size: 0; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+.tile { display: grid; min-inline-size: 0; align-content: start; gap: 10px; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); }
+.tile legend { padding: 0; font-size: .8125rem; font-weight: 600; }
+.livePreview :global(.hp-preview-frame) { block-size: min(560px, calc(100dvh - 260px)); min-block-size: 320px; }
+.notice { display: grid; gap: 10px; }
+.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool { display: inline-flex; min-block-size: 40px; min-inline-size: 40px; padding: 0 12px; align-items: center; justify-content: center; gap: 8px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); font-size: .875rem; font-weight: 500; cursor: pointer; }
+.tool:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.tool:disabled { opacity: .45; cursor: default; }
+.iconTool { padding: 0; }
+@media (max-width: 767px) { .tool { min-block-size: 44px; min-inline-size: 44px; } }
+.slider { display: grid; gap: 6px; }
+.slider label { font-size: .875rem; font-weight: 500; }
+.sliderRow { display: flex; align-items: center; gap: 12px; }
+.sliderRow input[type="range"] { flex: 1; min-block-size: 44px; accent-color: hsl(var(--primary)); }
+.sliderRow output { min-inline-size: 4ch; font-variant-numeric: tabular-nums; font-size: .875rem; }
+/* The seat icon is white artwork: it sits on a dark tile, as on the public page. */
+.darkTile { display: grid; place-items: center; min-block-size: 72px; padding: 10px; border-radius: 12px; background: #11161d; color: #fff; font-size: .8125rem; }
+.darkTile img { max-block-size: 56px; max-inline-size: 100%; object-fit: contain; }
+.perk { display: grid; min-inline-size: 0; gap: 12px; }
+.table { display: grid; gap: 14px; min-inline-size: 0; }
+
+/* One card's part of the page. The public components own their markup, so what has no flag is hidden here, never in the components. */
+.only { min-inline-size: 0; }
+.only[data-only="page"] :global(.tickets-perks),
+.only[data-only="page"] :global(.tickets-includes),
+.only[data-only="page"] :global(.tickets-transit),
+.only[data-only="page"] :global(.tickets-directions),
+.only[data-only="page"] :global(.tickets-price-wrap),
+.only[data-only="perks"] :global(.tickets-top),
+.only[data-only="perks"] :global(.tickets-match-includes),
+.only[data-only="includes"] :global(.tickets-top),
+.only[data-only="includes"] :global(.tickets-match),
+.only[data-only="transit"] :global(.tickets-top),
+.only[data-only="transit"] :global(.tickets-match-includes),
+.only[data-only="directions"] :global(.tickets-top),
+.only[data-only="directions"] :global(.tickets-match-includes),
+.only[data-only="button"] :global(.tp-closing) > :not(:global(.tp-buy)),
+.only[data-only="match"] :global(.tp-heading),
+.only[data-only="facts"] :global(.tp-heading),
+.only[data-only="raffle"] :global(.tp-heading),
+.only[data-only="donor"] :global(.tp-heading) { display: none; }

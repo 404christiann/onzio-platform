@@ -1,75 +1,69 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
+import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import {
-  EditorActionButton, EditorField, EditorGroup, EditorImage, EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorReorderButtons,
-  EditorSaveBar, EditorSecondaryButton, EditorSection, EditorSwitch, heldSaveState, kit,
-} from "@/components/admin/cinematic-editor/CinematicEditorKit";
+  EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
+} from "@/components/admin/ui/editor-kit";
+import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import { createClient } from "@/lib/admin-client";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { loadVisitorPageEditor, saveVisitorPageEditor } from "@/lib/visitor-page-editor";
 import {
-  TICKET_PAGE_PATHS, emptyTicketPageContent, ticketPageView, ticketPageDraftFingerprint, ticketPageSaveSchema, ticketPageSchemas,
+  emptyTicketPageContent, ticketPageView, ticketPageDraftFingerprint, ticketPageSaveSchema, ticketPageSchemas,
   type TicketPageContent, type TicketPageKey, type TicketPageSaveRequest, type TicketPageSnapshot, type TicketPageView,
 } from "@/lib/cinematic-ticket-pages-content";
-import { moveItem, removeItem, appendItem } from "@/lib/cinematic-robinson-editor";
 import { setTicketPageImage, unusedTicketPageUploads } from "@/lib/cinematic-ticket-pages-editor";
+import { editorPageState } from "@/components/admin/tickets/tickets-sections";
+import {
+  buildTicketPageSaveInput, changedTicketPageSections, setTicketPageShown, ticketPageSectionShown, ticketPageSectionSlice, type TicketPageSpec,
+} from "./ticket-page-sections";
+import styles from "./ticket-editors.module.css";
 import "@/components/admin/homepage/homepage-editor.css";
 
-export function TextField({ label, value, max, disabled, multiline, hint, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: string; onChange: (value: string) => void }) {
-  return <EditorField label={label} value={value} max={max} disabled={disabled} multiline={multiline} hint={hint} onChange={onChange} />;
-}
-
-export function MoveButtons({ index, length, disabled, noun, onMove, onRemove }: { index: number; length: number; disabled: boolean; noun: string; onMove: (delta: -1 | 1) => void; onRemove: () => void }) {
-  return <EditorReorderButtons index={index} length={length} disabled={disabled} noun={noun} onMove={onMove} onRemove={onRemove} />;
-}
-
-/** A list of plain text lines (bullet points) with add, reorder and remove. */
-export function TextList({ label, items, max, maxLength, disabled, onChange }: { label: string; items: string[]; max: number; maxLength: number; disabled: boolean; onChange: (items: string[]) => void }) {
-  return <div className={kit.stack}>{items.map((item, index) => <div key={index} className="grid min-w-0 gap-2">
-    <TextField label={`${label} ${index + 1}`} value={item} max={maxLength} disabled={disabled} onChange={value => onChange(items.map((current, position) => position === index ? value : current))} />
-    <MoveButtons index={index} length={items.length} disabled={disabled} noun={label.toLowerCase()} onMove={delta => onChange(moveItem(items, index, delta))} onRemove={() => onChange(removeItem(items, index))} />
-  </div>)}
-    <div><EditorActionButton disabled={disabled || items.length >= max} onClick={() => onChange(appendItem(items, "", max))}>Add {label.toLowerCase()}</EditorActionButton></div>
-  </div>;
-}
-
-/** A bordered group inside a section: one tile, one seating section, one benefit. */
-export function ItemCard({ legend, children }: { legend: string; children: ReactNode }) {
-  return <EditorGroup legend={legend}>{children}</EditorGroup>;
-}
-
-export type TicketFieldsApi<K extends TicketPageKey> = {
+export type TicketPageFieldsApi<K extends TicketPageKey> = {
   draft: TicketPageContent<K>;
   view: TicketPageView<K>;
   locked: boolean;
+  uploading: string | null;
   change: (edit: (content: TicketPageContent<K>) => TicketPageContent<K>) => void;
-  /** Upload, describe or remove the image in one slot. Empty slots say they are waiting for a file. */
-  imageSlot: (slot: string, label: string, hint?: string) => ReactNode;
-  /** `label` names the section for the switch's accessible name, for example "Show the raffle on the page". */
-  visibleToggle: (checked: boolean, onChange: (visible: boolean) => void, label: string) => ReactNode;
+  /** Switch a card's part on or off. Writes the flag only because the person toggled it. */
+  setShown: (id: string, shown: boolean) => void;
+  upload: (slot: string, file: File) => Promise<boolean>;
+  removeImage: (slot: string) => void;
 };
-
-export function SectionPanel({ title, description, toggle, children }: { title: string; description?: ReactNode; toggle?: ReactNode; children: ReactNode }) {
-  return <EditorSection title={title} description={description} aside={toggle}><div className={kit.stack}>{children}</div></EditorSection>;
-}
 
 const mediaSchema = z.array(z.object({ id: z.uuid(), storage_bucket: z.string(), storage_path: z.string(), width: z.number(), height: z.number() }).strict());
 
-/** Shared load / draft recovery / upload / atomic save shell for the two Tickets-menu pages (RC2027-TICKET-PAGES). */
-export default function TicketPageEditor<K extends TicketPageKey>({ pageKey, title, description, fields, preview }: {
-  pageKey: K; title: string; description: string;
-  fields: (api: TicketFieldsApi<K>) => ReactNode;
-  preview: (view: TicketPageView<K>) => ReactNode;
+type LiveProps<K extends TicketPageKey> = {
+  spec: TicketPageSpec<K>; id: string; content: TicketPageContent<K>; media: TicketPageSnapshot<K>["media"]; shared: CinematicHomepageContent | null; slice: string;
+  renderLive: (view: TicketPageView<K>) => ReactNode;
+};
+/** The real public page component, fed the draft with every other card switched off. Re-renders only when its own slice changes. */
+function SectionLiveInner<K extends TicketPageKey>({ spec, id, content, media, shared, renderLive }: LiveProps<K>) {
+  const view = useMemo(() => ticketPageView(spec.sectionOnly(content, id), media), [spec, content, id, media]);
+  const urls = useMemo(() => spec.imagesOf(content, id).flatMap(slot => view.images[slot]?.url ? [view.images[slot].url as string] : []), [spec, content, id, view]);
+  return <SettledPreview urls={urls}><div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}>{renderLive(view)}</CinematicShell></div></SettledPreview>;
+}
+const SectionLive = memo(SectionLiveInner, (a, b) => a.id === b.id && a.slice === b.slice && a.media === b.media && a.shared === b.shared) as typeof SectionLiveInner;
+
+/** Load, draft recovery, upload, atomic save and conflict handling for the two Tickets-menu pages (RC2027-TICKET-PAGES), on the editor kit. */
+export default function TicketPageEditor<K extends TicketPageKey>({ spec, title, description, openPageHref, renderFields, renderLive }: {
+  spec: TicketPageSpec<K>; title: string; description: string; openPageHref: string;
+  renderFields: (api: TicketPageFieldsApi<K>, id: string) => ReactNode;
+  renderLive: (view: TicketPageView<K>) => ReactNode;
 }) {
+  const pageKey = spec.key;
   const club = useClubContext();
+  const crumbs = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Tickets and stadium" }];
   const saveSchema = ticketPageSaveSchema(pageKey);
   const recoverySchema = z.object({
     content: ticketPageSchemas[pageKey], revision: z.string().regex(/^[0-9]+$/), designRevision: z.string(),
@@ -77,21 +71,26 @@ export default function TicketPageEditor<K extends TicketPageKey>({ pageKey, tit
   }).strict();
   const [snapshot, setSnapshot] = useState<TicketPageSnapshot<K> | null>(null), [draft, setDraft] = useState<TicketPageContent<K> | null>(null);
   const [media, setMedia] = useState<TicketPageSnapshot<K>["media"]>([]), [uploads, setUploads] = useState<string[]>([]), [pending, setPending] = useState<TicketPageSaveRequest<K> | null>(null);
-  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<string | null>(null), [message, setMessage] = useState(""), [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<string | null>(null);
+  const [message, setMessage] = useState(""), [failed, setFailed] = useState(false), [status, setStatus] = useState("");
+  const [conflict, setConflict] = useState(false), [saveFailed, setSaveFailed] = useState(false), [validation, setValidation] = useState("");
   const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [loadedClubId, setLoadedClubId] = useState<string | null>(null);
-  const [confirmReload, setConfirmReload] = useState(false), [previewPhone, setPreviewPhone] = useState(false);
-  const recoveryKey = useRef<string | null>(null), epoch = useRef(0);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const recoveryKey = useRef<string | null>(null), epoch = useRef(0), keepRef = useRef<HTMLButtonElement>(null);
+  const dialog = useEditorDialog<string>();
   const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch {} };
   const fingerprint = (content: TicketPageContent<K>) => { try { return ticketPageDraftFingerprint(pageKey, content); } catch { return JSON.stringify(content); } };
   const dirty = !!draft && !!snapshot && fingerprint(draft) !== fingerprint(snapshot.content ?? emptyTicketPageContent(pageKey));
   const locked = busy || !!pending || !!uploading;
+  const unsaved = dirty || !!pending || uploads.length > 0;
 
   useEffect(() => {
     let active = true;
     epoch.current += 1;
     recoveryKey.current = null;
     setSnapshot(null); setDraft(null); setLoadedClubId(null); setPending(null); setMedia([]); setUploads([]);
-    setMessage(""); setFailed(false); setBusy(false); setUploading(null); setShared(null);
+    setMessage(""); setFailed(false); setStatus(""); setConflict(false); setSaveFailed(false); setValidation("");
+    setBusy(false); setUploading(null); setShared(null);
     if (club.presentationTemplateKey !== "cinematic@2") return;
     Promise.all([loadVisitorPageEditor<TicketPageContent<K>>(pageKey), createClient().auth.getUser(), fetchCinematicHomepageContent(club.id)])
       .then(([loaded, user, homepage]) => {
@@ -136,98 +135,148 @@ export default function TicketPageEditor<K extends TicketPageKey>({ pageKey, tit
   const change = (edit: (value: TicketPageContent<K>) => TicketPageContent<K>) => {
     if (locked) return;
     setDraft(current => current && edit(current));
-    setMessage(""); setFailed(false);
+    setMessage(""); setFailed(false); setValidation(""); setSaveFailed(false);
   };
+  const setShown = (id: string, shown: boolean) => change(content => setTicketPageShown(spec, content, id, shown, snapshot?.content ?? null));
   /** Resolves true only when the server committed the save, so the Save button can show Saved. */
   async function save(): Promise<boolean> {
     if (!draft || !snapshot || busy || uploading) return false;
-    const parsed = saveSchema.safeParse(pending ?? { operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision, content: draft, retiredMediaAssetIds: unusedTicketPageUploads(uploads, draft) });
-    if (!parsed.success) { setFailed(true); setMessage("Review the fields before saving. Links must start with https://, mailto: or / (a page on this site)."); return false; }
+    const parsed = saveSchema.safeParse(buildTicketPageSaveInput({ pending, operationId: crypto.randomUUID(), snapshot, draft, retiredMediaAssetIds: unusedTicketPageUploads(uploads, draft) }));
+    if (!parsed.success) { setSaveFailed(true); setValidation("Review the fields before saving. Links must start with https://, mailto: or / (a page on this site)."); return false; }
     const request = parsed.data as TicketPageSaveRequest<K>, generation = epoch.current;
-    setPending(request); setBusy(true); setFailed(false); setMessage(`Saving ${title}…`);
+    setPending(request); setBusy(true); setFailed(false); setSaveFailed(false); setValidation(""); setMessage(""); setStatus(`Saving ${title}…`);
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, uploads })); } catch {}
     const result = await saveVisitorPageEditor<TicketPageContent<K>>(pageKey, request);
     if (generation !== epoch.current) return false;
     setBusy(false);
     if (result.status === "committed") {
       setSnapshot(result.snapshot); setDraft(result.snapshot.content ?? emptyTicketPageContent(pageKey)); setMedia(result.snapshot.media);
-      setUploads([]); setPending(null); setMessage(result.snapshot.cleanupPending ? `${title} saved. Image cleanup will retry automatically.` : `${title} saved.`); clearRecovery();
+      setUploads([]); setPending(null); setConflict(false); clearRecovery();
+      setMessage(result.snapshot.cleanupPending ? `${title} saved. Image cleanup will retry automatically.` : ""); setStatus(`${title} saved.`);
       return true;
     } else if (result.status === "uncertain") { setPending(result.request as TicketPageSaveRequest<K>); setFailed(true); setMessage(result.message); }
-    else { setPending(null); setFailed(true); setMessage(result.message); }
+    else { setPending(null); setFailed(true); setSaveFailed(result.status !== "conflict"); setConflict(result.status === "conflict"); setMessage(result.message); }
     return false;
   }
-  /** Reload asks first when there are unsaved edits (the same decision the native confirm made). */
-  function requestReload() {
-    if (locked) return;
-    if (dirty) setConfirmReload(true);
+  /** Discard asks first when there are unsaved edits (the same decision the native confirm made). */
+  function requestDiscard() {
+    if (busy || uploading) return;
+    if (pending) { setFailed(true); setMessage("Retry the same save before discarding your edits, so nothing is lost."); return; }
+    if (dirty || uploads.length) setConfirmReload(true);
     else void reload();
   }
-  async function reload() {
+  async function reload(keepDraft = false) {
     if (locked) return;
     const generation = epoch.current;
     setBusy(true);
     try {
       const loaded = await loadVisitorPageEditor<TicketPageContent<K>>(pageKey);
+      ticketPageSchemas[pageKey].parse(loaded.content ?? emptyTicketPageContent(pageKey));
       if (generation !== epoch.current) return;
-      setSnapshot(loaded); setDraft(loaded.content ?? emptyTicketPageContent(pageKey)); setMedia(loaded.media); setUploads([]); setMessage(""); setFailed(false); clearRecovery();
+      if (keepDraft) {
+        // Latest revision becomes the base, the edits stay, and images added in this session stay available.
+        const previous = new Set(snapshot?.media.map(image => image.id));
+        setMedia([...loaded.media, ...media.filter(image => !previous.has(image.id) && !loaded.media.some(saved => saved.id === image.id))]);
+        setMessage("Latest saved version loaded. Your edits were kept. Replace any images removed in the newer version before saving.");
+        setSnapshot(loaded);
+      } else {
+        setSnapshot(loaded); setDraft(loaded.content ?? emptyTicketPageContent(pageKey)); setMedia(loaded.media); setUploads([]); setMessage(""); clearRecovery();
+      }
+      setConflict(false); setFailed(false); setSaveFailed(false); setValidation("");
     } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : `Unable to reload ${title}.`); } }
     finally { if (generation === epoch.current) setBusy(false); }
   }
-  async function upload(slot: string, file: File) {
-    if (!draft || locked) return;
+  async function upload(slot: string, file: File): Promise<boolean> {
+    if (!draft || locked) return false;
     const generation = epoch.current;
-    setUploading(slot); setFailed(false); setMessage("Adding your image…");
+    setUploading(slot); setFailed(false); setStatus("Adding your image…");
     try {
       const result = await createClient().storage.from("homepage-artwork").upload(`${pageKey}/` + crypto.randomUUID(), file);
       if (result.error || !result.data) throw new Error(result.error?.message ?? "Image upload failed.");
       const bitmap = await createImageBitmap(file), dimensions = { width: bitmap.width, height: bitmap.height };
       bitmap.close();
-      if (generation !== epoch.current) return;
+      if (generation !== epoch.current) return false;
       const id = result.data.assetId;
       setMedia(current => [...current, { id, storage_bucket: "onzio-media", storage_path: result.data.path, ...dimensions }]);
       setUploads(current => [...current, id]);
       // Upload locks manual editing. Apply its one confirmed identity directly.
       setDraft(current => current && setTicketPageImage(current, slot, id));
-      setMessage(`Image ready. Save ${title} to use it.`);
-    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } }
+      setStatus(`Image ready. Save ${title} to use it.`);
+      return true;
+    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } return false; }
     finally { if (generation === epoch.current) setUploading(null); }
   }
+  const removeImage = (slot: string) => change(content => setTicketPageImage(content, slot, null));
   const saveAction = useSaveState({
-    isDirty: dirty || !!pending || uploads.length > 0,
+    isDirty: unsaved,
     onSave: async () => { if (!(await save())) throw new Error(`${title} was not saved.`); },
   });
+  const latestSave = useRef(save);
+  latestSave.current = save;
+  useUnsavedGuard(draft ? {
+    dirty: unsaved, edited: title, onSave: () => latestSave.current(),
+    onDiscard: () => {
+      if (busy || uploading || pending) throw new Error("A save is still being confirmed.");
+      if (!snapshot) return;
+      setDraft(snapshot.content ?? emptyTicketPageContent(pageKey)); setUploads([]); setMessage(""); setFailed(false); setConflict(false); setSaveFailed(false); setValidation(""); clearRecovery();
+    },
+  } : undefined);
 
-  const view: TicketPageView<K> | null = draft ? ticketPageView(draft, media) : null;
-  const imageSlot = (slot: string, label: string, hint?: string) => draft && view && draft.images[slot] && <EditorGroup key={slot} legend={label}>
-    <EditorImage label={label} url={view.images[slot]?.url} alt={draft.images[slot].alt} accept="image/png,image/webp"
-      empty="Waiting for an image. Nothing shows here on the public page until you add one."
-      uploading={uploading === slot} disabled={locked} hasImage={!!view.images[slot]?.url} onFile={file => void upload(slot, file)}
-      onRemove={() => change(content => setTicketPageImage(content, slot, null))} removeDisabled={locked || !draft.images[slot].assetId} />
-    <EditorField label="Image description" value={draft.images[slot].alt} max={1000} disabled={locked} hint={hint ?? "Leave empty when the text next to the image already says the same thing."}
-      onChange={alt => change(content => ({ ...content, images: { ...content.images, [slot]: { ...content.images[slot], alt } } }))} />
-  </EditorGroup>;
-  const visibleToggle = (checked: boolean, onChange: (visible: boolean) => void, label: string) => <EditorSwitch checked={checked} disabled={locked} label={label} onChange={onChange} />;
-  const saveState = heldSaveState(saveAction.state, busy || !!uploading);
+  const deferred = useDeferredValue(draft);
+  const pageState = editorPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
+  const changed = useMemo(() => new Set(draft && snapshot ? changedTicketPageSections(spec, draft, snapshot.content) : []), [spec, draft, snapshot]);
+  const view = draft ? ticketPageView(draft, media) : null;
+  const loading = !draft || !view || loadedClubId !== club.id;
 
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader eyebrow="Public website" title={title} description="This page is unavailable for the current website design." /></AdminPage>;
-  return <AdminPage className={kit.page}>
-    <AdminPageHeader eyebrow="Public website" title={title} description={description} actions={<EditorPageLink href={TICKET_PAGE_PATHS[pageKey]}>Open {title} page</EditorPageLink>} />
-    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
-    {!draft || !view || loadedClubId !== club.id ? <EditorLoading label={`Loading ${title}…`} failed={failed} onRetry={() => location.reload()} /> : <>
-      {fields({ draft, view, locked, change, imageSlot, visibleToggle })}
-      <p className={kit.note}>Images: PNG or WebP, up to 5 MB and 3000 pixels per side. Dashed boxes in the preview mark images still to add. Visitors never see them.</p>
-      <EditorPreview phone={previewPhone} onPhoneChange={setPreviewPhone}>
-        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={title}><CinematicShell contentOnly initialContent={shared}>{preview(view)}</CinematicShell></HomepagePreviewFrame>
-      </EditorPreview>
-      <EditorSaveBar state={saveState} retry={!!pending} onSave={() => { void saveAction.save().catch(() => undefined); }}
-        status={pending ? "Awaiting save confirmation" : saveState === "dirty" ? "Unsaved changes" : ""}>
-        <EditorSecondaryButton disabled={locked} onClick={requestReload}>Reload saved page</EditorSecondaryButton>
-      </EditorSaveBar>
-    </>}
+  if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={title} breadcrumb={crumbs} description="This page is unavailable for the current website design.">{null}</PageFrame>;
+
+  const sectionItems = draft ? spec.sections.map(section => {
+    const shown = ticketPageSectionShown(spec, draft, section.id);
+    return {
+      id: section.id, title: section.title, changed: changed.has(section.id), summary: spec.summary(draft, section.id), disabled: locked, switchLabel: section.switchLabel,
+      ...(shown !== null ? { visible: shown, onVisibleChange: (next: boolean) => setShown(section.id, next) } : {}),
+    };
+  }) : [];
+  const api: TicketPageFieldsApi<K> | null = draft && view ? { draft, view, locked, uploading, change, setShown, upload, removeImage } : null;
+  const previewOf = (id: string) => deferred && <SectionLive spec={spec} id={id} content={deferred} media={media} shared={shared} slice={ticketPageSectionSlice(spec, deferred, id)} renderLive={renderLive} />;
+
+  const notice = (message || validation || conflict) ? <div className={styles.notice} data-ticket-page-notice="">
+    {validation && <ValidationMessage live="assertive">{validation}</ValidationMessage>}
+    {(message || conflict) && <EditorNotice failed={failed || conflict}>{message}
+      {conflict && <span className={styles.noticeActions}>
+        <button ref={keepRef} type="button" className="admin-press" disabled={locked} onClick={() => void reload(true)} style={{ minHeight: 44, padding: "0 14px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--secondary))" }}>Load latest and keep my edits</button>
+        <EditorSecondaryButton disabled={locked} onClick={requestDiscard}>Reload saved page</EditorSecondaryButton>
+      </span>}
+    </EditorNotice>}
+  </div> : null;
+
+  if (!draft && failed) return <PageFrame title={title} breadcrumb={crumbs} description={description}>
+    <EditorNotice failed>{message}</EditorNotice>
+    <div><EditorSecondaryButton disabled={false} onClick={() => location.reload()}>Try again</EditorSecondaryButton></div>
+  </PageFrame>;
+
+  return <>
+    <ShimmerRegion loading={loading} loadingLabel={`Loading ${title}…`} minHeight={480}
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={spec.sections.length} /></div>}>
+      <PageFrame title={title} breadcrumb={crumbs} openPageHref={openPageHref} description={description} state={pageState}
+        onSave={() => { void saveAction.save().catch(() => undefined); }}
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        <PreviewCards sections={sectionItems} label={`${title} sections`} renderPreview={previewOf} previewScale={0.46}
+          onEdit={(id, event) => dialog.openSection(id, event)} />
+      </PageFrame>
+    </ShimmerRegion>
+    <p className={styles.srOnly} role="status" data-ticket-page-status="">{status}</p>
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${title}`} mode="split" returnFocusRef={dialog.returnFocusRef}
+      sections={spec.sections.map(section => ({ id: section.id, title: section.title, summary: draft && (ticketPageSectionShown(spec, draft, section.id) === false ? "Hidden on the page" : spec.summary(draft, section.id)) }))}
+      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id)}
+      renderSection={id => dialog.open ? renderFields(api, id) : null}
+      renderPreview={id => dialog.open ? <div className={styles.livePreview}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${title} section`}>
+          <div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}>{renderLive(ticketPageView(spec.sectionOnly(api.draft, id), media))}</CinematicShell></div>
+        </HomepagePreviewFrame></div> : null} />}
     <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {title} edits and load the saved page?
     </AdminConfirmDialog>
-  </AdminPage>;
+  </>;
 }
