@@ -3,14 +3,19 @@
  * directly reserve through the same reserveMediaUpload, then publish.
  *
  * Reruns: a published asset is returned by publishAuthorizedMedia's own idempotent path before
- * any reservation is read, so the reservation is skipped for it (no quota spent). An unused
- * reservation left by an earlier run (duplicate id) is reused by the publish.
+ * any reservation is read, so the reservation is skipped for it (no quota spent).
  *
- * Limits: the default is 60 uploads per hour per club. On a quota or rate refusal, and only when
- * the Supabase URL and database URL are both loopback, this raises the club's row in
- * onzio_private.club_media_limits (local test data) and retries once. The migration and the
- * defaults are never changed. Import it as "@/scripts/lib/publish-with-reservation" so the path
- * also works from the scripts/_rcv copy that verify-rc-admin runs. */
+ * Leftover reservations (only when the Supabase URL and database URL are both loopback, where
+ * onzio_private can be read through pg): a live unconsumed reservation for this club and upload
+ * id is reused; an expired unconsumed one is deleted and re-reserved; a consumed one, or one that
+ * belongs to another club, is never touched. On a hosted host no SQL runs: reserve is called and
+ * anything but a clean "reserved" result is rethrown, so a rerun that finds a leftover fails
+ * loudly instead of guessing.
+ *
+ * Limits: the default is 60 uploads per hour per club. On a quota or rate refusal on loopback,
+ * the club's row in onzio_private.club_media_limits is raised (local test data) and the reserve
+ * retried once. The migration and the defaults are never changed. Import it as
+ * "@/scripts/lib/publish-with-reservation" so the path also works from scripts/_rcv. */
 import pg from "pg";
 import { ContractError } from "@/lib/contract-error";
 import { publishAuthorizedMedia, type MediaAuthorization } from "@/lib/media-processing";
@@ -40,12 +45,25 @@ function isLoopback(raw: string | undefined): boolean {
   }
 }
 
-async function raiseLocalLimits(clubId: string): Promise<boolean> {
+function localSqlUrl(): string | null {
   const dbUrl = process.env.SUPABASE_DB_URL;
-  if (!isLoopback(process.env.NEXT_PUBLIC_SUPABASE_URL) || !isLoopback(dbUrl)) return false;
-  const client = new pg.Client({ connectionString: dbUrl });
+  return isLoopback(process.env.NEXT_PUBLIC_SUPABASE_URL) && isLoopback(dbUrl) ? dbUrl! : null;
+}
+
+async function withLocalSql<T>(run: (client: pg.Client) => Promise<T>): Promise<T> {
+  const url = localSqlUrl();
+  if (!url) throw new Error("Local SQL is only available on loopback");
+  const client = new pg.Client({ connectionString: url });
   await client.connect();
   try {
+    return await run(client);
+  } finally {
+    await client.end();
+  }
+}
+
+async function raiseLocalLimits(clubId: string): Promise<void> {
+  await withLocalSql(async (client) => {
     await client.query(
       `insert into onzio_private.club_media_limits
          (club_id, max_bytes, max_assets, max_uploads_per_hour, max_uploads_per_day, max_open_reservations, note, updated_at)
@@ -65,28 +83,64 @@ async function raiseLocalLimits(clubId: string): Promise<boolean> {
         LOCAL_LIMITS.maxOpenReservations,
       ],
     );
-  } finally {
-    await client.end();
-  }
-  return true;
+  });
 }
 
-async function alreadyPublished(authorization: MediaAuthorization): Promise<boolean> {
-  const { data, error } = await createServiceRoleClient()
-    .schema("onzio")
-    .from("media_assets")
-    .select("id")
-    .eq("id", authorization.uploadId)
-    .eq("club_id", authorization.clubId)
-    .eq("status", "published")
-    .maybeSingle();
-  if (error) throw new Error(`Unable to check media finalization: ${error.message}`);
-  return Boolean(data);
-}
 
-async function reserve(authorization: MediaAuthorization): Promise<void> {
-  try {
-    await reserveMediaUpload({
+export type LeftoverReservation = {
+  clubId: string;
+  consumed: boolean;
+  expired: boolean;
+};
+
+export type PublishDeps = {
+  /** True when the Supabase URL and database URL are both loopback. */
+  localSql: () => boolean;
+  alreadyPublished: (a: MediaAuthorization) => Promise<boolean>;
+  findReservation: (uploadId: string) => Promise<LeftoverReservation | null>;
+  /** Deletes only an unconsumed, expired reservation for this exact id and club. */
+  deleteExpiredReservation: (uploadId: string, clubId: string) => Promise<void>;
+  raiseLimits: (clubId: string) => Promise<void>;
+  reserve: (a: MediaAuthorization) => Promise<unknown>;
+  publish: (a: MediaAuthorization) => ReturnType<typeof publishAuthorizedMedia>;
+};
+
+const defaultDeps: PublishDeps = {
+  localSql: () => localSqlUrl() !== null,
+  alreadyPublished: async (authorization) => {
+    const { data, error } = await createServiceRoleClient()
+      .schema("onzio")
+      .from("media_assets")
+      .select("id")
+      .eq("id", authorization.uploadId)
+      .eq("club_id", authorization.clubId)
+      .eq("status", "published")
+      .maybeSingle();
+    if (error) throw new Error(`Unable to check media finalization: ${error.message}`);
+    return Boolean(data);
+  },
+  findReservation: (uploadId) =>
+    withLocalSql(async (client) => {
+      const { rows } = await client.query(
+        `select club_id, consumed_at is not null as consumed, expires_at <= now() as expired
+           from onzio_private.media_upload_reservations where id = $1`,
+        [uploadId],
+      );
+      return rows[0]
+        ? { clubId: rows[0].club_id as string, consumed: rows[0].consumed as boolean, expired: rows[0].expired as boolean }
+        : null;
+    }),
+  deleteExpiredReservation: (uploadId, clubId) =>
+    withLocalSql(async (client) => {
+      await client.query(
+        `delete from onzio_private.media_upload_reservations
+          where id = $1 and club_id = $2 and consumed_at is null and expires_at <= now()`,
+        [uploadId, clubId],
+      );
+    }),
+  raiseLimits: raiseLocalLimits,
+  reserve: (authorization) =>
+    reserveMediaUpload({
       clubId: authorization.clubId,
       actorId: authorization.actorId,
       uploadId: authorization.uploadId,
@@ -94,35 +148,34 @@ async function reserve(authorization: MediaAuthorization): Promise<void> {
       kind: authorization.kind,
       stagingPath: authorization.stagingPath,
       claimedSize: authorization.claimedSize,
-    });
-  } catch (error) {
-    // An earlier run left this id reserved (and maybe unused): let publish try to consume it.
-    if (
-      error instanceof ContractError &&
-      error.code === "MEDIA_QUOTA_UNAVAILABLE" &&
-      /duplicate key/i.test(error.message)
-    ) {
-      return;
-    }
-    throw error;
-  }
-}
+    }),
+  publish: publishAuthorizedMedia,
+};
 
-export async function publishWithReservation(authorization: MediaAuthorization) {
+export async function publishWithReservation(
+  authorization: MediaAuthorization,
+  deps: PublishDeps = defaultDeps,
+) {
   // A path outside the club (negative tests) cannot be reserved; publish refuses it itself.
   const ownPath = authorization.stagingPath.startsWith(`${authorization.clubId}/`);
-  if (ownPath && !(await alreadyPublished(authorization))) {
-    try {
-      await reserve(authorization);
-    } catch (error) {
-      if (
-        !(error instanceof ContractError && QUOTA_CODES.has(error.code)) ||
-        !(await raiseLocalLimits(authorization.clubId))
-      ) {
-        throw error;
-      }
-      await reserve(authorization);
+  if (!ownPath || (await deps.alreadyPublished(authorization))) {
+    return deps.publish(authorization);
+  }
+  const local = deps.localSql();
+  if (local) {
+    const leftover = await deps.findReservation(authorization.uploadId);
+    if (leftover && leftover.clubId === authorization.clubId) {
+      if (leftover.consumed) return deps.publish(authorization); // never touched; publish reports it
+      if (!leftover.expired) return deps.publish(authorization); // live: publish consumes it
+      await deps.deleteExpiredReservation(authorization.uploadId, authorization.clubId);
     }
   }
-  return publishAuthorizedMedia(authorization);
+  try {
+    await deps.reserve(authorization);
+  } catch (error) {
+    if (!local || !(error instanceof ContractError && QUOTA_CODES.has(error.code))) throw error;
+    await deps.raiseLimits(authorization.clubId);
+    await deps.reserve(authorization);
+  }
+  return deps.publish(authorization);
 }

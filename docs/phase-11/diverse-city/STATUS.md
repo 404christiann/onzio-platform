@@ -30,6 +30,13 @@ verify-rc-admin itself cannot gate this package, because the skill seeds from or
 scripts. The seed run above is the evidence instead. `smoke-media-pipeline.ts` and `verify-phase-7-media.ts`
 were typechecked only (they target hosted or their own clubs).
 
+**Bot Lows fixed (#170 review):** the duplicate-reservation check no longer matches error text. On loopback it reads
+`onzio_private.media_upload_reservations` for the upload id. A live, unconsumed reservation for the same club is reused. An
+expired, unconsumed one is deleted (restricted by id, club, `consumed_at is null` and `expires_at <= now()`) and re-reserved.
+Consumed reservations and other clubs' rows are never touched. Off loopback, no SQL runs and anything that is not a clean
+reserve is rethrown. New `tests/contracts/publish-with-reservation-script.test.ts` (9 cases, mocked). Re-verified: tsc clean;
+unit 337 files, 3775 tests; reset plus seed exits 0; a simulated expired leftover is replaced and consumed.
+
 **Known, not changed:** several seeds refuse to overwrite on a rerun without a reset (true on main too), and
 `seed-rose-city-shop-2027-local.ts` does not exit on that refusal path.
 
