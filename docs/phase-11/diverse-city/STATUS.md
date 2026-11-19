@@ -1,5 +1,47 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-08 Wave 1 follow-ups (discard wording, preview shimmer, kit Remove contrast)
+
+**Agent/package:** Claude Code (Sonnet worker W8, orchestrated), RC-ADMIN-08, branch `claude/rc-admin-08`
+on `66b9fea8`. **Status:** `in_progress`, PR open. It merges only on Christian's word. App code only:
+no migration, schema, RPC, data or production change, and nothing under `components/cinematic/`.
+
+**Completed work:**
+
+- **Discard wording:** a new `components/admin/editor-copy.ts` exports `DISCARD_CONFIRM` (title "Discard
+  your edits?", button "Discard and reload"). The Shop, Homepage and Stadium editors use it, so Shop no
+  longer says "Discard changes" on its confirm. Each dialog keeps its own body text, because each
+  explains something different. The PageFrame "Discard changes" link is unchanged.
+- **Preview shimmer:** PreviewCards renders the kit Shimmer as an absolute layer inside the fixed
+  preview box. It shows until the preview mounts, and while a consumer such as Stadium's
+  SettledPreview keeps its content hidden. Because the layer is absolute, the box never changes size,
+  and reduced motion gets Shimmer's static fill.
+- **Kit Remove contrast:** the old CinematicEditorKit `.remove` colour is now the destructive red mixed
+  75/25 with the foreground. A harness measured about 6.3:1 in light (4.48:1 before) and about 7.5:1 in
+  dark.
+- **Not done:** removing the dead "Edit in …" chip code in `HomepageEditor.tsx` and
+  `lib/cinematic-editor-shortcuts.ts`. That would lower the cinematic@2 selector-debt pin (`literal`
+  4→2, `read:templateKey` 2→0), and verify-rc-admin forbids editing the debt baseline, so it waits for
+  Christian.
+
+**Files changed:**
+- New: `components/admin/editor-copy.ts`.
+- Modified: `RoseCityShopEditor.tsx`, `HomepageOverviewEditor.tsx`, `RobinsonStadiumEditor.tsx` (wording
+  only), `PreviewCards.tsx` and `PreviewCards.module.css`, `CinematicEditorKit.module.css` (`.remove`
+  only), `tests/contracts/homepage-overview-editor.test.ts`.
+
+**Verification:**
+- `tsc` clean; `test:unit` 330 files / 3679 tests; architecture 152; selector debt unchanged.
+- verify-rc-admin `--touched none` on `/admin/stadium`, `/admin/homepage` and `/admin/shop`: all six
+  gates passed on each. Payloads 14/14 identical; CLS at or below 0.00001; 0 new axe; Diverse City 8/8.
+- One earlier Shop run failed gate 3 "saved" on a colour sampled mid-transition (`rgb(52,199,90)`), and
+  an identical rerun passed. That is a skill flake, noted for a skill fix.
+
+**Blockers or unresolved decisions:** dead-code removal waits on Christian's decision about the
+selector-debt pin.
+
+**Exact next step:** bot review; Christian decides the merge.
+
 ## 2026-11-18 - RC-ADMIN-01d verify-rc-admin: per-worktree build cache, stale lock holders, disk guard
 
 **Agent/package:** Claude Code (Sonnet workers, orchestrated), RC-ADMIN-01d, branch `claude/rc-admin-01d`

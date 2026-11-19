@@ -33,6 +33,7 @@ import {
   type RobinsonSectionId,
 } from "./robinson-sections";
 import styles from "./RobinsonStadiumEditor.module.css";
+import { DISCARD_CONFIRM } from "../editor-copy";
 
 const recoverySchema = z.object({
   content: robinsonContentSchema, revision: z.string().regex(/^[0-9]+$/), designRevision: z.string(),
@@ -254,7 +255,7 @@ export default function RobinsonStadiumEditor() {
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>
           <CinematicShell contentOnly initialContent={shared}><CinematicRobinson content={hydrateRobinsonContent(robinsonSectionOnly(api.draft, id as RobinsonSectionId), media)} ticketing={ticketing} /></CinematicShell>
         </HomepagePreviewFrame></div> : null} />}
-    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+    <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {PAGE} edits and load the saved page?
     </AdminConfirmDialog>

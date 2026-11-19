@@ -20,6 +20,7 @@ import { HomeFeaturePreview, KIT_PART_CSS, SHARED_LEFT_CSS, SHARED_RIGHT_CSS, Sh
 import { ShopScaledFrame } from "./ShopScaledFrame";
 import { editionsForKit, nextKitToAdd, visibleKits } from "./shop-fields-model";
 import styles from "./RoseCityShopEditor.module.css";
+import { DISCARD_CONFIRM } from "../../editor-copy";
 
 /** Natural size the public page is laid out at inside each preview box. */
 export const KIT_PREVIEW = { width: 390, height: 1440 } as const;
@@ -468,7 +469,7 @@ function ShopEditor() {
       </fieldset> : null}
     />
 
-    <AdminConfirmDialog open={confirmDiscard} destructive title="Discard your Shop changes?" confirmLabel="Discard changes" onCancel={() => setConfirmDiscard(false)} onConfirm={() => { setConfirmDiscard(false); void discardSurface(surface); }}>
+    <AdminConfirmDialog open={confirmDiscard} destructive title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} onCancel={() => setConfirmDiscard(false)} onConfirm={() => { setConfirmDiscard(false); void discardSurface(surface); }}>
       The {SURFACE_LABELS[surface].toLowerCase()} goes back to what is saved. This cannot be undone.
     </AdminConfirmDialog>
     <AdminConfirmDialog open={replaceLatest} title="Use the latest saved page?" confirmLabel="Use latest saved page" onCancel={() => setReplaceLatest(false)} onConfirm={() => resolveConflict(false)}>Discard your Shop draft and use the latest saved page?</AdminConfirmDialog>

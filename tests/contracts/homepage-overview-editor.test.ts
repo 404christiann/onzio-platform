@@ -56,7 +56,8 @@ describe("Homepage Overview: same edits, same payload", () => {
     expect(editor).toContain("setSavedFlash(false), 1800");
     expect(editor).toContain("Load latest and keep my edits");
     expect(editor).toContain("restoreRecoveredDraft()");
-    expect(editor).toContain('confirmLabel="Discard and reload"');
+    expect(editor).toContain("confirmLabel={DISCARD_CONFIRM.confirmLabel}");
+    expect(read("components/admin/editor-copy.ts")).toContain('confirmLabel: "Discard and reload"');
   });
 
   it("a hero edit made in the Overview saves the same hero request as before", () => {

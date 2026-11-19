@@ -35,7 +35,21 @@
   contain-intrinsic-size: auto 190px;
 }
 
+/* Fills the fixed box, so showing or hiding it never changes layout. Reduced motion is handled by Shimmer (static fill). */
+.box .placeholder {
+  display: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+}
+
+.box[data-preview-mounted="false"] .placeholder,
+.box:has(.scaled [style*="visibility"][style*="hidden"]) .placeholder {
+  display: block;
+}
+
 .scaled {
+  position: relative;
   inline-size: var(--preview-width, 780px);
   transform: scale(var(--preview-scale, .4));
   transform-origin: 0 0;

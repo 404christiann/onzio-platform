@@ -27,6 +27,7 @@ import HomepageRecoveryReview from "./HomepageRecoveryReview";
 import { HOMEPAGE_PARTS, type PartId } from "./homepage-parts";
 import styles from "./HomepageOverview.module.css";
 import "./homepage-editor.css";
+import { DISCARD_CONFIRM } from "../editor-copy";
 
 /** Registers the unsaved guard the classic admin shell asks before it follows a sidebar link. */
 function ClassicGuard({ dirty, onSave, onDiscard, retention }: { dirty: boolean; onSave: () => Promise<boolean>; onDiscard: () => Promise<void>; retention: () => string | null }) {
@@ -208,7 +209,7 @@ export default function HomepageOverviewEditor() {
       renderSection={id => <HomepagePartFields part={id as PartId} e={e} />}
     />
     {reviewRecovery && editor.recoveryConflict && <HomepageRecoveryReview current={state.baseline} recovered={editor.recoveryConflict.draft} reason={editor.recoveryConflict.reason} allowedAction={editor.recoveryConflict.allowedAction} close={() => setReviewRecovery(false)} restore={editor.restoreRecoveredDraft} />}
-    <AdminConfirmDialog open={confirmDiscard} title="Discard your edits?" confirmLabel="Discard and reload" destructive busy={discarding} onCancel={() => setConfirmDiscard(false)} onConfirm={() => void discard()}>
+    <AdminConfirmDialog open={confirmDiscard} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive busy={discarding} onCancel={() => setConfirmDiscard(false)} onConfirm={() => void discard()}>
       Your unsaved homepage edits and any photos added since the last save will be removed, and the saved homepage will load again.
     </AdminConfirmDialog>
     <AdminConfirmDialog open={leaveTo !== null} title="Leave without saving?" confirmLabel="Leave without saving" destructive onCancel={() => setLeaveTo(null)} onConfirm={() => { const href = leaveTo; setLeaveTo(null); void editor.discardUnsavedUploads().then(ok => { if (ok && href) router.push(href); }); }}>
