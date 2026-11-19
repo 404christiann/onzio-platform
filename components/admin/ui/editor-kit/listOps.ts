@@ -39,3 +39,13 @@ export function appendRow(rows: readonly (readonly string[])[], columns: number,
 export function removeRow(rows: readonly (readonly string[])[], columns: number, index: number, minRows = 0): string[][] {
   return normalizeRows(removeAt(rows, index, minRows), columns);
 }
+
+/** One item one place earlier (-1) or later (1). Only the order changes: the items themselves are the same objects. The first item cannot go earlier and the last cannot go later. */
+export function moveAt<T>(items: readonly T[], index: number, delta: -1 | 1): T[] {
+  const target = index + delta;
+  if (index < 0 || index >= items.length || target < 0 || target >= items.length) return items.slice();
+  const next = items.slice();
+  const [item] = next.splice(index, 1);
+  next.splice(target, 0, item);
+  return next;
+}

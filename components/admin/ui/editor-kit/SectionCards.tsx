@@ -17,6 +17,8 @@ export type SectionCardItem = {
   disabled?: boolean;
   /** Names the switch for assistive tech. Defaults to "Show <title> on the page". */
   switchLabel?: string;
+  /** Replaces the "Always shown" chip on a card with no switch, for a card whose visibility follows its content ("Hidden while empty"). */
+  chip?: ReactNode;
 };
 
 export type SectionCardsProps = {
@@ -57,7 +59,7 @@ export function SectionCards({ sections, onEdit, label = "Page sections" }: Sect
                   />
                 </span>
               ) : (
-                <span className={styles.chip} data-always-shown="">Always shown</span>
+                <span className={styles.chip} data-always-shown={section.chip == null ? "" : undefined} data-status-chip={section.chip == null ? undefined : ""}>{section.chip ?? "Always shown"}</span>
               )}
               <button
                 type="button"
