@@ -1,10 +1,21 @@
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
-import { socialPlatformOf } from "@/lib/social-links";
 
 const PLATFORMS: readonly SiteSocialPlatform[] = ["instagram", "facebook", "tiktok", "youtube", "x"];
+const ICON_PLATFORMS: Record<string, SiteSocialPlatform> = {
+  "instagramlogo.svg": "instagram", "facebooklogo.svg": "facebook", "tiktoklogo.svg": "tiktok", "youtubelogo.svg": "youtube", "xlogo.svg": "x",
+};
 
 /** Imported social rows can have UUID primary keys; their existing icon identifies the brand. */
-export const cinematicSocialPlatform = socialPlatformOf;
+export function cinematicSocialPlatform(social: { id: string; icon: string }): SiteSocialPlatform | null {
+  if ((PLATFORMS as readonly string[]).includes(social.id)) return social.id as SiteSocialPlatform;
+  try {
+    const path = new URL(social.icon, "https://asset.invalid/").pathname;
+    return ICON_PLATFORMS[path.split("/").at(-1)?.toLowerCase() ?? ""] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 
 /** Metadata is safe to supply for an explicitly entered link; destinations are always club data. */
 const ICON_METADATA: Record<SiteSocialPlatform, { label: string; icon: string; order: number }> = {

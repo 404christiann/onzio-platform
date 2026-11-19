@@ -76,10 +76,15 @@ describe("legacy social link ids (RC-ADMIN-4c)", () => {
     expect(socialStagePayload(draft, NOW).map((row) => row.href)).not.toContain(stray.href);
   });
 
-  it("is idempotent and keeps one mapping table with the public footer", () => {
+  it("is idempotent", () => {
     const once = canonicalizeSocialRows(legacyRows);
     expect(canonicalizeSocialRows(once)).toEqual(once);
-    for (const row of legacyRows) expect(socialPlatformOf(row)).toBe(cinematicSocialPlatform(row));
+  });
+
+  it("agrees with the public footer's own function (cinematicSocialPlatform) on the 5 legacy and 5 standard ids", () => {
+    const standardRows = PLATFORMS.map((id) => ({ ...legacyRows[0], id, icon: `/images/logo/${id}Logo.svg` }));
+    for (const row of [...legacyRows, ...standardRows]) expect(socialPlatformOf(row)).toBe(cinematicSocialPlatform(row));
+    expect(legacyRows.map((row) => socialPlatformOf(row))).toEqual([...PLATFORMS]);
   });
 });
 
