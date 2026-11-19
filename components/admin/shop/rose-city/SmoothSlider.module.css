@@ -1,0 +1,53 @@
+.field { display: grid; gap: 6px; min-inline-size: 0; }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.head label { font-size: .875rem; font-weight: 500; }
+.value { font-variant-numeric: tabular-nums; font-size: .875rem; color: hsl(var(--muted-foreground)); min-inline-size: 4ch; text-align: end; }
+.help { margin: 0; font-size: .8125rem; line-height: 1.45; color: hsl(var(--muted-foreground)); }
+
+/* 44px tall hit area; the visible track is 6px and the thumb 28px. */
+.range {
+  --fill: 0%;
+  appearance: none;
+  -webkit-appearance: none;
+  inline-size: 100%;
+  block-size: 48px;
+  min-block-size: 44px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+.range::-webkit-slider-runnable-track {
+  block-size: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, hsl(var(--primary)) var(--fill), hsl(var(--border)) var(--fill));
+}
+.range::-moz-range-track { block-size: 6px; border-radius: 999px; background: hsl(var(--border)); }
+.range::-moz-range-progress { block-size: 6px; border-radius: 999px; background: hsl(var(--primary)); }
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  inline-size: 28px;
+  block-size: 28px;
+  margin-block-start: -11px;
+  border: 2px solid hsl(var(--primary));
+  border-radius: 50%;
+  background: hsl(var(--background));
+  box-shadow: 0 1px 4px rgb(0 0 0 / 28%);
+  transition: transform 120ms cubic-bezier(.23, 1, .32, 1);
+}
+.range::-moz-range-thumb {
+  inline-size: 24px;
+  block-size: 24px;
+  border: 2px solid hsl(var(--primary));
+  border-radius: 50%;
+  background: hsl(var(--background));
+  box-shadow: 0 1px 4px rgb(0 0 0 / 28%);
+}
+.range:active::-webkit-slider-thumb { transform: scale(1.08); }
+.range:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .range::-webkit-slider-thumb { transition: none; }
+  .range:active::-webkit-slider-thumb { transform: none; }
+}
