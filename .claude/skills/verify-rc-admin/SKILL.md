@@ -124,6 +124,28 @@ Base URLs: `http://rose-city.localhost:<port>/admin/...`, `http://diverse-city.l
 | homepage | /admin/homepage | POST /api/admin/homepage | preview iframe `Homepage preview` piece `revamp.navigation` (scroll under sticky header, click twice at 12,12) → `.hp-panel` "Community" → Done → "Save homepage" |
 | shop | /admin/shop | POST /api/admin/shop | "Edit kit text" → first text field → "Save page" |
 | news | /admin/news | POST /api/admin/cinematic-news | first "Edit “<title>”" → first text field → "Save article" |
+| branding | /admin/branding | POST /api/admin/data, `upsert` on `site_branding` / `site_social_links` | `#footer-tagline` where the club shows one, else the first social link (a web address: `?rcv=<tag>` is added) |
+| members | /admin/members | POST /api/admin/members | no field: types `rcv-gate2@example.com` into "Administrator email" and presses "Add administrator" (the request is aborted, nobody is added) |
+| seasons | /admin/seasons | POST /api/admin/data, `insert` on `seasons` | no field: "Create Next Season" → confirm (aborted at the first write) |
+| roster | /admin/roster | POST /api/admin/data, `update` on `players` | no field: first `[data-player-id]` → Edit → "Name" → "Save changes" |
+| stats-match | /admin/stats?view=match | POST /api/admin/data, `upsert` on `player_match_stats` / `goalkeeper_match_stats` | first match in the "Match" select, first player, first stat input (+1) → header Save |
+| stats-season | /admin/stats?view=season | POST /api/admin/data, `upsert` on the `*_season_stats` / `*_season_adjustments` tables | first player, first stat input (+1) → header Save |
+
+Standings is not a Rose City editor (hidden for the club), so it has no row; `/admin/standings` is only in gate 6.
+
+**Shared `/api/admin/data` saves.** Reads are POSTs too, so a row names `ops` (and `tables`): a request is the editor's save, and is
+captured or aborted in gate 2, only if its JSON body has one of those operations on one of those tables. On that endpoint a `select`
+is never aborted, captured or counted. `scripts/editors.mjs` holds the rules (pinned by `verify.test.mjs`).
+
+**Declared capabilities (`lacks` in `EDITORS`, with a reason).** An editor says what it does not have; gate 3 and 4 then report
+those parts as "not applicable" for that editor only, never for everyone:
+- `pageSave`: no page Save button (Members, Seasons, Roster act or save per dialog). Gate 3 is not applicable. Gate 4 still runs the
+  page as it loads: CLS, sideways scroll, axe on `main` (ratchet against origin/main) at 390/1440 light/dark, and the reduced-motion
+  sample of the load. The edit, Save bar and discard parts are marked `saveParts: n/a`.
+- `retry`, `conflict`, `discard`: that gate 3 step reports `n/a: <reason>` (the report and `stepsPass` accept it only for these three).
+  `discard` also skips the discard dialog in gate 4's visuals and reduced-motion sample.
+- `status`: the old AdminSaveButton has no "Unsaved changes" line beside it; only that text check is skipped.
+`clean`, `dirty` (state and enabled Save), `saving` and `saved` can never be skipped.
 
 When a package changes how an editor opens (new section cards, dialogs, sheets), update its row in
 `EDITORS` in `rc-admin-verify.spec.ts` (`open`, `field`, `beforeSave`, `saveButton`) in the same
@@ -246,10 +268,10 @@ and writes its gitignored `test-results/`; nothing else there changes.
   dialog open/close (on a kit editor also the edit dialog opening and closing), saving, saved. (Probe proven: with motion allowed it reports the dialog's
   140 ms transform.)
 - **Gate 6 (Diverse City).** `/admin`, `/homepage`, `/programs`, `/contact`, `/shop`, `/about`,
-  `/schedule`, `/sponsors` on both builds: status < 400, an h1, no console error that origin/main
+  `/schedule`, `/sponsors`, `/roster`, `/seasons`, `/stats?view=match`, `/stats?view=season`, `/standings`, `/branding`, `/members` on both builds: status < 400, an h1, no console error that origin/main
   does not also log, and an identical `main` aria snapshot. Each page is compared only once it has **settled**
   (`scripts/settle.mjs`, pinned by `verify.test.mjs`): document complete, no showing loading marker (`aria-busy`,
-  loading region outside the `content` phase, visible skeleton or shimmer), no unfinished animation, and the `main`
+  loading region outside the `content` phase, visible skeleton or shimmer, a live region reading "Loading ...", an image, font, script or style still in flight), no unfinished animation, and the `main`
   aria tree unchanged for three reads 100 ms apart. A page that does not settle in 20 s fails with the reason (a
   hidden skeleton kept in the DOM does not count). The one console error ignored on both builds is the 404 of
   Vercel's `/_vercel/insights/script.js` (it only exists on Vercel and is requested late). Screenshots of the package build.
@@ -301,7 +323,8 @@ the shared lock for an hour. Three layers now cover it, all inside the skill:
 
 ## Cleanup
 
-`verify.sh cleanup` kills servers this skill started (pid files in `/private/tmp/onzio-rc-admin-verify/`,
+`verify.sh cleanup --worktree <wt>` also removes that worktree's own base-build cache (`wt-<key>`, about 1.8 GB), opt-in only: never
+another worktree's cache, and not while a live run of that worktree holds it. `verify.sh cleanup` kills servers this skill started (pid files in `/private/tmp/onzio-rc-admin-verify/`,
 plus their children) and removes auth state. It never kills by process name, never resets the
 database, and keeps the evidence and the per-worktree origin/main build caches. A run stops its own servers
 on exit, even on failure. The seeded Rose City and Diverse City clubs stay in the shared database;

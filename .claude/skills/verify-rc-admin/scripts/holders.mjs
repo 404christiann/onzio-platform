@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync, renameSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const CACHE_ROOT = "/private/tmp/onzio-rc-admin-verify";
@@ -145,11 +145,30 @@ export function writeHolder(dir, record) {
   return file;
 }
 
+// ---- opt-in cleanup of this worktree's own base-build cache -----------------------------------
+// `verify.sh cleanup --worktree <wt>`: removes <cache root>/wt-<key of THIS worktree> and nothing else (each is about 1.8 GB and only
+// goes away with the worktree otherwise). Never another worktree's directory, never while a live run of this worktree holds it.
+export function removeOwnCache(worktree, opts = {}) {
+  const {
+    root = CACHE_ROOT, realpath = realpathSync, holders = readHolders(holdersDir()), exists = existsSync,
+    rm = (dir) => rmSync(dir, { recursive: true, force: true }), now = Date.now(), timeoutSeconds = runTimeoutSeconds(), startOf = startOfPid,
+  } = opts;
+  const key = worktreeKey(worktree, realpath);
+  const dir = join(root, key);
+  if (!/^wt-[0-9a-f]{12}$/.test(basename(dir)) || dirname(dir) !== root) return { removed: false, dir, why: "not a per-worktree cache directory" };
+  if (!exists(dir)) return { removed: false, dir, why: "this worktree has no cache" };
+  const live = holders.find(({ record }) => record?.worktree && worktreeKey(record.worktree, realpath) === key && !isStaleHolder(record, { now, timeoutSeconds, startOf }).stale);
+  if (live) return { removed: false, dir, why: `a run of this worktree is still going (pid ${live.record.runPid}); not removing its cache` };
+  rm(dir);
+  return { removed: true, dir, why: "removed" };
+}
+
 // ---- CLI ---------------------------------------------------------------------------------------
 // holders.mjs cache-dir <worktree> <sha>
 // holders.mjs stale-cache <worktree> <keepSha>             prints dirs to delete, one per line
 // holders.mjs disk-check <dir> [minGb]                     exit 1 with a message when free space is under the minimum
 // holders.mjs cache-size <worktree>
+// holders.mjs own-cache <worktree>                          removes that worktree's own wt-* cache (opt-in, see removeOwnCache)
 // holders.mjs sweep [lockFile]                              clears stale holders, logs what it did
 // holders.mjs record <lockFile> <runPid> <worktree> [name:pid:port ...]
 // holders.mjs remove <lockFile> <runPid>
@@ -161,6 +180,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     mkdirSync(a[0], { recursive: true });
     const r = diskRoomCheck(freeKbOf(a[0]), a[1] ? Number(a[1]) : MIN_FREE_GB);
     (r.ok ? console.log : console.error)(r.message); process.exit(r.ok ? 0 : 1);
+  } else if (cmd === "own-cache") {
+    const r = removeOwnCache(a[0]);
+    console.log(`own cache: ${r.why}: ${r.dir}`); process.exit(r.removed || r.why.startsWith("this worktree has no") ? 0 : 1);
   } else if (cmd === "cache-size") {
     const kb = dirSizeKb(join(CACHE_ROOT, worktreeKey(a[0])));
     console.log(`${(kb / 1024).toFixed(0)} MB in ${join(CACHE_ROOT, worktreeKey(a[0]))} (the head build lives in the worktree's own .next)`);

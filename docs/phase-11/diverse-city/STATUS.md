@@ -1,5 +1,42 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4b-0 verify-rc-admin: keys for roster, seasons, stats, branding, members
+
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0, branch `claude/rc-admin-4b-0` on `3d52ab65`. **Status:** `in_progress`:
+PR open, waiting for onzio-bot. Skill only (`.claude/skills/verify-rc-admin/**` plus this entry): no app code, no migration.
+
+**Completed work:**
+- `EDITORS` rows for branding, members, seasons, roster, stats (match view) and stats (season view). Standings has no Rose
+  City row (hidden for the club); `/admin/standings` is in gate 6 only.
+- Shared `/api/admin/data` saves: reads are POSTs, so rows name `ops` and `tables`; gate 2 never aborts, captures or counts a
+  `select` (`scripts/editors.mjs`). Stats edits bump a number; Branding appends a query to a web address.
+- Declared capabilities (`lacks` + reason in a row): gate 3 reports "not applicable" for that editor only. `pageSave` (Members,
+  Seasons, Roster): gate 3 n/a, but gate 4 still runs the page as it loads (CLS, sideways scroll, axe with the origin/main
+  ratchet, reduced-motion load) with the save parts marked n/a. `retry` / `conflict` / `discard` / `status` skip only that part;
+  clean, dirty, saving and saved can never be skipped (`stepsPass`).
+- Gate 6 now covers 15 Diverse City pages (adds roster, seasons, stats match and season, standings, branding, members). Its settle
+  also waits on a "Loading ..." live region (About announced "Loading About page" while its iframe loaded; a roster run compared it mid-load).
+- Page-load `h1` waits are bounded at 45 s: three pages overran the 15 s default while the machine's load average was 30+.
+- Opt-in `verify.sh cleanup --worktree <wt>` removes that worktree's own `wt-*` base-build cache (about 1.8 GB), never another
+  worktree's, never while a live run of it holds it.
+- 12 new self-tests (49 in all).
+
+**Verification** (`--touched none`, run on this head, 20/20 payloads and Diverse City 15/15 unless noted; reports under `/Users/christianalcala/Downloads/onzio-platform/.claude/worktrees/rc-admin-4-0a-4b060a/test-results/rc-admin-verify/`):
+- Shop on clean main `b2ecd39d` (confirmation of 4-0a): all six gates pass: `20261119-105719-RC-ADMIN-4-0a-main-confirm`.
+- Stats (match): all six pass: `20261119-122015-RC-ADMIN-4b-0-fstatsm`. Stats (season): all six pass: `20261119-122610-RC-ADMIN-4b-0-fstatss`.
+- Branding: all six pass: `20261119-123146-RC-ADMIN-4b-0-fbrand` (gate 3 retry, conflict, discard n/a, declared).
+- Roster: gate 6 failed once on About mid-load before the settle fix (`20261119-121051-RC-ADMIN-4b-0-froster`); the rerun on this head is `20261119-123652-RC-ADMIN-4b-0-hroster`: gates 1, 2, 4, 5, 6 pass, gate 3 n/a (declared).
+- **Documented findings on main (app code, gate 4, not patched around; they show the new gate 4 coverage working):**
+  - `/admin/members`: CLS 0.01378 at 390 px (both schemes; limit 0.001) from `p.ClubSettings_notice` appearing at about 250 ms. 1440, axe and reduced motion pass.
+    Report `20261119-120625-RC-ADMIN-4b-0-fmembers`. Gates 2 and 6 pass. Passed to 4c (Team access).
+  - `/admin/seasons`: CLS 0.00111 at 390 px (both schemes) from the "Active Season" block (`div.font-body.font-semibold`) appearing after load.
+    Report `20261119-121530-RC-ADMIN-4b-0-fseasons`. Gates 2 and 6 pass.
+
+**Not covered here:** Roster's stats tab Save; Members' remove (gate 2 captures the add); Seasons' set-active and delete. Gate 3 on
+Members, Seasons and Roster is n/a by declaration, so a rebuild of any of them that adds a page Save must drop its `lacks.pageSave`.
+
+**Next step:** onzio-bot loop; then Christian decides whether the two documented gate 4 findings on main are acceptable for a skill PR.
+
 ## 2026-11-19 - RC-ADMIN-4a-policies Rose City Policies editor on the editor kit
 
 **Agent/package:** Claude Code (Sonnet worker, orchestrated), RC-ADMIN-4a-policies, branch `claude/rc-admin-4a-policies`.
