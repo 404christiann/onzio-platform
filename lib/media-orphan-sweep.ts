@@ -111,7 +111,6 @@ export async function runMediaOrphanSweep(deps: SweepDeps = {}): Promise<SweepRe
   const mode = deps.mode ?? resolveSweepMode();
   const runId = deps.runId ?? crypto.randomUUID();
   const now = deps.now ?? (() => new Date());
-  const runStartedAt = now();
   const empty: SweepResult = {
     mode, runId, graceHours: SWEEP_GRACE_HOURS, clubs: 0, published: 0, pinned: 0, waiting: 0,
     candidates: 0, wouldHaltRun: false, strayObjects: null, retired: 0, skipped: 0, failed: 0,
@@ -131,6 +130,10 @@ export async function runMediaOrphanSweep(deps: SweepDeps = {}): Promise<SweepRe
   });
   if (error || !data) throw new Error(`Unable to scan for orphaned media: ${error?.message ?? "empty result"}`);
   const scan = data as ScanResult;
+  // The database stamped scannedAt before any retirement in this run, and deleted_at comes from the
+  // same clock, so comparing the two is free of app/database clock skew.
+  const scannedAt = new Date(scan.scannedAt);
+  const runStartedAt = Number.isNaN(scannedAt.getTime()) ? now() : scannedAt;
 
   const totalCandidates = scan.clubs.reduce((sum, club) => sum + club.candidates.length, 0);
   const wouldHaltRun = totalCandidates > SWEEP_RUN_HALT_CANDIDATES;

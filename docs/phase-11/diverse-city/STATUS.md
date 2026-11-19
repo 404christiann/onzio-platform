@@ -84,6 +84,10 @@ the asset as this run's retirement only when `deleted_at` is at or after the run
 retired earlier is recorded as skipped (`already-retired`), its trash copy removed, and its public object left to
 the path that retired it. One unit test; `test:unit` and architecture re-run (code only, migration unchanged).
 
+**onzio-bot round 4 (no High or Medium; the optional Low fixed):** to remove app/database clock skew, the run start
+used by that read-back is now the scan's `scannedAt` (database clock, stamped before any retirement), the same
+clock as `deleted_at`. The two tests use an app clock 10 hours ahead to prove skew doesn't change the outcome.
+
 **Known limit:** cinematic JSON content stores asset ids that are mirrored into `*_media_asset_id` FK columns or
 child tables; the catalog test forces a decision on any new JSON column but cannot prove a mirror exists.
 

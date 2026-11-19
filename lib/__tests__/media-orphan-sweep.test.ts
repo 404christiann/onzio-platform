@@ -251,7 +251,8 @@ describe("enforce", () => {
     const path = c.candidates[0].path;
     const h = harness([c], {
       retire: () => ({ data: null, error: { message: "fetch failed" } }),
-      assetRow: { status: "orphaned", deleted_at: "2026-11-19T10:30:05Z" },
+      // After the scan's database timestamp; an app clock running ahead must not matter.
+      assetRow: { status: "orphaned", deleted_at: "2026-11-19T00:00:05Z" },
     });
     const result = await runMediaOrphanSweep({ ...h.deps, mode: "enforce", now: () => new Date("2026-11-19T10:30:00Z") });
     expect(result.retired).toBe(1);
@@ -266,7 +267,8 @@ describe("enforce", () => {
     const path = c.candidates[0].path;
     const h = harness([c], {
       retire: () => ({ data: null, error: { message: "fetch failed" } }),
-      assetRow: { status: "orphaned", deleted_at: "2026-11-19T09:00:00Z" },
+      // Before the scan's database timestamp (2026-11-19T00:00:00Z), whatever the app clock says.
+      assetRow: { status: "orphaned", deleted_at: "2026-11-18T23:59:59Z" },
     });
     const result = await runMediaOrphanSweep({ ...h.deps, mode: "enforce", now: () => new Date("2026-11-19T10:30:00Z") });
     expect(result.retired).toBe(0);
