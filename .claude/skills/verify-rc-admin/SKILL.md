@@ -211,6 +211,12 @@ and writes its gitignored `test-results/`; nothing else there changes.
   still do the resolving). The editor must use one of the two Save buttons and the visitor-editor
   reload/conflict controls; on main only Chick-fil-A has "Load latest and keep my edits", so other
   routes fail conflict until a package adds it.
+  **`website` step (`--route /admin/sponsors` only; every other route's gate 3 is unchanged):** after
+  the steps above the spec opens the page, opens the first Edit control, types
+  `rcv-gate3.example.com` into the first sponsor's "Their website (optional)", presses Done and Save,
+  waits for `saved`, reloads the page, and asserts the field now reads `https://rcv-gate3.example.com`
+  (saved and persisted, normalized). It then clears the website again with a second save so later gates
+  see the seeded page. Added in RC-ADMIN-14 because the first-text-field walk only ever edits the name.
   **Not applicable:** a route that is not in the `EDITORS` table, has no editable text field after
   15 s and no Save button reports gate 3 (and gate 4) as `N/A`. A route in `EDITORS` is always
   applicable, and a Save button with no field counts as a broken editor (it fails), so a slow or

@@ -1,5 +1,66 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-14 Rose City Sponsors editor on the editor kit (Previews layout)
+
+**Agent/package:** Claude Code (Sonnet worker W14, orchestrated), RC-ADMIN-14, branch `claude/rc-admin-14` on
+`0fa2b2ef`. **Status:** `in_progress`, PR open. It merges only on Christian's word. App code only: no migration,
+schema, RPC, data or production change, and nothing under `components/cinematic/` or `lib/`.
+
+**Completed work:**
+- `/admin/sponsors` for Rose City (cinematic@2, classic portal) now renders `RoseCitySponsorsEditor`.
+  - The page keeps its single template read; one `portal === "classic"` branch was added after it.
+  - Diverse City, other clubs and the new-admin portal are unchanged.
+- PageFrame: breadcrumb Website / Partners / Sponsors, "Open page" (/), and one Save for both places.
+  - Two PreviewCards: the Homepage carousel (the real `CinematicSponsors` fed by the draft) and the Website footer.
+  - They open an EditorDialog with one section per place. Each logo row has name, website, Replace, move,
+    plain Remove, and an "Also in the other place" switch.
+  - Caps are 10 / 6 / 30, enforced in the UI.
+  - The "Edit Partners pages" link is kept.
+- Adds the optional website for Rose City through the existing `website_url` column and the existing writes.
+  It is normalized like the one-list page and only written when it changes.
+- Saves go through the existing `persistSponsorAttempt`, with Retry through `saveAction.save()`. Deleted-logo
+  storage cleanup keeps the same calls and timing.
+- New conflict check: sponsors have no revision field, so the editor re-reads the list before the first write.
+  A mismatch gives the conflict state, with "Load latest and keep my edits" or "Reload saved page".
+
+**Files changed:** `app/admin/(protected)/sponsors/page.tsx`. New `components/admin/sponsors/rose-city/`
+(`RoseCitySponsorsEditor.tsx`, `RoseCitySponsorFields.tsx`, `rose-city-sponsors-model.ts`, CSS module). New test
+`tests/contracts/admin-rose-city-sponsors.test.ts` (77 tests): `diffRoseCitySponsors` is byte-identical to
+`diffSponsorLogos` across 60 single-place edit cases, and an untouched load gives an empty diff.
+
+**Verification:** verify-rc-admin `--route /admin/sponsors --touched none` on `0fa2b2ef`: PASS on all six gates.
+- Gate 1 (scope): 6 app files.
+- Gate 2 (payload identity): 14/14 identical.
+- Gate 3 (save states): kit path, all seven states pass, including retry and conflict.
+- Gate 4 (visual): CLS at most 0.00001, new axe 0, reduced motion 0.
+- Gate 5 (repo): tsc ok; unit 338 files, 3852 tests; architecture 152; selector debt unchanged.
+- Gate 6: Diverse City 8/8 identical.
+
+**Footer decision (Christian, 2026-11-18):** Rose City's public `CinematicFooter` renders no sponsor logos.
+The Footer placement control is hidden in the Rose City editor, but the data is preserved: saves round-trip existing
+footer flags unchanged, and a contract test covers it.
+
+**Known one-off (not chased, per Christian):** the first verify run after the #170 rebase failed in the Diverse City
+seed with "An invalid response was received from the upstream server". That is not `MEDIA_RESERVATION_MISSING`.
+It looked like a transient local gateway or DB failure while other workers shared the stack. An immediate re-run
+passed. The cause is unconfirmed; investigate only if it recurs.
+
+**Skill change (approved by Christian):** gate 3 on `/admin/sponsors` also performs one website-field save. Other
+routes are unchanged.
+
+**Fix round (Christian's Footer call plus bot round 1 on `d40aa78`):**
+- The Footer card, dialog section and switch are removed. The draft holds only carousel rows. Footer-only and resting
+  rows are never written and still count toward the 30-row cap. No update writes a footer value.
+- H1: Replace no longer reads a flag set inside a `setDrafts` updater. It reads `draftsRef`, so the new logo survives
+  and only the old one is retired. An unsaved replaced file is cleaned up. Pure helpers (`applyReplace`,
+  `retiredFiles`, `unsavedReplacedFile`) are tested.
+- M1: "Load latest and keep my edits" rebases per field onto the fresh rows. Other people's renames, websites, order
+  and footer flags survive. Rows deleted or hidden elsewhere are named in the conflict notice.
+- The partner-list note has a 20px gap.
+- Re-verified on `0fa2b2ef`: all six gates pass, and gate 3 includes the new website step. Unit: 338 files, 3838 tests.
+
+**Next step:** onzio-bot re-review, then Christian merges.
+
 ## 2026-11-18 - RC-ADMIN-12 Rose City News editor on the editor kit (Previews layout)
 
 **Agent/package:** Claude Code (Sonnet worker W12, orchestrated), RC-ADMIN-12, branch `claude/rc-admin-12` on
