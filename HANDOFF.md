@@ -8,6 +8,17 @@
   with the season" copy is still wrong; Christian decides). One slug-keyed branch in `seasons/page.tsx` (`"rose-city"`), to fold into `lib/site-for.ts` after 4c.
 - **Exact next step:** onzio-bot review, then Christian merges.
 
+## 2026-11-19 - Rose City launch gate: LEMON MILK accepted without a receipt (docs only)
+
+- **Status:** `done` (docs only). Christian knowingly accepted commercial use of LEMON MILK v5.0
+  (donationware) for launch with no receipt on file. The PR 151 launch-checklist gate is closed as an
+  accepted risk. Record and exit plan: `docs/rose-city-2027-fonts.md`, "LEMON MILK launch decision".
+- **Fallback check:** LEMON MILK is used in one place, the cinematic footer club name
+  (`.footer-brand strong`, shown only when no footer logo is set). Its stack is `'LEMON MILK', sans-serif`,
+  so removing the font falls back to generic sans-serif, not Figtree. Adding `'CinematicFigtree'` is a
+  one-line `components/cinematic` change that needs Christian's approval.
+- **Follow-up:** buy the LEMON MILK license and record the receipt in the fonts doc.
+
 ## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)
 
 - **Status:** `in_progress`, PR open; verify-rc-admin PASS (gate 3 declared n/a, Diverse City 15/15 identical). No migration, schema, validator, RPC or env
@@ -213,7 +224,7 @@
   FontsGeek files for launch on 2026-11-17. The exit plan (delete the two objects, or unset
   the variable and redeploy, which falls back to Figtree) and the follow-up (buy a webfont
   license or switch fonts) are in `docs/rose-city-2027-fonts.md`. The LEMON MILK receipt
-  is still an open launch gate.
+  gate was closed as an accepted risk on 2026-11-19 (see the entry at the top).
 
 ## 2026-11-10 - Unit tests run in parallel: test:contracts and test:legacy about 5 times faster
 

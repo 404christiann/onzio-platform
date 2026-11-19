@@ -48,6 +48,16 @@ Diverse City's classic Seasons page.
 
 **Exact next step:** onzio-bot review, then Christian merges.
 
+## 2026-11-19 - Rose City launch gate: LEMON MILK accepted without a receipt (docs only)
+
+**Agent/package:** Claude Code (Opus, RC-ADMIN wave 4 orchestrator), docs only, branch `claude/rc-lemon-milk-accepted` on `9e1dee1c`.
+**Status:** `done`, PR open.
+**Completed work:** recorded Christian's 2026-11-19 decision to launch with LEMON MILK without a receipt, next to the 2026-11-17 Avenir decision; closed the PR 151 gate as an accepted risk; checked every LEMON MILK use and its fallback.
+**Files changed:** `docs/rose-city-2027-fonts.md`, `HANDOFF.md`, this file.
+**Verification:** `git grep -i lemon` over `app components lib styles packages public` on `9e1dee1c`: one `@font-face` and one rule (`.cinematic-site .footer-brand strong`, stack `'LEMON MILK', sans-serif`) in `components/cinematic/cinematic.css`; `CinematicFooter.tsx:40` renders it only without a footer logo. The `--font-lemon-milk` variable maps to other fonts. No code changed.
+**Blockers or unresolved decisions:** the fallback is generic sans-serif, not Figtree; making it Figtree is a one-line public-site CSS change that needs Christian's approval.
+**Exact next step:** Christian decides on the one-line fallback change; follow-up purchase of the LEMON MILK license.
+
 ## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)
 
 **Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4b-roster, branch `claude/rc-admin-4b-roster` off `3d52ab65`.
