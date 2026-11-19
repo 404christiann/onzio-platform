@@ -31,17 +31,16 @@
 tests: the same write bodies and order as the classic editor for new, edit, show, hide and photo replace; classic messages; Goalkeepers
 first; filters; card numbers; rendered card and fields; Diverse City branch pins; no template selector in new files).
 
-**Verification:** verify-rc-admin `--route /admin/roster --package RC-ADMIN-4b-roster --touched roster`, final run on the review-fix head
-(this branch on `0a80031a`, with #186), report `test-results/rc-admin-verify/20261119-131413-RC-ADMIN-4b-roster/report.html`: PASS. The
-first run (`69de5a64`, report `20261119-125409-...`) passed too; the rerun followed the orchestrator's review (label "Save player", card
-numbers by current position). That rerun used a one-line widening of the skill's roster save regex to `/^Save( changes| player)?$/`, taken out of
-this PR (package PRs never change the skill); it goes in the skill-only PR RC-ADMIN-4b-0-2. **The final verify runs after that PR merges**,
-because on main's skill the roster row cannot click "Save player".
+**Verification:** final verify-rc-admin `--route /admin/roster --package RC-ADMIN-4b-roster --touched roster` on this branch rebased onto
+`5358951b` (main with #186 and #188), using main's skill unchanged, report
+`test-results/rc-admin-verify/20261119-135200-RC-ADMIN-4b-roster/report.html`: PASS. Earlier runs on the pre-rebase heads also passed (`69de5a64`,
+report `20261119-125409-...`; and the review-fix head with a local one-line skill regex change, report `20261119-131413-...`); that regex change now
+lives in #188.
 - Gate 1: 15 app files, 2 doc warnings, 0 forbidden. Gate 2: 19/19 identical, touched `roster`. Gate 3: n/a, declared in `EDITORS`
   (a player is saved from its own dialog; there is no page Save). Gate 4: CLS at most 0.00003 at 390 and 1440, light and dark; new axe 0;
   reduced motion 0 offenders. Gate 5: tsc ok; unit 350 files, 4138 tests; architecture 152; selector debt unchanged.
   Gate 6: Diverse City 15/15 pages identical to origin/main.
-- Gate 4 on the rerun: CLS at most 0.00042 (1440 light), new axe 0, reduced motion 0. Gate 5: unit 4139 tests. Gate 6: 15/15 identical.
+- Final run: gate 1 16 app files (18 changed), 2 doc warnings, 0 forbidden. Gate 2 19/19 identical. Gate 3 n/a. Gate 4 CLS at most 0.00003 at 390 and 1440, light and dark; new axe 0; reduced motion 0. Gate 5 tsc ok, unit 350 files 4139 tests, architecture 152, selector debt unchanged. Gate 6 15/15 identical.
 - Manual browser check of the player dialog (gate 3 is n/a, so verify does not drive it): one DB-lock hold on the shared local stack
   (fresh reset, seed, sign-in), the head build, Playwright, evidence in
   `test-results/manual-roster/20261119-132910/` (37 screenshots, `playwright-1.json`, `playwright-2.json`). Rose City at 390 and 1440:
@@ -62,7 +61,7 @@ because on main's skill the roster row cannot click "Save player".
 - The player editor's stats keep the classic quirk: changing a player's position after creation does not move the season row between the
   field and keeper tables (existing behaviour, not fixed here).
 
-**Exact next step:** onzio-bot review, then Christian merges.
+**Exact next step:** Christian merges.
 
 ## 2026-11-19 - RC-ADMIN-4b-0-2 verify-rc-admin: three small fixes for the Seasons, Roster and kit-editor rebuilds
 
@@ -215,7 +214,7 @@ Diverse City 8/8 pages identical). Report `test-results/rc-admin-verify/20261119
 
 **Blockers / decisions:** none. Not run: a real-browser pass of reordering on a phone (covered by contract tests and the
 button states, not by a gate).
-**Exact next step:** onzio-bot review, then Christian merges.
+**Exact next step:** Christian merges.
 
 ## 2026-11-19 - RC-ADMIN-4-0a verify-rc-admin flake cleanup
 
@@ -296,7 +295,7 @@ inside this worktree instead. A run also stops under 5 GB free disk; the orchest
 
 **Blockers or unresolved decisions:** none.
 
-**Exact next step:** onzio-bot review, then Christian merges. Nothing to apply on production.
+**Exact next step:** Christian merges. Nothing to apply on production.
 
 ## 2026-11-19 - RC-ADMIN-4-0b: Partners/Injury Report card spacing, Registrations and Standings hidden for Rose City
 
@@ -367,7 +366,7 @@ always has the link, so it is unchanged); one source-level contract test. Re-ver
 **Blockers or unresolved decisions:** none. The dashboard loading skeleton does not know the club, so for Rose City it
 briefly shows the registration placeholders.
 
-**Exact next step:** onzio-bot review, then Christian merges. Then RC-ADMIN-4a (About, Contact, Policies).
+**Exact next step:** Christian merges. Then RC-ADMIN-4a (About, Contact, Policies).
 
 ## 2026-11-19 - RC-ADMIN-10d orphan-media sweep (dry-run by default)
 
