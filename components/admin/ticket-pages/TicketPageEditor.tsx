@@ -26,6 +26,7 @@ import { editorPageState } from "@/components/admin/tickets/tickets-sections";
 import {
   buildTicketPageSaveInput, changedTicketPageSections, setTicketPageShown, ticketPageSectionShown, ticketPageSectionSlice, type TicketPageSpec,
 } from "./ticket-page-sections";
+import { DISCARD_CONFIRM } from "../editor-copy";
 import styles from "./ticket-editors.module.css";
 import "@/components/admin/homepage/homepage-editor.css";
 
@@ -274,7 +275,7 @@ export default function TicketPageEditor<K extends TicketPageKey>({ spec, title,
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${title} section`}>
           <div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}>{renderLive(ticketPageView(spec.sectionOnly(api.draft, id), media))}</CinematicShell></div>
         </HomepagePreviewFrame></div> : null} />}
-    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+    <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {title} edits and load the saved page?
     </AdminConfirmDialog>

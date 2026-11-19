@@ -7,7 +7,7 @@ export default function CinematicSeasonMembership({ content, placeholders = fals
   const showButton = isTicketPartShown(button);
   const column = (label: string) => label.endsWith("*") ? <>{label.slice(0, -1)}<span className="tp-star">*</span></> : label;
   return <div className="tp-page tp-season">
-    {isTicketPartShown(content.heading) && <TicketPageHeading title={content.heading.title} subtitle={content.heading.subtitle} />}
+    <TicketPageHeading title={content.heading.title} subtitle={content.heading.subtitle} visuallyHidden={!isTicketPartShown(content.heading)} />
     {isTicketPartShown(intro) && (intro.text.trim() || intro.highlights.length > 0 || intro.includes.length > 0) && <section className="tp-section tp-copy" aria-label="About the membership">
       {intro.text.trim() && <p>{intro.text}</p>}
       {intro.highlights.length > 0 && <ul className="tp-bullets">{intro.highlights.map((item, index) => <li key={index}>{item}</li>)}</ul>}

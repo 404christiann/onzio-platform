@@ -1,5 +1,59 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-09 post-Wave-2 polish (Season h1, descriptions, crop decimals, discard text, shimmer, preview ids)
+
+**Agent/package:** Claude Code (Sonnet worker W9, orchestrated), RC-ADMIN-09, branch `claude/rc-admin-09`
+on `9e563d79`. **Status:** `in_progress`, PR open. It merges only on Christian's word. App code only:
+no migration, schema, RPC, data or production change. One public-page change under
+`components/cinematic/` was approved by Christian (item 1).
+
+**Completed work:**
+
+1. **Season h1.** `TicketPageHeading` takes `visuallyHidden`. When `heading.visible` is false, the
+   Season page now renders `<h1 class="sr-only">` instead of dropping its only h1. Markup with the flag
+   on and with it absent is unchanged.
+2. **Description on two lines.** The PageFrame description wraps to two lines at every width instead
+   of being cut at one. The skeleton matches it, so the shift stays at 0 px.
+3. **Foothill crop fields.** They show at most one decimal. The stored value changes only when the
+   user types, so an untouched load and save, or opening and closing the dialog, stays byte-identical.
+4. **Discard confirm.** Foothill, Chick-fil-A, Tickets and the Season/KBYG shell use `DISCARD_CONFIRM`.
+   The text is unchanged.
+5. **Shimmer placeholder.** It is now driven by `data-preview-settling="true"`, set by `SettledPreview`,
+   instead of matching an inline style.
+6. **Preview ids.** `scopePreviewIds` gives each inline card preview a unique id prefix and rewrites the
+   `aria-*`, `for` and `#` references inside that preview, again after any later DOM change. Duplicate
+   ids on the built pages, before → after:
+   - `/admin/foothill-transit`: 1 → 0 (`robinson-title` ×2)
+   - `/admin/chick-fil-a`: 1 → 0
+   - `/admin/tickets`: 1 → 0 (`tickets-title` ×5)
+   - Stadium, Season and KBYG: 0 before and after
+
+**Files changed:**
+- `components/cinematic/CinematicSeasonMembership.tsx` and `components/cinematic/CinematicTicketPageParts.tsx`.
+- Editor kit: `PageFrame.module.css`, `skeletons.module.css`, `PreviewCards.tsx`, `PreviewCards.module.css`, and new
+  `scopePreviewIds.ts`.
+- Editors: Foothill (`StadiumEditor.tsx`, `FoothillSectionFields.tsx`, `foothill-sections.ts`),
+  `SettledPreview.tsx`, `ChickFilAEditor.tsx`, `TicketsEditor.tsx`, `TicketPageEditor.tsx`,
+  `HomepageOverviewPreview.tsx`.
+- Tests: new `rc-admin-09-polish.test.ts` and `rc-admin-09-season-h1.test.ts`, plus two updated contract
+  tests.
+
+**Verification:** verify-rc-admin `--touched none` passed all six gates on the final code for
+`/admin/season-membership`, `/admin/foothill-transit`, `/admin/stadium`, `/admin/homepage` and
+`/admin/tickets`.
+- Payloads 14/14 identical.
+- Save states 7/7.
+- CLS at most 0.00026.
+- 0 new axe violations.
+- Diverse City 8/8.
+- `tsc` clean; unit 3747; architecture 152; selector debt unchanged.
+- After rebasing onto `9e563d79` (RC-ADMIN-SEC-01, an unrelated cleanup job), `tsc` and the package
+  tests pass again.
+
+**Blockers or unresolved decisions:** none.
+
+**Exact next step:** bot review; Christian decides the merge. Then Wave 3 (the list pages).
+
 ## 2026-11-18 - RC-ADMIN-10b media upload quota, rate limit and one-time reservations
 
 **Agent/package:** Claude Code (Opus), RC-ADMIN-10b, PR #168, merged as `5d6649d6` (squash of the

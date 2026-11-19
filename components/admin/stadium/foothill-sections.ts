@@ -94,6 +94,9 @@ export function buildFoothillSaveInput(args: {
 export const foothillDirty = (draft: StadiumContent, saved: StadiumContent | null) => stadiumDraftFingerprint(draft) !== stadiumDraftFingerprint(saved ?? emptyStadiumContent());
 
 /** One crop edit in whole percent, as the person types it. Returns null when the crop would leave the image (the old editor refused it the same way). */
+/** A crop value (0 to 1) as the percent shown in its field: at most one decimal. Display only, the saved value is never rounded by this. */
+export const cropPercentLabel = (value: number): string => String(Number((value * 100).toFixed(1)));
+
 export function applyFoothillCrop(content: StadiumContent, cropKey: "phoneCardCrop" | "phoneMapCrop", key: keyof StadiumCrop, percent: number): StadiumContent | null {
   if (!Number.isFinite(percent)) return null;
   const candidate = { ...content[cropKey], [key]: percent / 100 };
