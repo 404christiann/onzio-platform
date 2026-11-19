@@ -16,7 +16,6 @@ import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import CinematicSponsors from "@/components/cinematic/CinematicSponsors";
 import { useClubContext } from "@/components/ClubContextProvider";
-import ResilientImage from "@/components/ResilientImage";
 import {
   confirmSponsorInserts,
   persistSponsorAttempt,
@@ -30,15 +29,15 @@ import { sponsorNameFromFile, type SponsorDraft } from "@/lib/sponsor-content";
 import { deleteUnusedSponsorStorageUrls, uploadSponsorLogo } from "@/lib/sponsor-storage";
 import {
   PLACES, PLACE_CAP, PLACE_NOUN, canAddTo, diffRoseCitySponsors, draftFingerprint, draftsFromRows, inPlace,
-  listedCount, moveWithinPlace, MAX_LISTED_SPONSORS, placeCount, placesOverCap, rebaseDrafts, removeFromPlace,
-  rowsFingerprint, setPlaceSwitch, websiteProblems, type Place,
+  listedCount, moveWithinPlace, MAX_LISTED_SPONSORS, placeCount, placesOverCap, applyReplace, rebaseDrafts, removeFromPlace, retiredFiles, unsavedReplacedFile,
+  rowsFingerprint, websiteProblems, type Place,
 } from "./rose-city-sponsors-model";
 import { RoseCitySponsorFields, type SponsorFieldsApi } from "./RoseCitySponsorFields";
 import styles from "./RoseCitySponsorsEditor.module.css";
 
 const PAGE = "Sponsors";
 const CRUMBS = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Partners" }];
-const DESCRIPTION = "Manage sponsor logos for the homepage carousel and footer. Save applies all changes together.";
+const DESCRIPTION = "Manage sponsor logos for the homepage carousel. Save applies all changes together.";
 const TITLES: Record<Place, string> = { carousel: "Homepage carousel", footer: "Website footer" };
 
 /** Natural width the public homepage strip is laid out at inside its preview box (its sizes follow the viewport). */
@@ -58,13 +57,12 @@ function previewRows(drafts: readonly SponsorDraft[], place: Place): DBSiteSpons
   }));
 }
 
-/** The real Rose City homepage sponsor strip (CinematicSponsors), fed the draft. Footer: the "Proud Partners" strip the classic page showed. */
+/** The real Rose City homepage sponsor strip (CinematicSponsors), fed the draft. */
 const PlacePreview = memo(function PlacePreview({ place, drafts, shared }: { place: Place; drafts: readonly SponsorDraft[]; shared: CinematicHomepageContent | null }) {
   const sponsors = useMemo(() => previewRows(drafts, place), [drafts, place]);
   const urls = useMemo(() => sponsors.map((sponsor) => sponsor.logo_url), [sponsors]);
   const empty = <p className={styles.empty}>No logos in the {PLACE_NOUN[place]} yet.</p>;
-  if (place === "carousel") {
-    return (
+  return (
       <SettledPreview urls={urls}>
         <div className={styles.previewFrame} data-admin-public-preview>
           {sponsors.length === 0 ? empty : (
@@ -74,25 +72,6 @@ const PlacePreview = memo(function PlacePreview({ place, drafts, shared }: { pla
           )}
         </div>
       </SettledPreview>
-    );
-  }
-  return (
-    <SettledPreview urls={urls}>
-      <div className={styles.stripWrap} data-admin-public-preview>
-        {sponsors.length === 0 ? <p className={styles.empty} style={{ color: "#aaa" }}>No logos in the footer yet.</p> : (
-          <div style={{ maxInlineSize: 760, marginInline: "auto" }}>
-            <p className={styles.stripTitle}>Proud Partners</p>
-            <div className={styles.strip}>
-              {sponsors.map((sponsor) => (
-                <div key={sponsor.id} className={styles.stripLogo}>
-                  <ResilientImage src={sponsor.logo_url} alt={sponsor.name} fill sizes="128px" className="object-contain" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </SettledPreview>
   );
 });
 
@@ -132,6 +111,8 @@ export default function RoseCitySponsorsEditor() {
   const unsaved = dirty || pendingSave;
   // While a save is running, uploading, or an earlier save waits to be re-sent as it was, the page cannot be edited.
   const locked = saving || uploading || pendingSave;
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
   const dirtyRef = useRef(unsaved);
   dirtyRef.current = unsaved;
 
@@ -191,11 +172,11 @@ export default function RoseCitySponsorsEditor() {
     }
   }
 
-  function removeLogo(key: string, place: Place) {
+  function removeLogo(key: string) {
     if (locked) return;
     const draft = drafts.find((entry) => entry.key === key);
     if (!draft) return;
-    const next = removeFromPlace(drafts, key, place);
+    const next = removeFromPlace(drafts, key);
     edit(next);
     if (draft.id === null && !next.some((entry) => entry.key === key)) void dropUnsavedFile(draft.logo_url);
   }
@@ -206,7 +187,7 @@ export default function RoseCitySponsorsEditor() {
     const selected = Array.from(files).slice(0, room);
     if (selected.length === 0) return;
     uploadingRef.current = true; setUploading(true); setMessage(""); setStatus("Adding your logos…");
-    let current = drafts;
+    let current = draftsRef.current;
     try {
       for (const file of selected) {
         const url = await uploadSponsorLogo(file, place);
@@ -217,6 +198,7 @@ export default function RoseCitySponsorsEditor() {
           homepage: place === "carousel", footer: place === "footer",
         };
         current = [...current, logo];
+        draftsRef.current = current;
         setDrafts(current);
         setFailure((value) => (value === "conflict" ? value : null));
       }
@@ -231,24 +213,21 @@ export default function RoseCitySponsorsEditor() {
 
   async function replaceLogo(key: string, file: File) {
     if (locked || uploadingRef.current) return;
-    const replaced = drafts.find((entry) => entry.key === key);
+    // Edits are locked while uploading, so the draft read now is the draft the upload lands on.
+    const replaced = draftsRef.current.find((entry) => entry.key === key);
     if (!replaced) return;
     uploadingRef.current = true; setUploading(true); setMessage(""); setStatus("Replacing the logo…");
     try {
-      const place: Place = replaced.homepage ? "carousel" : "footer";
-      const url = await uploadSponsorLogo(file, place);
+      const url = await uploadSponsorLogo(file, "carousel");
       ownedUploads.current.add(url);
-      if (!mounted.current) { await deleteUnusedSponsorStorageUrls([url]); ownedUploads.current.delete(url); return; }
-      let stillThere = false;
-      setDrafts((current) => current.map((entry) => {
-        if (entry.key !== key) return entry;
-        stillThere = true;
-        return { ...entry, logo_url: url, name: entry.name.trim() || sponsorNameFromFile(file.name) };
-      }));
+      const next = mounted.current ? applyReplace(draftsRef.current, key, url, sponsorNameFromFile(file.name)) : null;
+      if (!next) { await deleteUnusedSponsorStorageUrls([url]); ownedUploads.current.delete(url); return; }
+      draftsRef.current = next;
+      setDrafts(next);
       setFailure((value) => (value === "conflict" ? value : null));
-      if (!stillThere) { await deleteUnusedSponsorStorageUrls([url]); ownedUploads.current.delete(url); return; }
       setStatus("Logo replaced. Save to publish.");
-      if (replaced.id === null) await dropUnsavedFile(replaced.logo_url);
+      const orphan = unsavedReplacedFile(replaced);
+      if (orphan) await dropUnsavedFile(orphan);
     } catch (error: unknown) {
       if (mounted.current) { setMessage(error instanceof Error ? error.message : "Upload failed"); setStatus(""); }
     } finally {
@@ -286,14 +265,10 @@ export default function RoseCitySponsorsEditor() {
         }
         const logos = drafts.map((draft) => ({ key: draft.key, id: draft.id, name: draft.name, logo_url: draft.logo_url }));
         const changes = diffRoseCitySponsors(rows, drafts);
-        const replacedFiles = changes.toUpdate.flatMap((update) => {
-          const original = rows.find((row) => row.id === update.id);
-          return original && update.changes.logo_url !== undefined && original.logo_url !== update.changes.logo_url ? [original.logo_url] : [];
-        });
         current = {
           placement: "carousel", version: 0, logos, originalIds: new Set(rows.map((row) => row.id)), changes,
           deleted: false, updates: 0, inserted: null, insertUncertain: false,
-          retireUrls: [...changes.toDelete.map((logo) => logo.logo_url), ...replacedFiles], retired: false,
+          retireUrls: retiredFiles(rows, changes), retired: false,
         };
         attempt.current = current;
       }
@@ -367,9 +342,11 @@ export default function RoseCitySponsorsEditor() {
     if (saving || uploading) return;
     try {
       const latest = await fetchSponsorList(clubId);
-      setDrafts((current) => rebaseDrafts(current, rows, latest));
+      const rebased = rebaseDrafts(draftsRef.current, rows, latest);
+      setDrafts(rebased.drafts);
       setRows(latest);
-      setFailure(null); setMessage("Latest saved sponsors loaded. Your edits were kept."); setValidation(""); setErrors({});
+      setFailure(null); setValidation(""); setErrors({});
+      setMessage(["Latest saved sponsors loaded. Your edits were kept.", ...rebased.notes].join(" "));
     } catch (error: unknown) {
       setMessage(error instanceof Error ? error.message : "Unable to load the latest sponsors.");
     }
@@ -398,7 +375,6 @@ export default function RoseCitySponsorsEditor() {
     setWebsite: (key, website) => edit(drafts.map((draft) => (draft.key === key ? { ...draft, website } : draft))),
     move: (key, place, delta) => edit(moveWithinPlace(drafts, key, place, delta)),
     remove: removeLogo,
-    toggle: (key, place, on) => edit(setPlaceSwitch(drafts, key, place, on)),
     replace: (key, file) => void replaceLogo(key, file),
     add: (place, files) => void addLogos(place, files),
   };

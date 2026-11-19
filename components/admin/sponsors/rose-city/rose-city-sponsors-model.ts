@@ -2,7 +2,6 @@ import type { DBSiteSponsorLogo, SponsorLogoPlacement } from "@/lib/db-types";
 import {
   MAX_CAROUSEL_SPONSORS,
   MAX_FOOTER_SPONSORS,
-  SPONSOR_PLACEMENT_SWITCH,
   normalizeSponsorWebsite,
   savedSponsorName,
   type SponsorDraft,
@@ -11,7 +10,13 @@ import {
 } from "@/lib/sponsor-content";
 
 /*
- * The Rose City Sponsors editor edits both places at once. These are pure
+ * The Rose City Sponsors editor shows the homepage carousel only. The footer
+ * placement is hidden from the page but its data is preserved: a row's footer
+ * flag is never written, rows that show only in the footer (or nowhere) are
+ * never part of the draft and are never written or deleted, and they still
+ * count toward the 30 listed.
+ *
+ * (Older note:) The editor edits one list at once. These are pure
  * helpers: the draft is the club's visible sponsors in one list order, and a
  * place (homepage carousel or footer) shows the ones whose switch is on, in
  * that order. Sponsors that show nowhere ("resting" rows) are never part of the
@@ -26,21 +31,17 @@ import {
 /** Both places full and some sponsors resting; the same ceiling the one-list page uses. */
 export const MAX_LISTED_SPONSORS = 30;
 
-export const PLACES = ["carousel", "footer"] as const satisfies readonly SponsorLogoPlacement[];
-export type Place = (typeof PLACES)[number];
+export const PLACES = ["carousel"] as const satisfies readonly SponsorLogoPlacement[];
+export type Place = SponsorLogoPlacement;
 
 export const PLACE_NOUN: Record<Place, string> = { carousel: "homepage carousel", footer: "footer" };
 export const PLACE_CAP: Record<Place, number> = { carousel: MAX_CAROUSEL_SPONSORS, footer: MAX_FOOTER_SPONSORS };
 
 const flag = (place: Place): "homepage" | "footer" => (place === "carousel" ? "homepage" : "footer");
 
-export function isVisibleRow(row: Pick<DBSiteSponsorLogo, "show_on_homepage" | "show_in_footer">): boolean {
-  return row.show_on_homepage || row.show_in_footer;
-}
-
-/** The draft for a loaded list: every sponsor that shows somewhere, in list order. */
+/** The draft for a loaded list: every sponsor in the homepage carousel, in list order. */
 export function draftsFromRows(rows: readonly DBSiteSponsorLogo[]): SponsorDraft[] {
-  return rows.filter(isVisibleRow).map((row) => ({
+  return rows.filter((row) => row.show_on_homepage).map((row) => ({
     key: row.id,
     id: row.id,
     name: row.name,
@@ -61,7 +62,7 @@ export function placeCount(drafts: readonly SponsorDraft[], place: Place): numbe
 
 /** How many sponsors the club lists in all, including those resting. */
 export function listedCount(rows: readonly DBSiteSponsorLogo[], drafts: readonly SponsorDraft[]): number {
-  return drafts.length + rows.filter((row) => !isVisibleRow(row)).length;
+  return drafts.length + rows.filter((row) => !row.show_on_homepage).length;
 }
 
 /** Room for one more logo in a place, inside both that place's cap and the total. */
@@ -90,17 +91,9 @@ export function moveWithinPlace(drafts: readonly SponsorDraft[], key: string, pl
   return next;
 }
 
-/** Switches one place off for a sponsor. A sponsor left showing nowhere leaves the list (it is deleted on save). */
-export function removeFromPlace(drafts: readonly SponsorDraft[], key: string, place: Place): SponsorDraft[] {
-  return drafts.flatMap((draft) => {
-    if (draft.key !== key) return [draft];
-    const next = { ...draft, [flag(place)]: false };
-    return next.homepage || next.footer ? [next] : [];
-  });
-}
-
-export function setPlaceSwitch(drafts: readonly SponsorDraft[], key: string, place: Place, on: boolean): SponsorDraft[] {
-  return drafts.map((draft) => (draft.key === key ? { ...draft, [flag(place)]: on } : draft));
+/** Takes a sponsor out of the carousel. Its footer flag is untouched: on save a sponsor also in the footer keeps its row. */
+export function removeFromPlace(drafts: readonly SponsorDraft[], key: string): SponsorDraft[] {
+  return drafts.filter((draft) => draft.key !== key);
 }
 
 export type SponsorProblem = { key: string; field: "website"; message: string };
@@ -133,26 +126,24 @@ export function placesOverCap(drafts: readonly SponsorDraft[]): Place[] {
  * when one was typed.
  */
 export function diffRoseCitySponsors(all: readonly DBSiteSponsorLogo[], drafts: readonly SponsorDraft[]): SponsorLogoDiff {
-  const shown = all.filter(isVisibleRow);
+  const shown = all.filter((row) => row.show_on_homepage);
   const draftIds = new Set(drafts.flatMap((draft) => (draft.id === null ? [] : [draft.id])));
   const byId = new Map(all.map((row) => [row.id, row]));
 
   const toDelete: SponsorLogoDiff["toDelete"] = [];
   const toUpdate: SponsorLogoDiff["toUpdate"] = [];
   for (const row of shown) {
-    if (!draftIds.has(row.id)) { toDelete.push(row); continue; }
-    const draft = drafts.find((entry) => entry.id === row.id)!;
-    for (const place of PLACES) {
-      const column = SPONSOR_PLACEMENT_SWITCH[place];
-      if (row[column] !== draft[flag(place)]) toUpdate.push({ id: row.id, changes: { [column]: draft[flag(place)] } });
-    }
+    if (draftIds.has(row.id)) continue;
+    // Removed from the carousel: a row the footer still shows keeps its row and only the carousel switch goes off.
+    if (row.show_in_footer) toUpdate.push({ id: row.id, changes: { show_on_homepage: false } });
+    else toDelete.push(row);
   }
 
   const kept = drafts.filter((draft) => draft.id !== null && shown.some((row) => row.id === draft.id));
   const slots = shown.filter((row) => draftIds.has(row.id)).map((row) => row.sort_order).sort((a, b) => a - b);
   kept.forEach((draft, index) => {
     const row = byId.get(draft.id as string)!;
-    const name = savedSponsorName(draft.name, nameIndex(drafts, draft));
+    const name = savedSponsorName(draft.name, inPlace(drafts, "carousel").indexOf(draft));
     const changes: SponsorRowChanges = {};
     if (row.name !== name) changes.name = name;
     if (row.logo_url !== draft.logo_url) changes.logo_url = draft.logo_url;
@@ -166,15 +157,15 @@ export function diffRoseCitySponsors(all: readonly DBSiteSponsorLogo[], drafts: 
 
   let next = all.reduce((highest, row) => Math.max(highest, row.sort_order), -1) + 1;
   const toInsert: SponsorLogoDiff["toInsert"] = [];
-  drafts.forEach((draft) => {
+  drafts.forEach((draft, index) => {
     if (draft.id !== null) return;
     const website = normalizeSponsorWebsite(draft.website);
     toInsert.push({
-      name: savedSponsorName(draft.name, nameIndex(drafts, draft)),
+      name: savedSponsorName(draft.name, index),
       logo_url: draft.logo_url,
       sort_order: next++,
-      show_on_homepage: draft.homepage,
-      show_in_footer: draft.footer,
+      show_on_homepage: true,
+      show_in_footer: false,
       ...(website.ok && website.value !== null ? { website_url: website.value } : {}),
     });
   });
@@ -182,26 +173,86 @@ export function diffRoseCitySponsors(all: readonly DBSiteSponsorLogo[], drafts: 
   return { toDelete, toInsert, toUpdate };
 }
 
-/** The "Sponsor N" a blank name saves as: its position in the first place that shows it, as the classic page counts it. */
-function nameIndex(drafts: readonly SponsorDraft[], draft: SponsorDraft): number {
-  const place: Place = draft.homepage ? "carousel" : "footer";
-  return inPlace(drafts, place).indexOf(draft);
-}
+export type Rebased = { drafts: SponsorDraft[]; notes: string[] };
 
 /**
- * "Load latest and keep my edits": the edits stay on the freshly read list.
- * A sponsor someone else deleted leaves the draft; one someone else added joins
- * at the end; one the person removed here stays removed.
+ * "Load latest and keep my edits": the fresh list is the base, and only the
+ * fields the person changed (name, logo, website) are put back on it, so
+ * someone else's change to an untouched sponsor survives the next save. The
+ * order follows the fresh list unless the person reordered. Footer flags come
+ * from the fresh rows (the page never edits them). A sponsor that was deleted,
+ * or no longer shows in the carousel, leaves the draft and is reported in
+ * `notes`; one someone else added joins; one the person removed here stays removed.
  */
 export function rebaseDrafts(
   drafts: readonly SponsorDraft[],
   previousRows: readonly DBSiteSponsorLogo[],
   freshRows: readonly DBSiteSponsorLogo[],
-): SponsorDraft[] {
-  const fresh = new Set(freshRows.map((row) => row.id));
-  const before = new Set(previousRows.map((row) => row.id));
-  const mine = new Set(drafts.flatMap((draft) => (draft.id === null ? [] : [draft.id])));
-  const kept = drafts.filter((draft) => draft.id === null || fresh.has(draft.id));
-  const added = draftsFromRows(freshRows.filter((row) => !before.has(row.id) && !mine.has(row.id)));
-  return [...kept, ...added];
+): Rebased {
+  const prev = new Map(draftsFromRows(previousRows).map((draft) => [draft.id as string, draft]));
+  const freshAll = new Map(freshRows.map((row) => [row.id, row]));
+  const freshShown = new Map(draftsFromRows(freshRows).map((draft) => [draft.id as string, draft]));
+  const notes: string[] = [];
+  const merged = new Map<string, SponsorDraft>();
+  for (const draft of drafts) {
+    if (draft.id === null) continue;
+    const label = draft.name.trim() || "A sponsor";
+    const row = freshShown.get(draft.id);
+    if (!row) {
+      const elsewhere = freshAll.get(draft.id);
+      const edited = prev.get(draft.id) && JSON.stringify(fields(prev.get(draft.id)!)) !== JSON.stringify(fields(draft));
+      notes.push(elsewhere
+        ? `${label} no longer shows in the homepage carousel, so it was left out${edited ? " and your edits to it were not kept" : ""}.`
+        : `${label} was deleted somewhere else, so it was left out${edited ? " and your edits to it were not kept" : ""}.`);
+      continue;
+    }
+    const before = prev.get(draft.id);
+    const changed = (key: "name" | "logo_url" | "website") => !before || before[key] !== draft[key];
+    merged.set(draft.id, {
+      ...row,
+      key: draft.key,
+      name: changed("name") ? draft.name : row.name,
+      logo_url: changed("logo_url") ? draft.logo_url : row.logo_url,
+      website: changed("website") ? draft.website : row.website,
+    });
+  }
+  const mineIds = drafts.flatMap((draft) => (draft.id !== null && merged.has(draft.id) ? [draft.id] : []));
+  const before = [...prev.keys()].filter((id) => mineIds.includes(id));
+  const reordered = JSON.stringify(mineIds.filter((id) => prev.has(id))) !== JSON.stringify(before);
+  const removedHere = new Set([...prev.keys()].filter((id) => !drafts.some((draft) => draft.id === id)));
+  const addedElsewhere = [...freshShown.values()].filter((draft) => !prev.has(draft.id as string) && !drafts.some((mine) => mine.id === draft.id));
+  const fresh = drafts.filter((draft) => draft.id === null);
+  let ordered: SponsorDraft[];
+  if (reordered) {
+    ordered = drafts.flatMap((draft) => (draft.id === null ? [draft] : merged.has(draft.id) ? [merged.get(draft.id)!] : []));
+    ordered = [...ordered.filter((d) => d.id !== null), ...addedElsewhere, ...fresh];
+  } else {
+    const inFreshOrder = [...freshShown.keys()].flatMap((id) => (merged.has(id) ? [merged.get(id)!] : removedHere.has(id) ? [] : addedElsewhere.filter((d) => d.id === id)));
+    ordered = [...inFreshOrder, ...fresh];
+  }
+  return { drafts: ordered, notes };
+}
+
+function fields(draft: SponsorDraft) {
+  return [draft.name, draft.logo_url, draft.website];
+}
+
+/** A Replace: the draft with the new logo on the sponsor (a blank name takes the file's), or null when the sponsor is no longer in it. */
+export function applyReplace(drafts: readonly SponsorDraft[], key: string, url: string, fileName: string): SponsorDraft[] | null {
+  if (!drafts.some((draft) => draft.key === key)) return null;
+  return drafts.map((draft) => (draft.key === key ? { ...draft, logo_url: url, name: draft.name.trim() || fileName } : draft));
+}
+
+/** Files a save retires: the logos of deleted rows and the old file of every replaced logo. Never a file a row still points at. */
+export function retiredFiles(all: readonly DBSiteSponsorLogo[], diff: SponsorLogoDiff): string[] {
+  const replaced = diff.toUpdate.flatMap((update) => {
+    const original = all.find((row) => row.id === update.id);
+    return original && update.changes.logo_url !== undefined && original.logo_url !== update.changes.logo_url ? [original.logo_url] : [];
+  });
+  return [...diff.toDelete.map((logo) => logo.logo_url), ...replaced];
+}
+
+/** The file of a replaced logo that was never saved: it has no row to keep it, so it is cleaned up. */
+export function unsavedReplacedFile(replaced: Pick<SponsorDraft, "id" | "logo_url">): string | null {
+  return replaced.id === null ? replaced.logo_url : null;
 }

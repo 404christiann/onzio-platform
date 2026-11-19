@@ -36,13 +36,30 @@ schema, RPC, data or production change, and nothing under `components/cinematic/
 - Gate 5 (repo): tsc ok; unit 338 files, 3852 tests; architecture 152; selector debt unchanged.
 - Gate 6: Diverse City 8/8 identical.
 
-**Open decision (Christian):** Rose City's public `CinematicFooter` renders no sponsor logos, so the Footer place
-shows nowhere on the public site (this was already true on the old classic page). Keep the Footer place or drop it.
+**Footer decision (Christian, 2026-11-18):** Rose City's public `CinematicFooter` renders no sponsor logos.
+The Footer placement control is hidden in the Rose City editor, but the data is preserved: saves round-trip existing
+footer flags unchanged, and a contract test covers it.
 
-**Skill follow-up:** gates 2 and 3 only drive the sponsor name field. The website payload is covered by the
-contract tests.
+**Known one-off (not chased, per Christian):** the first verify run after the #170 rebase failed in the Diverse City
+seed with "An invalid response was received from the upstream server". That is not `MEDIA_RESERVATION_MISSING`.
+It looked like a transient local gateway or DB failure while other workers shared the stack. An immediate re-run
+passed. The cause is unconfirmed; investigate only if it recurs.
 
-**Next step:** onzio-bot review, then Christian's Footer decision, then merge on his word.
+**Skill change (approved by Christian):** gate 3 on `/admin/sponsors` also performs one website-field save. Other
+routes are unchanged.
+
+**Fix round (Christian's Footer call plus bot round 1 on `d40aa78`):**
+- The Footer card, dialog section and switch are removed. The draft holds only carousel rows. Footer-only and resting
+  rows are never written and still count toward the 30-row cap. No update writes a footer value.
+- H1: Replace no longer reads a flag set inside a `setDrafts` updater. It reads `draftsRef`, so the new logo survives
+  and only the old one is retired. An unsaved replaced file is cleaned up. Pure helpers (`applyReplace`,
+  `retiredFiles`, `unsavedReplacedFile`) are tested.
+- M1: "Load latest and keep my edits" rebases per field onto the fresh rows. Other people's renames, websites, order
+  and footer flags survive. Rows deleted or hidden elsewhere are named in the conflict notice.
+- The partner-list note has a 20px gap.
+- Re-verified on `0fa2b2ef`: all six gates pass, and gate 3 includes the new website step. Unit: 338 files, 3838 tests.
+
+**Next step:** onzio-bot re-review, then Christian merges.
 
 ## 2026-11-18 - RC-ADMIN-12 Rose City News editor on the editor kit (Previews layout)
 

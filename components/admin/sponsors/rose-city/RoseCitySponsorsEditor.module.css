@@ -4,6 +4,7 @@
 
 /* Partner-list note above the cards. */
 .partners {
+  margin-block-end: 20px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -116,10 +117,9 @@
 .tool:disabled { opacity: .45; cursor: default; }
 .remove { color: hsl(var(--destructive)); }
 @media (max-width: 767px) {
-  .tool, .also { min-block-size: 44px; }
+  .tool { min-block-size: 44px; }
   .tool { min-inline-size: 44px; }
   .input { min-block-size: 44px; }
   .row { grid-template-columns: minmax(0, 1fr); }
   .tile { inline-size: 100%; max-inline-size: 220px; }
-  .also { margin-inline-start: 0; inline-size: 100%; justify-content: space-between; }
 }

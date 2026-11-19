@@ -516,6 +516,32 @@ test.describe("gate 3: save behaviour", () => {
       await expect(field).toHaveValue(saved);
       await expect(button).toHaveAttribute("data-state", "clean");
     });
+    // Only /admin/sponsors: the new website field has no row in the first-text-field walk above (the first field is the name),
+    // so one save types a website into the first sponsor's "Their website (optional)", saves, reloads and checks it persisted.
+    // It then clears the website again so later gates see the seeded page.
+    if (ROUTE === "/admin/sponsors") {
+      await step("website", async () => {
+        const websiteField = () => page.getByLabel("Their website (optional)").first();
+        const openFirst = async () => {
+          await page.goto(HEAD + ROUTE);
+          await expect(page.locator("h1").first()).toBeVisible();
+          await kitEditLocator(page).click();
+          await expect(websiteField()).toBeVisible({ timeout: 15_000 });
+        };
+        const saveWith = async (value: string) => {
+          await websiteField().fill(value);
+          await page.locator("[data-editor-dialog-done]").filter({ visible: true }).first().click();
+          await expect(button).toHaveAttribute("data-state", "dirty");
+          await button.click();
+          await expect(button).toHaveAttribute("data-state", "saved", { timeout: 20_000 });
+        };
+        await openFirst();
+        await saveWith("rcv-gate3.example.com");
+        await openFirst(); // a fresh load: the stored value, normalized with https://, must come back
+        await expect(websiteField()).toHaveValue("https://rcv-gate3.example.com");
+        await saveWith("");
+      });
+    }
     await context.close();
     record("save-behaviour", { gate: 3, route: ROUTE, applicable: true, saveButton: kind, steps });
     for (const [name, outcome] of Object.entries(steps)) expect.soft(outcome, `save behaviour: ${name}`).toBe("pass");

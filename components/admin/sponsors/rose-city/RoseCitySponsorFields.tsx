@@ -3,7 +3,6 @@
 import { useId, useRef } from "react";
 import { IconCaretDown, IconCaretUp, IconUpload, IconWarning } from "@/components/admin/icons";
 import FileUpload from "@/components/admin/FileUpload";
-import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
 import ResilientImage from "@/components/ResilientImage";
 import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { SPONSOR_NAME_LIMIT, SPONSOR_WEBSITE_LIMIT, type SponsorDraft } from "@/lib/sponsor-content";
@@ -20,31 +19,25 @@ export type SponsorFieldsApi = {
   setName: (key: string, name: string) => void;
   setWebsite: (key: string, website: string) => void;
   move: (key: string, place: Place, delta: -1 | 1) => void;
-  remove: (key: string, place: Place) => void;
-  toggle: (key: string, place: Place, on: boolean) => void;
+  remove: (key: string) => void;
   replace: (key: string, file: File) => void;
   add: (place: Place, files: FileList | null) => void;
 };
 
-const DESCRIPTION: Record<Place, string> = {
-  carousel: "Sponsor logos shown on your homepage and your Sponsors page.",
-  footer: "Static sponsor logos shown in the website footer.",
-};
+const DESCRIPTION = "Sponsor logos shown on your homepage and your Sponsors page.";
 
 export function RoseCitySponsorFields({ api, place }: { api: SponsorFieldsApi; place: Place }) {
-  const other: Place = place === "carousel" ? "footer" : "carousel";
   const list = inPlace(api.drafts, place);
   const replaceInput = useRef<HTMLInputElement>(null);
   const replacing = useRef<string | null>(null);
   const cap = PLACE_CAP[place];
-  const otherFull = (draft: SponsorDraft) => !draft[other === "carousel" ? "homepage" : "footer"] && !api.canAdd(other);
 
   return (
     <div className={styles.fields} data-sponsor-fields={place}>
-      <p className={styles.note}>{DESCRIPTION[place]}</p>
+      <p className={styles.note}>{DESCRIPTION}</p>
       <p className={styles.countLine} role="status">
         <span>{list.length} of {cap}</span>
-        {list.length >= cap && <span className={styles.full}>{place === "carousel" ? "Homepage carousel" : "Footer"} is full</span>}
+        {list.length >= cap && <span className={styles.full}>Homepage carousel is full</span>}
       </p>
       <ul className={styles.rows} aria-label={`Sponsors in the ${PLACE_NOUN[place]}`}>
         {list.map((draft, index) => (
@@ -55,8 +48,6 @@ export function RoseCitySponsorFields({ api, place }: { api: SponsorFieldsApi; p
             index={index}
             count={list.length}
             place={place}
-            other={other}
-            otherFull={otherFull(draft)}
             onReplace={() => { replacing.current = draft.key; replaceInput.current?.click(); }}
           />
         ))}
@@ -89,15 +80,13 @@ export function RoseCitySponsorFields({ api, place }: { api: SponsorFieldsApi; p
   );
 }
 
-function SponsorRow({ api, draft, index, count, place, other, otherFull, onReplace }: {
-  api: SponsorFieldsApi; draft: SponsorDraft; index: number; count: number; place: Place; other: Place; otherFull: boolean; onReplace: () => void;
+function SponsorRow({ api, draft, index, count, place, onReplace }: {
+  api: SponsorFieldsApi; draft: SponsorDraft; index: number; count: number; place: Place; onReplace: () => void;
 }) {
   const id = useId();
   const blank = draft.name.trim() === "";
   const label = draft.name.trim() || `Sponsor ${index + 1}`;
   const error = api.errors[draft.key];
-  const otherOn = draft[other === "carousel" ? "homepage" : "footer"];
-  const otherName = other === "carousel" ? "homepage carousel" : "footer";
   return (
     <li className={styles.row} data-sponsor-row={draft.key}>
       <div className={styles.tile}>
@@ -156,19 +145,9 @@ function SponsorRow({ api, draft, index, count, place, other, otherFull, onRepla
         <button type="button" className={`admin-press ${styles.tool}`} disabled={api.locked || index === count - 1} onClick={() => api.move(draft.key, place, 1)} aria-label={`Move ${label} down`}>
           <IconCaretDown size={16} aria-hidden="true" />
         </button>
-        <button type="button" className={`admin-press ${styles.tool} ${styles.remove}`} disabled={api.locked} onClick={() => api.remove(draft.key, place)} aria-label={`Remove ${label} from the ${PLACE_NOUN[place]}`}>
+        <button type="button" className={`admin-press ${styles.tool} ${styles.remove}`} disabled={api.locked} onClick={() => api.remove(draft.key)} aria-label={`Remove ${label} from the ${PLACE_NOUN[place]}`}>
           Remove
         </button>
-        <span className={styles.also}>
-          <span id={`${id}-also`}>Also in the {otherName}</span>
-          <AdminSwitch
-            checked={otherOn}
-            label={`Show ${label} in the ${otherName} too`}
-            disabled={api.locked || (!otherOn && otherFull)}
-            disabledReason={!otherOn && otherFull ? `The ${otherName} is full.` : undefined}
-            onCheckedChange={(on) => api.toggle(draft.key, other, on)}
-          />
-        </span>
       </div>
     </li>
   );
