@@ -95,10 +95,35 @@ type StorageListEntry = {
   metadata?: Record<string, unknown> | null;
 };
 
+/** Storage list page size and multi-path remove batch size. */
+export const STAGING_LIST_PAGE_SIZE = 100;
+export const STAGING_REMOVE_BATCH_SIZE = 100;
+/** Per-run bounds so a huge backlog cannot outlive the function timeout. The
+ * next daily cron run picks up whatever one run leaves behind. */
+export const STAGING_MAX_FILES_PER_RUN = 2_000;
+export const STAGING_MAX_LIST_CALLS_PER_RUN = 200;
+export const STAGING_TIME_BUDGET_MS = 40_000;
+/** Extra time after the scan budget, only to finish deleting what was already
+ * selected. No new delete batch starts after this; the rest waits for the
+ * next run. Must stay under the route's maxDuration (60 s). */
+export const STAGING_REMOVE_GRACE_MS = 10_000;
+
+export type StagingCleanupResult = {
+  inspected: number;
+  removed: number;
+  failed: number;
+  /** True when a per-run bound stopped the scan before every prefix was read,
+   * so abandoned files may still be waiting for the next run. */
+  hasMore: boolean;
+};
+
 export async function cleanupAbandonedStagingMedia(input?: {
   olderThan?: Date;
   clubId?: string;
-}): Promise<{ inspected: number; removed: number; failed: number }> {
+  maxFilesPerRun?: number;
+  maxListCalls?: number;
+  timeBudgetMs?: number;
+}): Promise<StagingCleanupResult> {
   const service = createServiceRoleClient();
   const bucket = service.storage.from("onzio-upload-staging");
   if (input?.clubId && !isUuid(input.clubId)) {
@@ -107,16 +132,73 @@ export async function cleanupAbandonedStagingMedia(input?: {
   const retries = await processQueuedMediaCleanup({ clubId: input?.clubId });
   const olderThan =
     input?.olderThan ?? new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const maxFiles = input?.maxFilesPerRun ?? STAGING_MAX_FILES_PER_RUN;
+  const maxListCalls = input?.maxListCalls ?? STAGING_MAX_LIST_CALLS_PER_RUN;
+  const deadline =
+    Date.now() + (input?.timeBudgetMs ?? STAGING_TIME_BUDGET_MS);
+  const removeDeadline = deadline + STAGING_REMOVE_GRACE_MS;
   let inspected = 0;
   let removed = 0;
   let failed = 0;
+  let listCalls = 0;
+  let selected = 0;
+  let hasMore = false;
 
+  function outOfBudget(): boolean {
+    return selected >= maxFiles || listCalls >= maxListCalls || Date.now() >= deadline;
+  }
+
+  async function removeInBatches(paths: string[]): Promise<void> {
+    for (let i = 0; i < paths.length; i += STAGING_REMOVE_BATCH_SIZE) {
+      if (Date.now() >= removeDeadline) {
+        // Selected files that were not deleted stay eligible for the next run.
+        hasMore = true;
+        return;
+      }
+      const batch = paths.slice(i, i + STAGING_REMOVE_BATCH_SIZE);
+      const { data: deleted, error: removeError } = await bucket.remove(batch);
+      if (!removeError) {
+        // Storage returns the objects it actually removed; a path that was
+        // already gone is not counted.
+        removed += Array.isArray(deleted) ? deleted.length : batch.length;
+        continue;
+      }
+      failed += batch.length;
+      for (const path of batch) {
+        try {
+          const parsed = parseStoragePath(path);
+          await queueMediaCleanup({
+            clubId: parsed.clubId,
+            storageBucket: "onzio-upload-staging",
+            storagePath: path,
+            reason: "abandoned-staging-object",
+          });
+        } catch {
+          // Invalid legacy paths are reported as failures and left for
+          // operator review rather than deleted speculatively.
+        }
+      }
+    }
+  }
+
+  // Each prefix is listed completely before anything in it is deleted. Storage
+  // listings are offset-based, so deleting mid-scan would pull the next files
+  // back into the page that was just read and skip them. Folders are recursed
+  // only after the level's scan and deletes, for the same reason.
   async function walk(prefix: string, depth: number): Promise<void> {
     if (depth > 3) return;
+    const eligible: string[] = [];
+    const folders: string[] = [];
+    const seen = new Set<string>();
     let offset = 0;
-    while (true) {
+    scan: while (true) {
+      if (outOfBudget()) {
+        hasMore = true;
+        break;
+      }
+      listCalls += 1;
       const { data, error } = await bucket.list(prefix, {
-        limit: 100,
+        limit: STAGING_LIST_PAGE_SIZE,
         offset,
         sortBy: { column: "name", order: "asc" },
       });
@@ -126,38 +208,38 @@ export async function cleanupAbandonedStagingMedia(input?: {
         const path = prefix ? `${prefix}/${entry.name}` : entry.name;
         const isFolder = !entry.id && !entry.metadata;
         if (isFolder) {
-          await walk(path, depth + 1);
+          if (!seen.has(path)) folders.push(path);
+          seen.add(path);
           continue;
         }
+        if (seen.has(path)) continue;
+        seen.add(path);
         inspected += 1;
         const createdAt = entry.created_at
           ? new Date(entry.created_at)
           : null;
         if (!createdAt || createdAt >= olderThan) continue;
-        const { error: removeError } = await bucket.remove([path]);
-        if (removeError) {
-          failed += 1;
-          try {
-            const parsed = parseStoragePath(path);
-            await queueMediaCleanup({
-              clubId: parsed.clubId,
-              storageBucket: "onzio-upload-staging",
-              storagePath: path,
-              reason: "abandoned-staging-object",
-            });
-          } catch {
-            // Invalid legacy paths are reported as failures and left for
-            // operator review rather than deleted speculatively.
-          }
-        } else {
-          removed += 1;
+        if (selected >= maxFiles) {
+          hasMore = true;
+          break scan;
         }
+        selected += 1;
+        eligible.push(path);
       }
-      if (entries.length < 100) break;
+      if (entries.length < STAGING_LIST_PAGE_SIZE) break;
       offset += entries.length;
+    }
+    await removeInBatches(eligible);
+    for (const folder of folders) {
+      await walk(folder, depth + 1);
     }
   }
 
   await walk(input?.clubId?.toLowerCase() ?? "", input?.clubId ? 1 : 0);
-  return { inspected: inspected + retries.inspected, removed: removed + retries.removed, failed: failed + retries.failed };
+  return {
+    inspected: inspected + retries.inspected,
+    removed: removed + retries.removed,
+    failed: failed + retries.failed,
+    hasMore,
+  };
 }

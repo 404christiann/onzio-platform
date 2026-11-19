@@ -3,6 +3,9 @@ import { cleanupAbandonedStagingMedia } from "@/lib/media-cleanup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// The cleanup stops scanning after 40 s (STAGING_TIME_BUDGET_MS); this leaves
+// room for the last delete batch.
+export const maxDuration = 60;
 
 function unauthorized() {
   return NextResponse.json(
