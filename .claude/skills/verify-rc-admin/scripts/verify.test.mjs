@@ -574,8 +574,8 @@ test("4b-0: a declared missing status line skips only the status text check; a m
   assert.deepEqual(gate3Plan({ key: "stats-match", lacks: { status: "x" } }).skipped, {}, "the dirty step still runs");
   assert.equal(gate3Plan({ key: "x" }).noStatus, undefined, "an editor that declares nothing is held to the status line");
   const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
-  assert.match(spec, /kind === "admin" && !plan\.noStatus/);
-  assert.match(spec, /editor\.lacks\?\.discard/, "gate 4 skips the discard dialog only for an editor that declares no discard control");
+  assert.match(spec, /kind === "admin" && !planNow\(\)\.noStatus/);
+  assert.match(spec, /lacksDiscard\(page, editor\)/, "gate 4 skips the discard dialog only for an editor that declares no discard control");
 });
 
 test("4b-0: every page-load h1 wait is bounded at 45 s, not the 15 s expect default that a loaded machine overran three times", () => {
@@ -693,4 +693,38 @@ test("4b-0-2 follow-up: the seasons row's declared reason names both create labe
   const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
   const row = spec.slice(spec.indexOf('{ key: "seasons"'), spec.indexOf('{ key: "roster"'));
   assert.match(row, /lacks: \{ pageSave: "Create Next Season \(or Create <year> season\), Set active and Delete act at once; there is no page Save"/);
+});
+
+test("4b-0-3: lacksOnAdminButton skips steps only while the page uses the old AdminSaveButton; the kit's PageSaveButton runs them for real", () => {
+  const stats = { key: "stats-match", lacks: { retry: "re-sends the draft; no operationId" }, lacksOnAdminButton: { conflict: "no conflict control", discard: "no discard", status: "no status line" } };
+  const old = gate3Plan(stats, "admin");
+  assert.deepEqual(old.skipped, { retry: "re-sends the draft; no operationId", conflict: "no conflict control", discard: "no discard" });
+  assert.equal(old.noStatus, "no status line");
+  const rebuilt = gate3Plan(stats, "page");
+  assert.deepEqual(rebuilt.skipped, { retry: "re-sends the draft; no operationId" }, "conflict and discard run for real on PageSaveButton; only the declared retry reason is skipped");
+  assert.equal(rebuilt.noStatus, undefined);
+  assert.deepEqual(gate3Plan(stats).skipped, { retry: "re-sends the draft; no operationId" }, "an unknown kind never grants the old-button lacks");
+  assert.equal(gate3Plan({ key: "x", lacksOnAdminButton: { conflict: "r" }, lacks: {} }, "admin").skipped.conflict, "r");
+  assert.equal(stepsPass({ clean: "pass", dirty: "pass", saving: "pass", saved: "pass", retry: "n/a: re-sends the draft; no operationId", conflict: "pass", discard: "pass" }), true);
+});
+
+test("4b-0-3: the Stats rows serve main's old workspace and Rose City's dialog table with one row, and the dialog hooks do nothing where there is no dialog", () => {
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  for (const key of ["stats-match", "stats-season"]) {
+    const row = spec.slice(spec.indexOf(`{ key: "${key}"`), spec.indexOf("\n  { key:", spec.indexOf(`{ key: "${key}"`) + 5) === -1 ? spec.indexOf("];\nconst editorFor") : spec.indexOf("\n  { key:", spec.indexOf(`{ key: "${key}"`) + 5));
+    const code = row.split("\n").map((l) => l.replace(/\/\/.*$/, "")).join("\n");
+    assert.match(code, /\(Edit\|Select\) /, `${key} opens "Edit <player>" or "Select <player>"`);
+    assert.match(code, /\.\.\.STATS_DIALOG/, `${key} has the dialog hooks`);
+    assert.match(code, /lacksOnAdminButton: STATS_OLD_BUTTON_LACKS/, `${key} declares the old-button lacks`);
+    assert.doesNotMatch(code, /lacks: \{[^}]*(conflict|discard|status)/, `${key} no longer lacks conflict, discard or status unconditionally`);
+    assert.match(code, /lacks: \{ retry: "re-sends the draft; \/api\/admin\/data has no operationId/, `${key} declares retry with its reason`);
+  }
+  const hooks = spec.slice(spec.indexOf("const STATS_DIALOG"), spec.indexOf("const STATS_OLD_BUTTON_LACKS"));
+  assert.match(hooks, /if \(await dialog\.count\(\)\) \{ await dialog\.getByRole\("button", \{ name: "Done"/, "closeDialog does nothing without the dialog");
+  assert.match(hooks, /if \(await edit\.count\(\)\) await edit\.click\(\)/, "reopenDialog clicks Edit only if there is one (none on main)");
+  assert.match(spec, /const statsDialog = \(page: Page\) => page\.locator\("\[role=dialog\]"\)\.filter\(\{ has: page\.locator\("\[data-slot=stat-input\]"\) \}\)/, "the dialog is the one holding a stat input, not any dialog");
+  assert.match(spec, /if \(state\?\.ownDialog\?\.reopenDialog\) \{ await state\.ownDialog\.reopenDialog\(page\); return; \}/);
+  assert.match(spec, /if \(own\?\.closeDialog\) \{ await own\.closeDialog\(page\); return true; \}/);
+  assert.match(spec, /const planNow = \(\) => gate3Plan\(editor, kind\)/, "gate 3 reads the plan after the page's Save button kind is known");
+  assert.match(spec, /async function lacksDiscard\(page: Page, editor: Editor\)/, "gate 4 skips the discard dialog by the page's Save button kind too");
 });
