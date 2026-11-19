@@ -31,14 +31,26 @@
 tests: the same write bodies and order as the classic editor for new, edit, show, hide and photo replace; classic messages; Goalkeepers
 first; filters; card numbers; rendered card and fields; Diverse City branch pins; no template selector in new files).
 
-**Verification:** verify-rc-admin `--route /admin/roster --package RC-ADMIN-4b-roster --touched roster` on `69de5a64` (this branch on
-`0a80031a`, with #186), report `test-results/rc-admin-verify/20261119-125409-RC-ADMIN-4b-roster/report.html`: PASS.
+**Verification:** verify-rc-admin `--route /admin/roster --package RC-ADMIN-4b-roster --touched roster`, final run on the review-fix head
+(this branch on `0a80031a`, with #186), report `test-results/rc-admin-verify/20261119-131413-RC-ADMIN-4b-roster/report.html`: PASS. The
+first run (`69de5a64`, report `20261119-125409-...`) passed too; the rerun followed the orchestrator's review (label "Save player", card
+numbers by current position) and a one-line widening of the skill's roster save regex to `/^Save( changes| player)?$/`.
 - Gate 1: 15 app files, 2 doc warnings, 0 forbidden. Gate 2: 19/19 identical, touched `roster`. Gate 3: n/a, declared in `EDITORS`
   (a player is saved from its own dialog; there is no page Save). Gate 4: CLS at most 0.00003 at 390 and 1440, light and dark; new axe 0;
   reduced motion 0 offenders. Gate 5: tsc ok; unit 350 files, 4138 tests; architecture 152; selector debt unchanged.
   Gate 6: Diverse City 15/15 pages identical to origin/main.
-- Not covered by any gate: the player dialog itself (open, edit, Save) was not driven by verify, because gate 3 is n/a here; the dialog's
-  writes are covered by the contract test against the classic editor's bodies.
+- Gate 4 on the rerun: CLS at most 0.00042 (1440 light), new axe 0, reduced motion 0. Gate 5: unit 4139 tests. Gate 6: 15/15 identical.
+- Manual browser check of the player dialog (gate 3 is n/a, so verify does not drive it): one DB-lock hold on the shared local stack
+  (fresh reset, seed, sign-in), the head build, Playwright, evidence in
+  `test-results/manual-roster/20261119-132910/` (37 screenshots, `playwright-1.json`, `playwright-2.json`). Rose City at 390 and 1440:
+  add a player (validation first: jumps to the failing section; insert body equals the classic editor's; season stats row seeded),
+  edit (hometown, and at 1440 Goals = 3 through `saveSeasonTotals`; the update body has no `active`), hide and show on the card with
+  Undo (`players.active` in the DB), photo upload (stored under `onzio-media/<club>/roster/*.webp`, card loses "No photo"), and a failed
+  save (request aborted at 1440, a 500 at 390: the footer shows the message and the button reads "Save failed. Try again"; Save again
+  succeeds and the row updates). Diverse City at 1440 and 390: the classic Roster adds a player (insert body identical to the one the
+  classic browser spec pins) and edits it, with no kit frame on the page. 12 of 12 pass over two runs (the first run's six failures
+  were test-side: a locator, the media URL shape, and Diverse City having no seeded players; fixed and rerun in the same lock hold).
+- Conflict: the classic Roster has no revision or conflict handling (last write wins), so there is no stale-edit conflict to check.
 - Free disk at the start of the run: 21 GB; verify base cache 1.8 GB.
 
 **Blockers or unresolved decisions:**
