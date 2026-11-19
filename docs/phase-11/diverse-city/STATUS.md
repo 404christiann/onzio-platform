@@ -1,5 +1,56 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4-0b: Partners/Injury Report card spacing, Registrations hidden for Rose City
+
+**Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4-0b, branch `claude/rc-admin-4-0b` off `1177645d`.
+**Status:** `in_progress`: PR open (app code only, no migration, schema, validator, RPC or env change); all six
+verify-rc-admin gates pass on both routes. Waiting for onzio-bot and Christian's merge.
+
+**Completed work:**
+- **Spacing:** on `/admin/partners` and `/admin/injury-report` the Previews cards and the Partners/Injuries list below
+  them had 0px between them (the kit's PageFrame content is a plain block). `.listSection` in
+  `components/admin/list-cards/ListEditor.module.css` (used only by those two editors) now has a 20px top margin, the
+  space the Sponsors editor puts between its blocks; both loading skeletons match it. The shared `PreviewCards`
+  styles are untouched, so News, Schedule, Sponsors and the other kit editors are identical.
+- **Registrations hidden for Rose City:** `ADMIN_ROUTES_HIDDEN_BY_CLUB` in `lib/admin-route-manifest.ts` (keyed on the
+  club slug `rose-city`, not on `cinematic@2`) hides `registrations` and `sign-ups` for that club. The access context
+  gains an optional `clubSlug`, set by `adminAccessFor`, the dashboard and `AdminShell`. That removes the sidebar row,
+  search results, the quick action, the reimagined home job/More row and tab pages. The classic dashboard drops its
+  Paid Registrations metric, Registration Forms panel and Registration Mix for that club (grid reflows to three
+  metrics). The reimagined Payments page drops its "Registration money" link.
+  `app/admin/(protected)/registrations/layout.tsx` (new) calls `notFound()` for Rose City, which covers the page and
+  any page under it; `/admin/sign-ups` does the same. Diverse City and any other club render exactly as before.
+- **Not touched:** registration code, data, `/api/admin/registrations/*`, `/api/register`, public routes, Stripe Connect.
+  **API reachability:** `/api/admin/registrations/*` stays reachable for a signed-in Rose City owner or admin (it
+  authorizes by role only, with no club check). Left as is, per the brief.
+- Stripe Connect's return URL is still `/admin/registrations?connect=returned`, which now 404s for Rose City; Rose City
+  does not run Connect (registrations are out), so nothing to do unless that changes.
+- HANDOFF.md: wave 4 plan entry.
+
+**Files changed:** `lib/admin-route-manifest.ts`, `lib/admin-tab-page.ts`, `components/AdminShell.tsx`,
+`app/admin/(protected)/page.tsx`, `payments/page.tsx`, `sign-ups/page.tsx`, `registrations/layout.tsx` (new),
+`components/admin/reimagined/PaymentsPlan.tsx`, `components/admin/list-cards/ListEditor.module.css`,
+`components/admin/partners/PartnerCardPreview.module.css`, `components/admin/injury-report/InjuryCardPreview.module.css`,
+`tests/contracts/admin-rose-city-registrations-hidden.test.ts` (new, 11 tests), `HANDOFF.md`, this file.
+
+**Verification:** verify-rc-admin, package `RC-ADMIN-4-0b`, from this worktree.
+- `/admin/partners` (`--touched partners`): gates 1-6 PASS. Report
+  `test-results/rc-admin-verify/20261119-080320-RC-ADMIN-4-0b/report.html`.
+- `/admin/injury-report` (`--touched injury-report`): first run failed gate 6 (6/8) because origin/main's Programs and
+  Shop pages were caught still loading (known skill flake, package side loaded); one identical rerun: gates 1-6 PASS.
+  Report `test-results/rc-admin-verify/20261119-082133-RC-ADMIN-4-0b/report.html` (the failed run is `...081410...`).
+- Gate 5 in both: `tsc` clean, `test:unit` 346 files / 4042 tests, architecture 152, selector debt unchanged.
+- Before/after survey of Partners, Injury Report, News, Schedule and Sponsors at 390 and 1440, light and dark, taken
+  before the change (the 0px gap was the only inconsistency in the Previews cards).
+- Not run: a live Rose City browser check of the 404 and the hidden dashboard panels (covered by the contract test
+  and by gate 6 for Diverse City); the Rose City dashboard skeleton still shows the registration placeholders for a
+  moment before the real page replaces it.
+
+**Blockers or unresolved decisions:** none. The dashboard loading skeleton does not know the club, so for Rose City it
+briefly shows the registration placeholders.
+
+**Exact next step:** onzio-bot review, then Christian merges. Then RC-ADMIN-4a (About, Contact, Policies).
+
 ## 2026-11-19 - RC-ADMIN-10d orphan-media sweep (dry-run by default)
 
 **Agent/package:** Claude Code (Opus, with a Sonnet implementation subagent), RC-ADMIN-10d, branch
