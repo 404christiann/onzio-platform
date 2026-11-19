@@ -1,5 +1,45 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4b-stats Rose City Stats on the editor kit
+
+**Agent/package:** Claude Code (Sonnet worker, orchestrated), RC-ADMIN-4b-stats, branch `claude/rc-admin-4b-stats` on `0a80031a`.
+**Status:** `in_progress`, PR open; verify-rc-admin PASS (6/6, both views). App code only. No
+migration, schema, validator, RPC or env change.
+
+**Completed work:**
+- `/admin/stats` (both `?view=match` and `?view=season`) for Rose City (chosen by slug through `siteFor` in `lib/site-for.ts`: new `adminEditors.stats` slot filled by `roseCitySite`; classic portal only) is rebuilt on the kit:
+  `PageFrame` (Save, Discard changes), a Season picker, Match stats / Season totals tabs, read-only tables (field players, then
+  goalkeepers) with an Edit button per player, and a phone list. Diverse City and the reimagined portal keep `CombinedStatsPage`
+  untouched; the switch is `RoseCityStatsSwitch` (`siteFor(club)?.adminEditors?.stats`, no template selector, selector debt unchanged).
+- Edit opens a dialog whose number boxes change the page draft at once; Done closes it; the page Save publishes. The stepper
+  Workspace is gone. The season dialog shows "From matches N · added by hand +M" (one extra read of the season's saved matches,
+  `loadSeasonGames`), and refuses over-9,999 hand-added numbers in the classic words.
+- Payloads unchanged: the match save still upserts a row for every player (same keys, same order, `onConflict player_id,match_id`);
+  the season save is the classic `saveSeasonTotals`. Both saves now do two things the classic page never did, with no schema, RPC
+  or validator change: **stale-edit conflict** (before writing, re-read the rows' own `updated_at` (`player_match_stats` /
+  `goalkeeper_match_stats` for a match, `*_season_adjustments` for the dirty players of a season) and compare with what the page loaded; a
+  difference is a conflict: "Load latest and keep my edits" (edited players keep their edit, everyone else takes the latest) or "Reload
+  saved numbers"), and a visible **Try again** after a failed save (page notice plus the kit's "Save failed. Try again" button).
+  Limits: the check is a read before the write, not atomic (a save landing between them still wins last); after a save the page re-reads
+  the new `updated_at` values, and if that read fails the next save skips the check once.
+- Copy: the stale "Enter these separately from match stats" is gone. `/admin/season-stats` and `/admin/seasons/totals` still redirect.
+- verify-rc-admin: not touched by this PR (Christian's rule). The stats keys need "Edit <player>" and new `closeDialog` / `reopenDialog` row hooks;
+  that is a skill-only patch for the skill worker (RC-ADMIN-4b-0-3). Verify runs once it is on main.
+
+**Files changed:** `app/admin/(protected)/stats/page.tsx`; new `components/admin/stats/rose-city/` (`RoseCityStatsSwitch`, `RoseCityStatsPage`,
+`RoseCityMatchStats`, `RoseCitySeasonStats`, `StatsTables`, `StatsPlayerDialog`, `stats-model.ts`, `types.ts`, CSS module); new
+`tests/contracts/rc-admin-4b-stats-editor.test.ts` (26 tests).
+
+**Verification:** verify-rc-admin on head `f40218fb` (main `1bc4003d`), `--package RC-ADMIN-4b-stats --touched stats-match,stats-season`, run once per view; all six
+gates PASS on both: gate 2 18/18 identical, gate 3 clean, dirty, saving, saved, conflict and discard pass (retry n/a: declared, no operationId), gate 4 CLS <= 0.0003 and new axe 0
+at 390 and 1440 light and dark, gate 5 unit 4216 / architecture 152 / selector debt unchanged, gate 6 Diverse City 15/15. Reports (in the worktree, gitignored):
+`test-results/rc-admin-verify/20261119-152925-RC-ADMIN-4b-stats` (match) and `20261119-153650-RC-ADMIN-4b-stats` (season). Also `tsc` clean and `test:contracts` 3255.
+Manual check (real local stack, two browser contexts), 12/12: edit a player (dirty, then saved, persists after reload), a forced 500 save shows "Try again" and re-sends, a real
+second-tab conflict then "Load latest and keep my edits", then "Reload saved numbers", and Discard changes, in both views. It found and fixed a false conflict on Try
+again after a partly failed match save.
+
+**Next step:** onzio-bot review, then Christian merges.
+
 ## 2026-11-19 - RC-ADMIN-4b-0-4 verify-rc-admin: conflict step bumps a number field by different amounts
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-4, branch `claude/rc-admin-4b-0-4` on `84fba705`. **Status:** `in_progress`: PR open, waiting for
