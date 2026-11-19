@@ -1,5 +1,57 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-PREVIEW: Sam previews Rose City's public site on one Vercel Preview host
+
+**Agent/package:** Claude Code (Opus 5.5), RC-PREVIEW, branch `claude/rc-preview` on `44796089`. **Status:**
+`in_progress`, PR open; merges only on Christian's word. App code only: no migration, schema, RPC, data, env or
+production change. The production hold (`lib/public-site-hold.ts`) is untouched.
+
+**Plan change:** the brief asked only for a hold bypass. A `*.vercel.app` host has no `club_domains` row, so it
+404s as an unknown tenant before the hold runs. Christian chose (2026-11-18) an env-declared preview host over
+adding a production domain row, confirmed that Preview's Supabase env points at production, and said Sam gets the
+public site only, never the admin portal.
+
+**Completed work:**
+- `lib/rose-city-preview.ts`: `roseCityPreviewHost()` returns a host only when `RC_PREVIEW_UNHOLD` is exactly
+  `"1"`, `VERCEL_ENV` is exactly `"preview"`, and `RC_PREVIEW_HOST` is a single `<label>.vercel.app` host.
+  Otherwise it returns null, so the flag does nothing in production even if set.
+- `middleware.ts`: on that host only, the tenant resolves to `rose-city` and skips the hold, for GET/HEAD public
+  pages and Rose City's own internal `/_clubs/rose-city/**` path only. `/admin/**`, `/api/**` (including
+  `POST /api/register`), every other method, and other clubs' `/_clubs/**` paths return 404. `X-Robots-Tag: noindex, nofollow` stays on every response. Rose City's own domains stay held, and
+  Diverse City is unchanged.
+
+**Files changed:** `middleware.ts`, new `lib/rose-city-preview.ts`, new
+`tests/contracts/rose-city-preview-unhold.test.ts` (65 tests).
+
+**Verification:**
+- New contract: red first (7 bypass cases), then 65/65. With the hold, robots, routing and cinematic-routing
+  contracts: 121/121.
+- verify-rc-admin `--route /admin/website-pages` (hub; gates 3 and 4 N/A): PASS. Gate 1: 3 app files. Gate 2:
+  14/14 payloads identical. Gate 5: tsc ok, unit 341 files and 3962 tests, architecture 152, selector debt
+  unchanged. Gate 6: Diverse City admin 8/8 identical. The first run failed only at the local OTP sign-in rate
+  limit; the re-run passed. Re-run on the final HEAD `f9e2feae`: PASS (gate 1 three app files plus the two expected doc warnings; gate 2 14/14; unit 3968; gate 6 8/8).
+- `npm run test:unit` 3968/3968 and `npm run test:legacy` 789/789 on the final HEAD.
+- Real-server smoke (next start, three instances: no flag; flag with `VERCEL_ENV=production`; flag with
+  `VERCEL_ENV=preview`), shared local DB reset and seeded in the same lock hold: **55/55 PASS**.
+  - No flag, and flag with production: Rose City 404 + noindex; preview host 404; Diverse City public pages and
+    `/admin/login` 200.
+  - Flag with preview, on the preview host: 12 Rose City pages, each 200 with noindex and Rose City content; HEAD
+    200. Every admin, API and POST case and `/_clubs/diverse-city` are 404. `rose-city.localhost` stays held, and
+    Diverse City is unchanged.
+  - The first smoke found a real gap: a cross-host rewrite re-enters middleware at `/_clubs/rose-city/**`, which
+    the guard had closed. It's fixed and has tests.
+  - Harness limit: local `next start` proxies a cross-host rewrite with `Host: <host>:port`, which middleware
+    rightly rejects on a non-local host. So the public paths were checked at their internal paths, and the
+    rewrite itself by the contract tests. Vercel rewrites in place on the deployment's own host, the same path
+    production custom domains use. The smoke used a loopback DNS shim for the fake host only.
+
+**Blockers / decisions:** the Vercel changes are Christian's to make and approve one at a time: branch-scoped
+Preview env vars, a branch deploy, and a Shareable Link. Preview reads production data. Admin and API are closed
+on the preview host, so the preview can't write to production. `NEXT_PUBLIC_FONT_BASE_URL` is Production-only, so
+unless the preview branch gets it too, Avenir falls back to Figtree on the preview.
+
+**Next step:** onzio-bot review; Christian merges; then the Vercel steps in the PR thread.
+
 ## 2026-11-19 - RC-ADMIN-10a sponsor and news caps in SQL
 
 **Agent/package:** Claude Code (Opus), RC-ADMIN-10a, PR #176, branch `claude/rc-admin-10a` (rebased onto `44796089`).
