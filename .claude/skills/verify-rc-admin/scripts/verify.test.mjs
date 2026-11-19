@@ -3,11 +3,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync, execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkEnvText } from "./check-env-target.mjs";
+import { MIN_FREE_GB, diskRoomCheck, baseCacheDir, isStaleHolder, mayKillServer, runTimeoutSeconds, staleCacheDirs, sweepHolders, worktreeKey, writeHolder, holdersDir } from "./holders.mjs";
 import { KIT_EDIT_SELECTOR, KIT_ENABLED_FIELD_SELECTOR, chooseOpenPath, firstMarkableIndex, isMarkable, isPhoneWidth, listProblems, retryLockCheck, sectionTryOrder, sheetBarProblems } from "./kit-path.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -298,4 +299,103 @@ test("01c: a field the test cannot append to (web address, email, phone, slug, p
   assert.equal(isMarkable({ value: "", label: "Phone number" }), false);
   assert.equal(firstMarkableIndex([{ value: "https://a.b", label: "Link" }, { value: "Hello", label: "Title" }]), 1);
   assert.equal(firstMarkableIndex([{ value: "https://a.b", label: "Link" }]), -1);
+});
+
+// ---------------------------------------------------------------------------------------------
+// RC-ADMIN-01d: per-worktree build cache, lock-holder records, stale-holder clearing, lock fd.
+test("01d: the base-build cache is keyed by worktree: two worktrees never share a directory, one worktree keeps its own", () => {
+  const root = mkdtempSync(join(tmpdir(), "rcv-cache-"));
+  const a = join(root, "wt-a"), b = join(root, "wt-b");
+  mkdirSync(a); mkdirSync(b);
+  const sha = "1aa159ae".repeat(5);
+  assert.notEqual(baseCacheDir(a, sha, root), baseCacheDir(b, sha, root));
+  assert.equal(baseCacheDir(a, sha, root), baseCacheDir(a, sha, root));
+  assert.equal(baseCacheDir(a, sha, root), join(root, worktreeKey(a), `base-${sha}`));
+  // The same worktree reached through a symlink is the same worktree.
+  symlinkSync(a, join(root, "link-a"));
+  assert.equal(worktreeKey(join(root, "link-a")), worktreeKey(a));
+});
+
+test("01d: only this worktree's cache for older SHAs is listed for removal", () => {
+  const root = mkdtempSync(join(tmpdir(), "rcv-cache-"));
+  const a = join(root, "wt-a"), b = join(root, "wt-b");
+  mkdirSync(a); mkdirSync(b);
+  for (const [wt, sha] of [[a, "old1"], [a, "old2"], [a, "new"], [b, "old1"]]) mkdirSync(baseCacheDir(wt, sha, root), { recursive: true });
+  assert.deepEqual(staleCacheDirs(a, "new", root).sort(), [baseCacheDir(a, "old1", root), baseCacheDir(a, "old2", root)]);
+  assert.deepEqual(staleCacheDirs(join(root, "no-such-wt"), "new", root), []);
+});
+
+const NOW = Date.parse("2026-11-18T12:00:00Z");
+const record = (over = {}) => ({ runPid: 4242, runStart: "Wed Nov 18 11:50:00 2026", startedAt: "2026-11-18T11:50:00Z", worktree: "/wt", servers: [{ name: "base", pid: 777, port: 3111 }], ...over });
+
+test("01d: stale-holder detection: dead run pid is stale, too old is stale, live and young is kept", () => {
+  const alive = () => "Wed Nov 18 11:50:00 2026";
+  assert.equal(isStaleHolder(record(), { now: NOW, startOf: () => null }).stale, true);
+  assert.match(isStaleHolder(record(), { now: NOW, startOf: () => null }).reason, /dead/);
+  const old = record({ startedAt: "2026-11-18T09:00:00Z" });
+  assert.equal(isStaleHolder(old, { now: NOW, startOf: alive }).stale, true);
+  assert.match(isStaleHolder(old, { now: NOW, startOf: alive }).reason, /run timeout/);
+  assert.equal(isStaleHolder(record(), { now: NOW, startOf: alive }).stale, false);
+  // A recycled pid (different start time) is not our run.
+  assert.equal(isStaleHolder(record(), { now: NOW, startOf: () => "Thu Nov 19 01:00:00 2026" }).stale, true);
+  // The timeout is never below the lock wait a waiter may still be using.
+  assert.equal(runTimeoutSeconds({ ONZIO_DB_LOCK_WAIT: "7200" }), 7200);
+  assert.equal(runTimeoutSeconds({}), 3600);
+});
+
+test("01d: a pid is killed only if it still looks like the recorded server and holds the recorded port", () => {
+  const server = { pid: 777, port: 3111 };
+  assert.equal(mayKillServer(server, { command: "next-server (v16.0.1)", listeningPids: [777] }).ok, true);
+  assert.equal(mayKillServer(server, { command: "node node_modules/next/dist/bin/next start -p 3111", listeningPids: [777] }).ok, true);
+  assert.match(mayKillServer(server, { command: "/usr/bin/ssh host", listeningPids: [777] }).reason, /not a next server/);
+  assert.match(mayKillServer(server, { command: "next-server (v16)", listeningPids: [999] }).reason, /does not hold port 3111/);
+  assert.equal(mayKillServer(server, { command: null, listeningPids: [] }).ok, false);
+  assert.equal(mayKillServer({ pid: 1, port: 3111 }, { command: "next-server", listeningPids: [1] }).ok, false);
+});
+
+test("01d: sweepHolders kills exactly the recorded, matching pids of stale runs and nothing else", () => {
+  const dir = join(mkdtempSync(join(tmpdir(), "rcv-holders-")), "lock.holders");
+  writeHolder(dir, record({ runPid: 1001, servers: [{ name: "head", pid: 501, port: 3110 }, { name: "base", pid: 502, port: 3111 }] })); // dead run
+  writeHolder(dir, record({ runPid: 1002, servers: [{ name: "base", pid: 600, port: 3111 }] }));                                        // live and young
+  const killed = [];
+  const log = sweepHolders(dir, {
+    now: NOW, timeoutSeconds: 3600,
+    startOf: (pid) => (pid === 1002 ? "Wed Nov 18 11:50:00 2026" : null),
+    commandOf: (pid) => (pid === 501 ? "next-server (v16)" : "/usr/bin/vim"),   // 502 was recycled into an unrelated process
+    listening: (port) => (port === 3110 ? [501] : [502]),
+    kill: (pid) => killed.push(pid),
+  });
+  assert.deepEqual(killed, [501]);
+  assert.match(log.join("\n"), /not killing 502 :3111: pid 502 is not a next server/);
+  assert.match(log.join("\n"), /run 1002 .* kept/);
+  assert.equal(existsSync(join(dir, "1001.json")), false, "the stale record is deleted");
+  assert.equal(existsSync(join(dir, "1002.json")), true, "the live record stays");
+  assert.equal(holdersDir("/tmp/x.lock"), "/tmp/x.lock.holders");
+});
+
+test("01d: locked-run closes the lock's file descriptor for the servers it starts, and keeps it for itself", () => {
+  const dir = mkdtempSync(join(tmpdir(), "rcv-fd-"));
+  const lockFile = join(dir, "t.lock");
+  const wrapper = join(here, "..", "..", "..", "..", "scripts", "with-local-db-lock.sh");
+  const fn = readFileSync(join(here, "locked-run.sh"), "utf8").match(/^lock_fds\(\) \{[\s\S]*?^\}$/m)[0];
+  const script = `LOCK_FILE=${lockFile}\n${fn}\nmine="$(lock_fds)"\n` +
+    `(for fd in $(lock_fds); do eval "exec $fd>&-"; done; sh -c 'lsof -a -p $PPID -d 3-255 -Fn' | grep -c "${lockFile.replace("/var/", "/private/var/")}" ) > "${dir}/child"\n` +
+    `echo "$mine" > "${dir}/mine"`;
+  const result = spawnSync("bash", [wrapper, "bash", "-c", script], { encoding: "utf8", env: { ...process.env, ONZIO_DB_LOCK_FILE: lockFile, ONZIO_DB_LOCK_WAIT: "5" } });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(readFileSync(join(dir, "mine"), "utf8"), /^\d+$/m, "the run itself sees the lock fd");
+  assert.equal(readFileSync(join(dir, "child"), "utf8").trim(), "0", "a server subshell with the fd closed does not hold the lock file");
+});
+
+test("01d: the disk check refuses a build under 5 GB free and says so", () => {
+  const gb = (n) => n * 1024 * 1024; // df -k units
+  assert.equal(MIN_FREE_GB, 5);
+  assert.equal(diskRoomCheck(gb(5)).ok, true, "exactly 5 GB is enough");
+  assert.equal(diskRoomCheck(gb(27)).ok, true);
+  const low = diskRoomCheck(gb(4.99));
+  assert.equal(low.ok, false);
+  assert.match(low.message, /only 5\.0 GB free .* need at least 5 GB.* no build was started/);
+  assert.equal(diskRoomCheck(0.5 * gb(1)).ok, false, "the 516 MB case from the 2026-11-18 crash");
+  assert.equal(diskRoomCheck(NaN).ok, false, "unreadable free space refuses rather than builds");
+  assert.equal(diskRoomCheck(gb(8), 10).ok, false, "the minimum is a parameter");
 });

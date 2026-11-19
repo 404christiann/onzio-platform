@@ -49,8 +49,18 @@ Outside the lock (no shared state touched):
    `tests/architecture` and `tests/contracts`), and `npx vitest run --project unit tests/architecture`
    reported on its own. Selector debt must be byte-identical to origin/main.
 3. Builds: `next build` (ONZIO_ENVIRONMENT=staging) of the package worktree, and of a pristine
-   `git archive` of origin/main in `/private/tmp/onzio-rc-admin-verify/main-<sha>/` (cached by SHA,
-   node_modules cloned with `cp -c`). ~45 s each.
+   `git archive` of origin/main in `/private/tmp/onzio-rc-admin-verify/wt-<hash of the worktree's
+   realpath>/base-<sha>/` (cached per worktree and SHA, node_modules cloned with `cp -c`). ~45 s each.
+   Two runs on different worktrees never share a build directory (they used to, keyed by SHA only, and
+   broke each other's build); the same worktree reuses its own cache for the same SHA, and after a
+   successful build its `base-*` dirs for older SHAs are removed (at most one base build per worktree; old
+   ones are also removed before a new build starts). Before each build, `holders.mjs disk-check` reads free
+   space on the cache's volume and the run stops with a clear message under 5 GB (a full disk crashed the
+   Mac on 2026-11-18). The run prints the cache size at the end. Old shared `main-<sha>/` dirs from
+   earlier skill copies are left alone; delete them by hand when no run is using them.
+
+Just before the lock wait, `scripts/holders.mjs sweep` clears stale lock holders (see "Lock holders"),
+and if the lock is still busy the run logs who holds it (`lsof` on the lock file) and waits as before.
 
 Inside one lock hold (`scripts/locked-run.sh`):
 
@@ -248,11 +258,32 @@ Proof standard: the real user path in the real app (no test endpoints, no stubbe
 interception is at the network boundary: aborting saves in gate 2 (so nothing is written) and
 dropping or delaying one request in gate 3 to produce the retry and saving states.
 
+## Lock holders
+
+`scripts/with-local-db-lock.sh` (repo tooling, not changed here) opens the lock and deliberately clears
+close-on-exec (`F_SETFD 0`) so the lock outlives its `exec`; that is also why every child of the locked
+command inherits the lock fd. On 2026-11-18 a leaked `next-server` (parent launchd) kept that fd and held
+the shared lock for an hour. Three layers now cover it, all inside the skill:
+
+- Root cause: `locked-run.sh` starts each `next start` in a subshell that first closes every fd it has
+  open on the lock file (found with `lsof -p $$`), so a leaked server cannot hold the lock. The run itself
+  keeps the fd, so the lock still lasts exactly as long as the run.
+- Records: while it runs, `locked-run.sh` writes `<lock file>.holders/<run pid>.json` (run pid and start
+  time, worktree, each server's name, pid and port; default `/private/tmp/onzio-local-db.lock.holders/`)
+  and removes it in its exit trap.
+- Clearing: before waiting for the lock, `verify.sh` reads those files. A record is stale if its run pid is
+  dead (or was recycled by another process) or it is older than the run timeout (3600 s, the one-hour
+  session limit below, and never less than `ONZIO_DB_LOCK_WAIT`). For a stale record it SIGTERMs exactly the
+  recorded server pids, and only a pid whose command is `next-server` / `next start` and which holds the
+  recorded port; anything else is logged and left alone. Then it deletes the record. It never kills by
+  name and never kills a process that no record names. An unrecorded process holding the lock is logged
+  (`lsof`) and waited for; a human decides about it.
+
 ## Cleanup
 
 `verify.sh cleanup` kills servers this skill started (pid files in `/private/tmp/onzio-rc-admin-verify/`,
 plus their children) and removes auth state. It never kills by process name, never resets the
-database, and keeps the evidence and the cached origin/main build. A run stops its own servers
+database, and keeps the evidence and the per-worktree origin/main build caches. A run stops its own servers
 on exit, even on failure. The seeded Rose City and Diverse City clubs stay in the shared database;
 the next session that needs a clean stack resets it under the lock (that is normal here).
 

@@ -84,21 +84,43 @@ run() {
   [[ $gate1 == 0 && $tsc == 0 && $unit == 0 && $arch == 0 ]] || status=1
 
   echo "== builds (package HEAD and pristine $BASE ${base_sha:0:8})"
-  base_src="$CACHE/main-$base_sha"
+  # One cache per package worktree (wt-<hash of its realpath>/base-<sha>): two runs on different worktrees never share a
+  # build directory, so they cannot break each other's build. The same worktree reuses its own cache for the same SHA.
+  base_src="$(node "$SKILL/scripts/holders.mjs" cache-dir "$WT" "$base_sha")"
+  echo "verify: base build cache $base_src"
+  # At most one base build per worktree: drop older SHAs first (frees space before the build, not after).
+  prune_old_base() {
+    while IFS= read -r old; do [[ -n "$old" ]] && { echo "verify: removing old base cache $old"; rm -rf "$old"; }; done \
+      < <(node "$SKILL/scripts/holders.mjs" stale-cache "$WT" "$base_sha")
+  }
+  prune_old_base
+  # Fail fast with a clear message rather than start a build that could fill the host volume.
+  node "$SKILL/scripts/holders.mjs" disk-check "$CACHE" || die "not enough free disk; no build started"
   if [[ ! -f "$base_src/.next/BUILD_ID" ]]; then
     rm -rf "$base_src"; mkdir -p "$base_src"
     git -C "$WT" archive "$base_sha" | tar -x -C "$base_src" || die "archive failed"
     cp -cR "$WT/node_modules" "$base_src/" && install -m 600 "$WT/.env.local" "$WT/.env.test" "$base_src/"
     build "$base_src" "$out/logs/build-base.log" || die "base build failed"
   fi
+  node "$SKILL/scripts/holders.mjs" disk-check "$CACHE" || die "not enough free disk; package build not started"
   build "$WT" "$out/logs/build-head.log" || die "package build failed"
+  prune_old_base
 
+  # Clear lock holders left behind by a dead or overdue run (recorded server pids only, each re-checked), then say who still
+  # holds the lock before we wait for it.
+  local lock_file="${ONZIO_DB_LOCK_FILE:-/tmp/onzio-local-db.lock}"
+  node "$SKILL/scripts/holders.mjs" sweep "$lock_file"
+  if [[ -n "$(lsof -t "$lock_file" 2>/dev/null)" ]]; then
+    echo "verify: the DB lock is held; waiting (not killing anything unrecorded). Holders:"
+    lsof -nP "$lock_file" 2>/dev/null | sed 's/^/verify:   /'
+  fi
   echo "== waiting for the shared local DB lock, then reset + seed + servers + sign-in + browser gates"
   RCV_WT="$WT" RCV_BASE_SRC="$base_src" RCV_OUT="$out" RCV_ROUTE="$ROUTE" RCV_TOUCHED="$TOUCHED" RCV_SHARED_FIX="$SHARED" \
   RCV_SKILL="$SKILL" RCV_HEAD_PORT=$HEAD_PORT RCV_BASE_PORT=$BASE_PORT \
     "$WT/scripts/with-local-db-lock.sh" bash "$SKILL/scripts/locked-run.sh" || status=1
 
   node "$SKILL/scripts/report.mjs" "$out" || status=1
+  echo "verify: base build cache size: $(node "$SKILL/scripts/holders.mjs" cache-size "$WT")"
   echo "verify: report $out/report.html"
   return $status
 }
@@ -106,7 +128,7 @@ run() {
 cleanup() { # servers this skill started (pid files), never by process name; evidence is kept
   for f in "$CACHE"/server-*.pid; do [[ -f "$f" ]] && { pkill -P "$(cat "$f")" 2>/dev/null; kill "$(cat "$f")" 2>/dev/null; rm -f "$f"; }; done
   rm -f "$CACHE"/auth-*.json
-  echo "cleanup: servers stopped, auth state removed; base build cache kept in $CACHE/main-*; evidence kept under <worktree>/test-results/rc-admin-verify/"
+  echo "cleanup: servers stopped, auth state removed; base build caches kept in $CACHE/wt-*/; evidence kept under <worktree>/test-results/rc-admin-verify/"
 }
 
 case "$CMD" in doctor) doctor;; run) run;; cleanup) cleanup;; *) sed -n 2,12p "$0"; exit 64;; esac

@@ -1,5 +1,54 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-01d verify-rc-admin: per-worktree build cache, stale lock holders, disk guard
+
+**Agent/package:** Claude Code (Sonnet workers, orchestrated), RC-ADMIN-01d, branch `claude/rc-admin-01d`
+on `1aa159ae`. **Status:** `in_progress`, draft PR. It merges only on Christian's word. Skill-only:
+`.claude/skills/verify-rc-admin/`. No app code, migration, data or production change.
+`scripts/with-local-db-lock.sh` is unchanged.
+
+**Why:** three incidents on 2026-11-18.
+- Two verify runs building the same base SHA into one shared cache folder broke each other.
+- A leaked `next-server` inherited the DB lock's file descriptor (the lock wrapper clears
+  close-on-exec on purpose) and blocked every worker for about an hour until it was killed by hand.
+- The host disk filled to 516 MB free before the Mac crashed.
+
+**Completed work:**
+
+- **Per-worktree build cache:** base builds are cached at
+  `/private/tmp/onzio-rc-admin-verify/wt-<sha256(worktree realpath)[:12]>/base-<sha>`, with at most one SHA
+  per worktree; older SHAs are pruned before and after the build. Each run prints the cache size.
+- **Disk guard:** before each build the run checks free space on the host volume and fails fast under
+  5 GB.
+- **Lock holders:** `locked-run.sh` records the run and every server it starts in
+  `<lock>.holders/<run-pid>.json` and removes the file in its exit trap.
+- **Stale-holder sweep:** before waiting for the lock, a run sweeps holders. A holder is stale if its
+  run pid is dead or recycled, or it is older than max(3600 s, `ONZIO_DB_LOCK_WAIT`). Stale servers get
+  SIGTERM only if their command is still `next-server`/`next start` and they still hold the recorded
+  port. Unrecorded holders are never killed; they are logged with lsof and the run waits as before.
+- **Root cause:** each `next start` runs in a subshell that closes the lock fd, so a server can no
+  longer hold the DB lock.
+- `scripts/holders.mjs` is new; `verify.sh`, `locked-run.sh`, `verify.test.mjs` and `SKILL.md` are updated.
+
+**Verification:**
+
+- `verify.test.mjs`: 30/30. It covers cache keying, pruning, stale detection, the kill guard, closing
+  the lock fd and the disk threshold, including the 516 MB case. `tsc` clean; architecture 152.
+- Two concurrent runs on different worktrees built into separate caches (about 1.8 GB each) and both
+  finished:
+  - The 01d hub run passed every applicable gate, exit 0.
+  - The rc-admin-02 probe passed save behaviour 7/7, visuals, repo checks and Diverse City. Its gate 2
+    reported 12/13 only because that old branch predates #161.
+- Planted stale holder: a dummy server holding the lock with a dead run pid was killed by the sweep;
+  the lock was acquired and the run passed, exit 0.
+- Unrecorded holder: it was logged with lsof and not killed; the run gave up at the wait limit and
+  failed closed.
+
+**Blockers or unresolved decisions:** none. Known gap: the give-up message comes from
+`with-local-db-lock.sh` and does not name the holder pid, though the holder is logged just before it.
+
+**Exact next step:** bot review; Christian decides the merge; then Wave 2 (RC-ADMIN-03, 04) dispatches.
+
 ## 2026-11-18 - RC-ADMIN-06 Rose City Shop editor, Both kits
 
 **Agent/package:** Claude Code (Sonnet worker W6, orchestrated), RC-ADMIN-06, branch `claude/rc-admin-06`
