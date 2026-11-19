@@ -1,15 +1,21 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
-import { EditorGroup, EditorImage, EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorSaveBar, EditorSecondaryButton, EditorSection, EditorSwitch, editorSaveState, kit, useSavedFlash } from "@/components/admin/cinematic-editor/CinematicEditorKit";
-import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
+import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import {
+  EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
+} from "@/components/admin/ui/editor-kit";
 import { createClient } from "@/lib/admin-client";
 import { loadVisitorPageEditor, saveVisitorPageEditor, type VisitorPageSaveRequest } from "@/lib/visitor-page-editor";
-import { CHICK_FIL_A_ARTWORK_SLOTS, CHICK_FIL_A_SECTIONS, chickFilAContentSchema, chickFilARecoverySchema, chickFilADraftFingerprint, chickFilASaveSchema, emptyChickFilAContent, hydrateChickFilAContent, type ChickFilAArtworkSlot, type ChickFilAContent, type ChickFilASection, type ChickFilASnapshot } from "@/lib/chick-fil-a-content";
+import {
+  chickFilAContentSchema, chickFilARecoverySchema, chickFilASaveSchema, emptyChickFilAContent, hydrateChickFilAContent,
+  type ChickFilAArtworkSlot, type ChickFilAContent, type ChickFilASnapshot,
+} from "@/lib/chick-fil-a-content";
 import { loadTicketsEditor } from "@/lib/tickets-editor";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import type { TicketsContent } from "@/lib/tickets-content";
@@ -17,35 +23,62 @@ import CinematicShell from "@/components/cinematic/CinematicShell";
 import CinematicChickFilA from "@/components/cinematic/CinematicChickFilA";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
 import "@/components/admin/homepage/homepage-editor.css";
+import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
+import { partnerPageState } from "@/components/admin/stadium/partner-page-state";
+import styles from "@/components/admin/stadium/PartnerPageParts.module.css";
+import { ChickFilASectionFields } from "./ChickFilASectionFields";
+import {
+  CHICK_FIL_A_CARDS, buildChickFilASaveInput, changedChickFilACards, chickFilACardOnly, chickFilACardSummary, chickFilADirty,
+  chickFilAFlag, chickFilAImageRules, chickFilAPreviewImages, chickFilAPreviewSlice, type ChickFilACardId,
+} from "./chick-fil-a-sections";
 
-const ART_LABELS: Record<ChickFilAArtworkSlot, string> = { mealPass: "Meal pass", driveThru: "Drive-thru illustration", freeTicket: "Free ticket illustration", enjoyGame: "Meal illustration", map: "Route map", restaurant: "Restaurant photo", partner: "Match card partner", background: "Seat background" };
-const SECTION_LABELS: Record<ChickFilASection, string> = { heading: "Page heading", details: "Meal pass and details", steps: "Three steps", map: "Route map", match: "Next home match", restaurant: "Restaurant photo" };
-const blankPurchase = { purchaseUrl: "", missingPurchaseLabel: "Ticket link coming soon" };
+type Purchase = Pick<TicketsContent, "purchaseUrl" | "missingPurchaseLabel">;
+const blankPurchase: Purchase = { purchaseUrl: "", missingPurchaseLabel: "Ticket link coming soon" };
+const PAGE = "Chick-fil-A";
+const CRUMBS = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Tickets and stadium" }];
+const DESCRIPTION = "Edit the meal pass, details, three steps and images. Save applies all changes together.";
+
+type PreviewProps = {
+  id: ChickFilACardId; content: ChickFilAContent; media: ChickFilASnapshot["media"]; shared: CinematicHomepageContent | null; purchase: Purchase; slice: string;
+};
+/** The real public page component, fed the draft with only this card's section switched on. Re-renders only when its own slice changes. */
+const SectionLive = memo(function SectionLive({ id, content, media, shared, purchase }: PreviewProps) {
+  const page = useMemo(() => hydrateChickFilAContent(chickFilACardOnly(content, id), media, false), [content, id, media]);
+  const urls = useMemo(() => chickFilAPreviewImages(id).flatMap(slot => page.artwork[slot].url ? [page.artwork[slot].url as string] : []), [page, id]);
+  return <SettledPreview urls={urls}><CinematicShell contentOnly initialContent={shared}><CinematicChickFilA content={page} purchase={purchase} /></CinematicShell></SettledPreview>;
+}, (a, b) => a.id === b.id && a.slice === b.slice && a.media === b.media && a.shared === b.shared && a.purchase === b.purchase);
 
 export default function ChickFilAEditor() {
   const club = useClubContext();
   const [snapshot, setSnapshot] = useState<ChickFilASnapshot | null>(null), [draft, setDraft] = useState<ChickFilAContent | null>(null);
   const [media, setMedia] = useState<ChickFilASnapshot["media"]>([]), [retired, setRetired] = useState<string[]>([]);
   const [pending, setPending] = useState<VisitorPageSaveRequest<ChickFilAContent> | null>(null);
-  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<ChickFilAArtworkSlot | null>(null), [conflict, setConflict] = useState(false);
-  const [message, setMessage] = useState(""), [failed, setFailed] = useState(false), [loadedClubId, setLoadedClubId] = useState<string | null>(null);
-  const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [purchase, setPurchase] = useState<Pick<TicketsContent, "purchaseUrl" | "missingPurchaseLabel">>(blankPurchase);
-  const [previewPhone, setPreviewPhone] = useState(true);
-  const [confirmReload, setConfirmReload] = useState(false), [saved, setSaved] = useSavedFlash();
-  const recoveryKey = useRef<string | null>(null), generation = useRef(0), currentClubId = useRef(club.id);
+  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<ChickFilAArtworkSlot | null>(null);
+  const [message, setMessage] = useState(""), [failed, setFailed] = useState(false), [status, setStatus] = useState("");
+  const [conflict, setConflict] = useState(false), [saveFailed, setSaveFailed] = useState(false), [validation, setValidation] = useState("");
+  const [loadedClubId, setLoadedClubId] = useState<string | null>(null);
+  const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [purchase, setPurchase] = useState<Purchase>(blankPurchase);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const recoveryKey = useRef<string | null>(null), generation = useRef(0), currentClubId = useRef(club.id), keepRef = useRef<HTMLButtonElement>(null);
   currentClubId.current = club.id;
-  const dirty = !!draft && !!snapshot && chickFilADraftFingerprint(draft) !== chickFilADraftFingerprint(snapshot.content ?? emptyChickFilAContent());
+  const dialog = useEditorDialog<ChickFilACardId>();
+  const dirty = !!draft && !!snapshot && chickFilADirty(draft, snapshot.content);
+  const locked = busy || !!pending || !!uploading;
+  const unsaved = dirty || !!pending || retired.length > 0;
   const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch { /* Current in-memory draft remains available. */ } };
+
   useEffect(() => {
     const epoch = ++generation.current;
     let active = true;
     recoveryKey.current = null;
-    setSnapshot(null); setDraft(null); setLoadedClubId(null); setPending(null); setMedia([]); setRetired([]); setMessage(""); setFailed(false); setConflict(false); setBusy(false); setUploading(null); setShared(null); setPurchase(blankPurchase);
+    setSnapshot(null); setDraft(null); setLoadedClubId(null); setPending(null); setMedia([]); setRetired([]);
+    setMessage(""); setFailed(false); setStatus(""); setConflict(false); setSaveFailed(false); setValidation("");
+    setBusy(false); setUploading(null); setShared(null); setPurchase(blankPurchase);
     if (club.presentationTemplateKey !== "cinematic@2") return;
     Promise.all([loadVisitorPageEditor<ChickFilAContent>("chick-fil-a"), createClient().auth.getUser(), fetchCinematicHomepageContent(club.id), loadTicketsEditor()])
       .then(([loaded, user, homepage, tickets]) => {
         if (!active || generation.current !== epoch) return;
-        if (!user.data.user) throw new Error("Sign in again to edit Chick-fil-A.");
+        if (!user.data.user) throw new Error(`Sign in again to edit ${PAGE}.`);
         const savedContent = chickFilAContentSchema.parse(loaded.content ?? emptyChickFilAContent());
         const key = `onzio:chick-fil-a:v1:${location.origin}:${user.data.user.id}:${club.id}`;
         recoveryKey.current = key;
@@ -57,8 +90,8 @@ export default function ChickFilAEditor() {
         } catch { /* Broken or unavailable browser storage cannot block saved content. */ }
         setSnapshot(restored ? { ...loaded, revision: restored.revision, designRevision: restored.designRevision } : loaded);
         setDraft(restored?.content ?? savedContent); setMedia(restored?.media ?? loaded.media); setRetired(restored?.retired ?? []); setPending(restored?.pending ?? null); setLoadedClubId(club.id);
-        if (restored) setMessage(restored.pending ? "An earlier save needs confirmation. Retry the same save." : "Your unsaved Chick-fil-A draft has been restored.");
-      }).catch(error => { if (active && generation.current === epoch) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to load Chick-fil-A."); } });
+        if (restored) setMessage(restored.pending ? "An earlier save needs confirmation. Retry the same save." : `Your unsaved ${PAGE} draft has been restored.`);
+      }).catch(error => { if (active && generation.current === epoch) { setFailed(true); setMessage(error instanceof Error ? error.message : `Unable to load ${PAGE}.`); } });
     return () => { active = false; };
   }, [club.id, club.presentationTemplateKey]);
   useEffect(() => {
@@ -67,32 +100,45 @@ export default function ChickFilAEditor() {
     catch { /* Keep the draft in memory if browser storage is unavailable. */ }
   }, [draft, snapshot, dirty, pending, media, retired, loadedClubId, club.id]);
   useEffect(() => { if (!dirty && !pending) return; const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; }; window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn); }, [dirty, pending]);
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader title="Chick-fil-A" description="This page is unavailable for the current website design." /></AdminPage>;
-  const locked = busy || !!pending || !!uploading;
+
   const owns = (epoch: number, clubId: string) => generation.current === epoch && currentClubId.current === clubId;
-  const update = (edit: (content: ChickFilAContent) => void) => { setDraft(current => { if (!current) return current; const copy = structuredClone(current); edit(copy); return copy; }); setMessage(""); setFailed(false); setSaved(false); };
-  async function save() {
-    if (!draft || !snapshot || uploading || busy || loadedClubId !== club.id) return;
+  const update = (edit: (content: ChickFilAContent) => void) => {
+    if (locked) return;
+    setDraft(current => { if (!current) return current; const copy = structuredClone(current); edit(copy); return copy; });
+    setMessage(""); setFailed(false); setValidation(""); setSaveFailed(false);
+  };
+  /** Resolves true only when the server committed the save, so the Save button can show Saved. */
+  async function save(): Promise<boolean> {
+    if (!draft || !snapshot || uploading || busy || loadedClubId !== club.id) return false;
     const epoch = generation.current, clubId = club.id;
-    const parsed = chickFilASaveSchema.safeParse(pending ?? { operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision, content: draft, retiredMediaAssetIds: [...new Set(retired)] });
-    if (!parsed.success) { setFailed(true); setMessage("Review the page fields before saving."); return; }
+    const parsed = chickFilASaveSchema.safeParse(buildChickFilASaveInput({ pending, operationId: crypto.randomUUID(), snapshot, draft, retired }));
+    if (!parsed.success) { setSaveFailed(true); setValidation("Review the page fields before saving."); return false; }
     const request = parsed.data;
-    setPending(request); setBusy(true); setFailed(false); setMessage("Saving Chick-fil-A…");
+    setPending(request); setBusy(true); setFailed(false); setSaveFailed(false); setValidation(""); setMessage(""); setStatus(`Saving ${PAGE}…`);
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, retired })); } catch { }
+    let committed = false;
     try {
       const outcome = await saveVisitorPageEditor("chick-fil-a", request);
-      if (!owns(epoch, clubId)) return;
+      if (!owns(epoch, clubId)) return false;
       if (outcome.status === "committed") {
         setSnapshot(outcome.snapshot); setDraft(outcome.snapshot.content ?? emptyChickFilAContent()); setMedia(outcome.snapshot.media); setRetired([]); setPending(null); setConflict(false); clearRecovery();
-        setMessage(outcome.snapshot.cleanupPending ? "Chick-fil-A saved. Image cleanup will retry automatically." : "Chick-fil-A saved."); setSaved(true);
+        setMessage(outcome.snapshot.cleanupPending ? `${PAGE} saved. Image cleanup will retry automatically.` : ""); setStatus(`${PAGE} saved.`);
+        committed = true;
       } else if (outcome.status === "uncertain") { setPending(outcome.request); setFailed(true); setMessage(outcome.message); }
-      else { setPending(null); setFailed(true); setConflict(outcome.status === "conflict"); setMessage(outcome.message); }
+      else { setPending(null); setFailed(true); setSaveFailed(outcome.status !== "conflict"); setConflict(outcome.status === "conflict"); setMessage(outcome.message); }
     } catch { if (owns(epoch, clubId)) { setFailed(true); setMessage("Save could not be confirmed. Retry the same save. Your draft is locked until then."); } }
     finally { if (owns(epoch, clubId)) setBusy(false); }
+    return committed;
   }
-  async function reload(keepDraft = false, confirmed = false) {
+  /** Discard asks first when there are unsaved edits. */
+  function requestDiscard() {
+    if (busy || uploading) return;
+    if (pending) { setFailed(true); setMessage("Retry the same save before discarding your edits, so nothing is lost."); return; }
+    if (dirty || retired.length) setConfirmReload(true);
+    else void reload();
+  }
+  async function reload(keepDraft = false) {
     if (locked || loadedClubId !== club.id) return;
-    if (!keepDraft && dirty && !confirmed) { setConfirmReload(true); return; }
     const epoch = generation.current, clubId = club.id;
     setBusy(true);
     try {
@@ -104,48 +150,108 @@ export default function ChickFilAEditor() {
         setMedia([...loaded.media, ...media.filter(image => !previous.has(image.id) && !loaded.media.some(saved => saved.id === image.id))]);
         setMessage("Latest saved version loaded. Your edits were kept. Replace any images removed in the newer version before saving.");
       } else { setDraft(loaded.content ?? emptyChickFilAContent()); setMedia(loaded.media); setRetired([]); setMessage(""); clearRecovery(); }
-      setSnapshot(loaded); setConflict(false); setFailed(false);
-    } catch (error) { if (owns(epoch, clubId)) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to reload Chick-fil-A."); } }
+      setSnapshot(loaded); setConflict(false); setFailed(false); setSaveFailed(false); setValidation("");
+    } catch (error) { if (owns(epoch, clubId)) { setFailed(true); setMessage(error instanceof Error ? error.message : `Unable to reload ${PAGE}.`); } }
     finally { if (owns(epoch, clubId)) setBusy(false); }
   }
-  async function upload(slot: ChickFilAArtworkSlot, file: File) {
-    if (!draft || locked || loadedClubId !== club.id) return;
+  async function upload(slot: ChickFilAArtworkSlot, file: File): Promise<boolean> {
+    if (!draft || locked || loadedClubId !== club.id) return false;
     const epoch = generation.current, clubId = club.id;
-    setUploading(slot); setFailed(false); setMessage("Adding your image…");
+    setUploading(slot); setFailed(false); setStatus("Adding your image…");
     try {
       const bitmap = await createImageBitmap(file), dimensions = { width: bitmap.width, height: bitmap.height }; bitmap.close();
-      const result = await createClient().storage.from(slot === "restaurant" ? "homepage" : "homepage-artwork").upload("chick-fil-a/" + crypto.randomUUID(), file);
+      const result = await createClient().storage.from(chickFilAImageRules(slot).bucket).upload("chick-fil-a/" + crypto.randomUUID(), file);
       if (result.error || !result.data) throw new Error(result.error?.message ?? "Image upload failed.");
-      if (!owns(epoch, clubId)) return;
+      if (!owns(epoch, clubId)) return false;
       const oldId = draft.artwork[slot].assetId;
       if (oldId && media.some(image => image.id === oldId) && !snapshot?.media.some(image => image.id === oldId)) setRetired(current => [...new Set([...current, oldId])]);
       setMedia(current => [...current, { id: result.data.assetId, storage_bucket: "onzio-media", storage_path: result.data.path, ...dimensions }]);
-      update(content => { content.artwork[slot].assetId = result.data.assetId; }); setMessage("Image ready. Save Chick-fil-A to use it.");
-    } catch (error) { if (owns(epoch, clubId)) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } }
+      // Upload locks manual editing. Apply its one confirmed identity directly.
+      setDraft(current => { if (!current) return current; const copy = structuredClone(current); copy.artwork[slot].assetId = result.data.assetId; return copy; });
+      setStatus(`Image ready. Save ${PAGE} to use it.`);
+      return true;
+    } catch (error) { if (owns(epoch, clubId)) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } return false; }
     finally { if (owns(epoch, clubId)) setUploading(null); }
   }
-  const field = (label: string, key: "title" | "subtitle" | "detailsHeading" | "detailsBody") => <label className="block min-w-0" key={key}><span className={ADMIN_LABEL_CLASS}>{label}</span>{key === "detailsBody" ? <textarea className={ADMIN_INPUT_CLASS + " min-h-36"} disabled={locked} value={draft?.[key] ?? ""} maxLength={4000} onChange={event => update(content => { content[key] = event.target.value; })} /> : <input className={ADMIN_INPUT_CLASS} disabled={locked} value={draft?.[key] ?? ""} maxLength={120} onChange={event => update(content => { content[key] = event.target.value; })} />}</label>;
+  function removeImage(slot: ChickFilAArtworkSlot) {
+    if (!draft || locked) return;
+    const id = draft.artwork[slot].assetId;
+    if (id) setRetired(current => [...new Set([...current, id])]);
+    update(content => { content.artwork[slot].assetId = null; });
+  }
+  const saveAction = useSaveState({
+    isDirty: unsaved,
+    onSave: async () => { if (!(await save())) throw new Error(`${PAGE} was not saved.`); },
+  });
+  const latestSave = useRef(save);
+  latestSave.current = save;
+  useUnsavedGuard(draft ? {
+    dirty: unsaved, edited: PAGE, onSave: () => latestSave.current(),
+    onDiscard: () => {
+      if (busy || uploading || pending) throw new Error("A save is still being confirmed.");
+      if (!snapshot) return;
+      setDraft(snapshot.content ?? emptyChickFilAContent()); setRetired([]); setMessage(""); setFailed(false); setConflict(false); setSaveFailed(false); setValidation(""); clearRecovery();
+    },
+  } : undefined);
+
+  const deferred = useDeferredValue(draft);
+  const pageState = partnerPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
+  const changed = useMemo(() => new Set(draft && snapshot ? changedChickFilACards(draft, snapshot.content) : []), [draft, snapshot]);
   const page = draft ? hydrateChickFilAContent(draft, media, false) : null;
-  const canSave = !busy && !uploading && (dirty || !!pending || retired.length > 0);
-  return <AdminPage className={kit.page}>
-    <AdminPageHeader eyebrow="Public website" title="Chick-fil-A" description="Edit the meal pass, details, three steps and images. Save applies all changes together." actions={<EditorPageLink href="/stadium/chick-fil-a">Open Chick-fil-A page</EditorPageLink>} />
-    <p className={kit.notice}>The purchase link and unavailable message are shared with <Link className={kit.inlineLink} href="/admin/tickets">Tickets</Link>. Match heading, announcement and button text come from <Link className={kit.inlineLink} href="/admin/homepage">Homepage</Link>. Fixtures come from <Link className={kit.inlineLink} href="/admin/schedule">Schedule</Link>.</p>
-    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
-    {!draft || loadedClubId !== club.id ? <EditorLoading label="Loading Chick-fil-A…" failed={failed} onRetry={() => location.reload()} /> : <>
-      <EditorSection title="Page and details"><div className="grid gap-5 md:grid-cols-2">{field("Page heading", "title")}{field("Subtitle", "subtitle")}{field("Details heading", "detailsHeading")}{field("Details copy", "detailsBody")}</div></EditorSection>
-      <EditorSection title="Three steps"><div className="grid gap-4 md:grid-cols-3">{draft.stepLabels.map((label, index) => <EditorGroup legend={`Step ${index + 1}`} key={index}><label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Label</span><input className={ADMIN_INPUT_CLASS} disabled={locked} maxLength={120} value={label} onChange={event => update(content => { content.stepLabels[index] = event.target.value; })} /></label><label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Number</span><input className={ADMIN_INPUT_CLASS} disabled={locked} maxLength={12} value={draft.stepNumbers[index]} onChange={event => update(content => { content.stepNumbers[index] = event.target.value; })} /></label></EditorGroup>)}</div></EditorSection>
-      <EditorSection title="Visible sections"><div className={kit.switchGrid} data-columns="2">{CHICK_FIL_A_SECTIONS.map(section => <EditorSwitch key={section} label={`Show ${SECTION_LABELS[section].toLowerCase()}`} disabled={locked} checked={draft.sections[section]} onChange={checked => update(content => { content.sections[section] = checked; })} />)}</div></EditorSection>
-      <EditorSection title="Images" description="Words inside artwork change when you replace its image. Step labels and numbers are editable above."><div className="grid gap-4 md:grid-cols-2">{CHICK_FIL_A_ARTWORK_SLOTS.map(slot => <EditorGroup legend={ART_LABELS[slot]} key={slot}>
-        <EditorImage label={ART_LABELS[slot]} url={page?.artwork[slot].url} alt={draft.artwork[slot].alt} accept={slot === "restaurant" ? "image/jpeg,image/png,image/webp" : "image/png,image/webp"} empty="No image yet." hint={slot === "restaurant" ? "JPG, PNG or WebP, up to 15 MB and 6000 pixels per side." : "PNG or WebP, up to 5 MB and 3000 pixels per side."} uploading={uploading === slot} disabled={locked} hasImage={!!page?.artwork[slot].url} onFile={file => void upload(slot, file)}
-          onRemove={draft.artwork[slot].assetId ? () => { const id = draft.artwork[slot].assetId; if (id) setRetired(current => [...new Set([...current, id])]); update(content => { content.artwork[slot].assetId = null; }); } : undefined} />
-        <label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Image description</span><input className={ADMIN_INPUT_CLASS} disabled={locked} value={draft.artwork[slot].alt} maxLength={1000} onChange={event => update(content => { content.artwork[slot].alt = event.target.value; })} /></label>
-      </EditorGroup>)}</div></EditorSection>
-      <EditorPreview phone={previewPhone} onPhoneChange={setPreviewPhone}><HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="Chick-fil-A"><CinematicShell contentOnly initialContent={shared}><CinematicChickFilA content={page!} purchase={purchase} /></CinematicShell></HomepagePreviewFrame></EditorPreview>
-      <EditorSaveBar state={editorSaveState({ busy, canSave, saved })} retry={!!pending} onSave={() => void save()} status={pending ? "Awaiting save confirmation" : dirty ? "Unsaved changes" : ""}>
-        <EditorSecondaryButton disabled={locked} onClick={() => void reload()}>Reload saved page</EditorSecondaryButton>
-        {conflict && <EditorSecondaryButton disabled={locked} onClick={() => void reload(true)}>Load latest and keep my edits</EditorSecondaryButton>}
-      </EditorSaveBar>
-    </>}
-    <AdminConfirmDialog open={confirmReload} title="Discard your Chick-fil-A edits?" confirmLabel="Discard and reload" destructive onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(false, true); }}>Your unsaved Chick-fil-A edits will be discarded and the saved page loaded.</AdminConfirmDialog>
-  </AdminPage>;
+  const loading = !draft || !page || loadedClubId !== club.id;
+
+  if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={PAGE} breadcrumb={CRUMBS} description="This page is unavailable for the current website design.">{null}</PageFrame>;
+
+  const cardItems = draft ? CHICK_FIL_A_CARDS.map(card => {
+    const flag = chickFilAFlag(card.id);
+    return {
+      id: card.id, title: card.title, changed: changed.has(card.id), summary: chickFilACardSummary(draft, card.id), disabled: locked,
+      ...(flag ? { visible: draft.sections[flag], onVisibleChange: (visible: boolean) => update(content => { content.sections[flag] = visible; }) } : {}),
+    };
+  }) : [];
+  const api = draft && page ? { draft, page, locked, uploading, update, upload, removeImage } : null;
+  const previewOf = (id: string) => deferred && <SectionLive id={id as ChickFilACardId} content={deferred} media={media} shared={shared} purchase={purchase} slice={chickFilAPreviewSlice(deferred, id as ChickFilACardId)} />;
+
+  const notice = (message || validation || conflict) ? <div className={styles.notice} data-chick-fil-a-notice="">
+    {validation && <ValidationMessage live="assertive">{validation}</ValidationMessage>}
+    {(message || conflict) && <EditorNotice failed={failed || conflict}>{message}
+      {conflict && <span className={styles.noticeActions}>
+        <button ref={keepRef} type="button" className="admin-press" disabled={locked} onClick={() => void reload(true)} style={{ minHeight: 44, padding: "0 14px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--secondary))" }}>Load latest and keep my edits</button>
+        <EditorSecondaryButton disabled={locked} onClick={requestDiscard}>Reload saved page</EditorSecondaryButton>
+      </span>}
+    </EditorNotice>}
+  </div> : null;
+
+  if (!draft && failed) return <PageFrame title={PAGE} breadcrumb={CRUMBS} description={DESCRIPTION}>
+    <EditorNotice failed>{message}</EditorNotice>
+    <div><EditorSecondaryButton disabled={false} onClick={() => location.reload()}>Try again</EditorSecondaryButton></div>
+  </PageFrame>;
+
+  return <>
+    <ShimmerRegion loading={loading} loadingLabel={`Loading ${PAGE}…`} minHeight={480}
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={CHICK_FIL_A_CARDS.length} /></div>}>
+      <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/stadium/chick-fil-a" description={DESCRIPTION} state={pageState}
+        onSave={() => { void saveAction.save().catch(() => undefined); }}
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        <PreviewCards sections={cardItems} label="Chick-fil-A sections" renderPreview={previewOf} previewScale={0.46}
+          onEdit={(id, event) => dialog.openSection(id as ChickFilACardId, event)} />
+      </PageFrame>
+    </ShimmerRegion>
+    <p className={styles.srOnly} role="status" data-chick-fil-a-status="">{status}</p>
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE}`} mode="split" returnFocusRef={dialog.returnFocusRef}
+      sections={CHICK_FIL_A_CARDS.map(card => {
+        const flag = chickFilAFlag(card.id);
+        return { id: card.id, title: card.title, summary: draft && (flag && !draft.sections[flag] ? "Hidden on the page" : chickFilACardSummary(draft, card.id)) };
+      })}
+      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as ChickFilACardId)}
+      renderSection={id => dialog.open ? <ChickFilASectionFields api={api} id={id as ChickFilACardId} /> : null}
+      renderPreview={id => dialog.open ? <div className={styles.livePreview}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>
+          <CinematicShell contentOnly initialContent={shared}><CinematicChickFilA content={hydrateChickFilAContent(chickFilACardOnly(api.draft, id as ChickFilACardId), media, false)} purchase={purchase} /></CinematicShell>
+        </HomepagePreviewFrame></div> : null} />}
+    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+      onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
+      Discard unsaved {PAGE} edits and load the saved page?
+    </AdminConfirmDialog>
+  </>;
 }

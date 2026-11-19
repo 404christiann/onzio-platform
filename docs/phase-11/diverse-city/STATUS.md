@@ -1,5 +1,61 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-03 Foothill Transit and Chick-fil-A on the Previews layout
+
+**Agent/package:** Claude Code (Sonnet worker W3, orchestrated), RC-ADMIN-03, branch `claude/rc-admin-03`
+on `bfc296ba`. **Status:** `in_progress`, PR open. It merges only on Christian's word. App code only:
+no migration, schema, RPC, data or production change, and nothing under `components/cinematic/`.
+
+**Completed work:**
+
+- **Kit shells:** both editors follow Stadium's pattern: PageFrame, PreviewCards with the real public
+  section (`CinematicStadium` / `CinematicChickFilA`), split dialog, phone sheet, `useSaveState` with
+  Retry through `saveAction.save()`, conflict "Load latest and keep my edits" plus "Reload saved page",
+  "Discard and reload", and `useUnsavedGuard`. Foothill gained keep-my-edits on conflict by copying
+  Chick-fil-A's `reload(keepDraft)`.
+- **Foothill Transit:**
+  - Cards with switches: Page heading (`showHeading`), Phone map (`showMap`, which hides the public
+    route-map section), Next match (`showMatch`), Ticket benefits (`showBenefits`), and Sections
+    (`showSections`).
+  - Bus and map images: no switch.
+  - Two-level show/hide: the page-level `showSections` switch sits on the Sections card, and each block
+    has its own `visible` switch in the dialog.
+  - Reorder, add and remove for sections and benefits, as the old editor had them.
+  - Phone map crop control: the layout choice (full or split) and two crop panels with an overlay and
+    x, y, width and height fields. It uses the existing `stadiumCropSchema` fit check and shows a yellow
+    ValidationMessage for a crop that is refused.
+- **Chick-fil-A:**
+  - Six switch cards mapped 1:1 to `sections.*`: heading, details, steps, map, match and restaurant.
+  - The Background card has no switch.
+  - Images follow Christian's confirmed mapping: mealPass with Details; driveThru, freeTicket and
+    enjoyGame with Steps; partner with Match; map and restaurant on their own cards.
+  - Upload buckets and accepted types per slot are unchanged.
+- **Fixed:** cards showed false unsaved dots after a plain load because key order differed. The
+  changed-card check now parses both sides through the schema, in both editors.
+
+**Files changed:**
+- Rewritten: `components/admin/stadium/StadiumEditor.tsx` (Foothill) and
+  `components/admin/chick-fil-a/ChickFilAEditor.tsx`.
+- New in `components/admin/stadium/`: `foothill-sections.ts`, `FoothillSectionFields.tsx`,
+  `PartnerPageParts.tsx`, `PartnerPageParts.module.css`, `partner-page-state.ts`.
+- New in `components/admin/chick-fil-a/`: `chick-fil-a-sections.ts`, `ChickFilASectionFields.tsx`.
+- Test: `tests/contracts/partner-pages-sections.test.ts` (23 tests).
+
+**Verification:** verify-rc-admin `--touched foothill-transit,chick-fil-a` passed all six gates on
+`/admin/foothill-transit` and `/admin/chick-fil-a`, then passed again on both after rebasing onto
+`bfc296ba`.
+- Payloads: the 12 untouched editors are identical.
+- Save states: 7/7.
+- CLS 0.00001 at 1440 and 0 at 390, light and dark; 0 new axe violations.
+- Diverse City 8/8.
+- `tsc` clean; unit 3702; architecture 152; selector debt unchanged.
+
+**Blockers or unresolved decisions:** none. Polish items for later: crop fields show four decimals
+(display only), and the discard text should come from the shared `DISCARD_CONFIRM` constant (the
+wording is already the same).
+
+**Exact next step:** bot review; Christian decides the merge.
+
 ## 2026-11-18 - RC-ADMIN-04 Tickets, Season Membership, Know Before You Go on the Previews layout
 
 **Agent/package:** Claude Code (Sonnet worker W4, orchestrated), RC-ADMIN-04, branch `claude/rc-admin-04`
