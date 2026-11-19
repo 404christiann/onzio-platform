@@ -3,7 +3,7 @@
 ## 2026-11-19 - RC-ADMIN-4b-0-3 verify-rc-admin: Stats rows drive main's workspace and Rose City's dialog table
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-3, branch `claude/rc-admin-4b-0-3` on `9e1dee1c`. **Status:** `in_progress`: PR open,
-waiting for onzio-bot. Skill only: no app code, no migration. Starting point: the Stats worker's patch, reviewed and changed (see below).
+onzio-bot clean at `4787c48`. Skill only: no app code, no migration. Starting point: the Stats worker's patch, reviewed and changed (see below).
 
 **Completed work:**
 - Both stats rows open "Edit <player>" (Rose City's table, which opens a dialog whose number boxes edit the draft live) or "Select <player>" (main).
@@ -20,10 +20,10 @@ waiting for onzio-bot. Skill only: no app code, no migration. Starting point: th
 
 **Verification** (`--touched none`, clean main; reports under `/Users/christianalcala/Downloads/onzio-platform/.claude/worktrees/rc-admin-4b-0-2/test-results/rc-admin-verify/`):
 - `/admin/stats?view=match`: all six gates pass (gate 3: retry, conflict, discard n/a through `lacksOnAdminButton`): `20261119-135030-RC-ADMIN-4b-0-3-t3m`.
-- `/admin/stats?view=season`: **not run yet** (held by the verify-slot cap); to run before merge.
+- `/admin/stats?view=season`: all six gates pass (gate 3: retry, conflict, discard n/a through `lacksOnAdminButton`; 20/20 payloads, Diverse City 15/15): `20261119-141735-RC-ADMIN-4b-0-3-t3s`.
 - Not exercised live: the new build path (PageSaveButton, dialog, real conflict). The Stats branch verifies against this after it lands.
 
-**Next step:** the season run when a slot frees; onzio-bot; then `verify.sh cleanup --worktree` on this worktree.
+**Next step:** onzio-bot; then `verify.sh cleanup --worktree` on this worktree.
 
 ## 2026-11-19 - RC-ADMIN-4b-0-2 follow-up: seasons row reason text (onzio-bot Low on #188)
 
