@@ -1,5 +1,5 @@
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
-import { DEFAULT_SITE_SOCIAL_LINKS, normalizeSiteSocialLinks, socialLinkLabel } from "@/lib/social-links";
+import { DEFAULT_SITE_SOCIAL_LINKS, canonicalizeSocialRows, normalizeSiteSocialLinks, socialLinkLabel } from "@/lib/social-links";
 
 export type BrandingDraft = {
   logoPath: string;
@@ -13,10 +13,27 @@ export type BrandingStage =
   | { kind: "social"; payload: DBSiteSocialLink[]; links: DBSiteSocialLink[]; configured: SiteSocialPlatform[] }
   | { kind: "tagline"; payload: { footer_tagline: string; updated_at: string }; value: string };
 
+/** The load: stored rows (any id) become the form's five standard links. Uses the same mapper as the save. */
+export function draftFromRows(branding: { logoPath: string; tagline: string }, rows: readonly DBSiteSocialLink[]): BrandingDraft {
+  const canonical = canonicalizeSocialRows(rows);
+  return { logoPath: branding.logoPath, tagline: branding.tagline, links: normalizeSiteSocialLinks(canonical), configured: canonical.map((link) => link.id) };
+}
+
+const standardLinks = (draft: BrandingDraft) => normalizeSiteSocialLinks(canonicalizeSocialRows(draft.links));
+
 function socialValue(draft: BrandingDraft) {
-  return normalizeSiteSocialLinks(draft.links)
+  return standardLinks(draft)
     .filter((link) => draft.configured.includes(link.id))
     .map((link) => [link.id, link.href.trim()]);
+}
+
+/** The rows a social save writes: configured platforms only, always under the standard ids. */
+export function socialStagePayload(draft: BrandingDraft, now: string): DBSiteSocialLink[] {
+  return standardLinks(draft).filter((link) => draft.configured.includes(link.id)).map((link) => ({
+    id: link.id, label: socialLinkLabel(link.id), href: link.href.trim(), icon: link.icon,
+    sort_order: DEFAULT_SITE_SOCIAL_LINKS.findIndex((fallback) => fallback.id === link.id),
+    updated_at: now,
+  }));
 }
 
 export function validateChangedSocialLink(href: string, savedHref: string): string | undefined {
@@ -42,13 +59,9 @@ export function brandingStages(draft: BrandingDraft, saved: BrandingDraft, tagli
     stages.push({ kind: "logo", payload: { club_logo_path: draft.logoPath, updated_at: now }, value: draft.logoPath });
   }
   if (JSON.stringify(socialValue(draft)) !== JSON.stringify(socialValue(saved))) {
-    const links = normalizeSiteSocialLinks(draft.links).map((link) => ({ ...link }));
+    const links = standardLinks(draft).map((link) => ({ ...link }));
     const configured = [...draft.configured];
-    const payload = links.filter((link) => configured.includes(link.id)).map((link) => ({
-      id: link.id, label: socialLinkLabel(link.id), href: link.href.trim(), icon: link.icon,
-      sort_order: DEFAULT_SITE_SOCIAL_LINKS.findIndex((fallback) => fallback.id === link.id),
-      updated_at: now,
-    }));
+    const payload = socialStagePayload(draft, now);
     // An existing configured row stays configured even when its URL is cleared.
     if (payload.length) stages.push({ kind: "social", payload, links, configured });
   }

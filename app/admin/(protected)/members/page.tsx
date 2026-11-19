@@ -4,6 +4,8 @@ import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
 import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { TeamSkeleton } from "@/components/admin/club-settings/ClubSettingsSkeleton";
 import { ClubSettingsFrame } from "@/components/admin/club-settings/ClubSettingsFrame";
+import { RoseCityFrame } from "@/components/admin/club-settings/rose-city/RoseCityFrame";
+import roseStyles from "@/components/admin/club-settings/rose-city/RoseCity.module.css";
 import styles from "@/components/admin/club-settings/ClubSettings.module.css";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminPendingButton } from "@/components/admin/ui/AdminPendingButton";
@@ -12,6 +14,8 @@ import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { SignInPeople } from "@/components/admin/reimagined/SignInPeople";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { useClubContext } from "@/components/ClubContextProvider";
+import Link from "next/link";
+import { clubSettingsEditorFor } from "@/lib/admin-club-editors";
 import { memberLabel } from "@/lib/admin-greeting";
 import { cn } from "@/lib/utils";
 
@@ -337,8 +341,10 @@ function ClassicMembersPage() {
   }
 
   const disabled = loading || loadFailed || pending !== null || uncertain;
-  return (
-    <ClubSettingsFrame active="team">
+  // A club on the kit editors gets the editor-kit frame and a Payments link; the team logic below is the same for every club.
+  const isKit = clubSettingsEditorFor(club) === "kit";
+  const body = (
+    <>
       {!isOwner ? (
         <section className={styles.card} aria-labelledby="team-access-heading">
           <h2 id="team-access-heading">Team access</h2>
@@ -402,6 +408,20 @@ function ClassicMembersPage() {
         <p>{removing?.email} will be signed out and can’t sign in until you add them again.</p>
         {message && pending !== "remove" && <p role="alert" className={styles.error}>{message.text}</p>}
       </AdminConfirmDialog>
-    </ClubSettingsFrame>
+      {isKit && isOwner && (
+        <section className={roseStyles.card} aria-labelledby="payments-link-heading">
+          <div className={roseStyles.payments}>
+            <div>
+              <h2 id="payments-link-heading">Payments</h2>
+              <p>Your Onzio subscription and billing are on the Payments page.</p>
+            </div>
+            <Link className={roseStyles.paymentsLink} href="/admin/payments">Open Payments</Link>
+          </div>
+        </section>
+      )}
+    </>
   );
+  return isKit
+    ? <RoseCityFrame active="team">{body}</RoseCityFrame>
+    : <ClubSettingsFrame active="team">{body}</ClubSettingsFrame>;
 }

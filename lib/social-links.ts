@@ -65,3 +65,36 @@ export function normalizeSiteSocialLinks(rows: DBSiteSocialLink[]): DBSiteSocial
 export function socialLinkLabel(platform: SiteSocialPlatform): string {
   return DEFAULT_SITE_SOCIAL_LINKS.find((link) => link.id === platform)?.label ?? platform;
 }
+
+const PLATFORM_IDS: readonly SiteSocialPlatform[] = ["instagram", "facebook", "tiktok", "youtube", "x"];
+const ICON_PLATFORMS: Record<string, SiteSocialPlatform> = {
+  "instagramlogo.svg": "instagram", "facebooklogo.svg": "facebook", "tiktoklogo.svg": "tiktok", "youtubelogo.svg": "youtube", "xlogo.svg": "x",
+};
+
+/** The platform a stored row is for. Imported rows can have UUID primary keys; their icon file identifies the brand. */
+export function socialPlatformOf(social: { id: string; icon: string }): SiteSocialPlatform | null {
+  if ((PLATFORM_IDS as readonly string[]).includes(social.id)) return social.id as SiteSocialPlatform;
+  try {
+    const path = new URL(social.icon, "https://asset.invalid/").pathname;
+    return ICON_PLATFORMS[path.split("/").at(-1)?.toLowerCase() ?? ""] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The one legacy -> standard id mapper (RC-ADMIN-4c), used by the Branding load and save. Each row that is for a
+ * known platform comes back under that platform's standard id. A row already stored under the standard id wins over
+ * a legacy row for the same platform, even when its href is blank (the public footer follows the same rule); among
+ * legacy rows the first one wins. Rows it cannot identify are left out (they are never written or deleted here).
+ */
+export function canonicalizeSocialRows(rows: readonly DBSiteSocialLink[]): DBSiteSocialLink[] {
+  const chosen = new Map<SiteSocialPlatform, DBSiteSocialLink>();
+  for (const row of rows) {
+    const platform = socialPlatformOf(row);
+    if (!platform) continue;
+    const previous = chosen.get(platform);
+    if (!previous || (row.id === platform && previous.id !== platform)) chosen.set(platform, row);
+  }
+  return [...chosen.entries()].map(([platform, row]) => ({ ...row, id: platform }));
+}
