@@ -1,0 +1,42 @@
+.fields { display: grid; min-inline-size: 0; gap: 18px; }
+.field { display: grid; min-inline-size: 0; gap: 0; }
+.row { display: grid; min-inline-size: 0; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 767px) { .row { grid-template-columns: minmax(0, 1fr); } }
+.textarea { min-block-size: 12rem; resize: vertical; line-height: 1.5; }
+.hint, .count, .error { display: block; margin-block-start: 6px; font-size: .8125rem; line-height: 1.4; }
+.hint, .count { color: hsl(var(--muted-foreground)); }
+.count { text-align: end; font-variant-numeric: tabular-nums; }
+.count[data-full] { color: hsl(var(--foreground)); font-weight: 600; }
+.error { color: hsl(var(--destructive)); font-weight: 500; }
+.note { margin: 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.45; overflow-wrap: anywhere; }
+.note code { font-size: .8125rem; }
+.category { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+.categories { display: flex; flex-wrap: wrap; gap: 8px; }
+.categoryOption { position: relative; display: inline-flex; }
+.categoryOption input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.categoryLook { display: inline-flex; min-block-size: 44px; padding: 0 14px; align-items: center; gap: 8px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); font-size: .9375rem; touch-action: manipulation; transition: background-color 120ms ease, border-color 120ms ease; }
+.categoryLook i { inline-size: 10px; block-size: 10px; border-radius: 50%; }
+.categoryOption input:checked + .categoryLook { border-color: hsl(var(--ring)); background: hsl(var(--secondary)); font-weight: 600; box-shadow: 0 0 0 1px hsl(var(--ring)); }
+.categoryOption input:focus-visible + .categoryLook { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.categoryOption input:disabled + .categoryLook { opacity: .55; }
+.notice { display: grid; gap: 10px; }
+.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.livePreview :global(.hp-preview-frame) { block-size: min(560px, calc(100dvh - 260px)); min-block-size: 320px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-block-end: 14px; }
+.search { position: relative; flex: 1 1 220px; min-inline-size: 0; }
+.search input { padding-inline-start: 40px; }
+.searchIcon { position: absolute; inset-block: 0; inset-inline-start: 12px; display: flex; align-items: center; color: hsl(var(--muted-foreground)); pointer-events: none; }
+.showRemoved { display: inline-flex; min-block-size: 44px; align-items: center; gap: 8px; font-size: .875rem; color: hsl(var(--muted-foreground)); }
+.add { display: inline-flex; min-block-size: 44px; padding: 0 16px; align-items: center; gap: 8px; border: 0; border-radius: 10px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: .9375rem; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+.add:disabled { opacity: .5; cursor: default; }
+.add:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; padding: 0; border: 0; }
+.chip { display: inline-flex; min-block-size: 44px; padding: 0 14px; align-items: center; gap: 8px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: .875rem; cursor: pointer; touch-action: manipulation; }
+.chip[aria-pressed="true"] { border-color: hsl(var(--ring)); background: hsl(var(--secondary)); font-weight: 600; }
+.chip i { inline-size: 8px; block-size: 8px; border-radius: 50%; }
+.chip:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.countLine { margin: 0 0 14px; color: hsl(var(--muted-foreground)); font-size: .875rem; }
+.empty { padding: 28px; border: 1px dashed hsl(var(--border)); border-radius: 14px; color: hsl(var(--muted-foreground)); text-align: center; }
+.empty p { margin: 0 0 12px; }
+@media (prefers-reduced-motion: reduce) { .categoryLook { transition: none; } }
