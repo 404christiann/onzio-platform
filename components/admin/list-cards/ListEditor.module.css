@@ -1,0 +1,51 @@
+/* Shell pieces shared by the Partners and Injury Report editors. */
+.notice { display: grid; gap: 10px; }
+.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 8px; }
+.keep { min-block-size: 44px; padding: 0 14px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); cursor: pointer; }
+.keep:disabled { opacity: .5; cursor: default; }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.listSection { display: grid; min-inline-size: 0; gap: 12px; }
+.listHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.listHead h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
+.count { color: hsl(var(--muted-foreground)); font-size: .8125rem; font-weight: 500; }
+.note { margin: 0; color: hsl(var(--muted-foreground)); font-size: .875rem; line-height: 1.5; }
+.note a { color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 2px; }
+.empty { margin: 0; padding: 14px 16px; border: 1px dashed hsl(var(--input)); border-radius: 12px; color: hsl(var(--muted-foreground)); font-size: .875rem; }
+.fields { display: grid; min-inline-size: 0; gap: 18px; }
+.row2 { display: grid; min-inline-size: 0; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+/* The live preview beside the fields: one real narrow viewport, so the page's own phone layout applies. */
+.livePreview :global(.hp-preview-frame) { block-size: min(520px, calc(100dvh - 260px)); min-block-size: 300px; }
+.livePreview[data-tall] :global(.hp-preview-frame) { block-size: 760px; }
+.openLink { display: inline-flex; min-block-size: 44px; align-items: center; gap: 6px; color: hsl(var(--primary)); font-size: .875rem; text-decoration: underline; text-underline-offset: 2px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool { display: inline-flex; min-block-size: 40px; min-inline-size: 40px; padding: 0 12px; align-items: center; justify-content: center; gap: 8px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); font-size: .875rem; font-weight: 500; cursor: pointer; }
+.tool:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.tool:disabled { opacity: .45; cursor: default; }
+.tool[data-danger] { color: hsl(var(--destructive)); }
+@media (max-width: 767px) { .tool { min-block-size: 44px; min-inline-size: 44px; } }
+.readOnly { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--secondary) / .5); font-size: .875rem; }
+.readOnly b { font-weight: 600; }
+.readOnly span { color: hsl(var(--muted-foreground)); }
+/* Logo picker (Partners). Native radios, visually hidden, so arrow keys and screen readers work. */
+.picker { display: grid; min-inline-size: 0; margin: 0; padding: 0; gap: 10px; border: 0; }
+.picker > legend { padding: 0; margin-block-end: 6px; color: hsl(var(--muted-foreground)); font-size: 13px; font-weight: 500; }
+.tiles { display: grid; max-block-size: 232px; padding: 2px; overflow-y: auto; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; overscroll-behavior: contain; }
+.tile { position: relative; display: grid; min-block-size: 64px; padding: 6px; place-items: center; border: 1px solid hsl(var(--border)); border-radius: 10px; background: #fff; color: #333; font-size: .75rem; text-align: center; cursor: pointer; overflow: hidden; }
+.tile input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+.tile img { display: block; max-inline-size: 100%; max-block-size: 48px; object-fit: contain; }
+.tile[data-none] { background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
+.tile:has(input:checked) { outline: 2px solid hsl(var(--primary)); outline-offset: 1px; }
+.tile:has(input:focus-visible) { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.tile:has(input:disabled) { opacity: .55; cursor: default; }
+.tileLabel { overflow-wrap: anywhere; line-height: 1.2; }
+.segmented { display: grid; margin: 0; padding: 0; gap: 8px; border: 0; }
+.segmented > legend { padding: 0; margin-block-end: 6px; color: hsl(var(--muted-foreground)); font-size: 13px; font-weight: 500; }
+.segs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 4px; border-radius: 12px; background: hsl(var(--secondary)); }
+.seg { position: relative; display: grid; min-block-size: 40px; padding: 0 8px; place-items: center; border-radius: 9px; color: hsl(var(--muted-foreground)); font-size: .875rem; text-align: center; cursor: pointer; }
+.seg input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+.seg:has(input:checked) { background: hsl(var(--card)); color: hsl(var(--foreground)); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 12%); }
+.seg:has(input:focus-visible) { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.seg:has(input:disabled) { opacity: .55; cursor: default; }
+@media (max-width: 767px) { .seg { min-block-size: 44px; } }
+.hint { margin: 0; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.45; }
+.settle { margin-block-start: 8px; }

@@ -1,31 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { z } from "zod";
-import { ChevronDown, ChevronUp } from "@/components/admin/icons";
-import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
-import { EditorActionButton, EditorIconButton, EditorImage, EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorRemoveButton, EditorSaveBar, EditorSecondaryButton, EditorSection, editorSaveState, kit, useSavedFlash } from "@/components/admin/cinematic-editor/CinematicEditorKit";
-import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
-import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
-import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { ShimmerRegion, Shimmer } from "@/components/admin/ui/Shimmer";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
+import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import {
+  EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
+} from "@/components/admin/ui/editor-kit";
+import { ItemPreviewCards, ItemPreviewCardsSkeleton, type ItemCardItem } from "@/components/admin/list-cards/ItemPreviewCards";
+import { useMoveFocus } from "@/components/admin/list-cards/useMoveFocus";
+import styles from "@/components/admin/list-cards/ListEditor.module.css";
+import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
+import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
+import { partnerPageState } from "@/components/admin/stadium/partner-page-state";
 import CinematicInjuryReport from "@/components/cinematic/CinematicInjuryReport";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import { createClient } from "@/lib/admin-client";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import {
   INJURY_REPORT_ROUTE, MAX_INJURY_ENTRIES, cinematicInjuryReportDraftSchema, cinematicInjuryReportSaveSchema, starterCinematicInjuryReportContent,
-  type CinematicInjuryReportContent, type CinematicInjuryReportSave,
+  type CinematicInjuryEntry, type CinematicInjuryReportContent, type CinematicInjuryReportSave,
 } from "@/lib/cinematic-injury-report-content";
 import {
   addInjuryEntry, availablePlayers, injuryReportSaveRequest, loadCinematicInjuryReportEditor, moveInjuryEntry, removeInjuryEntry,
   retiredFromRoster, saveCinematicInjuryReportEditor, unusedInjuryUploads, type CinematicInjuryReportSnapshot, type InjuryMedia,
 } from "@/lib/cinematic-injury-report-editor";
-import { fetchInjuryPreviewRoster, injuryReportView, type InjuryAsset, type InjuryPlayerRow } from "@/lib/cinematic-injury-report-query";
-import { mediaAssetUrl } from "@/lib/media-assets";
+import { fetchInjuryPreviewRoster, type InjuryAsset, type InjuryPlayerRow } from "@/lib/cinematic-injury-report-query";
 import { supabase } from "@/lib/supabase";
 import "@/components/admin/homepage/homepage-editor.css";
+import { DISCARD_CONFIRM } from "../editor-copy";
+import { InjuryDialogFields, type InjuryFieldsApi, type InjurySlot } from "./InjuryFields";
+import {
+  BLOCK_TITLES, changedBlocks, changedEntryIds, entryDialogId, injuryDirty, mediaUrl, mergeMedia, parseInjuryDialogId, playerLabel, reportFor, savedContent,
+  type InjuryBlock, type InjuryDialogId,
+} from "./injury-sections";
+import preview from "./InjuryCardPreview.module.css";
 
 const mediaSchema = z.object({ id: z.uuid(), storage_path: z.string(), width: z.number(), height: z.number(), kind: z.enum(["graphic", "photograph"]) });
 const recoverySchema = z.object({
@@ -34,77 +48,93 @@ const recoverySchema = z.object({
   uploads: z.array(z.uuid()),
   media: z.array(mediaSchema),
 });
-type Slot = "logo" | "band";
-const UPLOADS: Record<Slot, { bucket: string; folder: string; accept: string; kind: InjuryMedia["kind"]; label: string }> = {
-  logo: { bucket: "sponsors", folder: "injury-report-logo", accept: "image/png,image/webp", kind: "graphic", label: "logo" },
-  band: { bucket: "news", folder: "injury-report-band", accept: "image/png,image/jpeg,image/webp", kind: "photograph", label: "photo" },
+const PAGE = "Injury Report";
+const CRUMBS = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Partners" }];
+const DESCRIPTION = "Edit the Injury Report page. Each injury card shows a Roster player's name, number, position and photo; edit those in Roster. Save applies all changes together.";
+const BLOCKS: readonly InjuryBlock[] = ["presenter", "rehab"];
+const UPLOADS: Record<InjurySlot, { bucket: string; folder: string; kind: InjuryMedia["kind"]; label: string }> = {
+  logo: { bucket: "sponsors", folder: "injury-report-logo", kind: "graphic", label: "logo" },
+  band: { bucket: "news", folder: "injury-report-band", kind: "photograph", label: "photo" },
 };
+const NO_ROSTER = { players: [] as InjuryPlayerRow[], assets: [] as InjuryAsset[] };
 
-function mergeMedia(...lists: InjuryMedia[][]): InjuryMedia[] {
-  const byId = new Map<string, InjuryMedia>();
-  for (const item of lists.flat()) if (!byId.has(item.id)) byId.set(item.id, item);
-  return [...byId.values()];
-}
-const asAsset = (item: InjuryMedia): InjuryAsset => ({ id: item.id, storage_bucket: "onzio-media", storage_path: item.storage_path, width: item.width, height: item.height });
-function mediaUrl(item: InjuryMedia | undefined): string {
-  if (!item) return "";
-  try { return mediaAssetUrl(asAsset(item)); } catch { return ""; }
-}
 async function retireUploads(ids: string[]) {
   await Promise.all(ids.map(assetId => fetch("/api/admin/media/cleanup", {
     method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assetId }),
   }).catch(() => undefined)));
 }
 
+type Roster = { players: InjuryPlayerRow[]; assets: InjuryAsset[] };
+type BlockLiveProps = { block: InjuryBlock; content: CinematicInjuryReportContent; roster: Roster; media: InjuryMedia[]; shared: CinematicHomepageContent | null; slice: string };
+/** The real public page, with only the part this card edits showing. Re-renders only when its own slice changes. */
+const BlockLive = memo(function BlockLive({ block, content, roster, media, shared }: BlockLiveProps) {
+  const report = useMemo(() => reportFor(content, [], roster, media), [content, roster, media]);
+  const urls = [report.presenterLogo?.url, report.band?.url].filter((url): url is string => !!url);
+  return <SettledPreview urls={urls}><div className={block === "presenter" ? preview.head : preview.rehab}>
+    <CinematicShell contentOnly initialContent={shared}><CinematicInjuryReport report={report} /></CinematicShell></div></SettledPreview>;
+}, (a, b) => a.block === b.block && a.slice === b.slice && a.shared === b.shared);
+
+type EntryLiveProps = { content: CinematicInjuryReportContent; entry: CinematicInjuryEntry; roster: Roster; shared: CinematicHomepageContent | null; slice: string };
+/** One injury drawn by the real public card. */
+const EntryLive = memo(function EntryLive({ content, entry, roster, shared }: EntryLiveProps) {
+  const report = useMemo(() => reportFor({ ...content, presenterLogoAssetId: null, bandAssetId: null, page: { ...content.page, quote: "" } }, [entry], roster, [], true), [content, entry, roster]);
+  const photo = report.entries[0]?.player.photo?.url;
+  return <SettledPreview urls={photo ? [photo] : []}><CinematicShell contentOnly initialContent={shared}><CinematicInjuryReport report={report} /></CinematicShell></SettledPreview>;
+}, (a, b) => a.entry.id === b.entry.id && a.slice === b.slice && a.shared === b.shared);
+
+const blockSlice = (block: InjuryBlock, content: CinematicInjuryReportContent, urls: { logo: string; band: string }) =>
+  JSON.stringify(block === "presenter" ? [content.page.presenterName, content.presenterLogoAssetId, urls.logo] : [content.page, content.bandAssetId, urls.band]);
+
 export default function CinematicInjuryReportEditor() {
   const club = useClubContext();
-  const [snapshot, setSnapshot] = useState<CinematicInjuryReportSnapshot | null>(null);
-  const [draft, setDraft] = useState<CinematicInjuryReportContent | null>(null);
-  const [pending, setPending] = useState<CinematicInjuryReportSave | null>(null);
-  const [media, setMedia] = useState<InjuryMedia[]>([]);
-  const [uploads, setUploads] = useState<string[]>([]);
-  const [uploading, setUploading] = useState<Slot | null>(null);
-  const [roster, setRoster] = useState<{ players: InjuryPlayerRow[]; assets: InjuryAsset[] }>({ players: [], assets: [] });
-  const [shared, setShared] = useState<CinematicHomepageContent | null>(null);
+  const [snapshot, setSnapshot] = useState<CinematicInjuryReportSnapshot | null>(null), [draft, setDraft] = useState<CinematicInjuryReportContent | null>(null);
+  const [pending, setPending] = useState<CinematicInjuryReportSave | null>(null), [media, setMedia] = useState<InjuryMedia[]>([]), [uploads, setUploads] = useState<string[]>([]);
+  const [uploading, setUploading] = useState<InjurySlot | null>(null), [roster, setRoster] = useState<Roster>(NO_ROSTER), [shared, setShared] = useState<CinematicHomepageContent | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [failed, setFailed] = useState(false);
-  const [phone, setPhone] = useState(false);
-  const [confirmReload, setConfirmReload] = useState(false);
-  const [saved, setSaved] = useSavedFlash();
-  const recoveryKey = useRef<string | null>(null);
-  const dirty = !!snapshot && !!draft && JSON.stringify(snapshot.content ?? starterCinematicInjuryReportContent()) !== JSON.stringify(draft);
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState(""), [failed, setFailed] = useState(false), [status, setStatus] = useState("");
+  const [conflict, setConflict] = useState(false), [saveFailed, setSaveFailed] = useState(false), [validation, setValidation] = useState("");
+  const [loadedClubId, setLoadedClubId] = useState<string | null>(null), [confirmReload, setConfirmReload] = useState(false);
+  const recoveryKey = useRef<string | null>(null), epoch = useRef(0), keepRef = useRef<HTMLButtonElement>(null), addRef = useRef<HTMLButtonElement>(null);
+  const dialog = useEditorDialog<InjuryDialogId>();
+  const rememberMove = useMoveFocus(draft);
+  const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch {} };
+  const saved = savedContent(snapshot);
+  const dirty = !!draft && !!snapshot && injuryDirty(draft, saved);
+  const locked = busy || !!pending || !!uploading;
+  const unsaved = dirty || !!pending || uploads.length > 0;
+  const players = snapshot?.players ?? [];
 
   useEffect(() => {
     let active = true;
-    setSnapshot(null); setDraft(null); setPending(null); setMedia([]); setUploads([]); setMessage(""); setFailed(false); setErrors({}); recoveryKey.current = null;
+    epoch.current += 1;
+    recoveryKey.current = null;
+    setSnapshot(null); setDraft(null); setLoadedClubId(null); setPending(null); setMedia([]); setUploads([]); setMessage(""); setFailed(false); setStatus("");
+    setConflict(false); setSaveFailed(false); setValidation(""); setErrors({}); setBusy(false); setUploading(null); setShared(null); setRoster(NO_ROSTER);
     if (club.presentationTemplateKey !== "cinematic@2") return;
     Promise.all([loadCinematicInjuryReportEditor(), createClient().auth.getUser(), fetchCinematicHomepageContent(club.id), fetchInjuryPreviewRoster(club.id, supabase)])
-      .then(([loaded, user, homepage, players]) => {
+      .then(([loaded, user, homepage, rows]) => {
         if (!active) return;
         if (!user.data.user) throw new Error("Sign in again to edit the Injury Report.");
         const key = `onzio:cinematic-injury-report:v1:${location.origin}:${user.data.user.id}:${club.id}`;
         recoveryKey.current = key;
-        let saved: z.infer<typeof recoverySchema> | null = null;
+        let stored: z.infer<typeof recoverySchema> | null = null;
         try {
           const raw = localStorage.getItem(key);
           if (raw) {
             const parsed = recoverySchema.safeParse(JSON.parse(raw));
-            if (parsed.success) saved = parsed.data;
+            if (parsed.success) stored = parsed.data;
             else localStorage.removeItem(key);
           }
         } catch {}
         setSnapshot(loaded);
-        setDraft(saved?.content ?? loaded.content ?? starterCinematicInjuryReportContent());
-        setPending(saved?.pending ?? null);
-        setUploads(saved?.uploads ?? []);
-        setMedia(mergeMedia(loaded.media, saved?.media ?? []));
-        setShared(homepage);
-        setRoster(players);
-        if (saved) setMessage(saved.pending ? "An earlier save needs confirmation. Retry the same save." : "Your unsaved Injury Report draft has been restored.");
+        setDraft(stored?.content ?? loaded.content ?? starterCinematicInjuryReportContent());
+        setPending(stored?.pending ?? null);
+        setUploads(stored?.uploads ?? []);
+        setMedia(mergeMedia(loaded.media, stored?.media ?? []));
+        setShared(homepage); setRoster(rows); setLoadedClubId(club.id);
+        if (stored) setMessage(stored.pending ? "An earlier save needs confirmation. Retry the same save." : "Your unsaved Injury Report draft has been restored.");
       }).catch(error => { if (active) { setMessage(error instanceof Error ? error.message : "Unable to load the Injury Report."); setFailed(true); } });
-    return () => { active = false; };
+    return () => { active = false; epoch.current += 1; };
   }, [club.id, club.presentationTemplateKey]);
 
   useEffect(() => {
@@ -112,7 +142,7 @@ export default function CinematicInjuryReportEditor() {
     try {
       if (dirty || pending || uploads.length) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, pending, uploads, media }));
       else localStorage.removeItem(recoveryKey.current);
-    } catch {}
+    } catch { /* The in-memory draft remains usable when browser storage is full. */ }
   }, [draft, snapshot, dirty, pending, uploads, media]);
 
   useEffect(() => {
@@ -122,147 +152,246 @@ export default function CinematicInjuryReportEditor() {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, pending]);
 
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader title="Injury Report" description="The Injury Report is part of the cinematic website design and is unavailable for this design." /></AdminPage>;
-  const locked = busy || !!pending || !!uploading;
-  const players = snapshot?.players ?? [];
-  const retired = draft ? new Set(retiredFromRoster(draft, players)) : new Set<string>();
+  const former = useMemo(() => new Set(draft && snapshot ? retiredFromRoster(draft, players) : []), [draft, snapshot, players]);
+  const settle = () => { setMessage(""); setFailed(false); setValidation(""); setErrors({}); setSaveFailed(false); };
   const update = (change: (value: CinematicInjuryReportContent) => CinematicInjuryReportContent | void) => {
+    if (locked) return;
     setDraft(current => { if (!current) return current; const next = structuredClone(current); return change(next) ?? next; });
-    setMessage(""); setFailed(false); setErrors({}); setSaved(false);
+    settle();
   };
-  const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch {} };
-  const byMedia = new Map(media.map(item => [item.id, item]));
+  const byMedia = useMemo(() => new Map(media.map(item => [item.id, item])), [media]);
+  const mediaUrls = useMemo(() => ({
+    logo: mediaUrl(draft?.presenterLogoAssetId ? byMedia.get(draft.presenterLogoAssetId) : undefined),
+    band: mediaUrl(draft?.bandAssetId ? byMedia.get(draft.bandAssetId) : undefined),
+  }), [draft?.presenterLogoAssetId, draft?.bandAssetId, byMedia]);
 
-  async function upload(slot: Slot, file: File) {
-    if (!draft || locked) return;
-    const config = UPLOADS[slot];
-    setUploading(slot); setFailed(false); setMessage(`Adding the ${config.label}…`);
+  /** Resolves true only when the server committed the save, so the Save button can show Saved. */
+  async function save(): Promise<boolean> {
+    if (!draft || !snapshot || busy || uploading) return false;
+    let request = pending;
+    if (!request) {
+      if (former.size) { setSaveFailed(true); setValidation("Remove the entries for players who are no longer on the Roster before saving."); return false; }
+      const result = injuryReportSaveRequest(draft, snapshot, crypto.randomUUID());
+      if (!result.ok) { setErrors(result.errors); setSaveFailed(true); setValidation("Review the highlighted fields before saving."); return false; }
+      request = result.request;
+    }
+    const generation = epoch.current;
+    setPending(request); setBusy(true); setFailed(false); setSaveFailed(false); setValidation(""); setErrors({}); setMessage(""); setStatus("Saving the Injury Report…");
+    try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, pending: request, uploads, media })); } catch {}
+    const result = await saveCinematicInjuryReportEditor(request);
+    if (generation !== epoch.current) return false;
+    setBusy(false);
+    if (result.status === "committed") {
+      const next = savedContent(result.snapshot);
+      await retireUploads(unusedInjuryUploads(uploads, next));
+      setSnapshot(result.snapshot); setDraft(next); setPending(null); setUploads([]); setConflict(false);
+      setMedia(mergeMedia(result.snapshot.media));
+      setMessage(""); setStatus("Injury Report saved."); clearRecovery();
+      return true;
+    } else if (result.status === "uncertain") { setPending(result.request); setFailed(true); setMessage(result.message); }
+    else { setPending(null); setFailed(true); setSaveFailed(result.status !== "conflict"); setConflict(result.status === "conflict"); setMessage(result.message); }
+    return false;
+  }
+
+  /** Discard asks first when there are unsaved edits. */
+  function requestDiscard() {
+    if (busy || uploading) return;
+    if (pending) { setFailed(true); setMessage("Retry the same save before discarding your edits, so nothing is lost."); return; }
+    if (dirty || uploads.length) setConfirmReload(true);
+    else void reload();
+  }
+  async function reload(keepDraft = false) {
+    if (locked) return;
+    const generation = epoch.current;
+    setBusy(true);
+    try {
+      const loaded = await loadCinematicInjuryReportEditor();
+      cinematicInjuryReportDraftSchema.parse(savedContent(loaded));
+      if (generation !== epoch.current) return;
+      if (keepDraft && draft) {
+        // The latest revision becomes the base and the edits stay. Images added in this session stay available.
+        const inUse = new Set([draft.presenterLogoAssetId, draft.bandAssetId]);
+        setMedia(mergeMedia(loaded.media, media.filter(item => uploads.includes(item.id) || inUse.has(item.id))));
+        setSnapshot(loaded);
+        setMessage("Latest saved version loaded. Your edits were kept. Replace any image removed in the newer version before saving.");
+      } else {
+        await retireUploads(unusedInjuryUploads(uploads, savedContent(loaded)));
+        if (generation !== epoch.current) return;
+        setSnapshot(loaded); setDraft(savedContent(loaded)); setMedia(loaded.media); setUploads([]); setMessage(""); clearRecovery();
+      }
+      setConflict(false); setFailed(false); setSaveFailed(false); setValidation(""); setErrors({});
+    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to reload the Injury Report."); } }
+    finally { if (generation === epoch.current) setBusy(false); }
+  }
+
+  async function upload(slot: InjurySlot, file: File): Promise<boolean> {
+    if (!draft || locked) return false;
+    const generation = epoch.current, config = UPLOADS[slot];
+    setUploading(slot); setFailed(false); setStatus(`Adding the ${config.label}…`);
     try {
       const result = await createClient().storage.from(config.bucket).upload(`${config.folder}/${crypto.randomUUID()}`, file);
       if (result.error || !result.data?.assetId) throw new Error(result.error?.message ?? `The ${config.label} upload failed.`);
-      const bitmap = await createImageBitmap(file);
-      const item: InjuryMedia = { id: result.data.assetId, storage_path: result.data.path, width: bitmap.width, height: bitmap.height, kind: config.kind };
+      const bitmap = await createImageBitmap(file), dimensions = { width: bitmap.width, height: bitmap.height };
+      bitmap.close();
+      // The page changed under this upload: nothing will ever reference the asset, so retire it now.
+      if (generation !== epoch.current) { void retireUploads([result.data.assetId]); return false; }
+      const item: InjuryMedia = { id: result.data.assetId, storage_path: result.data.path, ...dimensions, kind: config.kind };
       setMedia(current => mergeMedia([item], current));
       setUploads(current => [...current, item.id]);
-      update(content => { if (slot === "logo") content.presenterLogoAssetId = item.id; else content.bandAssetId = item.id; });
-      setMessage(`${slot === "logo" ? "Logo" : "Photo"} added. Save to publish it.`);
+      // Upload locks manual editing. Apply its one confirmed identity directly.
+      setDraft(current => {
+        if (!current) return current;
+        const next = structuredClone(current);
+        if (slot === "logo") next.presenterLogoAssetId = item.id; else next.bandAssetId = item.id;
+        return next;
+      });
+      setStatus(`${slot === "logo" ? "Logo" : "Photo"} added. Save to publish it.`);
+      return true;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : `The ${config.label} upload failed.`); setFailed(true);
-    } finally { setUploading(null); }
+      if (generation === epoch.current) { setMessage(error instanceof Error ? error.message : `The ${config.label} upload failed.`); setFailed(true); }
+      return false;
+    } finally { if (generation === epoch.current) setUploading(null); }
   }
 
-  async function save() {
-    if (!draft || !snapshot || busy || uploading) return;
-    let request = pending;
-    if (!request) {
-      if (retired.size) { setMessage("Remove the entries for players who are no longer on the Roster before saving."); setFailed(true); return; }
-      const result = injuryReportSaveRequest(draft, snapshot, crypto.randomUUID());
-      if (!result.ok) { setErrors(result.errors); setMessage("Review the highlighted fields before saving."); setFailed(true); return; }
-      request = result.request;
-    }
-    setPending(request); setBusy(true); setMessage("Saving the Injury Report…"); setFailed(false);
-    try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, pending: request, uploads, media })); } catch {}
-    const result = await saveCinematicInjuryReportEditor(request);
-    setBusy(false);
-    if (result.status === "committed") {
-      const saved = result.snapshot.content ?? starterCinematicInjuryReportContent();
-      await retireUploads(unusedInjuryUploads(uploads, saved));
-      setSnapshot(result.snapshot); setDraft(saved); setPending(null); setUploads([]);
-      setMedia(mergeMedia(result.snapshot.media));
-      setMessage("Injury Report saved."); clearRecovery(); setSaved(true);
-    } else if (result.status === "uncertain") {
-      setPending(result.request); setMessage(result.message); setFailed(true);
-    } else {
-      setPending(null); setMessage(result.message); setFailed(true);
-    }
-  }
-
-  async function reload(confirmed = false) {
-    if (locked) return;
-    if ((dirty || uploads.length) && !confirmed) { setConfirmReload(true); return; }
-    try {
-      const loaded = await loadCinematicInjuryReportEditor();
-      await retireUploads(unusedInjuryUploads(uploads, loaded.content ?? starterCinematicInjuryReportContent()));
-      setSnapshot(loaded); setDraft(loaded.content ?? starterCinematicInjuryReportContent()); setMedia(loaded.media); setUploads([]);
-      setMessage(""); setFailed(false); setErrors({}); clearRecovery();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to reload the Injury Report."); setFailed(true); }
-  }
-
-  const fieldError = (path: string) => errors[path] && <span className={kit.error} role="alert">{errors[path]}</span>;
-  const field = (path: string, label: string, control: ReactNode, hint?: string, wide = false) =>
-    <label className={`block min-w-0${wide ? " md:col-span-2" : ""}`}><span className={ADMIN_LABEL_CLASS}>{label}</span>{control}
-      {hint && <span className={kit.hint}>{hint}</span>}{fieldError(path)}</label>;
-  const input = (path: string, value: string, maximum: number, onChange: (value: string) => void) =>
-    <input className={ADMIN_INPUT_CLASS} disabled={locked} value={value} maxLength={maximum} aria-invalid={!!errors[path]} onChange={event => onChange(event.target.value)} />;
-  const mediaSlot = (slot: Slot, assetId: string | null, empty: string) => {
-    const url = mediaUrl(assetId ? byMedia.get(assetId) : undefined);
-    return <EditorImage label={slot === "logo" ? "Partner logo" : "Photo band"} noun={UPLOADS[slot].label} url={url} accept={UPLOADS[slot].accept} empty={empty}
-      tone={slot === "logo" ? "light" : "dark"} shape={slot === "band" ? "wide" : undefined} uploading={uploading === slot} disabled={locked} hasImage={!!assetId}
-      onFile={file => void upload(slot, file)}
-      onRemove={assetId ? () => update(content => { if (slot === "logo") content.presenterLogoAssetId = null; else content.bandAssetId = null; }) : undefined} />;
+  const move = (index: number, delta: -1 | 1, inDialog: boolean) => {
+    if (!draft || locked) return;
+    const entry = draft.entries[index];
+    if (!entry || index + delta < 0 || index + delta >= draft.entries.length) return;
+    rememberMove(entryDialogId(entry.id), delta, inDialog);
+    update(content => moveInjuryEntry(content, index, delta));
+    setStatus(`${playerLabel(entry, players, index)} is now number ${index + delta + 1}.`);
   };
-  const preview = draft ? injuryReportView(draft, roster.players, [...roster.assets, ...media.map(asAsset)]) : null;
+  const remove = (index: number) => {
+    if (!draft || locked) return;
+    const entry = draft.entries[index];
+    if (!entry) return;
+    update(content => removeInjuryEntry(content, index));
+    dialog.close();
+    setStatus(`${playerLabel(entry, players, index)} removed. Save to publish.`);
+    setTimeout(() => addRef.current?.focus(), 0);
+  };
+  const noRoomReason = !draft ? "" : draft.entries.length >= MAX_INJURY_ENTRIES ? `The page lists up to ${MAX_INJURY_ENTRIES} injuries. Remove one to add another.`
+    : players.length === 0 ? "Add players in Roster first." : availablePlayers(players, draft, "").length === 0 ? "Every active Roster player already has an entry." : "";
+  const addNew = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!draft || locked || noRoomReason) return;
+    const next = addInjuryEntry(draft, players);
+    const added = next.entries[next.entries.length - 1];
+    if (!added || next === draft) return;
+    setDraft(next); settle();
+    dialog.openSection(entryDialogId(added.id), event);
+  };
 
-  return <AdminPage className={kit.page}>
-    <AdminPageHeader eyebrow="Public website" title="Injury Report" description="Edit the Injury Report page. Each injury card shows a Roster player's name, number, position and photo; edit those in Roster. Save applies all changes together."
-      actions={<EditorPageLink href={INJURY_REPORT_ROUTE}>Open Injury Report</EditorPageLink>} />
-    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
-    {!draft || !snapshot ? <EditorLoading label="Loading the Injury Report…" failed={failed} onRetry={() => location.reload()} /> : <>
-      <EditorSection title="Presented by" description="Shown under the page heading. Until a logo is uploaded, the page shows the partner's name.">
-        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          {field("page.presenterName", "Partner name", input("page.presenterName", draft.page.presenterName, 60, value => update(content => { content.page.presenterName = value; })), "Also the logo's description for screen readers.")}
-          <div className="min-w-0"><span className={ADMIN_LABEL_CLASS}>Partner logo</span>{mediaSlot("logo", draft.presenterLogoAssetId, "No logo yet. The page shows the partner's name.")}
-            <span className={kit.hint}>PNG or WebP, ideally with a transparent background.</span></div>
-        </div>
-      </EditorSection>
+  const saveAction = useSaveState({
+    isDirty: unsaved,
+    onSave: async () => { if (!(await save())) throw new Error("The Injury Report was not saved."); },
+  });
+  const latestSave = useRef(save);
+  latestSave.current = save;
+  useUnsavedGuard(draft ? {
+    dirty: unsaved, edited: PAGE, onSave: () => latestSave.current(),
+    onDiscard: () => {
+      if (busy || uploading || pending) throw new Error("A save is still being confirmed.");
+      if (!snapshot) return;
+      void retireUploads(unusedInjuryUploads(uploads, saved));
+      setDraft(saved); setUploads([]); setMessage(""); setFailed(false); setConflict(false); setSaveFailed(false); setValidation(""); setErrors({}); clearRecovery();
+    },
+  } : undefined);
 
-      <EditorSection title="Injuries" aside={`${draft.entries.length}/${MAX_INJURY_ENTRIES}`}
-        description={<>Shown in this order. Pick a player from the <Link className={kit.inlineLink} href="/admin/roster">Roster</Link>; each player can appear once.</>}>
-        {draft.entries.length === 0 && <p className={`${kit.note} mb-4`}>No injuries. The page shows “No current injuries”.</p>}
-        <ol className="grid gap-4">{draft.entries.map((entry, index) => {
-          const options = availablePlayers(players, draft, entry.id);
-          const gone = retired.has(entry.id);
-          const name = players.find(player => player.id === entry.playerId)?.name ?? `entry ${index + 1}`;
-          return <li key={entry.id} className={`${kit.group} grid gap-4 md:grid-cols-2`} data-invalid={gone || undefined}>
-            {gone ? <p className={`${kit.error} mt-0 md:col-span-2`} role="alert">This player is no longer on the active Roster. Remove this entry to save.</p>
-              : field(`entries.${index}.playerId`, "Player", <select className={ADMIN_INPUT_CLASS} disabled={locked} value={entry.playerId} onChange={event => update(content => { content.entries[index].playerId = event.target.value; })}>
-                {options.map(player => <option key={player.id} value={player.id}>#{player.number} {player.name} · {player.position}</option>)}
-              </select>, undefined, true)}
-            {field(`entries.${index}.injury`, "Injury", input(`entries.${index}.injury`, entry.injury, 80, value => update(content => { content.entries[index].injury = value; })), "For example: Hamstring strain.")}
-            {field(`entries.${index}.timeline`, "Timeline", input(`entries.${index}.timeline`, entry.timeline, 40, value => update(content => { content.entries[index].timeline = value; })), "For example: 2–3 weeks, or Day-to-day.")}
-            {field(`entries.${index}.note`, "Note (optional)", input(`entries.${index}.note`, entry.note, 200, value => update(content => { content.entries[index].note = value; })), "One short line, shown in italics.", true)}
-            <div className={`${kit.toolbar} md:col-span-2`}>
-              <EditorIconButton label={`Move ${name} up`} disabled={locked || index === 0} onClick={() => update(content => moveInjuryEntry(content, index, -1))}><ChevronUp width="16" height="16" /></EditorIconButton>
-              <EditorIconButton label={`Move ${name} down`} disabled={locked || index === draft.entries.length - 1} onClick={() => update(content => moveInjuryEntry(content, index, 1))}><ChevronDown width="16" height="16" /></EditorIconButton>
-              <EditorRemoveButton label={`Remove ${name}`} disabled={locked} onClick={() => update(content => removeInjuryEntry(content, index))} />
-            </div>
-          </li>;
-        })}</ol>
-        <div className="mt-4"><EditorActionButton disabled={locked || draft.entries.length >= MAX_INJURY_ENTRIES || availablePlayers(players, draft, "").length === 0}
-          onClick={() => update(content => addInjuryEntry(content, players))}>Add injury</EditorActionButton></div>
-        {players.length === 0 && <p className={kit.hint}>Add players in Roster first.</p>}
-      </EditorSection>
+  const deferred = useDeferredValue(draft);
+  const pageState = partnerPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
+  const changedBlockSet = useMemo(() => new Set(draft && snapshot ? changedBlocks(draft, saved) : []), [draft, snapshot, saved]);
+  const changedEntries = useMemo(() => (draft && snapshot ? changedEntryIds(draft, saved) : new Set<string>()), [draft, snapshot, saved]);
+  const loading = !draft || !snapshot || loadedClubId !== club.id;
 
-      <EditorSection title="Photo, rehab quote and video" description="Shown below the injuries.">
-        <div className="grid gap-5 md:grid-cols-2">
-          <div className="min-w-0 md:col-span-2"><span className={ADMIN_LABEL_CLASS}>Photo band</span>{mediaSlot("band", draft.bandAssetId, "No photo. The page goes straight to the Rehab heading.")}</div>
-          {field("page.bandAlt", "Photo description", input("page.bandAlt", draft.page.bandAlt, 200, value => update(content => { content.page.bandAlt = value; })), "Describe the photo for screen readers.", true)}
-          {field("page.rehabHeading", "Rehab heading", input("page.rehabHeading", draft.page.rehabHeading, 80, value => update(content => { content.page.rehabHeading = value; })), undefined, true)}
-          {field("page.quote", "Quote", <textarea className={`${ADMIN_INPUT_CLASS} min-h-28`} disabled={locked} maxLength={600} value={draft.page.quote} aria-invalid={!!errors["page.quote"]} onChange={event => update(content => { content.page.quote = event.target.value; })} />, "Leave blank to hide the quote.", true)}
-          {field("page.quoteAttribution", "Quote by", input("page.quoteAttribution", draft.page.quoteAttribution, 120, value => update(content => { content.page.quoteAttribution = value; })))}
-          {field("page.videoUrl", "YouTube link", input("page.videoUrl", draft.page.videoUrl, 200, value => update(content => { content.page.videoUrl = value; })), "Paste a YouTube video link. Leave blank to show “Coming soon”.")}
-        </div>
-      </EditorSection>
+  if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={PAGE} breadcrumb={CRUMBS} description="The Injury Report is part of the cinematic website design and is unavailable for this design.">{null}</PageFrame>;
 
-      {preview && <EditorPreview phone={phone} onPhoneChange={setPhone}>
-        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="Injury Report"><CinematicShell contentOnly initialContent={shared}><CinematicInjuryReport report={preview} /></CinematicShell></HomepagePreviewFrame>
-      </EditorPreview>}
+  const blockItems = draft ? BLOCKS.map(block => ({ id: block as string, title: BLOCK_TITLES[block], changed: changedBlockSet.has(block), disabled: locked })) : [];
+  const entryItems: ItemCardItem[] = draft ? draft.entries.map((entry, index) => ({
+    id: entryDialogId(entry.id), label: playerLabel(entry, players, index), changed: changedEntries.has(entry.id),
+    flags: [
+      ...(former.has(entry.id) ? [{ text: "Left the Roster", tone: "needed" as const }] : []),
+      ...(!entry.injury.trim() ? [{ text: "Injury needed", tone: "needed" as const }] : []),
+      ...(!entry.timeline.trim() ? [{ text: "Timeline needed", tone: "needed" as const }] : []),
+    ],
+  })) : [];
+  const api: InjuryFieldsApi | null = draft ? {
+    draft, players, former, locked, uploading, mediaUrls, errors, update, upload, move: (index, delta) => move(index, delta, true), remove,
+  } : null;
+  const blockPreview = (id: string) => {
+    const target = parseInjuryDialogId(id);
+    return deferred && target?.kind === "block" ? <BlockLive block={target.block} content={deferred} roster={roster} media={media} shared={shared} slice={blockSlice(target.block, deferred, mediaUrls)} /> : null;
+  };
+  const entryPreview = (id: string) => {
+    const target = parseInjuryDialogId(id);
+    const entry = deferred && target?.kind === "entry" ? deferred.entries.find(row => row.id === target.id) : undefined;
+    if (!deferred || !entry) return null;
+    const row = roster.players.find(player => player.id === entry.playerId);
+    return <EntryLive content={deferred} entry={entry} roster={roster} shared={shared} slice={JSON.stringify([entry, row, former.has(entry.id)])} />;
+  };
+  const dialogSections = draft ? [
+    ...BLOCKS.map(block => ({ id: block as string, title: BLOCK_TITLES[block], summary: block === "presenter" ? draft.page.presenterName.trim() || "Name needed" : draft.page.rehabHeading.trim() || "Heading needed" })),
+    ...draft.entries.map((entry, index) => ({ id: entryDialogId(entry.id), title: playerLabel(entry, players, index), summary: former.has(entry.id) ? "Left the Roster" : entry.injury.trim() || "Injury needed" })),
+  ] : [];
 
-      <EditorSaveBar state={editorSaveState({ busy, canSave: !busy && !uploading && (dirty || !!pending), saved })} retry={!!pending} onSave={() => void save()}
-        status={pending ? "Awaiting save confirmation" : uploading ? "Uploading…" : dirty ? "Unsaved changes" : ""}>
-        <EditorSecondaryButton disabled={locked} onClick={() => void reload()}>Reload saved page</EditorSecondaryButton>
-      </EditorSaveBar>
-    </>}
-    <AdminConfirmDialog open={confirmReload} title="Discard your Injury Report edits?" confirmLabel="Discard and reload" destructive onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(true); }}>Your unsaved Injury Report edits will be discarded and the saved page loaded.</AdminConfirmDialog>
-  </AdminPage>;
+  const notice = (message || validation || conflict) ? <div className={styles.notice} data-injury-notice="">
+    {validation && <ValidationMessage live="assertive">{validation}</ValidationMessage>}
+    {(message || conflict) && <EditorNotice failed={failed || conflict}>{message}
+      {conflict && <span className={styles.noticeActions}>
+        <button ref={keepRef} type="button" className={`admin-press ${styles.keep}`} disabled={locked} onClick={() => void reload(true)}>Load latest and keep my edits</button>
+        <EditorSecondaryButton disabled={locked} onClick={requestDiscard}>Reload saved page</EditorSecondaryButton>
+      </span>}
+    </EditorNotice>}
+  </div> : null;
+
+  if (!draft && failed) return <PageFrame title={PAGE} breadcrumb={CRUMBS} description={DESCRIPTION}>
+    <EditorNotice failed>{message}</EditorNotice>
+    <div><EditorSecondaryButton disabled={false} onClick={() => location.reload()}>Try again</EditorSecondaryButton></div>
+  </PageFrame>;
+
+  return <>
+    <ShimmerRegion loading={loading} loadingLabel="Loading the Injury Report…" minHeight={520}
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={2} />
+        <div className={preview.skeletonHead}><Shimmer className={preview.skeletonTitle} /></div><ItemPreviewCardsSkeleton count={4} /></div>}>
+      <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref={INJURY_REPORT_ROUTE} description={DESCRIPTION} state={pageState}
+        onSave={() => { void saveAction.save().catch(() => undefined); }}
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        <PreviewCards sections={blockItems} label="Injury Report page parts" renderPreview={blockPreview} previewScale={0.4}
+          onEdit={(id, event) => dialog.openSection(id as InjuryDialogId, event)} />
+        {draft && <section className={styles.listSection} aria-labelledby="injuries-list-heading">
+          <div className={styles.listHead}>
+            <h2 id="injuries-list-heading">Injuries</h2>
+            <span className={styles.count}>{draft.entries.length} of {MAX_INJURY_ENTRIES}</span>
+          </div>
+          <p className={styles.note}>Each card is an injury as it appears on the page, in this order. Open one to edit it beside a live preview. Pick a player from the <Link href="/admin/roster">Roster</Link>; each player can appear once.</p>
+          {draft.entries.length === 0 && <p className={styles.empty}>No injuries. The page shows “No current injuries”.</p>}
+          <ItemPreviewCards items={entryItems} noun="injury" label="Injuries" disabled={locked} previewScale={0.44} previewClassName={preview.single}
+            renderPreview={entryPreview}
+            onEdit={(id, event) => dialog.openSection(id as InjuryDialogId, event)}
+            onMove={(id, delta) => { const index = draft.entries.findIndex(entry => entryDialogId(entry.id) === id); if (index >= 0) move(index, delta, false); }}
+            add={{ label: "Add injury", count: `${draft.entries.length} of ${MAX_INJURY_ENTRIES}`, disabled: !!noRoomReason, onAdd: addNew, hint: noRoomReason || undefined }}
+            addRef={addRef} />
+        </section>}
+      </PageFrame>
+    </ShimmerRegion>
+    <p className={styles.srOnly} role="status" data-injury-status="">{status}</p>
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title="Edit Injury Report" mode="split" returnFocusRef={dialog.returnFocusRef}
+      sections={dialogSections} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as InjuryDialogId)}
+      renderSection={id => dialog.open ? <InjuryDialogFields api={api} id={id as InjuryDialogId} /> : null}
+      previewHint="How this looks on the page"
+      renderPreview={id => {
+        if (!dialog.open) return null;
+        const target = parseInjuryDialogId(id);
+        if (!target) return null;
+        const entry = target.kind === "entry" ? api.draft.entries.find(row => row.id === target.id) : undefined;
+        const report = reportFor(api.draft, target.kind === "entry" ? (entry ? [entry] : []) : [], roster, media, true);
+        return <div className={styles.livePreview} data-tall={target.kind === "block" && target.block === "rehab" ? "" : undefined}>
+          <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={target.kind === "entry" ? "Injury on the page" : "Injury Report page"}>
+            <CinematicShell contentOnly initialContent={shared}><CinematicInjuryReport report={report} /></CinematicShell>
+          </HomepagePreviewFrame></div>;
+      }} />}
+    <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
+      onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
+      Discard unsaved Injury Report edits and load the saved page?
+    </AdminConfirmDialog>
+  </>;
 }

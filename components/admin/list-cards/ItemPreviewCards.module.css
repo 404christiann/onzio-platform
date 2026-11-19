@@ -1,0 +1,58 @@
+.grid { display: grid; margin: 0; padding: 0; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; list-style: none; }
+.card { display: grid; min-inline-size: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); color: hsl(var(--card-foreground)); }
+.previewWrap { position: relative; border-block-end: 1px solid hsl(var(--border)); }
+/* Fixed box: the preview inside is scaled and clipped, so nothing here can change the page's layout. */
+.box { position: relative; block-size: 200px; overflow: hidden; background: #fff; pointer-events: none; content-visibility: auto; contain-intrinsic-size: auto 200px; }
+.box .placeholder { display: none; position: absolute; inset: 0; border-radius: 0; }
+.box[data-preview-mounted="false"] .placeholder,
+.box:has(.scaled [data-preview-settling="true"]) .placeholder { display: block; }
+.scaled { position: relative; inline-size: calc(100% / var(--preview-scale, 1)); transform: scale(var(--preview-scale, 1)); transform-origin: 0 0; }
+.previewButton { position: absolute; inset: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.previewButton:disabled { cursor: default; }
+.previewButton:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+.foot { display: flex; min-block-size: 64px; padding: 10px 12px; align-items: center; justify-content: space-between; gap: 8px; }
+.number { display: flex; min-inline-size: 0; flex-wrap: wrap; align-items: center; gap: 6px 8px; color: hsl(var(--muted-foreground)); font-size: .8125rem; font-weight: 500; }
+.dot { inline-size: 8px; block-size: 8px; flex: none; border-radius: 50%; background: hsl(48 100% 56%); box-shadow: 0 0 0 2px hsl(48 100% 56% / .3); }
+.flag { display: inline-flex; min-block-size: 22px; padding: 0 8px; align-items: center; border-radius: 999px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); font-size: .6875rem; font-weight: 600; white-space: nowrap; }
+.flag[data-tone="needed"] { background: hsl(48 100% 56% / .28); }
+.controls { display: flex; flex: none; align-items: center; gap: 6px; }
+.icon { display: inline-flex; inline-size: 36px; block-size: 36px; align-items: center; justify-content: center; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); cursor: pointer; }
+.icon:disabled { opacity: .4; cursor: default; }
+.edit { min-block-size: 36px; padding: 0 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground, var(--foreground))); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+.edit:disabled { opacity: .5; cursor: default; }
+.icon:focus-visible, .edit:focus-visible, .add:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+@media (hover: hover) { .edit:hover:not(:disabled), .icon:hover:not(:disabled) { background: hsl(var(--accent)); } }
+.addItem { display: grid; min-inline-size: 0; align-content: start; gap: 8px; }
+.add { display: grid; inline-size: 100%; min-block-size: 200px; padding: 14px; place-items: center; align-content: center; gap: 4px; border: 2px dashed hsl(var(--input)); border-radius: 14px; background: transparent; color: hsl(var(--muted-foreground)); text-align: center; cursor: pointer; }
+.add b { color: hsl(var(--foreground)); font-size: .9375rem; }
+.add span { font-size: .8125rem; }
+.add:disabled { opacity: .5; cursor: default; }
+@media (hover: hover) { .add:hover:not(:disabled) { background: hsl(var(--secondary) / .5); } }
+.addHint { margin: 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.4; }
+.skeletonBox { border-radius: 0; }
+.skeletonNumber { inline-size: 36px; block-size: calc(.8125rem * 1.5); }
+.skeletonIcon { inline-size: 36px; block-size: 36px; border-radius: 8px; }
+.skeletonEdit { inline-size: 56px; block-size: 36px; border-radius: 8px; }
+@media (max-width: 767px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .box { block-size: 170px; contain-intrinsic-size: auto 170px; }
+  .icon, .edit { min-block-size: 44px; }
+  .icon { inline-size: 44px; block-size: 44px; }
+  .edit { padding: 0 16px; }
+  .add { min-block-size: 96px; }
+  .skeletonIcon { inline-size: 44px; block-size: 44px; }
+  .skeletonEdit { block-size: 44px; }
+}
+/* Beats the portal's blanket `.admin-press` transition, as the kit's cards do. */
+:global(.admin-portal) .previewButton.previewButton, :global(.admin-portal) .edit.edit, :global(.admin-portal) .icon.icon, :global(.admin-portal) .add.add {
+  transition-property: transform, background-color, color, border-color, opacity;
+  transition-duration: 120ms, 150ms, 150ms, 150ms, 150ms;
+  transition-timing-function: cubic-bezier(.23, 1, .32, 1), ease, ease, ease, ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(.admin-portal) .previewButton.previewButton, :global(.admin-portal) .edit.edit, :global(.admin-portal) .icon.icon, :global(.admin-portal) .add.add {
+    transition-property: background-color, color, opacity;
+    transition-duration: 120ms;
+    transition-timing-function: ease-out;
+  }
+}

@@ -1,5 +1,57 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-11 Rose City Partners and Injury Report editors on the editor kit (Previews layout)
+
+**Agent/package:** Claude Code (Sonnet worker W11, orchestrated), RC-ADMIN-11, branch `claude/rc-admin-11` on
+`0fa2b2ef`. **Status:** `in_progress`, PR open. It merges only on Christian's word. App code only: no migration,
+schema, RPC, data or production change, and nothing under `components/cinematic/` or `lib/`.
+
+**Completed work:**
+- `/admin/partners`:
+  - PageFrame: breadcrumb Website / Partners / Partners, "Open page" (/sponsors), and one Save.
+  - Two PreviewCards, one per page (the real `CinematicPartners`).
+  - A "Partners n of 24" grid of real public partner cards, each with move earlier/later and Edit, plus Add.
+  - One split dialog with the two pages, then one section per partner. Partner fields: name 80, role 160, a logo
+    picker (the shared Sponsors library or an upload), tone, and position tools.
+  - Remove is plain; no hide flag was added.
+- `/admin/injury-report`:
+  - Two kit cards: Presented by; Photo, rehab quote and video.
+  - A grid of real injury cards.
+  - Entry dialog: Roster player select, injury 80, timeline 40, note 200, and a read-only Roster note.
+  - A player who left the Roster gets a flag, and Save stays blocked as before.
+- Both editors keep the same schemas, routes, receipts and recovery keys. They use `useSaveState` with Retry
+  through `saveAction.save()`, a conflict with "Load latest and keep my edits" or "Reload saved page",
+  `DISCARD_CONFIRM`, `useUnsavedGuard` and shape-matched skeletons.
+
+**Files changed:** rewritten `components/admin/partners/CinematicPartnersEditor.tsx` and
+`components/admin/injury-report/CinematicInjuryReportEditor.tsx`.
+- New in `partners/`: `PartnerFields.tsx`, `partners-sections.ts`, `PartnerCardPreview.module.css`.
+- New in `injury-report/`: `InjuryFields.tsx`, `injury-sections.ts`, `InjuryCardPreview.module.css`.
+- New shared list-card helpers in `components/admin/list-cards/`.
+- New test `tests/contracts/rc-admin-11-list-editors.test.ts` (41 tests), with byte-identical payload checks
+  against the old request builders.
+
+**Verification:** verify-rc-admin `--touched partners,injury-report` on `0fa2b2ef`: PASS on all six gates for both
+`/admin/partners` and `/admin/injury-report`.
+- Gate 1 (scope): 14 app files.
+- Gate 2 (payload identity): 12/12 untouched editors identical.
+- Gate 3 (save states): all seven pass, including retry and conflict.
+- Gate 4 (visual): CLS at most 0.00001, new axe 0, reduced motion 0.
+- Gate 5 (repo): tsc ok; unit 338 files, 3816 tests; architecture 152; selector debt unchanged.
+- Gate 6: Diverse City 8/8 identical.
+
+**Not captured:** the Roster-left blocked state on screen. The seed has no Roster players or partners; contract
+tests cover it.
+
+**Bot fix round 1 (#173 review, Lows):**
+- L1: the grid now passes the card's dialog id to `rememberMove`, so focus moves to the remaining enabled button
+  after a move to first or last place. `moveFocusSelectors` is shared by the hook and its test.
+- L3: an upload that commits after a club or epoch change is retired through the existing cleanup call.
+- L2 (Injury Report breadcrumb "Partners") is unchanged and correct: the hub groups injury-report under Partners.
+- Re-verified: all six gates pass on both routes. Unit: 338 files, 3821 tests.
+
+**Next step:** onzio-bot re-review, then Christian merges.
+
 ## 2026-11-18 - RC-ADMIN-14 Rose City Sponsors editor on the editor kit (Previews layout)
 
 **Agent/package:** Claude Code (Sonnet worker W14, orchestrated), RC-ADMIN-14, branch `claude/rc-admin-14` on
