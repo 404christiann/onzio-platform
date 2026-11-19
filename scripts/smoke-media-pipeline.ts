@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { PNG } from "pngjs";
 import {
-  publishAuthorizedMedia,
   retirePublishedMedia,
   type MediaAuthorization,
 } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 
@@ -64,8 +64,8 @@ async function main() {
       });
     if (stageError) throw stageError;
 
-    const first = await publishAuthorizedMedia(authorization);
-    const retry = await publishAuthorizedMedia(authorization);
+    const first = await publishWithReservation(authorization);
+    const retry = await publishWithReservation(authorization);
     if (!retry.idempotent || retry.assetId !== first.assetId) {
       throw new Error("Idempotent retry contract failed");
     }

@@ -14,7 +14,7 @@ import { Client } from "pg";
 import sharp from "sharp";
 import WebSocket from "ws";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 import { ROBINSON_IMAGE_SLOTS, robinsonContentSchema, type RobinsonContent, type RobinsonImageSlot } from "@/lib/cinematic-robinson-content";
 import { ROBINSON_IMAGE_COLUMNS } from "@/lib/cinematic-robinson-query";
@@ -67,7 +67,7 @@ async function main() {
         const upload = await storage.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
         if (upload.error) throw upload.error;
       }
-      const result = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind: "graphic", fileName: source.file.replace(/\.jpg$/, ".png"), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+      const result = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind: "graphic", fileName: source.file.replace(/\.jpg$/, ".png"), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
       const ledger = (await db.query("select checksum_sha256 from onzio.media_assets where club_id=$1 and id=$2", [clubId, result.assetId])).rows[0];
       const delivered = await fetch(result.publicUrl);
       assert(delivered.ok && hash(Buffer.from(await delivered.arrayBuffer())) === ledger.checksum_sha256, `Delivered bytes do not match the ledger for ${slot}.`);

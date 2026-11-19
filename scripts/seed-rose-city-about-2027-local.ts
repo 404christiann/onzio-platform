@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { aboutContentSchema } from "@/lib/about-editor/contract";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 
 async function main() {
@@ -37,7 +37,7 @@ async function main() {
   const stagingPath = buildStoragePath({ clubId, surface: "about", assetId: uploadId, extension: validated.extension });
   const staged = await client.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType });
   if (staged.error) throw staged.error;
-  const photo = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", surface: "about", kind: "photo", fileName: "original-photo.webp", mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+  const photo = await publishWithReservation({ version: 1, uploadId, clubId, actorId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", surface: "about", kind: "photo", fileName: "original-photo.webp", mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
   const copy = JSON.parse(await readFile("assets/rose-city-about-2027/copy.json", "utf8"));
   const content = aboutContentSchema.parse({ ...copy, feature_image_url: photo.publicUrl });
   const inserted = await db.from("about_page_content").insert({ club_id: clubId, ...content, feature_image_asset_id: photo.assetId }).select("*").single();

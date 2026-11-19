@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 import WebSocket from "ws";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 import { ticketsContentSchema, TICKET_ARTWORK_SLOTS } from "@/lib/tickets-content";
 async function main() {
@@ -48,7 +48,7 @@ async function main() {
         const upload = await client.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
         if (upload.error)
             throw upload.error;
-        const result = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind: "graphic", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+        const result = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind: "graphic", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
         if (result.idempotent)
             await client.storage.from("onzio-upload-staging").remove([stagingPath]);
         const delivered = await fetch(result.publicUrl);

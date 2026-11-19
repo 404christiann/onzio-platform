@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 import WebSocket from "ws";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 import { chickFilAContentSchema, CHICK_FIL_A_MEDIA_COLUMNS, CHICK_FIL_A_ARTWORK_SLOTS } from "@/lib/chick-fil-a-content";
 import { stadiumContentSchema, STADIUM_ARTWORK_SLOTS } from "@/lib/stadium-content";
@@ -68,7 +68,7 @@ async function main() {
         const stagingPath = buildStoragePath({ clubId, surface: "homepage", assetId: uploadId, extension: validated.extension });
         const upload = await client.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
         if (upload.error) throw upload.error;
-        const result = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind, fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+        const result = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind, fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
         if (result.idempotent) await client.storage.from("onzio-upload-staging").remove([stagingPath]);
         const asset = (await db.query("select checksum_sha256,width,height from onzio.media_assets where club_id=$1 and id=$2", [clubId, result.assetId])).rows[0];
         const delivered = await fetch(result.publicUrl);

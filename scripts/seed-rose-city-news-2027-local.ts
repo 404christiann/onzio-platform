@@ -9,7 +9,7 @@ import { Client } from "pg";
 import WebSocket from "ws";
 import { newsArticleContentSchema, newsSlug } from "@/lib/cinematic-news";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 
 const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7";
@@ -64,7 +64,7 @@ async function main() {
     const stagingPath = buildStoragePath({ clubId, surface: "news", assetId: uploadId, extension: validated.extension });
     const upload = await storage.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
     if (upload.error) throw upload.error;
-    const published = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface: "news", kind: "photo", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+    const published = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface: "news", kind: "photo", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
     if (published.idempotent) await storage.storage.from("onzio-upload-staging").remove([stagingPath]);
 
     const protectedTables = ["homepage_revamp_content", "about_page_content", "cinematic_contact_content", "cinematic_shop_content", "cinematic_stadium_content", "cinematic_tickets_content", "matches", "site_sponsor_logos"] as const;

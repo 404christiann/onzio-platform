@@ -4,11 +4,11 @@ import sharp from "sharp";
 import { ContractError } from "@/lib/contract-error";
 import { cleanupAbandonedStagingMedia } from "@/lib/media-cleanup";
 import {
-  publishAuthorizedMedia,
   retirePublishedMedia,
   type MediaAuthorization,
 } from "@/lib/media-processing";
 import { validateMediaUpload } from "@/lib/media-validation";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 
@@ -172,8 +172,8 @@ async function main() {
       if (staged.error) throw staged.error;
       stagedPaths.add(entry.stagingPath);
 
-      const first = await publishAuthorizedMedia(entry);
-      const retry = await publishAuthorizedMedia(entry);
+      const first = await publishWithReservation(entry);
+      const retry = await publishWithReservation(entry);
       if (!retry.idempotent || retry.assetId !== first.assetId) {
         throw new Error("Hosted media retry was not idempotent");
       }
@@ -216,7 +216,7 @@ async function main() {
     if (spoofedUpload.error) throw spoofedUpload.error;
     stagedPaths.add(spoofed.stagingPath);
     await expectContractCode(
-      () => publishAuthorizedMedia(spoofed),
+      () => publishWithReservation(spoofed),
       "SIGNATURE_MISMATCH",
     );
 
@@ -239,7 +239,7 @@ async function main() {
     if (corruptUpload.error) throw corruptUpload.error;
     stagedPaths.add(corrupt.stagingPath);
     await expectContractCode(
-      () => publishAuthorizedMedia(corrupt),
+      () => publishWithReservation(corrupt),
       "CORRUPT_IMAGE",
     );
 
@@ -291,7 +291,7 @@ async function main() {
       clubId: bravo.id,
     };
     await expectContractCode(
-      () => publishAuthorizedMedia(crossClub),
+      () => publishWithReservation(crossClub),
       "CROSS_CLUB_MEDIA",
     );
 

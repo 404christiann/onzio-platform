@@ -1,5 +1,40 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-10e local seed scripts reserve uploads (fix for the 10b regression)
+
+**Agent/package:** Claude Code (Sonnet worker W10e, orchestrated), RC-ADMIN-10e, branch `claude/rc-admin-10e`
+on `d9fd6711`. **Status:** `in_progress`, PR open. It merges only on Christian's word. Scripts only: no app,
+migration, schema, RPC, skill or production change.
+
+**Why:** since RC-ADMIN-10b (#168), `publishAuthorizedMedia` consumes a one-time reservation that the
+authorize route makes first. The local seed scripts publish directly and never reserved, so every
+verify-rc-admin run failed at seed with `MEDIA_RESERVATION_MISSING`. That blocked gates 2, 3, 4 and 6 for
+RC-ADMIN-11, 12, 13 and 14. Production uploads were not affected.
+
+**Completed work:**
+- New `scripts/lib/publish-with-reservation.ts`. It calls the existing `reserveMediaUpload` with the same
+  upload id, club, actor, surface, kind, staging path and size, then calls `publishAuthorizedMedia`.
+  - It skips the reserve for an already-published asset (the idempotent path is unchanged) and reuses a
+    reservation left by an earlier run.
+  - A full seed publishes 88 Rose City assets, over the 60-per-hour default. On a quota or rate refusal,
+    and only when both the Supabase URL and the database URL are loopback, it upserts that club's local
+    `onzio_private.club_media_limits` row (note "local seed override (RC-ADMIN-10e)") and retries once.
+    Against any other host it rethrows. The migration and the defaults are unchanged.
+- The 16 scripts that called `publishAuthorizedMedia` now call the helper: the Rose City seeds, the crest
+  submark and episode-poster scripts, `smoke-media-pipeline.ts` and `verify-phase-7-media.ts`.
+
+**Verification:** in one DB lock hold, `supabase db reset --local` then the verify-rc-admin `seed-local.sh`
+on this worktree: every script exits 0, with 88 reservations all `consumed`. `npx tsc --noEmit` is clean.
+`npm run test:unit` passes (336 files, 3766 tests). There is no diff under `lib/ app/ components/ .claude/ supabase/`.
+verify-rc-admin itself cannot gate this package, because the skill seeds from origin/main's copy of these
+scripts. The seed run above is the evidence instead. `smoke-media-pipeline.ts` and `verify-phase-7-media.ts`
+were typechecked only (they target hosted or their own clubs).
+
+**Known, not changed:** several seeds refuse to overwrite on a rerun without a reset (true on main too), and
+`seed-rose-city-shop-2027-local.ts` does not exit on that refusal path.
+
+**Next step:** Christian merges. Then RC-ADMIN-11, 12, 13 and 14 rebase onto main and re-run verify-rc-admin.
+
 ## 2026-11-18 - RC-ADMIN-09 post-Wave-2 polish (Season h1, descriptions, crop decimals, discard text, shimmer, preview ids)
 
 **Agent/package:** Claude Code (Sonnet worker W9, orchestrated), RC-ADMIN-09, branch `claude/rc-admin-09`
