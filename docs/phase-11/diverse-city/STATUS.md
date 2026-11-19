@@ -2,7 +2,7 @@
 
 ## 2026-11-19 - RC-ADMIN-4b-0-3 verify-rc-admin: Stats rows drive main's workspace and Rose City's dialog table
 
-**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-3, branch `claude/rc-admin-4b-0-3` on `9e1dee1c`. **Status:** `in_progress`: PR open,
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-3, branch `claude/rc-admin-4b-0-3` on `313a63b1`. **Status:** `in_progress`: PR open,
 onzio-bot clean at `4787c48`. Skill only: no app code, no migration. Starting point: the Stats worker's patch, reviewed and changed (see below).
 
 **Completed work:**
