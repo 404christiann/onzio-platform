@@ -6,13 +6,12 @@ import { localPostgresConfig } from "./local-postgres";
 // club member write that row directly (no quota or rate check, so repeated runs never hit the
 // hourly limit) and delete it afterwards.
 
-export type ReservationState = { consumed?: boolean; expired?: boolean; clubId?: string };
+export type ReservationState = { consumed?: boolean; expired?: boolean };
 
 /** Records a reservation for `<club>/<surface>/<uuid>.<ext>` and returns a cleanup that deletes it. */
 export async function reserveStagingPath(path: string, actorId: string, state: ReservationState = {}) {
-  const [pathClub, surface, file] = path.split("/");
+  const [clubId, surface, file] = path.split("/");
   const id = file.replace(/\.[a-z]+$/, "");
-  const clubId = state.clubId ?? pathClub;
   const db = new Client(localPostgresConfig());
   await db.connect();
   try {
@@ -23,7 +22,7 @@ export async function reserveStagingPath(path: string, actorId: string, state: R
          now() - case when $7 then interval '10 minutes' else interval '0' end,
          now() + case when $7 then interval '-5 minutes' else interval '5 minutes' end,
          case when $6 then now() end, case when $6 then 'consumed' end)`,
-      [id, clubId, actorId, surface, state.clubId ? `${clubId}/${surface}/${file}` : path, state.consumed ?? false, state.expired ?? false],
+      [id, clubId, actorId, surface, path, state.consumed ?? false, state.expired ?? false],
     );
   } finally {
     await db.end();

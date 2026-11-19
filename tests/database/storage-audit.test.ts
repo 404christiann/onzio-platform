@@ -17,6 +17,8 @@ import {
 } from "../helpers/supabase";
 
 let clients: LocalClients;
+/** admin@bravo.local in the local seed. */
+const BRAVO_ADMIN_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa7";
 let originalAlphaBrandingPath: string | null | undefined;
 
 beforeEach(async () => {
@@ -159,12 +161,15 @@ describe("admin media staging signed-upload contract", () => {
     },
   );
 
-  it("still refuses to sign a staging upload for another club", async () => {
+  it("still refuses to sign a staging upload for another club, even with a live reservation for that path", async () => {
     const session = await createFreshLocalClient({
       email: "owner-aal2@alpha.local",
       userId: USER_IDS.ownerAal2,
     });
     memberCleanups.push(session.cleanup);
+    // RC-ADMIN-10c: with a live reservation in place, only the entitlement clause
+    // (can_mutate_feature) can refuse this, so the test still guards it.
+    memberCleanups.push(await reserveStagingPath(CROSS_CLUB_PATH, USER_IDS.ownerAal2));
 
     const { data, error } = await session.client.storage
       .from("onzio-upload-staging")
@@ -272,12 +277,12 @@ describe("admin media staging signed-upload coverage, every surface", () => {
     async (surface, index) => {
       const session = await createFreshLocalClient({
         email: "admin@bravo.local",
-        userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa7",
+        userId: BRAVO_ADMIN_ID,
       });
       sessionCleanups.push(session.cleanup);
 
       const path = pathFor(surface, index);
-      sessionCleanups.push(await reserveStagingPath(path, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa7"));
+      sessionCleanups.push(await reserveStagingPath(path, BRAVO_ADMIN_ID));
       const { data, error } = await session.client.storage
         .from("onzio-upload-staging")
         .createSignedUploadUrl(path, { upsert: false });
@@ -340,9 +345,9 @@ describe("staging upload needs a reservation", () => {
     await expectSignRefused("staging signed upload with an expired reservation");
   });
 
-  it("refuses to sign with another club's reservation for the same file", async () => {
-    cleanups.push(await reserveStagingPath(RESERVED_PATH, USER_IDS.ownerAal2, { clubId: CLUB_IDS.bravo }));
-    await expectSignRefused("staging signed upload with another club's reservation");
+  it("refuses to sign with a live reservation for a different file in the same club", async () => {
+    cleanups.push(await reserveStagingPath(`${CLUB_IDS.alpha}/homepage/cccccccc-cccc-4ccc-8ccc-cccccccc0002.png`, USER_IDS.ownerAal2));
+    await expectSignRefused("staging signed upload with a reservation for another path");
   });
 
   it("refuses a direct upload (no signed URL) without a reservation", async () => {

@@ -30,6 +30,14 @@ graphic upload right after apply.
   `tests/database/authenticated-rls.test.ts`: the every-surface member upload test reserves each path.
   Migration-order pins in the three contract tests gain the new file.
 
+**onzio-bot M1 (round 1, fixed, tests only):** with the reservation clause added, the cross-club signing test
+was refused by the missing reservation instead of the entitlement clause (`can_mutate_feature`), so nothing
+guarded that clause. The test now holds a live reservation for the other club's path and still expects 403; the
+misleading "another club's reservation" case (a state the 10b CHECK forbids) became "a live reservation for a
+different file in the same club", and the helper lost its `clubId` option. Mutation check: with the entitlement
+clause removed from the local policy, the cross-club test fails; with the real policy all 39 storage and RLS
+tests pass. Low also fixed: the bravo admin id is a named constant.
+
 **Verification (local; reset with this branch's migrations inside one DB lock hold):** full `test:db` 78 files,
 1339 tests; `db:types:check` passed; `test:unit` 341 files, 3967 tests; architecture checks; `tsc`; `next build`.
 The DB test that signs as the club member after a reservation is exactly what `/api/admin/media/authorize`
