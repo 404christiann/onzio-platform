@@ -40,7 +40,7 @@ verify-rc-admin gates pass on both routes. Waiting for onzio-bot and Christian's
 `components/admin/partners/PartnerCardPreview.module.css`, `components/admin/injury-report/InjuryCardPreview.module.css`,
 `lib/admin-hidden-route.ts` (new), `app/admin/(protected)/standings/layout.tsx` (new),
 `app/admin/(protected)/seasons/page.tsx`,
-`tests/contracts/admin-rose-city-registrations-hidden.test.ts` (new, 14 tests), `HANDOFF.md`, this file.
+`tests/contracts/admin-rose-city-registrations-hidden.test.ts` (new, 13 tests), `HANDOFF.md`, this file.
 
 **Verification:** verify-rc-admin, package `RC-ADMIN-4-0b`, from this worktree.
 - `/admin/partners` (`--touched partners`): gates 1-6 PASS. Report
@@ -48,7 +48,10 @@ verify-rc-admin gates pass on both routes. Waiting for onzio-bot and Christian's
 - `/admin/injury-report` (`--touched injury-report`): first run failed gate 6 (6/8) because origin/main's Programs and
   Shop pages were caught still loading (known skill flake, package side loaded); one identical rerun: gates 1-6 PASS.
   Report `test-results/rc-admin-verify/20261119-082133-RC-ADMIN-4-0b/report.html` (the failed run is `...081410...`).
-- Gate 5 in both: `tsc` clean, `test:unit` 346 files / 4042 tests, architecture 152, selector debt unchanged.
+- After the Standings addition (head `bd4bf4ed`), `/admin/partners` again: gates 1-6 PASS (first run, no rerun).
+  Report `test-results/rc-admin-verify/20261119-083551-RC-ADMIN-4-0b/report.html`; `test:unit` 346 files / 4044 tests.
+  Injury Report was not re-run: the Standings change touches neither editor.
+- Gate 5 in the first two runs: `tsc` clean, `test:unit` 346 files / 4042 tests, architecture 152, selector debt unchanged.
 - Before/after survey of Partners, Injury Report, News, Schedule and Sponsors at 390 and 1440, light and dark, taken
   before the change (the 0px gap was the only inconsistency in the Previews cards).
 - Not run: a live Rose City browser check of the 404 and the hidden dashboard panels (covered by the contract test
