@@ -4,7 +4,8 @@
 .keep { min-block-size: 44px; padding: 0 14px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); cursor: pointer; }
 .keep:disabled { opacity: .5; cursor: default; }
 .srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.listSection { display: grid; min-inline-size: 0; gap: 12px; }
+/* The page content is a plain block, so this is the whole space between the Previews cards above and the list: 20px, as the Sponsors editor puts between its blocks. */
+.listSection { display: grid; min-inline-size: 0; gap: 12px; margin-block-start: 20px; }
 .listHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .listHead h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .count { color: hsl(var(--muted-foreground)); font-size: .8125rem; font-weight: 500; }

@@ -100,6 +100,7 @@ export function adminAccessFor(
   const site: CodeSiteInput = club;
   return {
     ...site,
+    clubSlug: club.slug,
     role: club.role === "owner" || club.role === "admin" ? club.role : null,
     isBillingAuthorized: club.role === "owner" && club.lifecycle !== "archived",
     canMutateContent: canMutateClubContent(club),

@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SignUps } from "@/components/admin/reimagined/SignUps";
 import { readAdminPortal } from "@/lib/admin-portal";
+import { isAdminRouteHiddenForClub } from "@/lib/admin-route-manifest";
 import { loadSignUps, parseSignUpFormId, parseSignUpPersonId, parseSignUpTab } from "@/lib/admin-sign-ups-data";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
@@ -23,6 +24,8 @@ export default async function SignUpsPage({
   const { userId } = await requireFreshClubSession(supabase);
   const requestHeaders = await headers();
   const club = await getClubContext({ hostname: requestHeaders.get("host") ?? "", userId });
+  // A club whose admin hides Registrations (Rose City) has no list of sign-ups either.
+  if (isAdminRouteHiddenForClub(club.slug, "sign-ups")) notFound();
   const portal = await readAdminPortal(supabase, club.id);
   // A club still on the classic admin keeps its old page.
   if (portal.portal !== "reimagined") redirect("/admin/registrations");

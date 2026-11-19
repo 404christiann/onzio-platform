@@ -15,5 +15,5 @@
 .single.single :global(.injury-cross) { display: none; }
 .single.single :global(.injury-body) { display: block; padding: 14px 18px; }
 .single.single :global(.injury-list) { inline-size: 100%; margin: 0; }
-.skeletonHead { display: flex; align-items: baseline; gap: 12px; margin-block: 8px 12px; }
+.skeletonHead { display: flex; align-items: baseline; gap: 12px; margin-block: 20px 12px; }
 .skeletonTitle { inline-size: 96px; block-size: calc(1.0625rem * 1.5); }

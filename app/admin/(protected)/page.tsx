@@ -26,6 +26,7 @@ import { getClubContext, type ClubContext } from "@/lib/club-context";
 import {
   getVisibleAdminHomeJobs,
   getVisibleAdminQuickActions,
+  isAdminRouteHiddenForClub,
   type AdminQuickActionId,
   type AdminRouteAccessContext,
 } from "@/lib/admin-route-manifest";
@@ -207,6 +208,7 @@ async function AdminDashboardContent() {
   const routeAccess: AdminRouteAccessContext = {
     role: club.role,
     presentationTemplateKey: club.presentationTemplateKey,
+    clubSlug: club.slug,
     isBillingAuthorized,
     canMutateContent,
     storeEnabled: club.storeEnabled,
@@ -226,6 +228,9 @@ async function AdminDashboardContent() {
   const quickActions = getVisibleAdminQuickActions(routeAccess);
   const { timeZone } = portal;
   const data = await loadAdminDashboardData(supabase, club.id, timeZone);
+  // A club whose admin hides Registrations (Rose City) gets no registration
+  // metric, form list or mix; the rest of the dashboard is unchanged.
+  const showRegistrations = !isAdminRouteHiddenForClub(club.slug, "registrations");
 
   return (
     <AdminPage>
@@ -270,14 +275,18 @@ async function AdminDashboardContent() {
       {data.activeSeasonLabel ? (
         <p className="-mb-3 text-sm font-medium text-muted-foreground">{data.activeSeasonLabel} season overview</p>
       ) : null}
-      <section aria-label="Club statistics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <section
+        aria-label="Club statistics"
+        className={`grid grid-cols-2 gap-4 ${showRegistrations ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+      >
         <MetricCard label="Active Players" section={data.players} />
         <MetricCard label="Active Staff" section={data.staff} />
         <MetricCard label="Season Matches" section={data.seasonMatches} />
-        <MetricCard label="Paid Registrations" section={data.paidRegistrations} />
+        {showRegistrations ? <MetricCard label="Paid Registrations" section={data.paidRegistrations} /> : null}
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className={showRegistrations ? "grid gap-6 xl:grid-cols-2" : "grid gap-6"}>
+        {showRegistrations ? (
         <DashboardPanel title="Registration Forms" actionHref="/admin/registrations" actionLabel="View all">
           {data.forms.status === "error" ? (
             <SectionError message={data.forms.message} />
@@ -309,6 +318,7 @@ async function AdminDashboardContent() {
             <EmptyState message="No current registration forms." />
           )}
         </DashboardPanel>
+        ) : null}
 
         <DashboardPanel title="Upcoming Fixtures & Events" actionHref="/admin/schedule" actionLabel="View schedule">
           {data.events.status === "error" ? (
@@ -325,6 +335,7 @@ async function AdminDashboardContent() {
         </DashboardPanel>
       </div>
 
+      {showRegistrations ? (
       <DashboardPanel title="Registration Mix" description="Paid registrations across current forms">
         {data.registrationMix.status === "error" ? (
           <SectionError message={data.registrationMix.message} />
@@ -371,6 +382,7 @@ async function AdminDashboardContent() {
           <EmptyState message="Paid registrations will appear here once a current form receives payment." />
         )}
       </DashboardPanel>
+      ) : null}
     </AdminPage>
   );
 }
