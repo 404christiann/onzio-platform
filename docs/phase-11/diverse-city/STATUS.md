@@ -33,7 +33,12 @@ states, dialog fields render, kit and copy checks). Selector debt untouched (sam
 - Gate 1: 5 app files. Gate 2: 13/13 identical, touched `policies`. Gate 3: kit path, clean, dirty, saving, saved, retry,
   conflict and discard pass. Gate 4: CLS at most 0.00032, new axe 0, reduced motion 0 offenders.
 - Gate 5: tsc ok; unit 346 files, 4050 tests; architecture 152; selector debt unchanged. Gate 6: Diverse City 8/8 identical.
-- FINAL_RUN_PLACEHOLDER
+- Final run (run 10) on `b73a5bc9` (this branch on `b2ecd39d`, with the #183 skill fixes), report
+  `test-results/rc-admin-verify/20261119-104409-RC-ADMIN-4a-policies/report.html`: PASS on all six gates. Gate 1: 5 app files,
+  2 doc warnings. Gate 2: 13/13 identical. Gate 3: all seven states pass. Gate 4: CLS at most 0.00032, new axe 0. Gate 5: tsc ok;
+  unit 348 files, 4088 tests; architecture 152; selector debt unchanged. Gate 6: 8/8 identical.
+- Run 9 (on `1fd26b31`, before #183, so without `settle.mjs`) failed only gate 3 "saved": the Save button colour was sampled
+  mid-transition (`rgb(46, 189, 102)`), the known skill flake. The identical rerun on the fixed skill passed, so #183 held here.
 - Flakes (infrastructure, no code change between runs): two runs failed at seed with "An invalid response was received
   from the upstream server" right after the DB reset, one at sign-in (`Enter your code` timed out), one stopped on the disk
   check (3.7 GB free).
