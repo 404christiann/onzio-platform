@@ -1,5 +1,30 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4b-0-2 verify-rc-admin: three small fixes for the Seasons, Roster and kit-editor rebuilds
+
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-2, branch `claude/rc-admin-4b-0-2` on `0a80031a`. **Status:** `in_progress`: PR
+open, waiting for onzio-bot. Skill only: no app code, no migration.
+
+**Completed work:**
+- `seasons` row finds the create button as "Create Next Season" (main) or "Create <year> season" (rebuilt): `SEASON_CREATE_BUTTON`.
+- `roster` row's dialog save button matches "Save", "Save changes" (main) or "Save player" (rebuilt): `ROSTER_SAVE_BUTTON`.
+- The kit field walk presses Back before every section on a phone, not only the first: after an image-only section (4c's Club logo)
+  the sheet is still inside it with the list hidden. Every step goes through `gotoSection`, which presses Back only when it is showing.
+  (`[data-editor-dialog-back]` is rendered only in a phone section view, so it never exists in the list.)
+- Gate 6's settle also waits on `/api/admin/data` selects in flight: the first Seasons run compared `/admin/stats?view=match` with its
+  "Match" select still disabled (matches not loaded yet). Other XHR (polling) is not counted.
+- 54 self-tests pass (5 new for these four things).
+
+**Verification** (`--touched none`, clean main `0a80031a`, reports under `/Users/christianalcala/Downloads/onzio-platform/.claude/worktrees/rc-admin-4b-0-2/test-results/rc-admin-verify/`):
+- `/admin/stadium` (a kit editor, 390 included): all six gates pass; the Back change does not alter main's kit editors: `20261119-132025-RC-ADMIN-4b-0-2-stadium`.
+- `/admin/seasons`: gates 1, 2 (20/20), 5 and 6 (15/15) pass, gate 3 n/a (declared); gate 4 fails only on the documented Seasons CLS on main
+  (0.00111 at 390, intermittent between schemes): `20261119-133401-RC-ADMIN-4b-0-2-seasons3`. An earlier run (`130307-...-seasons`) had gate 6 14/15 on the
+  Stats select-disabled gap, fixed above.
+- `/admin/roster` on the final head: gates 1, 2, 4, 5, 6 pass, gate 3 n/a (declared): `20261119-134227-RC-ADMIN-4b-0-2-roster`.
+- The new labels ("Create 2028 season", "Save player") are proven by self-tests only: main still uses the old labels.
+
+**Next step:** onzio-bot loop, then `verify.sh cleanup --worktree` on this worktree.
+
 ## 2026-11-19 - RC-ADMIN-4b-0 verify-rc-admin: keys for roster, seasons, stats, branding, members
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0, branch `claude/rc-admin-4b-0` on `3d52ab65`. **Status:** `in_progress`:

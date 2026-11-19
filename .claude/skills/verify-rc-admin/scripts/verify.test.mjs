@@ -646,3 +646,45 @@ test("4b-0: every EDITORS row that saves through /api/admin/data names both ops 
     assert.match(code(row), /\btables: \[("[a-z_]+"(, )?)+\]/, `${key} names its tables`);
   }
 });
+
+test("4b-0-2: the seasons row finds the create button under both labels, and only those", async () => {
+  const { SEASON_CREATE_BUTTON } = await import("./editors.mjs");
+  for (const label of ["Create Next Season", "Create 2028 season", "Create 2027 Season", "create 2030 season"]) assert.equal(SEASON_CREATE_BUTTON.test(label), true, label);
+  for (const label of ["Create season", "Create 28 season", "Create 20281 season", "Create 2028 seasons", "Create Next Season now", "Edit 2028 season", "Recreate 2028 season", ""]) assert.equal(SEASON_CREATE_BUTTON.test(label), false, label);
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  const row = spec.slice(spec.indexOf('{ key: "seasons"'), spec.indexOf('{ key: "roster"'));
+  assert.match(row, /getByRole\("button", \{ name: SEASON_CREATE_BUTTON \}\)/, "the seasons row uses the shared matcher");
+  assert.doesNotMatch(row, /visibleButton\(page, "Create Next Season"\)/, "no exact-label lookup is left in the row");
+});
+
+test("4b-0-2: gate 6 treats a data-endpoint select still in flight as loading, and nothing else on that endpoint", async () => {
+  const { isAdminDataRead } = await import("./editors.mjs");
+  const body = (operation) => JSON.stringify({ table: "matches", operation });
+  assert.equal(isAdminDataRead({ method: "POST", pathname: "/api/admin/data", body: body("select") }), true);
+  for (const operation of ["insert", "update", "upsert", "delete"]) assert.equal(isAdminDataRead({ method: "POST", pathname: "/api/admin/data", body: body(operation) }), false, operation);
+  assert.equal(isAdminDataRead({ method: "GET", pathname: "/api/admin/data", body: body("select") }), false);
+  assert.equal(isAdminDataRead({ method: "POST", pathname: "/api/admin/members", body: body("select") }), false, "other endpoints (polling) are not counted");
+  assert.equal(isAdminDataRead({ method: "POST", pathname: "/api/admin/data", body: "not json" }), false);
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /if \(asset\(r\) \|\| dataRead\(r\)\) inflight\.add\(r\)/);
+});
+
+test("4b-0-2: the kit field walk goes Back to the list before every section on a phone, not just the first", () => {
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  const walk = spec.slice(spec.indexOf("async function findKitField"), spec.indexOf("\n}\n", spec.indexOf("async function findKitField")));
+  const loop = walk.slice(walk.indexOf("for (const index of sectionTryOrder"));
+  assert.match(loop, /await gotoSection\(page, index\)/, "every section step goes through gotoSection");
+  assert.doesNotMatch(loop, /sectionButtons\(page\)\.nth\(index\)\.click\(\)/, "no bare section click is left in the loop");
+  const goto = spec.slice(spec.indexOf("async function gotoSection"), spec.indexOf("\n}\n", spec.indexOf("async function gotoSection")));
+  assert.match(goto, /back\.count\(\) && await back\.first\(\)\.isVisible\(\)\) await back\.first\(\)\.click\(\)/, "Back is pressed only when it is showing");
+  assert.ok(goto.indexOf("isVisible()") < goto.indexOf("sectionButtons(page).nth(index).click()"), "Back comes before the section click");
+});
+
+test("4b-0-2: the roster row's dialog save button matches 'Save', 'Save changes' (main) and 'Save player' (Rose City's rebuilt dialog), and only those", async () => {
+  const { ROSTER_SAVE_BUTTON } = await import("./editors.mjs");
+  for (const label of ["Save", "Save changes", "Save player"]) assert.equal(ROSTER_SAVE_BUTTON.test(label), true, label);
+  for (const label of ["Save player now", "Save and close", "Saved", "Save changes and add another", "Autosave", "Save staff member", ""]) assert.equal(ROSTER_SAVE_BUTTON.test(label), false, label);
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  const row = spec.slice(spec.indexOf('{ key: "roster"'), spec.indexOf('{ key: "stats-match"'));
+  assert.match(row, /getByRole\("button", \{ name: ROSTER_SAVE_BUTTON \}\)/, "the roster row uses the shared matcher");
+});

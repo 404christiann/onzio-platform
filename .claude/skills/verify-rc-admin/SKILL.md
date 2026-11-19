@@ -126,8 +126,8 @@ Base URLs: `http://rose-city.localhost:<port>/admin/...`, `http://diverse-city.l
 | news | /admin/news | POST /api/admin/cinematic-news | first "Edit “<title>”" → first text field → "Save article" |
 | branding | /admin/branding | POST /api/admin/data, `upsert` on `site_branding` / `site_social_links` | `#footer-tagline` where the club shows one, else the first social link (a web address: `?rcv=<tag>` is added) |
 | members | /admin/members | POST /api/admin/members | no field: types `rcv-gate2@example.com` into "Administrator email" and presses "Add administrator" (the request is aborted, nobody is added) |
-| seasons | /admin/seasons | POST /api/admin/data, `insert` on `seasons` | no field: "Create Next Season" → confirm (aborted at the first write) |
-| roster | /admin/roster | POST /api/admin/data, `update` on `players` | no field: first `[data-player-id]` → Edit → "Name" → "Save changes" |
+| seasons | /admin/seasons | POST /api/admin/data, `insert` on `seasons` | no field: "Create Next Season" (classic) or "Create <year> season" (rebuilt) → confirm (aborted at the first write) |
+| roster | /admin/roster | POST /api/admin/data, `update` on `players` | no field: first `[data-player-id]` → Edit → "Name" → "Save changes" (or "Save player" on the rebuilt dialog) |
 | stats-match | /admin/stats?view=match | POST /api/admin/data, `upsert` on `player_match_stats` / `goalkeeper_match_stats` | first match in the "Match" select, first player, first stat input (+1) → header Save |
 | stats-season | /admin/stats?view=season | POST /api/admin/data, `upsert` on the `*_season_stats` / `*_season_adjustments` tables | first player, first stat input (+1) → header Save |
 
@@ -271,7 +271,7 @@ and writes its gitignored `test-results/`; nothing else there changes.
   `/schedule`, `/sponsors`, `/roster`, `/seasons`, `/stats?view=match`, `/stats?view=season`, `/standings`, `/branding`, `/members` on both builds: status < 400, an h1, no console error that origin/main
   does not also log, and an identical `main` aria snapshot. Each page is compared only once it has **settled**
   (`scripts/settle.mjs`, pinned by `verify.test.mjs`): document complete, no showing loading marker (`aria-busy`,
-  loading region outside the `content` phase, visible skeleton or shimmer, a live region reading "Loading ...", an image, font, script or style still in flight), no unfinished animation, and the `main`
+  loading region outside the `content` phase, visible skeleton or shimmer, a live region reading "Loading ...", an image, font, script or style still in flight, a `select` through `/api/admin/data` still in flight), no unfinished animation, and the `main`
   aria tree unchanged for three reads 100 ms apart. A page that does not settle in 20 s fails with the reason (a
   hidden skeleton kept in the DOM does not count). The one console error ignored on both builds is the 404 of
   Vercel's `/_vercel/insights/script.js` (it only exists on Vercel and is requested late). Screenshots of the package build.

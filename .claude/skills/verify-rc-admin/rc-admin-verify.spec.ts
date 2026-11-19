@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { KIT_ANY_FIELD_SELECTOR, KIT_DIALOG_SELECTOR, KIT_DONE_SELECTOR, KIT_EDIT_SELECTOR, KIT_ENABLED_FIELD_SELECTOR, KIT_LIST_SELECTOR, KIT_WAIT_MS, chooseOpenPath, firstMarkableIndex, isPhoneWidth, listProblems, retryLockCheck, sectionTryOrder, sheetBarProblems } from "./scripts/kit-path.mjs";
-import { gate3Plan, isEditorSave, isMutating, stepsPass } from "./scripts/editors.mjs";
+import { ROSTER_SAVE_BUTTON, SEASON_CREATE_BUTTON, gate3Plan, isAdminDataRead, isEditorSave, isMutating, stepsPass } from "./scripts/editors.mjs";
 import { BUSY_SELECTOR, LOADING_TEXT, isEnvironmentNoise, savedColourProblems, waitUntilSettled } from "./scripts/settle.mjs";
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type Request } from "@playwright/test";
 
@@ -110,7 +110,7 @@ export const EDITORS: Editor[] = [
     act: async (page) => { await page.locator("#new-admin-email").fill("rcv-gate2@example.com"); await visibleButton(page, "Add administrator").click(); },
     lacks: { pageSave: "adding and removing an administrator act at once; there is no page Save" } },
   { key: "seasons", route: "/admin/seasons", save: /\/api\/admin\/data$/, ops: ["insert"], tables: ["seasons"],
-    act: async (page) => { await visibleButton(page, "Create Next Season").click(); await page.getByRole("dialog").getByRole("button", { name: /^Create/ }).click(); },
+    act: async (page) => { await page.getByRole("button", { name: SEASON_CREATE_BUTTON }).filter({ visible: true }).first().click(); await page.getByRole("dialog").getByRole("button", { name: /^Create/ }).click(); },
     lacks: { pageSave: "Create Next Season, Set active and Delete act at once; there is no page Save" } },
   { key: "roster", route: "/admin/roster", save: /\/api\/admin\/data$/, ops: ["update"], tables: ["players"],
     act: async (page) => {
@@ -121,7 +121,7 @@ export const EDITORS: Editor[] = [
       const name = page.locator("#player-name");
       await expect(name).toBeVisible();
       await mark(name, "rcv");
-      await page.getByRole("dialog").getByRole("button", { name: /^Save( changes)?$/ }).click();
+      await page.getByRole("dialog").getByRole("button", { name: ROSTER_SAVE_BUTTON }).click();
     },
     lacks: { pageSave: "a player is saved from its own dialog; the stats tab's Save is not covered here" } },
   { key: "stats-match", route: "/admin/stats?view=match", save: /\/api\/admin\/data$/, ops: ["upsert"], tables: ["player_match_stats", "goalkeeper_match_stats"],
@@ -220,7 +220,7 @@ async function waitForPanel(page: Page) {
 async function gotoSection(page: Page, index: number) {
   const dialog = kitDialog(page);
   const back = dialog.locator("[data-editor-dialog-back]");
-  if (await back.count()) await back.click();
+  if (await back.count() && await back.first().isVisible()) await back.first().click(); // inside a section the list is hidden: Back shows it
   await sectionButtons(page).nth(index).click();
   await waitForPanel(page);
 }
@@ -260,8 +260,9 @@ async function findKitField(page: Page): Promise<{ index: number; section: numbe
   const count = await sectionButtons(page).count();
   const active = phone ? -1 : await sectionButtons(page).evaluateAll((els) => els.findIndex((el) => el.getAttribute("aria-current") === "true"));
   for (const index of sectionTryOrder(count, active)) {
-    await sectionButtons(page).nth(index).click();
-    await waitForPanel(page);
+    // Every step goes through gotoSection: after a section with no text field (an image-only Club logo) the phone sheet is still inside
+    // that section with the list hidden, so Back must be pressed again before the next section button can be clicked.
+    await gotoSection(page, index);
     if (await hasEnabledField(page, 1_000)) return { index: await pinFirstEnabled(page), section: index };
   }
   throw new Error(`no section of the editor dialog has an enabled text field (${count} sections)`);
@@ -953,7 +954,10 @@ async function dcSnapshot(context: BrowserContext, base: string, path: string, s
   const failed: string[] = [];
   const inflight = new Set<Request>();
   const asset = (r: Request) => ["image", "font", "stylesheet", "script", "media"].includes(r.resourceType());
-  page.on("request", (r) => { if (asset(r)) inflight.add(r); });
+  // Also the editors' own loads through /api/admin/data (operation "select"): Stats compared with its Match select still disabled
+  // because the matches had not arrived. Other XHR/fetch (polling) stays out of it, or a polling page would never settle.
+  const dataRead = (r: Request) => isAdminDataRead({ method: r.method(), pathname: new URL(r.url()).pathname, body: r.postData() ?? "" });
+  page.on("request", (r) => { if (asset(r) || dataRead(r)) inflight.add(r); });
   page.on("requestfinished", (r) => inflight.delete(r));
   page.on("requestfailed", (r) => inflight.delete(r));
   page.on("response", (r) => { if (r.status() >= 400) failed.push(`${r.status()} ${r.request().method()} ${r.url().replace(/\?.*$/, "")}`); });
