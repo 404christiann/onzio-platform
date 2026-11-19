@@ -3,10 +3,9 @@
 ## 2026-11-19 - RC-ADMIN-10c staging upload needs a live reservation
 
 **Agent/package:** Claude Code (Opus), RC-ADMIN-10c, branch `claude/rc-admin-10c` on `84142ca3`.
-**Status:** `in_progress`: PR open and ready. Production not touched. Christian lifted the 2026-11-20 04:00 UTC
-time gate on 2026-11-19; the three checks stay: (a) passed on DB evidence and is re-run with the log hour then
-available right before the dry run; (b) a fresh B1-a he reviews before the dry run; (c) a real photo and a real
-graphic upload right after apply.
+**Status:** `in_progress`: PR #178; the migration is on production (2026-11-19 08:5x UTC, after Christian's
+"push"), the read-only check and check (c) passed; onzio-bot clean at `4ad5e71` after one fix round. Waiting only
+for Christian's merge. He lifted the 2026-11-20 04:00 UTC time gate on 2026-11-19 and kept checks (a), (b), (c).
 
 **Completed work:**
 - Migration `20261119090000_staging_insert_requires_reservation.sql`:
@@ -43,10 +42,39 @@ tests pass. Low also fixed: the bravo admin id is a named constant.
 The DB test that signs as the club member after a reservation is exactly what `/api/admin/media/authorize`
 does (service-role reserve, then sign with the member's session); finalize is unchanged from 10b.
 
-**Blockers or unresolved decisions:** onzio-bot review; then the fresh B1-a and check (a) for Christian's review.
+**Production gate (2026-11-19 UTC, from Christian's Mac, Supabase CLI 2.122.0):**
+1. Check (a), re-run at 08:49 UTC: 1 `media.publish` since 10b went live (03:56:24 UTC), 1 with a consumed
+   reservation (asset side 1 / 1), 0 during the rollout, 1 reservation in total (consumed), 0 expired, 0 overrides.
+   Logs available 07:51:42 to 08:44:28 UTC (17 records): 0 media requests, 0 responses with status 503, 0
+   `MEDIA_QUOTA_*` / `MEDIA_RATE_LIMITED` mentions. (The 03:56 to 06:43 UTC gap was accepted earlier.)
+2. Check (b), fresh B1-a, raw output sent to Christian, who reviewed it: four buckets (`onzio-media` 583 objects /
+   65 MB, newest 2026-11-19 03:59:46; `onzio-upload-staging` the same 5 objects from 2026-08-09, 7.8 MB, waiting for
+   SEC-01's first 10:00 UTC run; `onzio-branding` 1; `onzio-fonts` 2); exactly four storage policies, none on
+   `storage.buckets`; the live INSERT policy matched `20260808160000` exactly.
+3. Ledger: the only local-only version was `20261119090000`; main had not moved.
+4. Snapshot: 2 clubs, 4 active domains, audit `1027:1034`, 582 published assets, 1 reservation, 4 storage
+   policies, helper absent, no reservation clause.
+5. Backup (Christian typed the password):
+   `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-20261119-0050-pre-rcadmin10c.dump`, 1,307,300 bytes,
+   94 table-data entries, SHA-256 `5e2df1c0ef6b7bfdddb70e0bf68811de1e3882dbc483138724a68e7c1fc48208`. Kept.
+6. Dry run: exactly `20261119090000_staging_insert_requires_reservation.sql`, no seeds, no roles (repeated right
+   before the apply). Christian said "push". Applied with `db push --linked --skip-vault`.
+7. Read-only check: no local-only or remote-only versions; a second dry run says "up to date"; the helper exists;
+   the INSERT policy now contains `staging_upload_reserved`; still 4 storage policies; snapshot unchanged.
+8. Check (c), immediately after, through the real admin in Christian's signed-in Chrome, on Diverse City:
+   - Photo: About, Story feature image, a generated 4000x2667 JPEG of 3,640,015 bytes. Reservation issued
+     08:55:27, consumed 08:55:33; published 08:55:34 as a 2400x1600 WebP of 640,018 bytes; no staging object left.
+   - Graphic: Sponsors, "Add sponsor logos", a generated 800x400 transparent PNG of 11,209 bytes. Reservation
+     (kind graphic) issued 08:57:03, consumed 08:57:05; published as an 800x400 WebP of 5,722 bytes; no staging
+     object left.
+   - Both edits discarded. Diverse City still has its 3 sponsors (3 / 3 / 1) and the original About feature image
+     (`552e351b…`). Removing the sponsor draft retired the graphic (`de1cee23…`, now orphaned); the test photo
+     (`20986642…`, 640 KB) stays published and unused, for 10d's report-only run to flag (or retire on his say).
+9. The copied link files, the test images and the Chrome tab are gone.
 
-**Exact next step:** onzio-bot clean; then run B1-a fresh and re-run check (a) with the log hour, send both to
-Christian, and wait for his review before the dry run. Then the dry run and his "push".
+**Blockers or unresolved decisions:** Christian's merge of #178.
+
+**Exact next step:** Christian merges #178. Then RC-ADMIN-10d (orphan sweep, dry-run only until he says "enforce").
 
 ## 2026-11-18 - RC-PREVIEW: Sam previews Rose City's public site on one Vercel Preview host
 

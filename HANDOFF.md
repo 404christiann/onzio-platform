@@ -1,6 +1,8 @@
 ## 2026-11-19 - RC-ADMIN-10c: staging upload needs a live reservation
 
-- **Status:** `in_progress`. PR open and ready; production not touched. Record in `STATUS.md`.
+- **Status:** `in_progress`. PR #178: the migration is on production (2026-11-19, after Christian's "push"); the
+  read-only check and a real photo and graphic upload passed; onzio-bot clean. Waiting for his merge. Record in
+  `STATUS.md`.
 - **What:** migration `20261119090000_staging_insert_requires_reservation.sql` adds
   `onzio_private.staging_upload_reserved(name)` to `onzio_staging_member_insert` (otherwise byte for byte the
   `20260808160000` policy), so a club editor can no longer stage a file without going through `/authorize` and
@@ -8,7 +10,7 @@
 - **Checks (Christian, 2026-11-19):** (a) passed, re-run with the then-available log hour before the dry run;
   (b) fresh B1-a, raw output to Christian, wait for his review before the dry run; (c) a real photo and a real
   graphic upload right after apply.
-- **Exact next step:** onzio-bot clean, then (a) and (b) for Christian's review.
+- **Exact next step:** Christian merges #178, then RC-ADMIN-10d.
 
 ## 2026-11-18 - RC-PREVIEW: Rose City public-site preview for Sam (app code only)
 
