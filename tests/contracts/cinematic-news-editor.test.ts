@@ -9,7 +9,6 @@ import { describe, expect, it } from "vitest";
 import { emptyNewsDraft, newsDraftFromArticle, newsSaveRequest } from "@/lib/cinematic-news-editor";
 import { ADMIN_ROUTE_MANIFEST, isAdminRouteVisible } from "@/lib/admin-route-manifest";
 import { MEDIA_SURFACES } from "@/lib/storage-path";
-import NewsEditorList from "@/components/admin/news/NewsEditorList";
 import type { NewsEditorArticle } from "@/lib/cinematic-news";
 
 const LA = "America/Los_Angeles";
@@ -55,19 +54,5 @@ describe("RC2027-NEWS editor", () => {
     expect(isAdminRouteVisible(news!, { role: "admin", presentationTemplateKey: "cinematic@2", isBillingAuthorized: false, canMutateContent: true, storeEnabled: true })).toBe(true);
     expect(isAdminRouteVisible(news!, { role: "owner", presentationTemplateKey: "editorial@1", isBillingAuthorized: true, canMutateContent: true, storeEnabled: true })).toBe(false);
     expect(MEDIA_SURFACES).toContain("news");
-  });
-
-  it("lists shown articles with Edit and Remove, and removed ones with Restore", () => {
-    const removed = { ...saved, id: "removed-id", removedAt: "2027-01-01T00:00:00.000Z", content: { ...saved.content, title: "An old story" } };
-    const html = renderToStaticMarkup(createElement(NewsEditorList, { articles: [saved, removed], timeZone: LA, disabled: false, onEdit: () => {}, onRemove: () => {}, onRestore: () => {} }));
-    expect(html).toContain("Foothill Transit becomes Official Front of Jersey Sponsor of RCFC");
-    expect(html).toContain("Friday, Nov 20, 2026 at 12:00 PM");
-    expect(html).toContain("Sponsor/Partner");
-    expect(html).toMatch(/Edit<\/button>/);
-    expect(html).toMatch(/Remove<\/button>/);
-    expect(html).toContain("Removed from the site");
-    expect(html.indexOf("Removed from the site")).toBeLessThan(html.indexOf("An old story"));
-    expect(html).toMatch(/Restore<\/button>/);
-    expect(renderToStaticMarkup(createElement(NewsEditorList, { articles: [], timeZone: LA, disabled: false, onEdit: () => {}, onRemove: () => {}, onRestore: () => {} }))).toContain("No articles yet.");
   });
 });

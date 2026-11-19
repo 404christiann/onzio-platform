@@ -1,5 +1,41 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-12 Rose City News editor on the editor kit (Previews layout)
+
+**Agent/package:** Claude Code (Sonnet worker W12, orchestrated), RC-ADMIN-12, branch `claude/rc-admin-12` on
+`0fa2b2ef`. **Status:** `in_progress`, PR open. It merges only on Christian's word. App code only: no migration,
+schema, RPC, data or production change, and nothing under `components/cinematic/` or `lib/`.
+
+**Completed work:**
+- `/admin/news` (Rose City, cinematic@2) is rebuilt on the editor kit.
+  - PageFrame: breadcrumb Website / Pages / News, "Open page" (/news), and one page Save.
+  - Article cards render the real public `CinematicNewsList`, fed by the draft inside `SettledPreview`. Each
+    card has a Live / Removed / Not saved yet tag, an unsaved dot, Edit, and a menu with Open on the site,
+    Discard my edits and Remove from the site.
+  - Toolbar: search, category chips, Show removed, Add article.
+- The split `EditorDialog` has three sections: Details, Cover photo and Article. Its preview is the real
+  article. Every schema limit shows as a count. The web address is read-only after the first save.
+- The page Save sends one request per edited article, through the existing `newsSaveRequest` and
+  `saveNewsArticle`. Each request keeps its own operation id and expected revision.
+  - If any article is invalid, nothing is sent and the invalid article is named.
+  - The first failure stops the run and earlier saves stay saved. Retry resends the pending request.
+  - A 409 gives a conflict with "Load latest and keep my edits" or "Reload saved page".
+- Remove and Restore stay immediate, through the existing calls.
+
+**Files changed:** `components/admin/news/CinematicNewsEditor.tsx`. New: `news-page.ts`, `NewsCards.tsx` (+ CSS),
+`NewsArticleFields.tsx`, `NewsEditor.module.css`. Removed: `NewsEditorList.tsx`. Tests: new
+`tests/contracts/rc-admin-12-news.test.ts`; the old list test was dropped from `cinematic-news-editor.test.ts`.
+
+**Verification:** verify-rc-admin `--route /admin/news --touched news` on `0fa2b2ef`: PASS on all six gates.
+- Gate 1 (scope): 9 app files.
+- Gate 2 (payload identity): 13/13 identical.
+- Gate 3 (save states): clean, dirty, saving, saved, retry, conflict and discard all pass.
+- Gate 4 (visual): CLS at most 0.00001, new axe 0, reduced motion 0.
+- Gate 5 (repo): tsc ok; unit 338 files, 3785 tests; architecture 152; selector debt unchanged.
+- Gate 6: Diverse City 8/8 identical.
+
+**Next step:** onzio-bot review, then Christian merges.
+
 ## 2026-11-18 - RC-ADMIN-10e local seed scripts reserve uploads (fix for the 10b regression)
 
 **Agent/package:** Claude Code (Sonnet worker W10e, orchestrated), RC-ADMIN-10e, branch `claude/rc-admin-10e`

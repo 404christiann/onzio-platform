@@ -1,126 +1,157 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
-import { EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorPrimaryButton, EditorRemoveButton, EditorSaveBar, EditorSecondaryButton, EditorSection, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
-import FileUpload from "@/components/admin/FileUpload";
-import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
-import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
-import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
-import NewsEditorList from "@/components/admin/news/NewsEditorList";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import { DISCARD_CONFIRM } from "@/components/admin/editor-copy";
+import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
+import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
+import { IconAdd, IconSearch } from "@/components/admin/icons";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
+import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
+import {
+  EditorDialog, PageFrame, PageFrameSkeleton, PreviewCardsSkeleton, ValidationMessage, derivePageSaveState, useEditorDialog,
+} from "@/components/admin/ui/editor-kit";
 import { CinematicNewsArticle } from "@/components/cinematic/CinematicNews";
 import CinematicShell from "@/components/cinematic/CinematicShell";
-import NativeImage from "@/components/ResilientNativeImage";
+import type { NewsPublicArticle } from "@/lib/cinematic-news-query";
 import { createClient } from "@/lib/admin-client";
-import { NEWS_CATEGORIES, NEWS_LIMITS, newsInstantToLocal, newsLocalToInstant, newsSlug, splitNewsParagraphs, type NewsArticleSave, type NewsEditorArticle } from "@/lib/cinematic-news";
-import { emptyNewsDraft, loadNewsEditor, newsDraftFromArticle, newsSaveRequest, saveNewsArticle, type NewsDraft, type NewsDraftProblems } from "@/lib/cinematic-news-editor";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { fetchClubIdentity } from "@/lib/cinematic-identity";
+import { NEWS_CATEGORIES, newsCategory, newsInstantToLocal, newsLocalToInstant, type NewsEditorArticle } from "@/lib/cinematic-news";
+import { loadNewsEditor, newsDraftFromArticle, saveNewsArticle, type NewsDraft, type NewsDraftProblems } from "@/lib/cinematic-news-editor";
 import "@/components/admin/homepage/homepage-editor.css";
+import { NewsArticleFields, type NewsFieldsApi } from "./NewsArticleFields";
+import { NewsCards } from "./NewsCards";
+import {
+  DEFAULT_NEWS_FILTER, NEWS_SECTIONS, buildSavePlan, changedEntries, entryChanged, entryForArticle, entryForNew, entryTitle, filterNewsCards, newsCards,
+  newsPageFailure, previewArticle, draftParagraphs, type NewsCardItem, type NewsEntry, type NewsFilter, type NewsSaveItem, type NewsSectionId,
+} from "./news-page";
+import styles from "./NewsEditor.module.css";
 
-type Editing = { article: NewsEditorArticle | null; draft: NewsDraft; original: string };
+const PAGE = "News";
+const CRUMBS = [{ label: "Website" }, { label: "Pages", href: "/admin/website-pages" as const }];
+const DESCRIPTION = "Write the articles shown on your News page. Saving shows an article on the site right away.";
+
+type Confirm = { kind: "reload" } | { kind: "remove"; card: NewsCardItem } | { kind: "discard"; card: NewsCardItem } | null;
 
 async function discardUnsavedCover(assetId: string | null, saved: NewsEditorArticle | null) {
   if (!assetId || saved?.cover?.assetId === assetId) return;
   await fetch("/api/admin/media/cleanup", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assetId }) }).catch(() => undefined);
 }
 
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
 export default function CinematicNewsEditor() {
   const club = useClubContext();
   const [articles, setArticles] = useState<NewsEditorArticle[] | null>(null);
+  const [entries, setEntries] = useState<Record<string, NewsEntry>>({});
   const [timeZone, setTimeZone] = useState("UTC");
   const [shared, setShared] = useState<CinematicHomepageContent | null>(null);
-  const [editing, setEditing] = useState<Editing | null>(null);
-  const [problems, setProblems] = useState<NewsDraftProblems>({});
-  const [pending, setPending] = useState<NewsArticleSave | null>(null);
+  const [loadedClubId, setLoadedClubId] = useState<string | null>(null);
+  const [problems, setProblems] = useState<Record<string, NewsDraftProblems>>({});
+  const [pending, setPending] = useState<NewsSaveItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
-  const [phone, setPhone] = useState(true);
-  const [confirming, setConfirming] = useState<{ kind: "cancel" } | { kind: "remove"; article: NewsEditorArticle } | null>(null);
+  const [status, setStatus] = useState("");
+  const [conflict, setConflict] = useState<{ key: string; title: string } | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [invalid, setInvalid] = useState<{ key: string; title: string } | null>(null);
+  const [filter, setFilter] = useState<NewsFilter>(DEFAULT_NEWS_FILTER);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<Confirm>(null);
+  const epoch = useRef(0);
+  const newCount = useRef(0);
   const uploadClub = useRef(club.id);
-  const dirty = !!editing && JSON.stringify(editing.draft) !== editing.original;
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const lastShown = useRef<NewsEntry | null>(null);
+  const dialog = useEditorDialog<NewsSectionId>();
+
+  const changed = useMemo(() => changedEntries(entries), [entries]);
+  const locked = busy || uploading || !!pending;
+  const unsaved = changed.length > 0 || !!pending;
 
   useEffect(() => {
     let active = true;
+    epoch.current += 1;
     uploadClub.current = club.id;
-    setArticles(null); setEditing(null); setPending(null); setMessage(""); setFailed(false);
+    setArticles(null); setEntries({}); setProblems({}); setPending(null); setBusy(false); setUploading(false); setMessage(""); setFailed(false);
+    setStatus(""); setConflict(null); setSaveFailed(false); setInvalid(null); setOpenKey(null); setLoadedClubId(null); setShared(null);
     if (club.presentationTemplateKey !== "cinematic@2") return;
     Promise.all([loadNewsEditor(), fetchClubIdentity(club.id), fetchCinematicHomepageContent(club.id)]).then(([loaded, identity, homepage]) => {
       if (!active) return;
-      setArticles(loaded.articles); setTimeZone(identity?.timeZone || "UTC"); setShared(homepage);
+      setArticles(loaded.articles); setTimeZone(identity?.timeZone || "UTC"); setShared(homepage); setLoadedClubId(club.id);
     }).catch(error => { if (active) { setMessage(error instanceof Error ? error.message : "Unable to load News."); setFailed(true); } });
-    return () => { active = false; };
+    return () => { active = false; epoch.current += 1; };
   }, [club.id, club.presentationTemplateKey]);
 
   useEffect(() => {
-    if (!dirty && !pending) return;
+    if (!unsaved) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, pending]);
+  }, [unsaved]);
 
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader title="News" description="This website design does not publish News." /></AdminPage>;
-  const locked = busy || uploading || !!pending;
+  const cards = useMemo(() => (articles ? newsCards(articles, entries, timeZone) : []), [articles, entries, timeZone]);
+  const visibleCards = useMemo(() => filterNewsCards(cards, filter), [cards, filter]);
 
-  const open = (article: NewsEditorArticle | null) => {
-    const draft = article ? newsDraftFromArticle(article, timeZone) : emptyNewsDraft(newsInstantToLocal(new Date().toISOString(), timeZone));
-    setEditing({ article, draft, original: JSON.stringify(draft) }); setProblems({}); setMessage(""); setFailed(false);
+  const clearNotices = () => { setMessage(""); setFailed(false); setSaveFailed(false); setInvalid(null); };
+  const replaceArticle = (article: NewsEditorArticle) => setArticles(current => [...(current ?? []).filter(item => item.id !== article.id), article]);
+  const dropEntry = (key: string) => {
+    setEntries(current => { const { [key]: _gone, ...rest } = current; return rest; });
+    setProblems(current => { const { [key]: _gone, ...rest } = current; return rest; });
   };
-  const update = (patch: Partial<NewsDraft>) => {
-    setEditing(current => current && { ...current, draft: { ...current.draft, ...patch } });
-    setProblems(current => { const next = { ...current }; for (const key of Object.keys(patch)) delete next[key as keyof NewsDraft]; return next; });
-  };
-  const replaceArticle = (article: NewsEditorArticle) => setArticles(current => {
-    const others = (current ?? []).filter(item => item.id !== article.id);
-    return [...others, article].sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt) || a.id.localeCompare(b.id));
-  });
 
-  async function send(request: NewsArticleSave, done: string) {
-    setPending(request); setBusy(true); setMessage("Saving…"); setFailed(false);
-    const result = await saveNewsArticle(request);
-    setBusy(false);
-    if (result.status === "committed") {
-      setPending(null); replaceArticle(result.result.article); setMessage(done);
-      return result.result.article;
-    }
-    if (result.status === "uncertain") { setMessage(result.message); setFailed(true); return null; }
-    setPending(null); setMessage(result.message); setFailed(true);
-    return null;
+  function open(card: NewsCardItem, event?: MouseEvent<HTMLElement>) {
+    if (locked || !card.article && !entries[card.key]) return;
+    if (card.article) setEntries(current => (current[card.key] ? current : { ...current, [card.key]: entryForArticle(card.article!, timeZone) }));
+    setOpenKey(card.key);
+    dialog.openSection("details", event);
   }
-
-  async function save() {
-    if (!editing || locked && !pending) return;
-    let request = pending;
-    if (!request) {
-      const built = newsSaveRequest(editing.draft, editing.article, timeZone, crypto.randomUUID());
-      if (!built.ok) { setProblems(built.problems); setMessage("Fix the highlighted fields before saving."); setFailed(true); return; }
-      request = built.request;
-    }
-    const saved = await send(request, editing.article ? "Article saved." : "Article added to News.");
-    if (saved) setEditing(null);
-  }
-
-  async function cancel(confirmed = false) {
-    if (!editing || locked) return;
-    if (dirty && !confirmed) { setConfirming({ kind: "cancel" }); return; }
-    await discardUnsavedCover(editing.draft.coverAssetId, editing.article);
-    setEditing(null); setProblems({}); setMessage(""); setFailed(false);
-  }
-
-  async function setRemoved(article: NewsEditorArticle, remove: boolean, confirmed = false) {
+  function addArticle(event: MouseEvent<HTMLButtonElement>) {
     if (locked) return;
-    if (remove && !confirmed) { setConfirming({ kind: "remove", article }); return; }
-    await send({ operationId: crypto.randomUUID(), action: remove ? "remove" : "restore", articleId: article.id, expectedRevision: article.revision },
-      remove ? "Article removed from the site. Restore it any time." : "Article restored to the site.");
+    newCount.current += 1;
+    const key = `new-${newCount.current}`;
+    setEntries(current => ({ ...current, [key]: entryForNew(key, newsInstantToLocal(new Date().toISOString(), timeZone)) }));
+    clearNotices();
+    setOpenKey(key);
+    dialog.openSection("details", event);
+  }
+  /** Closing keeps edits. An article opened and left alone, or a new one left empty, drops out of the edited set. */
+  function closeDialog() {
+    dialog.close();
+    const key = openKey;
+    if (!key) return;
+    const entry = entries[key];
+    if (entry) lastShown.current = entry;
+    if (entry && !entryChanged(entry)) dropEntry(key);
   }
 
-  async function uploadCover(files: FileList | null) {
-    if (!files?.[0] || !editing || locked) return;
-    const file = files[0], clubId = club.id, previous = editing.draft.coverAssetId, saved = editing.article;
-    setUploading(true); setMessage(""); setFailed(false);
+  const entry = openKey ? entries[openKey] ?? (lastShown.current?.key === openKey ? lastShown.current : null) : null;
+  if (entry && openKey && entries[openKey]) lastShown.current = entries[openKey];
+
+  function update(patch: Partial<NewsDraft>) {
+    if (locked || !openKey) return;
+    const key = openKey;
+    setEntries(current => current[key] ? { ...current, [key]: { ...current[key], draft: { ...current[key].draft, ...patch } } } : current);
+    setProblems(current => {
+      if (!current[key]) return current;
+      const next = { ...current[key] };
+      for (const field of Object.keys(patch)) delete next[field as keyof NewsDraft];
+      return { ...current, [key]: next };
+    });
+    setMessage(""); setFailed(false); setSaveFailed(false); setInvalid(null);
+  }
+
+  async function uploadCover(file: File) {
+    if (!entry || locked) return;
+    const clubId = club.id, previous = entry.draft.coverAssetId, saved = entry.article;
+    setUploading(true); clearNotices(); setStatus("Adding your photo…");
     try {
       const client = createClient(), path = `covers/${crypto.randomUUID()}-${file.name}`;
       const result = await client.storage.from("news").upload(path, file);
@@ -128,86 +159,241 @@ export default function CinematicNewsEditor() {
       const publicResult = client.storage.from("news").getPublicUrl(path);
       if (publicResult.error || !publicResult.data.publicUrl) throw new Error("Could not prepare the photo.");
       if (uploadClub.current !== clubId) return;
-      update({ coverAssetId: result.data.assetId, coverUrl: publicResult.data.publicUrl });
+      const key = entry.key;
+      setEntries(current => current[key] ? { ...current, [key]: { ...current[key], draft: { ...current[key].draft, coverAssetId: result.data.assetId, coverUrl: publicResult.data.publicUrl } } } : current);
+      setStatus("Photo ready. Save to use it.");
       await discardUnsavedCover(previous, saved);
     } catch (error) { if (uploadClub.current === clubId) { setMessage(error instanceof Error ? error.message : "Could not upload the photo."); setFailed(true); } }
     finally { if (uploadClub.current === clubId) setUploading(false); }
   }
-
   async function removeCover() {
-    if (!editing || locked) return;
-    const previous = editing.draft.coverAssetId;
+    if (!entry || locked) return;
+    const previous = entry.draft.coverAssetId;
     update({ coverAssetId: null, coverUrl: "" });
-    await discardUnsavedCover(previous, editing.article);
+    await discardUnsavedCover(previous, entry.article);
   }
 
-  const field = (key: keyof NewsDraft, label: string, control: ReactNode, hint?: string) => <label className="block min-w-0">
-    <span className={ADMIN_LABEL_CLASS}>{label}</span>{control}
-    {hint && <span className={kit.hint}>{hint}</span>}
-    {problems[key] && <span className={kit.error} role="alert">{problems[key]}</span>}
-  </label>;
-  const text = (key: "cardHeading" | "title" | "subtitle" | "coverAlt" | "actionLabel" | "actionHref", label: string, max: number, hint?: string) => editing &&
-    field(key, label, <input className={ADMIN_INPUT_CLASS} disabled={locked} value={editing.draft[key]} maxLength={max} aria-invalid={!!problems[key]} onChange={event => update({ [key]: event.target.value })} />, hint);
+  /** Sends one request. Resolves true when the server committed it; otherwise the notices say why. */
+  async function sendItem(item: NewsSaveItem, generation: number): Promise<boolean> {
+    setPending(item);
+    const result = await saveNewsArticle(item.request);
+    if (generation !== epoch.current) return false;
+    if (result.status === "committed") {
+      replaceArticle(result.result.article);
+      if (item.request.action === "save") dropEntry(item.key);
+      setPending(null);
+      return true;
+    }
+    if (result.status === "uncertain") { setFailed(true); setMessage(`“${item.title}” could not be confirmed. Retry the same save: it won’t publish twice.`); return false; }
+    setPending(null);
+    if (result.status === "conflict") { setConflict({ key: item.key, title: item.title }); setFailed(true); setMessage(`“${item.title}” was changed elsewhere. Your edits are not lost.`); }
+    else { setSaveFailed(true); setFailed(true); setMessage(`“${item.title}”: ${result.message}`); }
+    return false;
+  }
 
-  const draft = editing?.draft;
+  /**
+   * The page Save. Each edited article goes through the same save call and receipt it always had, one after
+   * another; the first one that fails stops the run and is named. Articles already saved stay saved.
+   */
+  async function saveAll(): Promise<boolean> {
+    if (busy || uploading || !articles) return false;
+    const rest = pending ? (pending.request.action === "save" ? changed.filter(item => item.key !== pending.key) : []) : changed;
+    const plan = buildSavePlan(rest, cards.map(card => card.key), timeZone, () => crypto.randomUUID());
+    if (!plan.ok) {
+      setProblems(current => ({ ...current, [plan.key]: plan.problems }));
+      setInvalid({ key: plan.key, title: plan.title }); setSaveFailed(true);
+      return false;
+    }
+    const items = [...(pending ? [pending] : []), ...plan.items];
+    if (!items.length) return true;
+    const generation = epoch.current;
+    clearNotices(); setConflict(null); setBusy(true); setStatus(`Saving ${plural(items.length, "article", "articles")}…`);
+    let done = 0;
+    for (const item of items) {
+      if (!(await sendItem(item, generation))) {
+        if (generation === epoch.current) {
+          setBusy(false);
+          if (done) setMessage(current => `Saved ${done} of ${items.length}. ${current}`);
+        }
+        return false;
+      }
+      done += 1;
+    }
+    if (generation !== epoch.current) return false;
+    setBusy(false);
+    const only = items.length === 1 ? items[0] : null;
+    const text = only?.request.action === "remove" ? "Article removed from the site. Restore it any time."
+      : only?.request.action === "restore" ? "Article restored to the site."
+      : only ? (only.request.action === "save" && only.request.articleId ? "Article saved." : "Article added to News.") : `${items.length} articles saved.`;
+    setMessage(items.every(item => item.request.action === "save") ? "" : text); setStatus(text);
+    return true;
+  }
+
+  async function setRemoved(card: NewsCardItem, remove: boolean, confirmed = false) {
+    const article = card.article;
+    if (locked || !article) return;
+    if (remove && !confirmed) { setConfirm({ kind: "remove", card }); return; }
+    const generation = epoch.current;
+    clearNotices(); setConflict(null); setBusy(true);
+    const item: NewsSaveItem = { key: article.id, title: card.title, request: { operationId: crypto.randomUUID(), action: remove ? "remove" : "restore", articleId: article.id, expectedRevision: article.revision } };
+    const entryOfArticle = entries[article.id];
+    const ok = await sendItem(item, generation);
+    if (generation !== epoch.current) return;
+    setBusy(false);
+    if (!ok) return;
+    if (remove && entryOfArticle) { dropEntry(article.id); await discardUnsavedCover(entryOfArticle.draft.coverAssetId, article); }
+    const text = remove ? "Article removed from the site. Restore it any time." : "Article restored to the site.";
+    setMessage(text); setStatus(text);
+  }
+
+  async function discardEntry(card: NewsCardItem) {
+    if (locked) return;
+    const target = entries[card.key];
+    if (!target) return;
+    dropEntry(card.key);
+    await discardUnsavedCover(target.draft.coverAssetId, target.article);
+  }
+
+  /** Discard asks first when there are unsaved edits (the same decision the old editor's confirm made). */
+  function requestDiscard() {
+    if (busy || uploading) return;
+    if (pending) { setFailed(true); setMessage("Retry the same save before discarding your edits, so nothing is lost."); return; }
+    if (changed.length) setConfirm({ kind: "reload" });
+    else void reload();
+  }
+  async function reload(keepEdits = false) {
+    if (locked) return;
+    const generation = epoch.current;
+    setBusy(true);
+    try {
+      const loaded = await loadNewsEditor();
+      if (generation !== epoch.current) return;
+      if (keepEdits) {
+        const byId = new Map(loaded.articles.map(article => [article.id, article]));
+        setArticles(loaded.articles);
+        setEntries(current => Object.fromEntries(Object.entries(current).map(([key, item]) => {
+          const latest = item.article ? byId.get(item.article.id) : null;
+          return [key, latest ? { ...item, article: latest, original: JSON.stringify(newsDraftFromArticle(latest, timeZone)) } : item];
+        })));
+        setMessage("Latest articles loaded. Your edits were kept."); setFailed(false);
+      } else {
+        const covers = changed.map(item => discardUnsavedCover(item.draft.coverAssetId, item.article));
+        setArticles(loaded.articles); setEntries({}); setProblems({}); setMessage(""); setFailed(false);
+        await Promise.all(covers);
+      }
+      setConflict(null); setSaveFailed(false); setInvalid(null);
+    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to reload News."); } }
+    finally { if (generation === epoch.current) setBusy(false); }
+  }
+
+  const saveAction = useSaveState({
+    isDirty: unsaved,
+    onSave: async () => { if (!(await saveAll())) throw new Error("News was not saved."); },
+  });
+  const latestSave = useRef(saveAll);
+  latestSave.current = saveAll;
+  useUnsavedGuard(articles ? {
+    dirty: unsaved, edited: PAGE, onSave: () => latestSave.current(),
+    onDiscard: () => {
+      if (busy || uploading || pending) throw new Error("A save is still being confirmed.");
+      for (const item of changed) void discardUnsavedCover(item.draft.coverAssetId, item.article);
+      setEntries({}); setProblems({}); clearNotices(); setConflict(null);
+    },
+  } : undefined);
+
+  const pageState = derivePageSaveState(saveAction.state, newsPageFailure({ pending: !!pending, conflict: !!conflict, saveFailed }));
+  const loading = !articles || loadedClubId !== club.id;
+  const live = (articles ?? []).filter(article => !article.removedAt).length;
+  const removed = (articles ?? []).length - live;
+
+  if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={PAGE} breadcrumb={CRUMBS} description="This website design does not publish News.">{null}</PageFrame>;
+
+  const notice = (message || invalid || conflict) ? <div className={styles.notice} data-news-notice="">
+    {invalid && <ValidationMessage live="assertive" title={`“${invalid.title}” needs a few fixes before saving.`}>
+      Fix the highlighted fields, then press Save again. Nothing was sent.
+      <span className={styles.noticeActions}>
+        <button type="button" className="admin-press" onClick={event => { const card = cards.find(item => item.key === invalid.key); if (card) open(card, event); }}
+          style={{ minHeight: 44, padding: "0 14px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--secondary))" }}>Open “{invalid.title}”</button>
+      </span>
+    </ValidationMessage>}
+    {(message || conflict) && <EditorNotice failed={failed || !!conflict}>{message}
+      {conflict && <span className={styles.noticeActions}>
+        <button ref={keepRef} type="button" className="admin-press" disabled={locked} onClick={() => void reload(true)} style={{ minHeight: 44, padding: "0 14px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--secondary))" }}>Load latest and keep my edits</button>
+        <EditorSecondaryButton disabled={locked} onClick={requestDiscard}>Reload saved page</EditorSecondaryButton>
+      </span>}
+    </EditorNotice>}
+  </div> : null;
+
+  if (!articles && failed) return <PageFrame title={PAGE} breadcrumb={CRUMBS} description={DESCRIPTION}>
+    <EditorNotice failed>{message}</EditorNotice>
+    <div><EditorSecondaryButton disabled={false} onClick={() => location.reload()}>Try again</EditorSecondaryButton></div>
+  </PageFrame>;
+
+  const draft = entry?.draft;
+  const fieldsApi: NewsFieldsApi | null = entry && draft ? {
+    draft, slug: entry.article?.slug ?? null, timeZone, problems: problems[entry.key] ?? {}, locked, uploading,
+    update, upload: file => void uploadCover(file), removeCover: () => void removeCover(),
+  } : null;
   const previewInstant = draft ? newsLocalToInstant(draft.publishedLocal, timeZone) : null;
-  const preview = draft && {
-    id: editing!.article?.id ?? "new", slug: editing!.article?.slug ?? newsSlug(draft.title), publishedAt: previewInstant ?? new Date().toISOString(),
-    content: { category: draft.category, cardHeading: draft.cardHeading, title: draft.title || "Article title", subtitle: draft.subtitle, coverAlt: draft.coverAlt,
-      paragraphs: splitNewsParagraphs(draft.body), actionLabel: draft.actionLabel, actionHref: draft.actionHref },
-    cover: draft.coverUrl ? { url: draft.coverUrl, width: 2287, height: 1237 } : null,
-  };
+  const dialogTitle = !entry ? "Edit article" : entry.article ? `Edit “${entryTitle(entry)}”` : "New article";
 
-  return <AdminPage className={kit.page}>
-    <AdminPageHeader eyebrow="Public website" title="News" description="Write the articles shown on your News page. Saving shows an article on the site right away." actions={<EditorPageLink href="/news">Open News page</EditorPageLink>} />
-    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
-    {!articles ? <EditorLoading label={failed ? "News could not be loaded." : "Loading News…"} failed={failed} onRetry={() => location.reload()} />
-      : !editing || !draft ? <EditorSection title="Articles" aside={<EditorPrimaryButton disabled={locked} onClick={() => open(null)}>Add article</EditorPrimaryButton>}>
-        <NewsEditorList articles={articles} timeZone={timeZone} disabled={locked} onEdit={open} onRemove={article => void setRemoved(article, true)} onRestore={article => void setRemoved(article, false)} />
-        {pending && <div className={`${kit.toolbar} mt-5`}><EditorPrimaryButton onClick={() => void send(pending, "Saved.")}>Retry the same save</EditorPrimaryButton><span className={kit.note}>Waiting for the last save to be confirmed.</span></div>}
-      </EditorSection>
-      : <>
-        <EditorSection title={editing.article ? "Edit article" : "New article"} description={`Web address: /news/${editing.article?.slug ?? (newsSlug(draft.title) || "…")}${editing.article ? "" : " (set when you first save; it doesn’t change later)"}`}>
-          <div className="grid gap-5 md:grid-cols-2">
-            {field("category", "Category", <select className={ADMIN_INPUT_CLASS} disabled={locked} value={draft.category} onChange={event => update({ category: event.target.value as NewsDraft["category"] })}>
-              {NEWS_CATEGORIES.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}
-            </select>, "Sets the colour band on the card and the dot on the article.")}
-            {field("publishedLocal", "Date and time", <input type="datetime-local" className={ADMIN_INPUT_CLASS} disabled={locked} value={draft.publishedLocal} aria-invalid={!!problems.publishedLocal} onChange={event => update({ publishedLocal: event.target.value })} />, `Shown on the article. Club time (${timeZone}). Newest articles are listed first.`)}
-            {text("cardHeading", "Card heading", NEWS_LIMITS.cardHeading, "Short heading above the card on the News page, like “Foothill Transit”.")}
-            {text("title", "Title", NEWS_LIMITS.title)}
-            <div className="md:col-span-2">{text("subtitle", "Subtitle (optional)", NEWS_LIMITS.subtitle)}</div>
+  return <>
+    <ShimmerRegion loading={loading} loadingLabel="Loading News…" minHeight={480}
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={6} /></div>}>
+      <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/news" description={DESCRIPTION} state={pageState}
+        onSave={() => { void saveAction.save().catch(() => undefined); }}
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        <div className={styles.toolbar}>
+          <div className={styles.search}>
+            <span className={styles.searchIcon}><IconSearch size={18} aria-hidden="true" /></span>
+            <input type="search" className={ADMIN_INPUT_CLASS} placeholder="Search articles" aria-label="Search articles" value={filter.query} onChange={event => setFilter({ ...filter, query: event.target.value })} />
           </div>
-        </EditorSection>
-        <EditorSection title="Cover photo">
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="grid min-w-0 gap-3">
-              <div className={kit.imagePreview} data-shape="wide">
-                {draft.coverUrl ? <NativeImage src={draft.coverUrl} alt={draft.coverAlt || "Cover photo"} />
-                  : <span className={kit.imageEmpty}>No photo yet. The website shows a dark box here.</span>}
-              </div>
-              <FileUpload label={draft.coverAssetId ? "Replace photo" : "Upload photo"} accept="image/png,image/jpeg,image/webp" onUpload={files => void uploadCover(files)} uploading={uploading} />
-              {draft.coverAssetId && <div><EditorRemoveButton disabled={locked} onClick={() => void removeCover()}>Remove photo</EditorRemoveButton></div>}
-            </div>
-            {text("coverAlt", "Photo description", NEWS_LIMITS.coverAlt, "Describe the photo for people using screen readers.")}
-          </div>
-        </EditorSection>
-        <EditorSection title="Article">
-          {field("body", "Article text", <textarea className={`${ADMIN_INPUT_CLASS} min-h-72`} disabled={locked} value={draft.body} aria-invalid={!!problems.body} onChange={event => update({ body: event.target.value })} />, `Put each paragraph on its own line. Up to ${NEWS_LIMITS.paragraphs} paragraphs.`)}
-          <div className="mt-5 grid gap-5 md:grid-cols-2">
-            {text("actionLabel", "Button label (optional)", NEWS_LIMITS.actionLabel, "Shown under the article, like “Partner with us”.")}
-            {text("actionHref", "Button link", NEWS_LIMITS.actionHref, "A page on this site, like /community/partnership, or a full https:// link. Leave both blank for no button.")}
-          </div>
-        </EditorSection>
-        {preview && <EditorPreview title="What visitors see · this article" phone={phone} onPhoneChange={setPhone}>
-          <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="News article"><CinematicShell contentOnly initialContent={shared}><CinematicNewsArticle article={preview} timeZone={timeZone} /></CinematicShell></HomepagePreviewFrame>
-        </EditorPreview>}
-        <EditorSaveBar state={busy ? "saving" : "dirty"} onSave={() => void save()}
-          status={uploading ? "Uploading photo…" : pending ? "Waiting for save confirmation" : dirty ? "Unsaved changes" : ""}
-          primary={<EditorPrimaryButton busy={busy} disabled={uploading || (!dirty && !pending && !!editing.article)} onClick={() => void save()}>{busy ? "Saving…" : pending ? "Retry the same save" : editing.article ? "Save article" : "Add to News"}</EditorPrimaryButton>}>
-          <EditorSecondaryButton disabled={locked} onClick={() => void cancel()}>Cancel</EditorSecondaryButton>
-        </EditorSaveBar>
-      </>}
-    <AdminConfirmDialog open={confirming?.kind === "cancel"} title="Discard your changes?" confirmLabel="Discard changes" cancelLabel="Keep editing" destructive onCancel={() => setConfirming(null)} onConfirm={() => { setConfirming(null); void cancel(true); }}>Your changes to this article will be discarded.</AdminConfirmDialog>
-    <AdminConfirmDialog open={confirming?.kind === "remove"} title={`Remove “${confirming?.kind === "remove" ? confirming.article.content.title : ""}” from the site?`} confirmLabel="Remove article" destructive onCancel={() => setConfirming(null)} onConfirm={() => { const target = confirming?.kind === "remove" ? confirming.article : null; setConfirming(null); if (target) void setRemoved(target, true, true); }}>Visitors will no longer see this article. You can restore it later.</AdminConfirmDialog>
-  </AdminPage>;
+          <span className={styles.showRemoved}>
+            <span aria-hidden="true">Show removed</span>
+            <AdminSwitch label="Show removed articles" checked={filter.showRemoved} onCheckedChange={showRemoved => setFilter({ ...filter, showRemoved })} />
+          </span>
+          <button type="button" className={`admin-press ${styles.add}`} disabled={locked} onClick={addArticle} data-add-article=""><IconAdd size={16} aria-hidden="true" />Add article</button>
+        </div>
+        <div className={styles.chips} role="group" aria-label="Category">
+          {[{ key: "all" as const, label: "All", color: "" }, ...NEWS_CATEGORIES].map(item => <button key={item.key} type="button" className={`admin-press ${styles.chip}`} aria-pressed={filter.category === item.key}
+            onClick={() => setFilter({ ...filter, category: item.key })}>{item.color && <i style={{ background: item.color }} aria-hidden="true" />}{item.label}</button>)}
+        </div>
+        <p className={styles.countLine}><b>{live} on the site</b>{removed ? ` · ${removed} removed` : ""} · newest first</p>
+        {visibleCards.length
+          ? <NewsCards cards={visibleCards} shared={shared} timeZone={timeZone} locked={locked} onEdit={(card, event) => open(card, event)}
+            onRemove={card => void setRemoved(card, true)} onRestore={card => void setRemoved(card, false)}
+            onDiscard={card => setConfirm({ kind: "discard", card })} />
+          : <div className={styles.empty}>{cards.length ? <p>No articles match.</p> : <p>No articles yet. The News page shows “News is coming soon.” until you add one.</p>}</div>}
+      </PageFrame>
+    </ShimmerRegion>
+    <p className={styles.srOnly} role="status" data-news-status="">{status}</p>
+    <EditorDialog open={dialog.open} onClose={closeDialog} title={dialogTitle} mode="split" returnFocusRef={dialog.returnFocusRef}
+      footerNote="Edits stay on the page until you press Save. Saving shows the article on the site right away."
+      previewHint="The article as visitors see it"
+      sections={NEWS_SECTIONS.map(section => ({
+        id: section.id, title: section.title,
+        summary: !draft ? undefined : section.id === "details" ? `${newsCategory(draft.category).label}${draft.cardHeading ? ` · ${draft.cardHeading}` : ""}`
+          : section.id === "photo" ? (draft.coverUrl ? "Photo added" : "No photo yet") : plural(draftParagraphs(draft).length, "paragraph", "paragraphs"),
+      }))}
+      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as NewsSectionId)}
+      renderSection={id => dialog.open && fieldsApi ? <NewsArticleFields api={fieldsApi} id={id as NewsSectionId} /> : null}
+      renderPreview={() => dialog.open && entry && draft ? <div className={styles.livePreview}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="News article">
+          <CinematicShell contentOnly initialContent={shared}>
+            <CinematicNewsArticle timeZone={timeZone} article={previewArticle({ key: entry.key, draft, publishedAt: previewInstant ?? new Date().toISOString() }, entry.article?.slug ?? "preview") as NewsPublicArticle} />
+          </CinematicShell>
+        </HomepagePreviewFrame></div> : null} />
+    <AdminConfirmDialog open={confirm?.kind === "reload"} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
+      onCancel={() => setConfirm(null)} onConfirm={() => { setConfirm(null); void reload(); }}>
+      Discard unsaved News edits and load the saved page?
+    </AdminConfirmDialog>
+    <AdminConfirmDialog open={confirm?.kind === "discard"} title="Discard your changes?" confirmLabel="Discard changes" cancelLabel="Keep editing" destructive
+      onCancel={() => setConfirm(null)} onConfirm={() => { const card = confirm?.kind === "discard" ? confirm.card : null; setConfirm(null); if (card) void discardEntry(card); }}>
+      Your changes to this article will be discarded.
+    </AdminConfirmDialog>
+    <AdminConfirmDialog open={confirm?.kind === "remove"} title={`Remove “${confirm?.kind === "remove" ? confirm.card.title : ""}” from the site?`} confirmLabel="Remove article" cancelLabel="Keep article" destructive
+      onCancel={() => setConfirm(null)} onConfirm={() => { const card = confirm?.kind === "remove" ? confirm.card : null; setConfirm(null); if (card) void setRemoved(card, true, true); }}>
+      Visitors will no longer see this article and its web address stops working. You can restore it later.{confirm?.kind === "remove" && confirm.card.changed ? " Your unsaved edits to it will be discarded." : ""}
+    </AdminConfirmDialog>
+  </>;
 }
