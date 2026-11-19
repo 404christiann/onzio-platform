@@ -4,9 +4,10 @@
   (donationware) for launch with no receipt on file. The PR 151 launch-checklist gate is closed as an
   accepted risk. Record and exit plan: `docs/rose-city-2027-fonts.md`, "LEMON MILK launch decision".
 - **Fallback check:** LEMON MILK is used in one place, the cinematic footer club name
-  (`.footer-brand strong`, shown only when no footer logo is set). Its stack is `'LEMON MILK', sans-serif`,
-  so removing the font falls back to generic sans-serif, not Figtree. Adding `'CinematicFigtree'` is a
-  one-line `components/cinematic` change that needs Christian's approval.
+  (`.footer-brand strong`, shown only when no footer logo is set). Its stack now ends in
+  `'CinematicFigtree', sans-serif` (one-line `components/cinematic/cinematic.css` change, approved by
+  Christian 2026-11-19), and `tests/contracts/cinematic-fonts.test.ts` fails if any LEMON MILK or Avenir
+  stack loses that fallback.
 - **Follow-up:** buy the LEMON MILK license and record the receipt in the fonts doc.
 
 ## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)

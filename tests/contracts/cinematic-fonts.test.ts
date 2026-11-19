@@ -65,6 +65,22 @@ describe("cinematic fonts", () => {
     for (const { stack } of heavy) expect(stack).toBe("'CinematicAvenirHeavy','CinematicFigtree',sans-serif");
   });
 
+  it("every LEMON MILK stack falls back to CinematicFigtree, then sans-serif", () => {
+    const stacks = cinematicCss.flatMap(({ name, css }) =>
+      [...css.matchAll(/(font-family|font|--[\w-]+)\s*:\s*([^;{}]+)/g)]
+        .filter(([, property, value]) => property !== "font-family" || !/src\s*:/.test(value))
+        .filter(([, , value]) => /lemon\s*milk/i.test(value))
+        // The family list starts at the first family; for the font shorthand that is LEMON MILK itself.
+        .map(([, property, value]) => ({ name, property, stack: (property === "font" ? value.slice(value.search(/['"]?lemon\s*milk/i)) : value).trim() })),
+    ).filter(({ property, stack }) => !(property === "font-family" && familyList(stack).length === 1 && /^lemon milk$/i.test(familyList(stack)[0])));
+    // The one use today is the cinematic footer club name (.footer-brand strong).
+    expect(stacks.length).toBeGreaterThanOrEqual(1);
+    for (const { name, stack } of stacks) {
+      const families = familyList(stack);
+      expect(families.slice(-2), `${name}: ${stack}`).toEqual(["CinematicFigtree", "sans-serif"]);
+    }
+  });
+
   it("emits both Avenir faces from a valid https base", () => {
     const css = avenirFontFaceCss("https://example.supabase.co/storage/v1/object/public/fonts/");
     expect(css).toContain("font-family:'CinematicAvenir';src:url('https://example.supabase.co/storage/v1/object/public/fonts/Avenir-Medium.ttf') format('truetype')");
