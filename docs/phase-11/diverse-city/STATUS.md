@@ -1,5 +1,51 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4a-about: Rose City About editor on the editor kit (app code only)
+
+**Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4a-about, branch `claude/rc-admin-4a-about`.
+**Status:** `in_progress`: PR open (app code only; no migration, schema, validator, RPC or env change). Verified on `2b8c6e23`;
+the PR head is the same commit rebased onto `b2ecd39d` (skill-only #183). Waiting for onzio-bot and Christian's merge.
+
+**Completed work:**
+- `/admin/about` for a classic-portal `cinematic@2` club (Rose City) now uses `PageFrame`, `SectionCards` and an `EditorDialog`
+  (two panes on desktop, full-screen sheet on phone). Two public pages, About and Club Logo, behind a page switch: Save
+  publishes only the page you are on, and each POST to `/api/admin/about-editor` is byte-identical to the classic editor's
+  (`buildAboutSaveRequest` reuses `prepareAboutPageSave` and `aboutEditorSaveSchema`). Each page keeps its own draft, revision,
+  pending request and conflict flag. Leaving the admin still saves both pages (About first).
+- Reordering: Values keep move up/down; crest features and color cards gain "Move ... earlier" / "Move ... later" buttons
+  (no drag and drop; first card cannot go earlier, last cannot go later). Order already persisted, so no server change.
+- Story is now a paragraph list (`StringListField`), which fixes the stripped trailing Enter; the payload is still
+  `story_paragraphs[]`, blank paragraphs dropped and the rest trimmed on save as before.
+- The closing-button list is filtered client-side to the 13 routes the server accepts (`ABOUT_CONTENT_DESTINATIONS`).
+  A stored link outside the list shows "Current link unavailable" and blocks Save, as before.
+- Values and Closing hide only when empty, as today: the card says "Hidden while empty" / "Shown" (no switch).
+  `SectionCards` gained an optional `chip` prop for that; default output is unchanged.
+- Conflict now offers "Load latest and keep my edits" besides "Reload saved page"; field messages use the classic words.
+- Diverse City: `about/page.tsx` sends only `portal === "classic" && presentationTemplateKey === "cinematic@2"` to the new
+  editor; every other club and the reimagined portal render the classic `AboutEditor` as before. `uploadAboutImage` moved
+  unchanged to `lib/about-editor/upload.ts` and is shared.
+- Selector debt unchanged at 3/3 in `about/page.tsx`: the one dispatch replaced the `cinematic@2` ternary that chose the
+  "Crest page heading" panel title inside the classic-portal branch of the old editor. That branch was dead once Rose City's
+  classic portal goes to the new editor (only Diverse City-type clubs can reach it, and they take "Clubhouse heading").
+  The other two uses (reimagined portal) are kept. The new files never read the template key.
+- Not changed: the verify skill (the kit path wins over the About row's iframe `open`, so no skill change was needed).
+
+**Files changed:** `app/admin/(protected)/about/page.tsx`, `components/admin/about/rose-city/{RoseCityAboutEditor.tsx,
+AboutSectionFields.tsx,about-sections.ts,AboutEditor.module.css}` (new), `lib/about-editor/upload.ts` (new),
+`components/admin/ui/editor-kit/SectionCards.tsx` (optional `chip`), `components/admin/ui/editor-kit/listOps.ts` (`moveAt`),
+`tests/contracts/rc-admin-4a-about-editor.test.ts` (new, 24 tests: payload bytes vs the classic request, reorder changes only
+the order for values, features and color cards, button disabled states, rules and words, Diverse City dispatch), `HANDOFF.md`, this file.
+
+**Verification:** verify-rc-admin, `--route /admin/about --package RC-ADMIN-4a-about --touched about`, on `2b8c6e23`:
+gates 1-6 PASS (payload identity 13/13, save states clean/dirty/saving/saved/retry/conflict/discard, 390/1440 light/dark with
+0 new axe and CLS under 0.0001, reduced motion 0 offenders, typecheck + 4093 unit + 152 architecture, selector debt unchanged,
+Diverse City 8/8 pages identical). Report `test-results/rc-admin-verify/20261119-102845-RC-ADMIN-4a-about/report.html`
+(an earlier aborted start is `...100808...`).
+
+**Blockers / decisions:** none. Not run: a real-browser pass of reordering on a phone (covered by contract tests and the
+button states, not by a gate).
+**Exact next step:** onzio-bot review, then Christian merges.
+
 ## 2026-11-19 - RC-ADMIN-4-0a verify-rc-admin flake cleanup
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4-0a, branch `claude/rc-admin-4-0a` on `1177645d`.
