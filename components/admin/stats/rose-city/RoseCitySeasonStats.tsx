@@ -119,6 +119,7 @@ export function RoseCitySeasonStats({ seasonState, onViewChange, controlsRef, on
     saveLock.current = true;
     setSaving(true);
     setError(null);
+    let wrote = false;
     try {
       if (versions) {
         const latest = await readVersions(selectedSeasonId).catch((checkError: unknown) => { throw new Error(checkError instanceof Error ? `Could not check for newer changes: ${checkError.message}` : "Could not check for newer changes. Your changes are still here."); });
@@ -127,9 +128,15 @@ export function RoseCitySeasonStats({ seasonState, onViewChange, controlsRef, on
           return false;
         }
       }
+      wrote = true;
       const { entries, join } = seasonSaveInput(players, stats, dirtyIds, seasonRowIds);
       const problem = await saveSeasonTotals(createClient(), selectedSeasonId, entries, join);
-      if (problem) { setFailure({ kind: "error", message: problem }); return false; }
+      if (problem) {
+        setFailure({ kind: "error", message: problem });
+        // The field and keeper writes are separate: one may have landed and moved its rows' `updated_at`. Learn the versions as they are now, or Try again would call our own partial write a conflict.
+        readVersions(selectedSeasonId).then(setVersions, () => setVersions(null));
+        return false;
+      }
       setSeasonRowIds(new Set(players.map(player => player.id)));
       setBaselineStats(stats);
       setFailure(null);
@@ -137,6 +144,7 @@ export function RoseCitySeasonStats({ seasonState, onViewChange, controlsRef, on
       readVersions(selectedSeasonId).then(setVersions, () => setVersions(null));
       return true;
     } catch (saveError: unknown) {
+      if (wrote) readVersions(selectedSeasonId).then(setVersions, () => setVersions(null));
       setFailure({ kind: "error", message: saveError instanceof Error ? saveError.message : "Failed to save season stats. Your changes are still here." });
       return false;
     } finally { saveLock.current = false; setSaving(false); }

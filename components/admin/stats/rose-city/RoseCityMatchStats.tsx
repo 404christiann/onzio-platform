@@ -172,12 +172,15 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
     return { rows: matchRowsFromData(players, fieldData, keeperData), versions: versionsFrom(fieldData, keeperData) };
   }
 
+  const learnVersions = (matchId: string) => { fetchLatest(matchId).then(latest => setVersions(latest.versions), () => setVersions(null)); };
+
   /** Whole-match save: a row for every player, like the classic editor. Before writing, it checks nobody saved this match since the page loaded. */
   async function handleSave(): Promise<boolean> {
     if (!statsReady || saving || saveLock.current || !selectedMatch || !hasChanges) return false;
     saveLock.current = true;
     setSaving(true);
     setError(null);
+    let wrote = false;
     try {
       if (versions) {
         const latest = await fetchLatest(selectedMatch).catch((checkError: unknown) => { throw new Error(checkError instanceof Error ? `Could not check for newer changes: ${checkError.message}` : "Could not check for newer changes. Your changes are still here."); });
@@ -186,19 +189,26 @@ export function RoseCityMatchStats({ seasonState, selectedMatchId, onSelectedMat
           return false;
         }
       }
+      wrote = true;
       const supabase = createClient();
       const { fieldRows, keeperRows } = buildMatchSaveRows(players, stats, selectedMatch);
       const [{ error: fieldError }, { error: keeperError }] = await Promise.all([
         fieldRows.length > 0 ? supabase.from("player_match_stats").upsert(fieldRows, { onConflict: "player_id,match_id" }) : Promise.resolve({ error: null }),
         keeperRows.length > 0 ? supabase.from("goalkeeper_match_stats").upsert(keeperRows, { onConflict: "player_id,match_id" }) : Promise.resolve({ error: null }),
       ]);
-      if (fieldError || keeperError) { setFailure({ kind: "error", message: fieldError?.message ?? keeperError?.message ?? "Unknown error" }); return false; }
+      if (fieldError || keeperError) {
+        setFailure({ kind: "error", message: fieldError?.message ?? keeperError?.message ?? "Unknown error" });
+        // The two writes are separate: one may have landed and moved its rows' `updated_at`. Learn the versions as they are now, or Try again would call our own partial write a conflict.
+        learnVersions(selectedMatch);
+        return false;
+      }
       setBaselineStats(stats);
       setFailure(null);
       // The save moved every row's `updated_at`; learn the new ones so the next save does not mistake this one for someone else's.
-      fetchLatest(selectedMatch).then(latest => setVersions(latest.versions), () => setVersions(null));
+      learnVersions(selectedMatch);
       return true;
     } catch (saveError: unknown) {
+      if (wrote) learnVersions(selectedMatch);
       setFailure({ kind: "error", message: saveError instanceof Error ? saveError.message : "Failed to save match stats. Your changes are still here." });
       return false;
     } finally {

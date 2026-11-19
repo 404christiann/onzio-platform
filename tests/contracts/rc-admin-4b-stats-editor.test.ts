@@ -231,10 +231,20 @@ describe("RC-ADMIN-4b Stats: stale-edit conflict and retry", () => {
     const match = source("components/admin/stats/rose-city/RoseCityMatchStats.tsx");
     expect(match.indexOf("changedSince(players.map")).toBeGreaterThan(0);
     expect(match.indexOf("changedSince(players.map")).toBeLessThan(match.indexOf('.upsert(fieldRows, { onConflict: "player_id,match_id" })'));
-    expect(match).toContain("fetchLatest(selectedMatch).then(latest => setVersions(latest.versions), () => setVersions(null))");
+    expect(match).toContain("fetchLatest(matchId).then(latest => setVersions(latest.versions), () => setVersions(null))");
     const season = source("components/admin/stats/rose-city/RoseCitySeasonStats.tsx");
     expect(season.indexOf("changedSince(dirtyIds")).toBeLessThan(season.indexOf("saveSeasonTotals(createClient()"));
     expect(season).toContain("readVersions(selectedSeasonId).then(setVersions, () => setVersions(null))");
+  });
+
+  it("a save that fails after writing learns the new row versions, so Try again is not called a conflict against our own partial write", () => {
+    const match = source("components/admin/stats/rose-city/RoseCityMatchStats.tsx");
+    const failed = match.slice(match.indexOf("if (fieldError || keeperError) {"), match.indexOf("setBaselineStats(stats);"));
+    expect(failed).toContain("learnVersions(selectedMatch)");
+    expect(match).toContain("if (wrote) learnVersions(selectedMatch)");
+    const season = source("components/admin/stats/rose-city/RoseCitySeasonStats.tsx");
+    expect(season.slice(season.indexOf("if (problem) {"), season.indexOf("setSeasonRowIds(new Set(players"))).toContain("readVersions(selectedSeasonId).then(setVersions");
+    expect(season).toContain("if (wrote) readVersions(selectedSeasonId)");
   });
 
   it("the page offers Try again after a failed save and the two conflict ways out", () => {
