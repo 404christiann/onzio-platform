@@ -20,7 +20,7 @@ Checked the creator/vendor pages on2026-10-13:
 - Avenir: [MyFonts / Linotype Avenir](https://www.myfonts.com/collections/avenir-font-linotype/), with [Avenir Pro65 Medium](https://www.myfonts.com/products/pro-65-medium-115678-avenir-368766/). For hosted live text choose the Webfonts license, appropriate license holder/domain and pageview allowance. A desktop license does not cover hosting font files. Do not infer the webfont price from the displayed starting desktop price. A licensed vendor download still needs a visual comparison against the approved Medium face before replacing this local-only source.
 - LEMON MILK v5.0: [Marsnev licensing guide](https://marsnev.com/buy-fonts/), [creator FAQ](https://marsnev.com/questions/) and [Donationware EULA](https://marsnev.com/wp-content/uploads/2026/09/Marsnev-Donationware-EULA-%E2%80%94-2025.pdf). The creator grants commercial use after donation, including web projects. Keep the PayPal receipt and EULA; identify LEMON MILK and the actual license holder in the donation note. The EULA restricts redistribution/modification and conditions website embedding on prevention of extraction; confirm the intended delivery method with the creator before publication if that condition is unclear. No donation, purchase or outbound message was performed. These files are the donationware version, not LEMON MILK Pro.
 
-Both archives supply usable font bytes; neither establishes the remaining commercial/webfont permissions. Publication remains pending license evidence and separate scoped launch approval.
+Both archives supply usable font bytes; neither establishes the remaining commercial/webfont permissions. Publication remains pending license evidence and separate scoped launch approval. (Superseded for launch by the Avenir decision of 2026-11-17 and the LEMON MILK decision of 2026-11-19 below.)
 
 ## Local verification
 
@@ -42,8 +42,8 @@ Christian confirmed Avenir during testing-preview preparation. The supplied
 Medium font is now included in the protected Vercel phone preview; its hosted
 bytes match the supplied local file. No new licensing receipt was inspected.
 The main checkout still keeps the supplied Avenir files out of Git and Vercel;
-production loads them from the onzio-fonts bucket (see Launch decision below). LEMON MILK receipt
-status is unchanged. See `rose-city-2027-phone-preview.md`.
+production loads them from the onzio-fonts bucket (see Launch decision below). LEMON MILK: accepted
+for launch without a receipt on 2026-11-19 (see LEMON MILK launch decision below). See `rose-city-2027-phone-preview.md`.
 
 ## Launch decision — 2026-11-17
 
@@ -51,4 +51,14 @@ On 2026-11-17 Christian knowingly accepted hosting the FontsGeek Avenir files fo
 
 - Exit plan: delete the two objects from the `onzio-fonts` bucket, or unset `NEXT_PUBLIC_FONT_BASE_URL` in Vercel production and redeploy (the value is baked in at build time). Either way the site falls back to Figtree, with no code change.
 - Follow-up: buy an Avenir webfont license (see Verified licensing paths above) and record the license holder, domain and receipt here, or switch fonts.
-- LEMON MILK is unchanged. Its commercial-use receipt is still open, and it is a launch gate in the PR 151 launch checklist.
+- LEMON MILK: see the LEMON MILK launch decision below.
+
+## LEMON MILK launch decision — 2026-11-19
+
+On 2026-11-19 Christian knowingly accepted commercial use of LEMON MILK (v5.0 donationware) for launch without a donation receipt or license on file. The PR 151 launch-checklist gate "LEMON MILK commercial-use receipt" is **closed as an accepted risk**, not satisfied.
+
+- **Where it is used (checked on `main` `9e1dee1c`):** exactly one place. `components/cinematic/cinematic.css` declares `@font-face 'LEMON MILK'` from the committed file `public/fonts/lemon-milk/LEMONMILK-BoldItalic.otf`, and one rule uses it: `.cinematic-site .footer-brand strong` (the club name in the cinematic footer). `CinematicFooter.tsx` renders that name only when the club has no footer logo image; with a footer logo set, LEMON MILK is not shown anywhere. The `--font-lemon-milk` variable and `.font-lemon-milk` class in `styles/globals.css` map to Geist or the academy heading font, not to LEMON MILK, and are not affected.
+- **Fallback, as built today:** the rule is `font: italic 700 1.5vw 'LEMON MILK', sans-serif`. If the LEMON MILK file is removed, the footer name falls back to the browser's generic `sans-serif` (for example Helvetica or Arial), **not** to Figtree. Every other Rose City font stack (`--body`, `--heavy`, roster) already lists `'CinematicFigtree'` before `sans-serif`.
+- **Exit plan:** delete the `@font-face 'LEMON MILK'` rule and the files in `public/fonts/lemon-milk/` (served from this app, not from a font URL or the `onzio-fonts` bucket), then redeploy. For the footer name to fall back to Figtree rather than generic sans-serif, the same change must make the stack `'LEMON MILK','CinematicFigtree',sans-serif` (or drop LEMON MILK from it). That is a one-line `components/cinematic` change and needs Christian's approval, like any public-site change.
+- **Exposure note:** all eight LEMON MILK OTFs are committed and publicly downloadable from `/fonts/lemon-milk/`, but only `LEMONMILK-BoldItalic.otf` is used.
+- **Follow-up:** buy the license (Marsnev donation or LEMON MILK Pro; see Verified licensing paths above) and record the license holder, domain and receipt here.
