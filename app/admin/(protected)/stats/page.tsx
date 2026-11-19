@@ -1,7 +1,5 @@
-import { Suspense } from "react";
-import { AdminStatsGroupsSkeleton } from "@/components/admin/AdminCompetitionSkeletons";
-import { CombinedStatsPage } from "@/components/admin/stats/CombinedStatsPage";
+import { StatsPageForClub } from "@/components/admin/stats/rose-city/RoseCityStatsSwitch";
 
 export default function StatsPage() {
-  return <Suspense fallback={<AdminStatsGroupsSkeleton label="Loading stats" />}><CombinedStatsPage /></Suspense>;
+  return <StatsPageForClub />;
 }
