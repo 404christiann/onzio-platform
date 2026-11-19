@@ -27,6 +27,7 @@ import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import { partnerPageState } from "@/components/admin/stadium/partner-page-state";
 import styles from "@/components/admin/stadium/PartnerPageParts.module.css";
 import { ChickFilASectionFields } from "./ChickFilASectionFields";
+import { DISCARD_CONFIRM } from "../editor-copy";
 import {
   CHICK_FIL_A_CARDS, buildChickFilASaveInput, changedChickFilACards, chickFilACardOnly, chickFilACardSummary, chickFilADirty,
   chickFilAFlag, chickFilAImageRules, chickFilAPreviewImages, chickFilAPreviewSlice, type ChickFilACardId,
@@ -249,7 +250,7 @@ export default function ChickFilAEditor() {
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>
           <CinematicShell contentOnly initialContent={shared}><CinematicChickFilA content={hydrateChickFilAContent(chickFilACardOnly(api.draft, id as ChickFilACardId), media, false)} purchase={purchase} /></CinematicShell>
         </HomepagePreviewFrame></div> : null} />}
-    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+    <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {PAGE} edits and load the saved page?
     </AdminConfirmDialog>

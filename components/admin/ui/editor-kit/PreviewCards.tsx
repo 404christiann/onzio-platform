@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
 import { Shimmer } from "../Shimmer";
 import { KIT_EDIT_PROPS } from "./kitEdit";
+import { scopePreviewIds } from "./scopePreviewIds";
 import { hasVisibilityControl, type SectionCardItem } from "./SectionCards";
 import styles from "./PreviewCards.module.css";
 
@@ -56,9 +57,19 @@ function useNearViewport(enabled: boolean) {
 
 function PreviewBox({ children, width, scale, lazy }: { children: ReactNode; width: number; scale: number; lazy: boolean }) {
   const { ref, near } = useNearViewport(lazy);
+  const scope = `pv${useId().replace(/[^a-zA-Z0-9]/g, "")}-`;
+  // The public components hardcode ids; one preview per card would repeat them across the admin page.
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !near) return;
+    scopePreviewIds(node, scope);
+    const observer = new MutationObserver(() => scopePreviewIds(node, scope));
+    observer.observe(node, { subtree: true, childList: true, attributes: true, attributeFilter: ["id", "aria-labelledby", "aria-describedby", "for", "href"] });
+    return () => observer.disconnect();
+  }, [ref, near, scope]);
   return (
     <div ref={ref} className={styles.box} aria-hidden="true" inert data-preview-box="" data-preview-mounted={near}>
-      {/* Placeholder under the preview: shown until it mounts, and while a consumer keeps the mounted content visibility:hidden until it settles (see the CSS). */}
+      {/* Placeholder under the preview: shown until it mounts, and while a consumer marks its mounted content data-preview-settling="true" until it settles (see the CSS). */}
       <Shimmer className={styles.placeholder} data-preview-placeholder="" />
       {near && (
         <div className={styles.scaled} style={{ "--preview-width": `${width}px`, "--preview-scale": scale } as CSSProperties}>
@@ -75,8 +86,8 @@ function PreviewBox({ children, width, scale, lazy }: { children: ReactNode; wid
  * footer holds the title, an unsaved-edits dot, the show/hide switch or the
  * "Always shown" chip, and Edit. The preview box has a fixed size and is
  * scaled with transform and clipped, so loading or editing a preview never
- * moves the page. Until a preview mounts (lazy) or settles (a consumer hiding
- * its content with visibility:hidden, like Stadium's SettledPreview), the box
+ * moves the page. Until a preview mounts (lazy) or settles (a consumer that hides
+ * its content and sets data-preview-settling="true", like Stadium's SettledPreview), the box
  * shows the kit's shimmer instead of an empty white box.
  */
 export function PreviewCards({

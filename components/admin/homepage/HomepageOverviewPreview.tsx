@@ -112,7 +112,7 @@ function PageFrame({ draft, videoSource, height, onBody, hidden }: { draft: Home
   const value = useMemo(() => ({ playback: false, draft, videoSource, selection: null, allowedPieces: PREVIEW_PIECES, select: () => undefined }), [draft, videoSource]);
   return <>
     <iframe ref={frame} title="Homepage preview" aria-hidden="true" tabIndex={-1} {...{ inert: true }} srcDoc={initialDocument.current}
-      style={{ width: OVERVIEW_DESIGN_WIDTH, height, visibility: hidden ? "hidden" : "visible" }} />
+      data-preview-settling={hidden ? "true" : undefined} style={{ width: OVERVIEW_DESIGN_WIDTH, height, visibility: hidden ? "hidden" : "visible" }} />
     {body && createPortal(
       <HomepagePreviewContext.Provider value={value}>
         <div data-homepage-preview="true" data-playback="false" onClickCapture={event => event.preventDefault()} onSubmitCapture={event => event.preventDefault()}>

@@ -288,7 +288,7 @@ describe("editor wiring", () => {
   });
   it("uses the page frame, preview cards, split dialog, unsaved guard, conflict actions and discard confirm", () => {
     for (const source of [foot, chick]) {
-      for (const name of ["PageFrame", "PreviewCards", 'mode="split"', "useUnsavedGuard", "partnerPageState", "PageFrameSkeleton", "PreviewCardsSkeleton", "Load latest and keep my edits", "Reload saved page", "Discard and reload", "saveAction.save()", "SettledPreview"]) expect(source, name).toContain(name);
+      for (const name of ["PageFrame", "PreviewCards", 'mode="split"', "useUnsavedGuard", "partnerPageState", "PageFrameSkeleton", "PreviewCardsSkeleton", "Load latest and keep my edits", "Reload saved page", "DISCARD_CONFIRM.confirmLabel", "saveAction.save()", "SettledPreview"]) expect(source, name).toContain(name);
       expect(source).not.toMatch(/onRetry=/);
     }
   });

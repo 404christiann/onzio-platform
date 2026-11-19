@@ -163,7 +163,7 @@ describe("Season Membership cards", () => {
     expect(html("heading")).toContain("<h1");
     expect(html("heading")).not.toContain("tp-pricing");
     expect(html("intro")).toContain("tp-copy");
-    expect(html("intro")).not.toContain("<h1");
+    expect(html("intro")).not.toContain("<h1>"); // the isolated card keeps only the sr-only h1 (RC-ADMIN-09)
     expect(html("pricing")).toContain("<table");
     expect(html("pricing")).not.toContain("tp-buy");
     expect(html("button")).toContain("tp-buy");
@@ -302,7 +302,7 @@ describe("editor wiring", () => {
     expect(shell).toContain("ticketPageSaveSchema(pageKey)");
   });
   it.each([["tickets", tickets], ["shell", shell]])("%s uses the page frame, preview cards, split dialog, conflict actions and the unsaved guard", (_name, source) => {
-    for (const name of ["PageFrame", "PreviewCards", 'mode="split"', "useUnsavedGuard", "editorPageState", "PageFrameSkeleton", "PreviewCardsSkeleton", "Load latest and keep my edits", "Reload saved page", "Discard and reload", "SettledPreview", "saveAction.save()"]) {
+    for (const name of ["PageFrame", "PreviewCards", 'mode="split"', "useUnsavedGuard", "editorPageState", "PageFrameSkeleton", "PreviewCardsSkeleton", "Load latest and keep my edits", "Reload saved page", "DISCARD_CONFIRM.confirmLabel", "SettledPreview", "saveAction.save()"]) {
       expect(source, name).toContain(name);
     }
   });

@@ -35,7 +35,7 @@
   contain-intrinsic-size: auto 190px;
 }
 
-/* Fills the fixed box, so showing or hiding it never changes layout. Reduced motion is handled by Shimmer (static fill). */
+/* Fills the fixed box, so showing or hiding it never changes layout. Reduced motion is handled by Shimmer (static fill, no sweep). A consumer that hides its content while it settles marks it data-preview-settling="true". */
 .box .placeholder {
   display: none;
   position: absolute;
@@ -44,7 +44,7 @@
 }
 
 .box[data-preview-mounted="false"] .placeholder,
-.box:has(.scaled [style*="visibility"][style*="hidden"]) .placeholder {
+.box:has(.scaled [data-preview-settling="true"]) .placeholder {
   display: block;
 }
 
