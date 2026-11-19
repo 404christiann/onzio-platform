@@ -1,9 +1,11 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import ClassicSeasonsPage from "@/components/admin/ClassicSeasonsPage";
+import RoseCitySeasonsPage from "@/components/admin/seasons/rose-city/RoseCitySeasonsPage";
 import { SeasonsHub } from "@/components/admin/reimagined/SeasonsHub";
 import { readAdminPortal } from "@/lib/admin-portal";
 import { getAdminRouteHref, isAdminRouteHiddenForClub } from "@/lib/admin-route-manifest";
+import { loadSeasonsList } from "@/lib/admin-seasons-list";
 import { loadSeasonsHub } from "@/lib/admin-seasons-data";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
@@ -20,6 +22,8 @@ import { createClient } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
+const ROSE_CITY_SLUG = "rose-city";
+
 export default async function SeasonsPage({
   searchParams,
 }: {
@@ -33,7 +37,26 @@ export default async function SeasonsPage({
     redirect("/admin/login?error=not_authorized");
   }
   const portal = await readAdminPortal(supabase, club.id);
-  if (portal.portal !== "reimagined") return <ClassicSeasonsPage />;
+  if (portal.portal !== "reimagined") {
+    // RC-ADMIN-4b-seasons: Rose City's classic admin lists seasons on the editor kit, keyed on the club's slug
+    // (not on its site design, as ADMIN_ROUTES_HIDDEN_BY_CLUB is). Every other club keeps the classic page.
+    if (club.slug !== ROSE_CITY_SLUG) return <ClassicSeasonsPage />;
+    const list = await loadSeasonsList(supabase, club.id);
+    if (list.status !== "ready") {
+      return (
+        <p role="alert" className="mx-auto max-w-[1120px] text-sm text-destructive">
+          Your seasons could not be loaded. Refresh the page to try again.
+        </p>
+      );
+    }
+    return (
+      <RoseCitySeasonsPage
+        seasons={list.seasons}
+        deleteStates={list.deleteStates}
+        hasStandings={!isAdminRouteHiddenForClub(club.slug, "standings")}
+      />
+    );
+  }
 
   // The same predicate the home and the classic shell use for content changes.
   const canMutateContent =

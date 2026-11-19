@@ -27,8 +27,9 @@ const seasonInsert = (payload: Record<string, unknown>) =>
   adminDataRequestSchema.safeParse({ table: "seasons", operation: "insert", columns: "id,label", payload, single: "single" });
 
 describe("where the hub runs", () => {
-  it("is the Seasons page for a reimagined club, and the old page, unchanged, for a classic one", () => {
-    expect(page).toContain('portal.portal !== "reimagined") return <ClassicSeasonsPage />');
+  it("is the Seasons page for a reimagined club, and the old page, unchanged, for a classic one (RC-ADMIN-4b-seasons: except Rose City, which has its own kit page)", () => {
+    expect(page).toContain('portal.portal !== "reimagined") {');
+    expect(page).toContain("if (club.slug !== ROSE_CITY_SLUG) return <ClassicSeasonsPage />");
     expect(classic).toContain("Create Next Season");
     expect(classic).toContain("does not change with the season");
     expect(page).not.toContain('redirect("/admin/schedule")');
