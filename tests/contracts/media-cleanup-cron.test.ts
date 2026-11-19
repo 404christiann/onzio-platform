@@ -76,21 +76,35 @@ describe("abandoned media cleanup cron", () => {
 
   it("removes abandoned staging media for an authorized invocation", async () => {
     process.env.CRON_SECRET = "local-cron-secret";
-    cleanup.mockResolvedValue({ inspected: 4, removed: 2, failed: 0 });
+    cleanup.mockResolvedValue({ inspected: 4, removed: 2, failed: 0, hasMore: false });
 
     const response = await GET(request("Bearer local-cron-secret"));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      data: { inspected: 4, removed: 2, failed: 0 },
+      data: { inspected: 4, removed: 2, failed: 0, hasMore: false },
       error: null,
     });
     expect(cleanup).toHaveBeenCalledOnce();
   });
 
+  it("logs deleted count and whether more remain", async () => {
+    process.env.CRON_SECRET = "local-cron-secret";
+    cleanup.mockResolvedValue({ inspected: 9, removed: 5, failed: 0, hasMore: true });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const response = await GET(request("Bearer local-cron-secret"));
+
+    expect(response.status).toBe(200);
+    expect(JSON.parse(String(log.mock.calls[0][0]))).toEqual({
+      event: "media.staging_cleanup", inspected: 9, removed: 5, failed: 0, hasMore: true,
+    });
+    log.mockRestore();
+  });
+
   it("returns a failure for incomplete cleanup so Vercel can alert", async () => {
     process.env.CRON_SECRET = "local-cron-secret";
-    cleanup.mockResolvedValue({ inspected: 4, removed: 1, failed: 1 });
+    cleanup.mockResolvedValue({ inspected: 4, removed: 1, failed: 1, hasMore: false });
 
     const response = await GET(request("Bearer local-cron-secret"));
 

@@ -1,5 +1,43 @@
 # Diverse City FC Status
 
+## 2026-11-18 - RC-ADMIN-SEC-01 staging cleanup deletes every abandoned upload
+
+**Agent/package:** Claude Code (nested Sonnet session, orchestrated), RC-ADMIN-SEC-01, branch
+`claude/rc-admin-sec-01-dc4ed0` on `574bf145`. **Status:** `in_progress`, PR open. It merges only on
+Christian's word. App code only: no migration, schema, RPC, storage-policy, data or production change.
+
+**Why:** from a read-only upload audit. `cleanupAbandonedStagingMedia` (`lib/media-cleanup.ts`) listed
+`onzio-upload-staging` by offset and deleted files one at a time mid-scan. Every delete pulled later
+files back into the page it had just read, so about half of each page was skipped (100 of 120 files,
+200 of 250 in tests), and a backlog could stay forever.
+
+**Completed work:**
+
+- Each folder is now listed completely before anything in it is deleted. Folders are walked after
+  their level's deletes, and deletes run in batches of 100 through the storage multi-path remove.
+  Failed batches are queued for retry as before.
+- Every run is capped: 2,000 files, 200 list calls and 40 seconds. The result reports `hasMore` when
+  files are left for the next run, and the cron route sets `maxDuration = 60`.
+- Eligibility is unchanged (older than 24 hours; the same prefixes, depth and protections).
+- The cron stays daily at `10:00 UTC`, because the project is on Vercel Hobby, which allows daily crons
+  only. `vercel.json` is unchanged.
+
+**Files changed:** `lib/media-cleanup.ts`, `app/api/cron/media-cleanup/route.ts`,
+`tests/contracts/media-cleanup-cron.test.ts`, new `tests/contracts/media-cleanup-staging.test.ts`,
+`HANDOFF.md` (the cleanup line).
+
+**Verification:** the new staging tests use a fake storage client whose listing shifts on delete, as
+the real API does.
+- Against the old code all 6 failed; with the fix all pass.
+- They prove every eligible file is deleted across 3 or more pages, ineligible and too-new files are
+  kept, batches respect the size limit, and the per-run bounds set `hasMore`.
+- `tsc` clean; unit 3741; architecture 152.
+
+**Blockers or unresolved decisions:** none. The quota, rate limit, staging reservation and orphan
+sweep are planned as RC-ADMIN-10a–10d and wait for Christian's OK.
+
+**Exact next step:** bot review; Christian decides the merge.
+
 ## 2026-11-18 - RC-ADMIN-03 Foothill Transit and Chick-fil-A on the Previews layout
 
 **Agent/package:** Claude Code (Sonnet worker W3, orchestrated), RC-ADMIN-03, branch `claude/rc-admin-03`

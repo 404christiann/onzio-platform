@@ -15077,7 +15077,10 @@ on 2026-07-28 and verified at `2026-07-29T01:37:37Z`.
   administrator and this closeout record is the release notice; no email was
   sent.
 - A daily abandoned-staging-media cleanup is defined for `10:00 UTC` in
-  `vercel.json` at `/api/cron/media-cleanup`. The route requires Vercel's
+  `vercel.json` at `/api/cron/media-cleanup` (the project is on Vercel Hobby, so
+  the cron stays daily). Since RC-ADMIN-SEC-01 each run is bounded (2,000 files,
+  200 list calls, 40 s, `maxDuration = 60`) and reports `hasMore` when files
+  remain for the next run. The route requires Vercel's
   `CRON_SECRET`, reports incomplete cleanup as HTTP 500, and exposes no provider
   error details. A fresh sensitive `CRON_SECRET` is configured for Production
   only. Vercel Cron Jobs is enabled and shows the installed path with schedule
