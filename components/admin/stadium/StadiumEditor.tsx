@@ -31,6 +31,7 @@ import {
   foothillPreviewSlice, foothillSectionOnly, foothillSectionSummary, type FoothillSectionId,
 } from "./foothill-sections";
 import { partnerPageState } from "./partner-page-state";
+import { DISCARD_CONFIRM } from "../editor-copy";
 import styles from "./PartnerPageParts.module.css";
 
 const recoverySchema = z.object({
@@ -271,7 +272,7 @@ export default function StadiumEditor() {
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>
           <CinematicShell contentOnly initialContent={shared}><CinematicStadium content={hydrateStadiumContent(foothillSectionOnly(api.draft, id as FoothillSectionId), media)} ticketing={ticketing} /></CinematicShell>
         </HomepagePreviewFrame></div> : null} />}
-    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+    <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {PAGE} edits and load the saved page?
     </AdminConfirmDialog>

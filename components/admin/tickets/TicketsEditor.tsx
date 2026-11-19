@@ -25,6 +25,7 @@ import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import styles from "@/components/admin/ticket-pages/ticket-editors.module.css";
 import "@/components/admin/homepage/homepage-editor.css";
 import { TicketsSectionFields, type TicketsFieldsApi } from "./TicketsSectionFields";
+import { DISCARD_CONFIRM } from "../editor-copy";
 import {
   TICKETS_SECTIONS, TICKETS_SECTION_IMAGES, buildTicketsSaveInput, changedTicketsSections, editorPageState, setTicketsFlag,
   ticketsSectionOnly, ticketsSectionShown, ticketsSectionSlice, ticketsSectionSummary, type TicketsSectionId,
@@ -256,7 +257,7 @@ export default function TicketsEditor() {
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>
           <div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}><CinematicTickets content={hydrateTicketsContent(ticketsSectionOnly(api.draft, id as TicketsSectionId), media, false)} /></CinematicShell></div>
         </HomepagePreviewFrame></div> : null} />}
-    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+    <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {PAGE} edits and load the saved page?
     </AdminConfirmDialog>

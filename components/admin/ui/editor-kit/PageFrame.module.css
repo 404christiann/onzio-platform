@@ -107,10 +107,14 @@
   color: hsl(var(--muted-foreground));
   font-size: .875rem;
   line-height: 1.5;
-  /* One line on desktop and two on a phone, always the same height, so the skeleton matches whatever the text says. */
+  /* Up to two lines at every width, always the same two-line height, so the skeleton matches whatever the text says. */
+  display: -webkit-box;
+  min-block-size: calc(.875rem * 1.5 * 2);
+  max-block-size: calc(.875rem * 1.5 * 2);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .openPage {
@@ -172,14 +176,6 @@
     font-size: 1.5rem;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .description {
-    display: -webkit-box;
-    min-block-size: calc(.875rem * 1.5 * 2);
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    white-space: normal;
   }
 
   .openPage {

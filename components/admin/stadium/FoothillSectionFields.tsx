@@ -7,7 +7,7 @@ import NativeImage from "@/components/ResilientNativeImage";
 import { EditorGroup, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import type { StadiumArtworkSlot, StadiumContent, StadiumCrop, StadiumPageContent } from "@/lib/stadium-content";
-import { applyFoothillCrop, foothillSectionTitle, FOOTHILL_FLAGS, type FoothillSectionId } from "./foothill-sections";
+import { applyFoothillCrop, cropPercentLabel, foothillSectionTitle, FOOTHILL_FLAGS, type FoothillSectionId } from "./foothill-sections";
 import { ActionButton, AlwaysShownRow, ReorderButtons, ShowRow, TextField } from "./PartnerPageParts";
 import styles from "./PartnerPageParts.module.css";
 
@@ -45,11 +45,14 @@ function ImageSlot({ api, slot }: { api: FoothillFieldsApi; slot: StadiumArtwork
   </EditorGroup>;
 }
 
+/** Shows the saved value rounded to one decimal. What the owner types is shown exactly and saved exactly; an untouched field never writes. */
 function CropField({ id, label, value, disabled, onChange }: { id: string; label: string; value: number; disabled: boolean; onChange: (percent: number) => void }) {
+  const [typed, setTyped] = useState<string | null>(null);
   return <div className={kit.field}>
     <label htmlFor={id}>{label} (%)</label>
-    <input id={id} type="number" inputMode="decimal" min={0} max={100} step={0.1} disabled={disabled} value={Number((value * 100).toFixed(4))}
-      onChange={event => { if (event.target.value) onChange(Number(event.target.value)); }} />
+    <input id={id} type="number" inputMode="decimal" min={0} max={100} step={0.1} disabled={disabled} value={typed ?? cropPercentLabel(value)}
+      onChange={event => { setTyped(event.target.value); if (event.target.value) onChange(Number(event.target.value)); }}
+      onBlur={() => setTyped(null)} />
   </div>;
 }
 
