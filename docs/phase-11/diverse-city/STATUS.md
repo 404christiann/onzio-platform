@@ -5,10 +5,11 @@
 **Agent/package:** Claude Code (Opus, RC-ADMIN wave 4 orchestrator), docs only, branch `claude/rc-lemon-milk-accepted` on `9e1dee1c`.
 **Status:** `done`, PR open.
 **Completed work:** recorded Christian's 2026-11-19 decision to launch with LEMON MILK without a receipt, next to the 2026-11-17 Avenir decision; closed the PR 151 gate as an accepted risk; checked every LEMON MILK use and its fallback.
-**Files changed:** `docs/rose-city-2027-fonts.md`, `HANDOFF.md`, this file.
+**Files changed:** `docs/rose-city-2027-fonts.md`, `HANDOFF.md`, this file, `components/cinematic/cinematic.css`, `tests/contracts/cinematic-fonts.test.ts`.
 **Verification:** `git grep -i lemon` over `app components lib styles packages public` on `9e1dee1c`: one `@font-face` and one rule (`.cinematic-site .footer-brand strong`, stack `'LEMON MILK', sans-serif`) in `components/cinematic/cinematic.css`; `CinematicFooter.tsx:40` renders it only without a footer logo. The `--font-lemon-milk` variable maps to other fonts. No code changed.
-**Blockers or unresolved decisions:** the fallback is generic sans-serif, not Figtree; making it Figtree is a one-line public-site CSS change that needs Christian's approval.
-**Exact next step:** Christian decides on the one-line fallback change; follow-up purchase of the LEMON MILK license.
+**Fallback fix (Christian approved 2026-11-19):** `components/cinematic/cinematic.css` footer stack is now `'LEMON MILK','CinematicFigtree',sans-serif`; `tests/contracts/cinematic-fonts.test.ts` gains a LEMON MILK fallback check (red before the fix, 8/8 after); font + architecture tests 160/160.
+**Blockers or unresolved decisions:** LEMON MILK is served from the repo (`public/fonts/lemon-milk/`), not the `onzio-fonts` bucket; Christian decides whether to move it. Render check at 390/1440 is blocked locally by the public-site hold.
+**Exact next step:** Christian's merge; post-launch, buy LEMON MILK and Avenir webfont licenses.
 
 ## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)
 
