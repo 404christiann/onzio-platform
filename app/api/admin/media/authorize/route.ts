@@ -10,6 +10,7 @@ import {
   describeMediaAuthorizationFailure,
   describeMediaRequestValidationFailure,
 } from "@/lib/media-diagnostics";
+import { describeMediaQuotaFailure, reserveMediaUpload } from "@/lib/media-quota";
 import { requireMediaRouteAuthorization } from "@/lib/media-route-auth";
 import { buildStoragePath } from "@/lib/storage-path";
 
@@ -30,6 +31,28 @@ export const dynamic = "force-dynamic";
  * or internal SQL is included.
  */
 function errorResponse(error: unknown) {
+  // Quota and rate refusals (RC-ADMIN-10b) carry their own status and a plain
+  // message for the upload banner. A failed check stops the upload (503).
+  const quota = describeMediaQuotaFailure(error);
+  if (quota) {
+    return NextResponse.json(
+      {
+        error: {
+          code: quota.code,
+          message: quota.message,
+          ...(quota.retryAfterSeconds
+            ? { retryAfterSeconds: quota.retryAfterSeconds }
+            : {}),
+        },
+      },
+      {
+        status: quota.status,
+        headers: quota.retryAfterSeconds
+          ? { "Retry-After": String(quota.retryAfterSeconds) }
+          : undefined,
+      },
+    );
+  }
   if (error instanceof ContractError) {
     const status = error.code === "AUTHENTICATION_REQUIRED" ? 401 : 403;
     return NextResponse.json(
@@ -109,6 +132,17 @@ export async function POST(request: Request) {
       assetId: uploadId,
       extension: sourceExtension,
     });
+    // Checks the club's quota and rate and records a one-time reservation
+    // before Storage signs anything. Throws, and signs nothing, on any refusal.
+    const reservation = await reserveMediaUpload({
+      clubId: club.id,
+      actorId: user.id,
+      uploadId,
+      surface: parsed.data.surface,
+      kind: parsed.data.kind,
+      stagingPath,
+      claimedSize: parsed.data.size,
+    });
     const { data: signedUpload, error: signedUploadError } =
       await supabase.storage
         .from("onzio-upload-staging")
@@ -128,7 +162,7 @@ export async function POST(request: Request) {
       mimeType: parsed.data.mimeType,
       claimedSize: parsed.data.size,
       stagingPath,
-      expiresAt: Date.now() + 5 * 60 * 1000,
+      expiresAt: reservation.expiresAt,
     };
     return NextResponse.json({
       uploadId,

@@ -3,6 +3,7 @@ import { ContractError } from "@/lib/contract-error";
 import { finalizeMediaRequestSchema } from "@/lib/media-api-contract";
 import { verifyMediaAuthorizationToken } from "@/lib/media-authorization-token";
 import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { MEDIA_RESERVATION_MESSAGES } from "@/lib/media-quota";
 import { requireMediaRouteAuthorization } from "@/lib/media-route-auth";
 
 export const runtime = "nodejs";
@@ -44,6 +45,10 @@ export async function POST(request: Request) {
         ? error.code
         : "MEDIA_FINALIZATION_FAILED";
     const status = code === "AUTHENTICATION_REQUIRED" ? 401 : 400;
-    return NextResponse.json({ error: { code } }, { status });
+    const message = MEDIA_RESERVATION_MESSAGES[code];
+    return NextResponse.json(
+      { error: message ? { code, message } : { code } },
+      { status },
+    );
   }
 }

@@ -1,3 +1,22 @@
+## 2026-11-18 - RC-ADMIN-10b: media upload quota, rate limit and one-time reservations (local only)
+
+- **Status:** `in_progress`: built and verified locally on `claude/rc-admin-10b` (from `574bf145`),
+  committed locally, rebased onto `9e563d79` after SEC-01 merged and re-verified. Not pushed, no PR,
+  production untouched. Next: the production migration gate, then Christian's merge.
+- **What:** migration `20261118200000_media_upload_quota.sql` adds per-club limits (defaults 2 GiB, 2,000
+  files, 60 per hour, 300 per day, 40 open, with an override table) and one-time upload reservations,
+  reached only through service-role RPCs.
+  - `/api/admin/media/authorize` reserves before signing and fails closed with 409/429/503 and plain
+    messages.
+  - Finalize consumes the reservation and refuses staged bytes larger than the claim.
+- **Verification:** media DB tests 84/84, full `test:db` 1318/1318, `test:unit` 3738/3738, `tsc`, `next
+  build` and `db:types:check` all pass. An end-to-end 11.45 MB 6000x4000 photo was stored as a 306,868
+  byte 2400x1600 WebP. A rate refusal over HTTP returned 429 with Retry-After.
+- **Order agreed with Christian (2026-11-18):** 10b, then 10c (the staging policy requires a reservation,
+  at least one day after 10b is live), then 10a (sponsor 30/10/6 and news 200 caps; slideshow constant
+  only), then 10d (orphan sweep, at least 7 days of dry run before enforce).
+- **Exact next step:** Christian's B1-b output for the 50% headroom check. Details in `STATUS.md`.
+
 ## 2026-11-18 - Rose City admin design phase: settled design and build order (design only)
 
 - **Status:** `design settled, not built`. No application code, no PR for the design, nothing pushed,

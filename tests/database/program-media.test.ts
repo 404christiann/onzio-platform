@@ -375,6 +375,21 @@ describe("program gallery media pipeline", () => {
         .from("onzio-upload-staging")
         .remove([stagingPath]);
     });
+    // RC-ADMIN-10b: finalize uses the one-time reservation authorize records.
+    const { data: reservation, error: reserveError } = await clients.service.rpc(
+      "reserve_media_upload",
+      {
+        p_club_id: CLUB_IDS.alpha,
+        p_actor_id: USER_IDS.adminAal2,
+        p_upload_id: uploadId,
+        p_surface: "programs",
+        p_kind: "photo",
+        p_staging_path: stagingPath,
+        p_claimed_size: bytes.length,
+      },
+    );
+    expect(reserveError).toBeNull();
+    expect(reservation).toMatchObject({ status: "reserved" });
 
     return publishAuthorizedMedia({
       version: 1,
