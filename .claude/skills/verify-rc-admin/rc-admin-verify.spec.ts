@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { KIT_ANY_FIELD_SELECTOR, KIT_DIALOG_SELECTOR, KIT_DONE_SELECTOR, KIT_EDIT_SELECTOR, KIT_ENABLED_FIELD_SELECTOR, KIT_LIST_SELECTOR, KIT_WAIT_MS, chooseOpenPath, firstMarkableIndex, isPhoneWidth, listProblems, retryLockCheck, sectionTryOrder, sheetBarProblems } from "./scripts/kit-path.mjs";
-import { SEASON_CREATE_BUTTON, gate3Plan, isAdminDataRead, isEditorSave, isMutating, stepsPass } from "./scripts/editors.mjs";
+import { ROSTER_SAVE_BUTTON, SEASON_CREATE_BUTTON, gate3Plan, isAdminDataRead, isEditorSave, isMutating, stepsPass } from "./scripts/editors.mjs";
 import { BUSY_SELECTOR, LOADING_TEXT, isEnvironmentNoise, savedColourProblems, waitUntilSettled } from "./scripts/settle.mjs";
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type Request } from "@playwright/test";
 
@@ -121,7 +121,7 @@ export const EDITORS: Editor[] = [
       const name = page.locator("#player-name");
       await expect(name).toBeVisible();
       await mark(name, "rcv");
-      await page.getByRole("dialog").getByRole("button", { name: /^Save( changes)?$/ }).click();
+      await page.getByRole("dialog").getByRole("button", { name: ROSTER_SAVE_BUTTON }).click();
     },
     lacks: { pageSave: "a player is saved from its own dialog; the stats tab's Save is not covered here" } },
   { key: "stats-match", route: "/admin/stats?view=match", save: /\/api\/admin\/data$/, ops: ["upsert"], tables: ["player_match_stats", "goalkeeper_match_stats"],

@@ -61,3 +61,6 @@ export const SEASON_CREATE_BUTTON = /^(?:Create Next Season|Create \d{4} season)
 export function isAdminDataRead({ method, pathname, body }) {
   return method === "POST" && pathname === ADMIN_DATA_PATH && parseBody(body)?.operation === "select";
 }
+
+/** The roster dialog's save button: "Save" / "Save changes" on main, "Save player" on Rose City's rebuilt roster dialog. Anchored. */
+export const ROSTER_SAVE_BUTTON = /^Save( changes| player)?$/;

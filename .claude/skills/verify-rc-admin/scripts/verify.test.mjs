@@ -679,3 +679,12 @@ test("4b-0-2: the kit field walk goes Back to the list before every section on a
   assert.match(goto, /back\.count\(\) && await back\.first\(\)\.isVisible\(\)\) await back\.first\(\)\.click\(\)/, "Back is pressed only when it is showing");
   assert.ok(goto.indexOf("isVisible()") < goto.indexOf("sectionButtons(page).nth(index).click()"), "Back comes before the section click");
 });
+
+test("4b-0-2: the roster row's dialog save button matches 'Save', 'Save changes' (main) and 'Save player' (Rose City's rebuilt dialog), and only those", async () => {
+  const { ROSTER_SAVE_BUTTON } = await import("./editors.mjs");
+  for (const label of ["Save", "Save changes", "Save player"]) assert.equal(ROSTER_SAVE_BUTTON.test(label), true, label);
+  for (const label of ["Save player now", "Save and close", "Saved", "Save changes and add another", "Autosave", "Save staff member", ""]) assert.equal(ROSTER_SAVE_BUTTON.test(label), false, label);
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  const row = spec.slice(spec.indexOf('{ key: "roster"'), spec.indexOf('{ key: "stats-match"'));
+  assert.match(row, /getByRole\("button", \{ name: ROSTER_SAVE_BUTTON \}\)/, "the roster row uses the shared matcher");
+});

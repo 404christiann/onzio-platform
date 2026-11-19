@@ -10,3 +10,4 @@ export function gate3Plan(editor: EditorShape | undefined): { applicable: boolea
 export function stepsPass(steps: Record<string, string> | undefined): boolean;
 export const SEASON_CREATE_BUTTON: RegExp;
 export function isAdminDataRead(request: SaveShape): boolean;
+export const ROSTER_SAVE_BUTTON: RegExp;

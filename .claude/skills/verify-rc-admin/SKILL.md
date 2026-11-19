@@ -127,7 +127,7 @@ Base URLs: `http://rose-city.localhost:<port>/admin/...`, `http://diverse-city.l
 | branding | /admin/branding | POST /api/admin/data, `upsert` on `site_branding` / `site_social_links` | `#footer-tagline` where the club shows one, else the first social link (a web address: `?rcv=<tag>` is added) |
 | members | /admin/members | POST /api/admin/members | no field: types `rcv-gate2@example.com` into "Administrator email" and presses "Add administrator" (the request is aborted, nobody is added) |
 | seasons | /admin/seasons | POST /api/admin/data, `insert` on `seasons` | no field: "Create Next Season" (classic) or "Create <year> season" (rebuilt) → confirm (aborted at the first write) |
-| roster | /admin/roster | POST /api/admin/data, `update` on `players` | no field: first `[data-player-id]` → Edit → "Name" → "Save changes" |
+| roster | /admin/roster | POST /api/admin/data, `update` on `players` | no field: first `[data-player-id]` → Edit → "Name" → "Save changes" (or "Save player" on the rebuilt dialog) |
 | stats-match | /admin/stats?view=match | POST /api/admin/data, `upsert` on `player_match_stats` / `goalkeeper_match_stats` | first match in the "Match" select, first player, first stat input (+1) → header Save |
 | stats-season | /admin/stats?view=season | POST /api/admin/data, `upsert` on the `*_season_stats` / `*_season_adjustments` tables | first player, first stat input (+1) → header Save |
 
