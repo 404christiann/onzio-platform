@@ -5,7 +5,7 @@ import { basename } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 import { logoContentSchema } from "@/lib/about-editor/contract";
 
@@ -54,7 +54,7 @@ async function main() {
     const stagingPath = buildStoragePath({ clubId, surface: "about", assetId: uploadId, extension: validated.extension });
     const upload = await client.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
     if (upload.error) throw upload.error;
-    const result = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface: "about", kind: "graphic", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+    const result = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface: "about", kind: "graphic", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
     if (result.idempotent) await client.storage.from("onzio-upload-staging").remove([stagingPath]);
     published[key] = { assetId: result.assetId, url: result.publicUrl, path: result.storagePath };
   }

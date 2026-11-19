@@ -5,7 +5,7 @@ import { basename } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 
 async function main() {
@@ -30,7 +30,7 @@ async function main() {
   const stagingPath = buildStoragePath({ clubId, surface: "homepage", assetId: uploadId, extension: validated.extension });
   const upload = await client.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
   if (upload.error) throw upload.error;
-  const published = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind: "photo", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+  const published = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind: "photo", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
   if (published.idempotent) await client.storage.from("onzio-upload-staging").remove([stagingPath]);
   const update = await db.from("homepage_revamp_content").update({ episode_poster_media_asset_id: published.assetId }).eq("club_id", clubId).eq("episode_poster_media_asset_id", before.data.episode_poster_media_asset_id).select("*").single();
   if (update.error) throw update.error;

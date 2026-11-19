@@ -8,7 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 import WebSocket from "ws";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 
 const clubId = "32ceba0b-4e25-52c2-bb6b-d82fb87637a7";
@@ -61,7 +61,7 @@ async function main() {
     const stagingPath = buildStoragePath({ clubId, surface: "homepage", assetId: uploadId, extension: validated.extension });
     const upload = await storage.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
     if (upload.error) throw upload.error;
-    const published = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind: "graphic", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+    const published = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface: "homepage", kind: "graphic", fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
     if (published.idempotent) await storage.storage.from("onzio-upload-staging").remove([stagingPath]);
 
     const protectedTables = ["about_page_content", "club_logo_page_content", "site_branding", "homepage_hero_content", "matches"];

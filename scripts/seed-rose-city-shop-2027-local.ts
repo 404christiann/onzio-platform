@@ -5,7 +5,7 @@ import { Client } from "pg";
 import WebSocket from "ws";
 import { createClient } from "@supabase/supabase-js";
 import { validateMediaUpload } from "@/lib/media-validation";
-import { publishAuthorizedMedia } from "@/lib/media-processing";
+import { publishWithReservation } from "@/scripts/lib/publish-with-reservation";
 import { buildStoragePath } from "@/lib/storage-path";
 import { cinematicShopContentSchema, APPROVED_SHOP_MAP_CROP, EMPTY_CINEMATIC_SHOP_CONTENT } from "@/lib/cinematic-shop-content";
 import { shopSectionSchema, shopPurchaseSchema } from "@/lib/shop-editor/contract";
@@ -45,7 +45,7 @@ async function main() {
       const stagingPath = buildStoragePath({ clubId, surface: "shop", assetId: uploadId, extension: validated.extension });
       const upload = await client.storage.from("onzio-upload-staging").upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
       if (upload.error) throw new Error(`Cannot stage ${slot}`);
-      const result = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface: "shop", kind: input.kind, fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+      const result = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface: "shop", kind: input.kind, fileName: basename(input.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
       if (result.idempotent) await client.storage.from("onzio-upload-staging").remove([stagingPath]);
       const response = await fetch(result.publicUrl); if (!response.ok) throw new Error(`Unavailable publication ${slot}`);
       const deliveredHash = createHash("sha256").update(Buffer.from(await response.arrayBuffer())).digest("hex");

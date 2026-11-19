@@ -7,7 +7,7 @@ import { resolve, basename } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { validateMediaUpload, type MediaKind } from '@/lib/media-validation';
-import { publishAuthorizedMedia } from '@/lib/media-processing';
+import { publishWithReservation } from '@/scripts/lib/publish-with-reservation';
 import { buildStoragePath, type MediaSurface } from '@/lib/storage-path';
 import { defaultCinematicHomepageContent, cinematicHomepageStorageRecord } from '@/lib/cinematic-homepage-content';
 import { parsePresentationDocument, templateRegistry } from '@/packages/presentation';
@@ -52,7 +52,7 @@ for (const [key, surface] of Object.entries(used)) {
   const stagingPath = buildStoragePath({ clubId, surface, assetId: uploadId, extension: validated.extension });
   const { error } = await client.storage.from('onzio-upload-staging').upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
   if (error) throw error;
-  const result = await publishAuthorizedMedia({ version: 1, uploadId, clubId, actorId, surface, kind: source.kind, fileName: basename(source.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
+  const result = await publishWithReservation({ version: 1, uploadId, clubId, actorId, surface, kind: source.kind, fileName: basename(source.inputPath), mimeType: validated.mimeType, claimedSize: bytes.length, stagingPath, expiresAt: Date.now() + 60000 });
   // Idempotent publication already has a finalized object; remove rerun input.
   if (result.idempotent) await client.storage.from('onzio-upload-staging').remove([stagingPath]);
   published[key] = { assetId: result.assetId, url: result.publicUrl, path: result.storagePath };
