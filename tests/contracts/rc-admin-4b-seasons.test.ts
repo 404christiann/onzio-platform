@@ -158,6 +158,28 @@ describe("RC-ADMIN-4b-seasons: the writes are the classic page's, unchanged", ()
     expect(body.indexOf('from("player_season_stats").delete()')).toBeLessThan(body.indexOf('from("goalkeeper_season_stats").delete()'));
     expect(body.indexOf('from("goalkeeper_season_stats").delete()')).toBeLessThan(body.indexOf('from("seasons").delete()'));
   });
+
+  it("refuses the delete when the guard says the season is not deletable, before any write", () => {
+    const body = ops.slice(ops.indexOf("export async function deleteSeason"));
+    const refuse = "if (!guard.deletable) return { error: guard.reason };";
+    expect(body).toContain(refuse);
+    expect(body.indexOf("readDeleteState")).toBeLessThan(body.indexOf(refuse));
+    expect(body.indexOf(refuse)).toBeLessThan(body.indexOf('from("player_season_stats").delete()'));
+  });
+
+  it("scopes every server read of the list to the club (RLS lets a public club's seasons through otherwise)", () => {
+    const loader = source("lib/admin-seasons-list.ts");
+    const body = loader.slice(loader.indexOf("export async function loadSeasonsList"));
+    const reads = ['.from("seasons")', '.from("matches")', '.from("player_season_totals")', '.from("goalkeeper_season_totals")'];
+    for (const read of reads) {
+      const at = body.indexOf(read);
+      expect(at, read).toBeGreaterThan(-1);
+      // The club filter sits in the same query chain: before the next ".from(" or the end of the function.
+      const next = body.indexOf(".from(", at + read.length);
+      const chain = body.slice(at, next === -1 ? undefined : next);
+      expect(chain, read).toContain('.eq("club_id", clubId)');
+    }
+  });
 });
 
 describe("RC-ADMIN-4b-seasons: the delete guard is the classic page's", () => {
