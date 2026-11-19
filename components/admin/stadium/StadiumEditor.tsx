@@ -1,65 +1,86 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
-import { EditorActionButton, EditorGroup, EditorIconButton, EditorImage, EditorLoading, EditorNotice, EditorPageLink, EditorPreview, EditorRemoveButton, EditorSaveBar, EditorSecondaryButton, EditorSection, EditorSwitch, editorSaveState, kit, useSavedFlash } from "@/components/admin/cinematic-editor/CinematicEditorKit";
-import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
-import { ChevronDown, ChevronUp } from "@/components/admin/icons";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
+import { useSaveState } from "@/components/admin/ui/useSaveState";
+import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
+import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import {
+  EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
+} from "@/components/admin/ui/editor-kit";
 import { createClient } from "@/lib/admin-client";
 import { loadVisitorPageEditor, saveVisitorPageEditor } from "@/lib/visitor-page-editor";
 import { loadTicketsEditor } from "@/lib/tickets-editor";
 import { emptyTicketsContent } from "@/lib/tickets-content";
 import {
-  STADIUM_ARTWORK_SLOTS, emptyStadiumContent, hydrateStadiumContent, resetStadiumMapFraming,
-  stadiumDraftSchema, stadiumDraftFingerprint, stadiumSaveSchema, stadiumCropSchema,
-  type StadiumArtworkSlot, type StadiumContent, type StadiumSnapshot, type StadiumSaveRequest, type StadiumCrop,
+  emptyStadiumContent, hydrateStadiumContent, resetStadiumMapFraming, stadiumDraftSchema, stadiumSaveSchema,
+  type StadiumArtworkSlot, type StadiumContent, type StadiumSaveRequest, type StadiumSnapshot,
 } from "@/lib/stadium-content";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import CinematicStadium, { type StadiumTicketing } from "@/components/cinematic/CinematicStadium";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import "@/components/admin/homepage/homepage-editor.css";
+import { SettledPreview } from "./SettledPreview";
+import { FoothillSectionFields } from "./FoothillSectionFields";
+import {
+  FOOTHILL_FLAGS, FOOTHILL_PREVIEW_IMAGES, FOOTHILL_SECTIONS, buildFoothillSaveInput, changedFoothillSections, foothillDirty,
+  foothillPreviewSlice, foothillSectionOnly, foothillSectionSummary, type FoothillSectionId,
+} from "./foothill-sections";
+import { partnerPageState } from "./partner-page-state";
+import styles from "./PartnerPageParts.module.css";
 
 const recoverySchema = z.object({
   content: stadiumDraftSchema, revision: z.string().regex(/^[0-9]+$/), designRevision: z.string(),
   pending: stadiumSaveSchema.nullable(), retired: z.array(z.uuid()),
   media: z.array(z.object({ id: z.uuid(), storage_bucket: z.string(), storage_path: z.string(), width: z.number(), height: z.number() }).strict()),
 }).strict();
-const ART_LABELS: Record<StadiumArtworkSlot, string> = { bus: "Bus", map: "Route card and walking map", partner: "Ticket partner" };
-const VISIBILITY: [keyof Pick<StadiumContent, "showHeading" | "showMap" | "showSections" | "showMatch" | "showBenefits">, string][] = [
-  ["showHeading", "Page heading and bus"], ["showMap", "Route map"], ["showSections", "Stadium information"], ["showMatch", "Next home match"], ["showBenefits", "Ticket benefits"],
-];
+const PAGE = "Foothill Transit";
+const CRUMBS = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Tickets and stadium" }];
+const DESCRIPTION = "Edit the Foothill Transit bus route page, travel information and artwork. Save applies all changes together.";
+
+type PreviewProps = {
+  id: FoothillSectionId; content: StadiumContent; media: StadiumSnapshot["media"]; shared: CinematicHomepageContent | null; ticketing: StadiumTicketing; slice: string;
+};
+/** The real public page component, fed the draft with only this card's sections switched on. Re-renders only when its own slice changes. */
+const SectionLive = memo(function SectionLive({ id, content, media, shared, ticketing }: PreviewProps) {
+  const page = useMemo(() => hydrateStadiumContent(foothillSectionOnly(content, id), media), [content, id, media]);
+  const urls = useMemo(() => FOOTHILL_PREVIEW_IMAGES[id].flatMap(slot => page.artwork[slot].url ? [page.artwork[slot].url as string] : []), [page, id]);
+  return <SettledPreview urls={urls}><CinematicShell contentOnly initialContent={shared}><CinematicStadium content={page} ticketing={ticketing} /></CinematicShell></SettledPreview>;
+}, (a, b) => a.id === b.id && a.slice === b.slice && a.media === b.media && a.shared === b.shared && a.ticketing === b.ticketing);
 
 export default function StadiumEditor() {
   const club = useClubContext();
   const [snapshot, setSnapshot] = useState<StadiumSnapshot | null>(null), [draft, setDraft] = useState<StadiumContent | null>(null);
   const [media, setMedia] = useState<StadiumSnapshot["media"]>([]), [retired, setRetired] = useState<string[]>([]), [pending, setPending] = useState<StadiumSaveRequest | null>(null);
-  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<StadiumArtworkSlot | null>(null), [message, setMessage] = useState(""), [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState<StadiumArtworkSlot | null>(null);
+  const [message, setMessage] = useState(""), [failed, setFailed] = useState(false), [status, setStatus] = useState("");
+  const [conflict, setConflict] = useState(false), [saveFailed, setSaveFailed] = useState(false), [validation, setValidation] = useState("");
   const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [ticketing, setTicketing] = useState<StadiumTicketing>(emptyTicketsContent());
-  const [previewPhone, setPreviewPhone] = useState(true), [loadedClubId, setLoadedClubId] = useState<string | null>(null);
-  const [confirmReload, setConfirmReload] = useState(false), [leaveTo, setLeaveTo] = useState<string | null>(null), [saved, setSaved] = useSavedFlash();
-  const router = useRouter();
-  const recoveryKey = useRef<string | null>(null), epoch = useRef(0);
+  const [loadedClubId, setLoadedClubId] = useState<string | null>(null);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const recoveryKey = useRef<string | null>(null), epoch = useRef(0), keepRef = useRef<HTMLButtonElement>(null);
+  const dialog = useEditorDialog<FoothillSectionId>();
   const clearRecovery = () => { try { if (recoveryKey.current) localStorage.removeItem(recoveryKey.current); } catch {} };
-  const dirty = !!draft && !!snapshot && stadiumDraftFingerprint(draft) !== stadiumDraftFingerprint(snapshot.content ?? emptyStadiumContent());
+  const dirty = !!draft && !!snapshot && foothillDirty(draft, snapshot.content);
   const locked = busy || !!pending || !!uploading;
+  const unsaved = dirty || !!pending || retired.length > 0;
 
   useEffect(() => {
     let active = true;
     epoch.current += 1;
     recoveryKey.current = null;
     setSnapshot(null); setDraft(null); setLoadedClubId(null); setPending(null); setMedia([]); setRetired([]);
-    setMessage(""); setFailed(false); setBusy(false); setUploading(null); setShared(null); setTicketing(emptyTicketsContent());
+    setMessage(""); setFailed(false); setStatus(""); setConflict(false); setSaveFailed(false); setValidation("");
+    setBusy(false); setUploading(null); setShared(null); setTicketing(emptyTicketsContent());
     if (club.presentationTemplateKey !== "cinematic@2") return;
     Promise.all([loadVisitorPageEditor<StadiumContent>("stadium"), createClient().auth.getUser(), fetchCinematicHomepageContent(club.id), loadTicketsEditor()])
       .then(([loaded, user, homepage, tickets]) => {
         if (!active) return;
-        if (!user.data.user) throw new Error("Sign in again to edit Foothill Transit.");
+        if (!user.data.user) throw new Error(`Sign in again to edit ${PAGE}.`);
         const key = `onzio:stadium:v1:${location.origin}:${user.data.user.id}:${club.id}`;
         recoveryKey.current = key;
         setShared(homepage); setTicketing(tickets.content ?? emptyTicketsContent()); setLoadedClubId(club.id);
@@ -75,7 +96,7 @@ export default function StadiumEditor() {
         setSnapshot(stored ? { ...loaded, revision: stored.revision, designRevision: stored.designRevision } : loaded);
         setDraft(stored?.content ?? loaded.content ?? emptyStadiumContent()); setMedia(stored?.media ?? loaded.media);
         setRetired(stored?.retired ?? []); setPending(stored?.pending ?? null);
-        if (stored) setMessage(stored.pending ? "An earlier save needs confirmation. Retry the same save." : "Your unsaved Foothill Transit draft has been restored.");
+        if (stored) setMessage(stored.pending ? "An earlier save needs confirmation. Retry the same save." : `Your unsaved ${PAGE} draft has been restored.`);
       }).catch(error => { if (active) { setMessage(error.message); setFailed(true); } });
     return () => { active = false; epoch.current += 1; };
   }, [club.id, club.presentationTemplateKey]);
@@ -93,54 +114,72 @@ export default function StadiumEditor() {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, pending]);
 
+  const settle = () => { setMessage(""); setFailed(false); setValidation(""); setSaveFailed(false); };
+  const replace = (next: StadiumContent) => { if (locked) return; setDraft(next); settle(); };
   const update = (edit: (value: StadiumContent) => void) => {
     if (locked) return;
     setDraft(current => { if (!current) return current; const copy = structuredClone(current); edit(copy); return copy; });
-    setMessage(""); setFailed(false); setSaved(false);
+    settle();
   };
-  function guardLink(event: MouseEvent<HTMLAnchorElement>) {
-    if (locked) { event.preventDefault(); return; }
-    if (dirty) { event.preventDefault(); setLeaveTo(event.currentTarget.getAttribute("href")); }
-  }
-  async function save() {
-    if (!draft || !snapshot || busy || uploading) return;
-    const parsed = stadiumSaveSchema.safeParse(pending ?? { operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision, content: draft, retiredMediaAssetIds: [...new Set(retired)] });
-    if (!parsed.success) { setFailed(true); setMessage("Review the fields and map crop before saving."); return; }
+  /** Resolves true only when the server committed the save, so the Save button can show Saved. */
+  async function save(): Promise<boolean> {
+    if (!draft || !snapshot || busy || uploading) return false;
+    const parsed = stadiumSaveSchema.safeParse(buildFoothillSaveInput({ pending, operationId: crypto.randomUUID(), snapshot, draft, retired }));
+    if (!parsed.success) { setSaveFailed(true); setValidation("Review the fields and map crop before saving."); return false; }
     const request = parsed.data, generation = epoch.current;
-    setPending(request); setBusy(true); setFailed(false); setMessage("Saving Foothill Transit…");
+    setPending(request); setBusy(true); setFailed(false); setSaveFailed(false); setValidation(""); setMessage(""); setStatus(`Saving ${PAGE}…`);
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, retired })); } catch {}
     const result = await saveVisitorPageEditor<StadiumContent>("stadium", request);
-    if (generation !== epoch.current) return;
+    if (generation !== epoch.current) return false;
     setBusy(false);
     if (result.status === "committed") {
       setSnapshot(result.snapshot); setDraft(result.snapshot.content ?? emptyStadiumContent()); setMedia(result.snapshot.media);
-      setRetired([]); setPending(null); setMessage(result.snapshot.cleanupPending ? "Foothill Transit saved. Image cleanup will retry automatically." : "Foothill Transit saved."); clearRecovery(); setSaved(true);
+      setRetired([]); setPending(null); setConflict(false); clearRecovery();
+      setMessage(result.snapshot.cleanupPending ? `${PAGE} saved. Image cleanup will retry automatically.` : ""); setStatus(`${PAGE} saved.`);
+      return true;
     } else if (result.status === "uncertain") { setPending(result.request); setFailed(true); setMessage(result.message); }
-    else { setPending(null); setFailed(true); setMessage(result.message); }
+    else { setPending(null); setFailed(true); setSaveFailed(result.status !== "conflict"); setConflict(result.status === "conflict"); setMessage(result.message); }
+    return false;
   }
-  async function reload(confirmed = false) {
+  /** Discard asks first when there are unsaved edits. */
+  function requestDiscard() {
+    if (busy || uploading) return;
+    if (pending) { setFailed(true); setMessage("Retry the same save before discarding your edits, so nothing is lost."); return; }
+    if (dirty || retired.length) setConfirmReload(true);
+    else void reload();
+  }
+  async function reload(keepDraft = false) {
     if (locked) return;
-    if (dirty && !confirmed) { setConfirmReload(true); return; }
     const generation = epoch.current;
     setBusy(true);
     try {
       const loaded = await loadVisitorPageEditor<StadiumContent>("stadium");
+      stadiumDraftSchema.parse(loaded.content ?? emptyStadiumContent());
       if (generation !== epoch.current) return;
-      setSnapshot(loaded); setDraft(loaded.content ?? emptyStadiumContent()); setMedia(loaded.media); setRetired([]); setMessage(""); setFailed(false); clearRecovery();
-    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to reload Foothill Transit."); } }
+      if (keepDraft) {
+        // Latest revision becomes the base, the edits stay, and images added in this session stay available.
+        const previous = new Set(snapshot?.media.map(image => image.id));
+        setMedia([...loaded.media, ...media.filter(image => !previous.has(image.id) && !loaded.media.some(saved => saved.id === image.id))]);
+        setMessage("Latest saved version loaded. Your edits were kept. Replace any images removed in the newer version before saving.");
+        setSnapshot(loaded);
+      } else {
+        setSnapshot(loaded); setDraft(loaded.content ?? emptyStadiumContent()); setMedia(loaded.media); setRetired([]); setMessage(""); clearRecovery();
+      }
+      setConflict(false); setFailed(false); setSaveFailed(false); setValidation("");
+    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : `Unable to reload ${PAGE}.`); } }
     finally { if (generation === epoch.current) setBusy(false); }
   }
-  async function upload(slot: StadiumArtworkSlot, file: File) {
-    if (!draft || locked) return;
+  async function upload(slot: StadiumArtworkSlot, file: File): Promise<boolean> {
+    if (!draft || locked) return false;
     const generation = epoch.current;
-    setUploading(slot); setFailed(false); setMessage("Adding your image…");
+    setUploading(slot); setFailed(false); setStatus("Adding your image…");
     try {
       const client = createClient(), bucket = client.storage.from("homepage-artwork");
       const result = await bucket.upload("stadium/" + crypto.randomUUID(), file);
       if (result.error || !result.data) throw new Error(result.error?.message ?? "Image upload failed.");
       const bitmap = await createImageBitmap(file), dimensions = { width: bitmap.width, height: bitmap.height };
       bitmap.close();
-      if (generation !== epoch.current) return;
+      if (generation !== epoch.current) return false;
       const oldId = draft.artwork[slot].assetId;
       if (oldId && media.some(asset => asset.id === oldId) && !snapshot?.media.some(asset => asset.id === oldId)) setRetired(current => [...new Set([...current, oldId])]);
       setMedia(current => [...current, { id: result.data.assetId, storage_bucket: "onzio-media", storage_path: result.data.path, ...dimensions }]);
@@ -151,55 +190,90 @@ export default function StadiumEditor() {
         copy.artwork[slot].assetId = result.data.assetId;
         return copy;
       });
-      setMessage("Image ready. Save Foothill Transit to use it.");
-    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } }
+      setStatus(`Image ready. Save ${PAGE} to use it.`);
+      return true;
+    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } return false; }
     finally { if (generation === epoch.current) setUploading(null); }
   }
-  function setCrop(cropKey: "phoneCardCrop" | "phoneMapCrop", key: keyof StadiumCrop, value: number) {
-    if (!draft || !Number.isFinite(value)) return;
-    const candidate = { ...draft[cropKey], [key]: value / 100 };
-    if (!stadiumCropSchema.safeParse(candidate).success) { setFailed(true); setMessage("The crop must fit inside the image. Reduce width or height before moving it toward an edge."); return; }
-    update(content => { content[cropKey] = candidate; });
+  function removeImage(slot: StadiumArtworkSlot) {
+    if (!draft || locked) return;
+    const id = draft.artwork[slot].assetId;
+    if (id) setRetired(current => [...new Set([...current, id])]);
+    update(content => { content.artwork[slot].assetId = null; });
   }
-  function moveSection(index: number, direction: number) {
-    update(content => { const next = index + direction; if (next >= 0 && next < content.sections.length) [content.sections[index], content.sections[next]] = [content.sections[next], content.sections[index]]; });
-  }
-  const field = (label: string, key: "title" | "subtitle" | "includesHeading" | "benefitsNote", multiline = false) => <label className="block min-w-0" key={key}><span className={ADMIN_LABEL_CLASS}>{label}</span>{multiline
-    ? <textarea className={ADMIN_INPUT_CLASS + " min-h-28"} disabled={locked} value={draft?.[key] ?? ""} maxLength={4000} onChange={event => update(content => { content[key] = event.target.value; })} />
-    : <input className={ADMIN_INPUT_CLASS} disabled={locked} value={draft?.[key] ?? ""} maxLength={120} onChange={event => update(content => { content[key] = event.target.value; })} />}</label>;
+  const saveAction = useSaveState({
+    isDirty: unsaved,
+    onSave: async () => { if (!(await save())) throw new Error(`${PAGE} was not saved.`); },
+  });
+  const latestSave = useRef(save);
+  latestSave.current = save;
+  useUnsavedGuard(draft ? {
+    dirty: unsaved, edited: PAGE, onSave: () => latestSave.current(),
+    onDiscard: () => {
+      if (busy || uploading || pending) throw new Error("A save is still being confirmed.");
+      if (!snapshot) return;
+      setDraft(snapshot.content ?? emptyStadiumContent()); setRetired([]); setMessage(""); setFailed(false); setConflict(false); setSaveFailed(false); setValidation(""); clearRecovery();
+    },
+  } : undefined);
+
+  const deferred = useDeferredValue(draft);
+  const pageState = partnerPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
+  const changed = useMemo(() => new Set(draft && snapshot ? changedFoothillSections(draft, snapshot.content) : []), [draft, snapshot]);
   const page = draft ? hydrateStadiumContent(draft, media) : null;
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader title="Foothill Transit" description="This page is unavailable for the current website design." /></AdminPage>;
-  const canSave = !busy && !uploading && (dirty || !!pending || retired.length > 0);
-  return <AdminPage className={kit.page}>
-    <AdminPageHeader eyebrow="Public website" title="Foothill Transit" description="Edit the Foothill Transit bus route page, travel information and artwork. Save applies all changes together." actions={<EditorPageLink href="/stadium/foothill-transit">Open Foothill Transit page</EditorPageLink>} />
-    <p className={kit.notice}>Next-match wording comes from <Link className={kit.inlineLink} href="/admin/homepage" onClick={guardLink}>Homepage</Link>; fixtures come from <Link className={kit.inlineLink} href="/admin/schedule" onClick={guardLink}>Schedule</Link>. The purchase link and its unavailable message are managed in <Link className={kit.inlineLink} href="/admin/tickets" onClick={guardLink}>Tickets</Link>.</p>
-    {message && <EditorNotice failed={failed}>{message}</EditorNotice>}
-    {!draft || loadedClubId !== club.id ? <EditorLoading label="Loading Foothill Transit…" failed={failed} onRetry={() => location.reload()} /> : <>
-      <EditorSection title="Page and sections"><div className="grid gap-5 md:grid-cols-2">{field("Page heading", "title")}{field("Subtitle", "subtitle")}</div>
-        <fieldset className="mt-6 min-w-0"><legend className={ADMIN_LABEL_CLASS}>Visible on the page</legend><div className={kit.switchGrid} data-columns="2">{VISIBILITY.map(([key, label]) => <EditorSwitch key={key} label={label} disabled={locked} checked={draft[key]} onChange={checked => update(content => { content[key] = checked; })} />)}</div></fieldset></EditorSection>
-      <EditorSection title="Stadium information"><div className="grid gap-4">{draft.sections.map((section, index) => <EditorGroup key={section.id} legend={`Section ${index + 1}`}>
-        <label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Heading</span><input className={ADMIN_INPUT_CLASS} disabled={locked} maxLength={120} value={section.heading} onChange={event => update(content => { content.sections[index].heading = event.target.value; })} /></label>
-        <label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Information</span><textarea className={ADMIN_INPUT_CLASS + " min-h-28"} disabled={locked} maxLength={4000} value={section.body} onChange={event => update(content => { content.sections[index].body = event.target.value; })} /></label>
-        <label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Footnote</span><textarea className={ADMIN_INPUT_CLASS} disabled={locked} maxLength={4000} value={section.note} onChange={event => update(content => { content.sections[index].note = event.target.value; })} /></label>
-        <EditorSwitch label={`Show section ${index + 1}`} disabled={locked} checked={section.visible} onChange={checked => update(content => { content.sections[index].visible = checked; })} />
-        {section.bullets.map((bullet, bulletIndex) => <div className={kit.subgroup} key={bulletIndex}><label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Bullet {bulletIndex + 1}</span><textarea className={ADMIN_INPUT_CLASS} disabled={locked} maxLength={4000} value={bullet} onChange={event => update(content => { content.sections[index].bullets[bulletIndex] = event.target.value; })} /></label><div><EditorRemoveButton disabled={locked} onClick={() => update(content => { content.sections[index].bullets.splice(bulletIndex, 1); })}>Remove bullet {bulletIndex + 1}</EditorRemoveButton></div></div>)}
-        <div className={kit.toolbar}><EditorActionButton disabled={locked || section.bullets.length >= 20} onClick={() => update(content => { content.sections[index].bullets.push(""); })}>Add bullet</EditorActionButton><span className={kit.spacer} /><EditorIconButton label={`Move section ${index + 1} up`} disabled={locked || index === 0} onClick={() => moveSection(index, -1)}><ChevronUp width="16" height="16" /></EditorIconButton><EditorIconButton label={`Move section ${index + 1} down`} disabled={locked || index === draft.sections.length - 1} onClick={() => moveSection(index, 1)}><ChevronDown width="16" height="16" /></EditorIconButton><EditorRemoveButton label={`Remove section ${index + 1}`} disabled={locked} onClick={() => update(content => { content.sections.splice(index, 1); })}>Remove section</EditorRemoveButton></div>
-      </EditorGroup>)}<div><EditorActionButton disabled={locked || draft.sections.length >= 12} onClick={() => update(content => { content.sections.push({ id: crypto.randomUUID(), heading: "", body: "", note: "", bullets: [], visible: true }); })}>Add section</EditorActionButton></div></div></EditorSection>
-      <EditorSection title="Ticket benefits"><div className="grid gap-4">{field("Benefits heading", "includesHeading")}{draft.benefits.map((benefit, index) => <EditorGroup key={index} legend={`Benefit ${index + 1}`}><div className="grid gap-4 md:grid-cols-2"><label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Title</span><input className={ADMIN_INPUT_CLASS} disabled={locked} value={benefit.title} maxLength={120} onChange={event => update(content => { content.benefits[index].title = event.target.value; })} /></label><label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Details</span><textarea className={ADMIN_INPUT_CLASS} disabled={locked} value={benefit.detail} maxLength={4000} onChange={event => update(content => { content.benefits[index].detail = event.target.value; })} /></label></div><div className={kit.toolbar}><span className={kit.spacer} /><EditorIconButton label={`Move benefit ${index + 1} up`} disabled={locked || index === 0} onClick={() => update(content => { [content.benefits[index - 1], content.benefits[index]] = [content.benefits[index], content.benefits[index - 1]]; })}><ChevronUp width="16" height="16" /></EditorIconButton><EditorIconButton label={`Move benefit ${index + 1} down`} disabled={locked || index === draft.benefits.length - 1} onClick={() => update(content => { [content.benefits[index], content.benefits[index + 1]] = [content.benefits[index + 1], content.benefits[index]]; })}><ChevronDown width="16" height="16" /></EditorIconButton><EditorRemoveButton label={`Remove benefit ${index + 1}`} disabled={locked} onClick={() => update(content => { content.benefits.splice(index, 1); })}>Remove benefit</EditorRemoveButton></div></EditorGroup>)}<div><EditorActionButton disabled={locked || draft.benefits.length >= 10} onClick={() => update(content => { content.benefits.push({ title: "", detail: "" }); })}>Add benefit</EditorActionButton></div>{field("Benefits footnote", "benefitsNote", true)}</div></EditorSection>
-      <EditorSection title="Images" description="PNG or WebP, up to 5 MB and 3000 pixels per side. Words inside artwork change when you replace its image."><div className="grid gap-4 md:grid-cols-2">{STADIUM_ARTWORK_SLOTS.map(slot => <EditorGroup key={slot} legend={ART_LABELS[slot]}>
-        <EditorImage label={ART_LABELS[slot]} url={page?.artwork[slot].url} alt={draft.artwork[slot].alt} accept="image/png,image/webp" empty="No image yet." uploading={uploading === slot} disabled={locked} hasImage={!!page?.artwork[slot].url} onFile={file => void upload(slot, file)}
-          onRemove={draft.artwork[slot].assetId ? () => { const id = draft.artwork[slot].assetId; if (id) setRetired(current => [...new Set([...current, id])]); update(content => { content.artwork[slot].assetId = null; }); } : undefined} />
-        <label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Image description</span><input className={ADMIN_INPUT_CLASS} disabled={locked} value={draft.artwork[slot].alt} maxLength={1000} onChange={event => update(content => { content.artwork[slot].alt = event.target.value; })} /></label>
-      </EditorGroup>)}</div></EditorSection>
-      <EditorSection title="Phone map layout" description="Replacement maps start as a full image. Choose two parts only when your artwork contains a separate route card and walking map."><label className="block min-w-0"><span className={ADMIN_LABEL_CLASS}>Display the map</span><select className={ADMIN_INPUT_CLASS} disabled={locked} value={draft.phoneMapLayout} onChange={event => update(content => { content.phoneMapLayout = event.target.value as "full" | "split"; })}><option value="full">Show the full image</option><option value="split">Show a route card, then a walking map</option></select></label>
-        {draft.phoneMapLayout === "split" && <div className="mt-5 grid gap-4 md:grid-cols-2">{(["phoneCardCrop", "phoneMapCrop"] as const).map((cropKey, index) => <EditorGroup key={cropKey} legend={`${index === 0 ? "Route card" : "Walking map"} crop`}><div className="grid grid-cols-2 gap-4">{(["x", "y", "width", "height"] as const).map(key => <label className="block min-w-0" key={key}><span className={ADMIN_LABEL_CLASS}>{({ x: "Left", y: "Top", width: "Width", height: "Height" })[key]} (%)</span><input className={ADMIN_INPUT_CLASS} type="number" min={key === "x" || key === "y" ? 0 : 0.001} max={100} step={0.1} disabled={locked} value={Number((draft[cropKey][key] * 100).toFixed(4))} onChange={event => { if (event.target.value) setCrop(cropKey, key, Number(event.target.value)); }} /></label>)}</div></EditorGroup>)}</div>}
-      </EditorSection>
-      <EditorPreview phone={previewPhone} onPhoneChange={setPreviewPhone}><HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="Foothill Transit"><CinematicShell contentOnly initialContent={shared}><CinematicStadium content={page!} ticketing={ticketing} /></CinematicShell></HomepagePreviewFrame></EditorPreview>
-      <EditorSaveBar state={editorSaveState({ busy, canSave, saved })} retry={!!pending} onSave={() => void save()} status={pending ? "Awaiting save confirmation" : dirty ? "Unsaved changes" : ""}>
-        <EditorSecondaryButton disabled={locked} onClick={() => void reload()}>Reload saved page</EditorSecondaryButton>
-      </EditorSaveBar>
-    </>}
-    <AdminConfirmDialog open={confirmReload} title="Discard your Foothill Transit edits?" confirmLabel="Discard and reload" destructive onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(true); }}>Your unsaved Foothill Transit edits will be discarded and the saved page loaded.</AdminConfirmDialog>
-    <AdminConfirmDialog open={leaveTo !== null} title="Leave this page?" confirmLabel="Leave page" cancelLabel="Stay on this page" onCancel={() => setLeaveTo(null)} onConfirm={() => { const href = leaveTo; setLeaveTo(null); if (href) router.push(href); }}>Your unsaved Foothill Transit draft will be kept on this browser.</AdminConfirmDialog>
-  </AdminPage>;
+  const loading = !draft || !page || loadedClubId !== club.id;
+
+  if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={PAGE} breadcrumb={CRUMBS} description="This page is unavailable for the current website design.">{null}</PageFrame>;
+
+  const sectionItems = draft ? FOOTHILL_SECTIONS.map(section => {
+    const flag = FOOTHILL_FLAGS[section.id];
+    return {
+      id: section.id, title: section.title, changed: changed.has(section.id), summary: foothillSectionSummary(draft, section.id), disabled: locked,
+      ...(flag ? { visible: draft[flag], onVisibleChange: (visible: boolean) => update(content => { content[flag] = visible; }) } : {}),
+    };
+  }) : [];
+  const api = draft && page ? { draft, page, locked, uploading, update, replace, upload, removeImage } : null;
+  const previewOf = (id: string) => deferred && <SectionLive id={id as FoothillSectionId} content={deferred} media={media} shared={shared} ticketing={ticketing} slice={foothillPreviewSlice(deferred, id as FoothillSectionId)} />;
+
+  const notice = (message || validation || conflict) ? <div className={styles.notice} data-foothill-notice="">
+    {validation && <ValidationMessage live="assertive">{validation}</ValidationMessage>}
+    {(message || conflict) && <EditorNotice failed={failed || conflict}>{message}
+      {conflict && <span className={styles.noticeActions}>
+        <button ref={keepRef} type="button" className="admin-press" disabled={locked} onClick={() => void reload(true)} style={{ minHeight: 44, padding: "0 14px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--secondary))" }}>Load latest and keep my edits</button>
+        <EditorSecondaryButton disabled={locked} onClick={requestDiscard}>Reload saved page</EditorSecondaryButton>
+      </span>}
+    </EditorNotice>}
+  </div> : null;
+
+  if (!draft && failed) return <PageFrame title={PAGE} breadcrumb={CRUMBS} description={DESCRIPTION}>
+    <EditorNotice failed>{message}</EditorNotice>
+    <div><EditorSecondaryButton disabled={false} onClick={() => location.reload()}>Try again</EditorSecondaryButton></div>
+  </PageFrame>;
+
+  return <>
+    <ShimmerRegion loading={loading} loadingLabel={`Loading ${PAGE}…`} minHeight={480}
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={FOOTHILL_SECTIONS.length} /></div>}>
+      <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/stadium/foothill-transit" description={DESCRIPTION} state={pageState}
+        onSave={() => { void saveAction.save().catch(() => undefined); }}
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        <PreviewCards sections={sectionItems} label="Foothill Transit sections" renderPreview={previewOf} previewScale={0.46}
+          onEdit={(id, event) => dialog.openSection(id as FoothillSectionId, event)} />
+      </PageFrame>
+    </ShimmerRegion>
+    <p className={styles.srOnly} role="status" data-foothill-status="">{status}</p>
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE}`} mode="split" returnFocusRef={dialog.returnFocusRef}
+      sections={FOOTHILL_SECTIONS.map(section => {
+        const flag = FOOTHILL_FLAGS[section.id];
+        return { id: section.id, title: section.title, summary: draft && (flag && !draft[flag] ? "Hidden on the page" : foothillSectionSummary(draft, section.id)) };
+      })}
+      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as FoothillSectionId)}
+      renderSection={id => dialog.open ? <FoothillSectionFields api={api} id={id as FoothillSectionId} /> : null}
+      renderPreview={id => dialog.open ? <div className={styles.livePreview}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>
+          <CinematicShell contentOnly initialContent={shared}><CinematicStadium content={hydrateStadiumContent(foothillSectionOnly(api.draft, id as FoothillSectionId), media)} ticketing={ticketing} /></CinematicShell>
+        </HomepagePreviewFrame></div> : null} />}
+    <AdminConfirmDialog open={confirmReload} title="Discard your edits?" confirmLabel="Discard and reload" destructive
+      onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
+      Discard unsaved {PAGE} edits and load the saved page?
+    </AdminConfirmDialog>
+  </>;
 }
