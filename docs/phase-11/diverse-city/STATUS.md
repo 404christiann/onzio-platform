@@ -51,6 +51,60 @@ press Back between sections (fixed on main by RC-ADMIN-4b-0-2, #188) and gate 2 
 - `npx tsc --noEmit` clean; `npm run test:unit` 4130 passed.
 
 **Blockers or unresolved decisions:** none. Questions for Christian are in the PR body (Payments link on the Team tab; tagline shown as "not set" for Rose City).
+
+## 2026-11-19 - RC-ADMIN-4b-seasons: Rose City Seasons on the editor kit (app code only)
+
+**Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4b-seasons, branch `claude/rc-admin-4b-seasons` on `9e1dee1c`.
+**Status:** `in_progress`, PR open; verify-rc-admin PASS (gate 3 declared n/a). Merges only on Christian's word. App code only: no
+migration, schema, RPC, validator, env or skill change; selector debt unchanged.
+
+**Completed work:**
+- `/admin/seasons` for Rose City is a kit page (`PageFrame`, no Save, no Open page): Active season and Season records tiles, a list
+  of seasons with "Make active" (asks first and names the pages that switch), "Delete" (a real confirm dialog, not the two-click
+  "Confirm Delete") and a "Create <next> season" button that names the season. No fields. The same four delete-guard sentences.
+- The same writes through `POST /api/admin/data`, in the same order, as `ClassicSeasonsPage` (`components/admin/seasons/rose-city/seasons-ops.ts`:
+  deactivate all then activate one; insert the season then zero stat rows for active players; re-check the guard then delete stat rows then
+  the season). No atomic set-active and no reorder (both would need schema or an RPC).
+- **Layout shift (found by 4b-0 on main: CLS 0.00111 at 390):** the list and tiles are read on the server (`lib/admin-seasons-list.ts`,
+  user-scoped client, same counts and views as the classic guard), so the page has no loading state and nothing appears after load.
+  After a write the page calls `router.refresh()`.
+- Standings is hidden for Rose City: no Standings or League table link and no Standings text on the page ("Roster, Schedule and Stats").
+  The sentence "Each season has its own league table." and "Standings" in the Make-active confirm appear only when the club has Standings
+  (`hasStandings` from `isAdminRouteHiddenForClub`).
+- Diverse City keeps `ClassicSeasonsPage`, byte-identical, with its old copy ("Standings is one league table that does not change with
+  the season"). That wording is wrong, but changing it would change Diverse City's admin; it is Christian's decision, separate from this
+  package. The two tests that pin it still pass unchanged.
+- Rose City is chosen in `app/admin/(protected)/seasons/page.tsx` by `club.slug === "rose-city"` (a slug-keyed constant, no template
+  selector, no debt entry). To be folded into `lib/site-for.ts` after 4c merges.
+
+**Files changed:** `app/admin/(protected)/seasons/page.tsx`; new `lib/admin-seasons-list.ts`; new `components/admin/seasons/rose-city/`
+(`RoseCitySeasonsPage.tsx`, `seasons-ops.ts`, `seasons.module.css`); new `tests/contracts/rc-admin-4b-seasons.test.ts` (29 tests: rendered
+list, Make-active and delete copy, no Standings text or link, write snippets equal to the classic page's and their order, guard sentences,
+newest-first order, page branch pins); `tests/contracts/admin-reimagined-seasons.test.ts` (one line: the classic-portal branch now reads
+`club.slug !== ROSE_CITY_SLUG`).
+
+**Verification:** `verify.sh run --route /admin/seasons --package RC-ADMIN-4b-seasons --touched seasons` on the head built on `5358951b`,
+report `test-results/rc-admin-verify/20261119-135156-RC-ADMIN-4b-seasons/report.html`: PASS.
+- Gate 1: 7 app files, 0 warnings, 0 forbidden. Gate 2: 19/19 identical (touched `seasons`). Gate 3: n/a, declared in `EDITORS`
+  (Create, Make active and Delete act at once; there is no page Save). Gate 4: CLS 0.00000 at 390 and 0.00001 at 1440, light and dark
+  (main: 0.00111 at 390); new axe 0 (existing on main 0); reduced motion 0 offenders. Gate 5: tsc ok; unit 350 files, 4141 tests;
+  architecture 152; selector debt unchanged. Gate 6: Diverse City 15/15 identical to origin/main.
+- Then rebased onto `9e1dee1c` (#187). It changed `EditorDialog.tsx`/`.module.css` and `PageSaveButton.tsx` in the kit; this page uses
+  neither (`PageFrame` without `onSave` renders no Save button, and there is no dialog button of its own other than `AdminConfirmDialog`),
+  so verify was not rerun; tsc and unit were rerun on the rebased head (below).
+- Not driven by verify (gate 3 n/a): Make active and Delete (Rose City's seed has one season, so neither button shows). Their
+  write code is the classic page's and pinned by the contract tests above. Driven by hand instead: manual check on the head build
+  (one DB-lock hold: reset, seed, sign-in, `next start`, Playwright), `test-results/manual-seasons/20261119-144654/`, 3 of 3 pass, Rose
+  City at 390 and 1440: create 2028 (cancel, then confirm; 10 zero stat rows), Make active (confirm names Roster, Schedule and Stats;
+  cancel changed nothing), Roster and Schedule follow the new active season, delete the empty season (cancel, then confirm), and a 500
+  on the insert, update and delete each shows an error and leaves the data unchanged. Diverse City's classic page still creates and
+  activates a season at both sizes. The first three runs failed on locator races in the script, not on the page.
+- onzio-coder (one loop): Medium that the contract test did not pin the delete-guard refusal or the `club_id` filter on the server
+  reads, fixed in `e2c4212f` with two tests, mutation-checked; clean on that head.
+
+**Blockers or unresolved decisions:** none for this package. Open for Christian: the wrong "does not change with the season" copy on
+Diverse City's classic Seasons page.
+
 **Exact next step:** onzio-bot review, then Christian merges.
 
 ## 2026-11-19 - RC-ADMIN-4b-0-3 verify-rc-admin: Stats rows drive main's workspace and Rose City's dialog table
@@ -165,6 +219,8 @@ because on main's skill the roster row cannot click "Save player".
   field and keeper tables (existing behaviour, not fixed here).
 
 **Exact next step:** onzio-bot review, then Christian merges.
+
+Post-merge confirmation 2026-11-19: verify-rc-admin on main's skill passed all gates (g3 n/a declared), Diverse City 15/15, CLS ≤0.00003; report `test-results/rc-admin-verify/20261119-135200-RC-ADMIN-4b-roster/report.html` (worktree since removed).
 
 ## 2026-11-19 - RC-ADMIN-4b-0-2 verify-rc-admin: three small fixes for the Seasons, Roster and kit-editor rebuilds
 
