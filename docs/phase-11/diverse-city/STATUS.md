@@ -1,5 +1,45 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-10c staging upload needs a live reservation
+
+**Agent/package:** Claude Code (Opus), RC-ADMIN-10c, branch `claude/rc-admin-10c` on `84142ca3`.
+**Status:** `in_progress`: PR open and ready. Production not touched. Christian lifted the 2026-11-20 04:00 UTC
+time gate on 2026-11-19; the three checks stay: (a) passed on DB evidence and is re-run with the log hour then
+available right before the dry run; (b) a fresh B1-a he reviews before the dry run; (c) a real photo and a real
+graphic upload right after apply.
+
+**Completed work:**
+- Migration `20261119090000_staging_insert_requires_reservation.sql`:
+  - New `onzio_private.staging_upload_reserved(p_name)` (security definer, stable, `search_path ''`, execute for
+    authenticated): true when a reservation exists for exactly that staging path and the path's club, not
+    consumed and not expired. It uses the unique `staging_path` index.
+  - `onzio_staging_member_insert` is recreated from `20260808160000` byte for byte, plus
+    `and onzio_private.staging_upload_reserved(name)`. Still no `metadata` condition (empty at sign time).
+  - SELECT and DELETE policies unchanged; the service role (finalize, cleanup, scripts) bypasses RLS.
+- Ready rollback: `docs/phase-11/diverse-city/RC-ADMIN-10C-ROLLBACK.sql` recreates the `20260808160000` policy
+  exactly and drops the helper, in one transaction.
+- Finding (pinned by a test): Storage evaluates the INSERT policy when it signs, not again when the token is
+  used. A token signed while the reservation was live still uploads after the reservation is consumed. That is
+  acceptable: every token cost a reservation (quota and rate), the path is write-once (`upsert: false`), finalize
+  refuses a consumed or expired reservation, and the staging cleanup removes leftovers after 24 hours.
+- Tests: new `tests/helpers/staging-reservation.ts` writes a reservation row directly for member staging tests
+  (no quota or rate, so reruns never hit the hourly limit) and deletes it afterwards.
+  `tests/database/storage-audit.test.ts`: the existing member sign tests reserve first; a new block refuses
+  signing with no, a consumed, an expired or another club's reservation, refuses a direct upload with no
+  reservation, signs and uploads with a live one (no metadata at sign time), and pins the sign-time-only check.
+  `tests/database/authenticated-rls.test.ts`: the every-surface member upload test reserves each path.
+  Migration-order pins in the three contract tests gain the new file.
+
+**Verification (local; reset with this branch's migrations inside one DB lock hold):** full `test:db` 78 files,
+1339 tests; `db:types:check` passed; `test:unit` 341 files, 3967 tests; architecture checks; `tsc`; `next build`.
+The DB test that signs as the club member after a reservation is exactly what `/api/admin/media/authorize`
+does (service-role reserve, then sign with the member's session); finalize is unchanged from 10b.
+
+**Blockers or unresolved decisions:** onzio-bot review; then the fresh B1-a and check (a) for Christian's review.
+
+**Exact next step:** onzio-bot clean; then run B1-a fresh and re-run check (a) with the log hour, send both to
+Christian, and wait for his review before the dry run. Then the dry run and his "push".
+
 ## 2026-11-18 - RC-PREVIEW: Sam previews Rose City's public site on one Vercel Preview host
 
 **Agent/package:** Claude Code (Opus 5.5), RC-PREVIEW, branch `claude/rc-preview` on `44796089`. **Status:**
@@ -55,9 +95,9 @@ unless the preview branch gets it too, Avenir falls back to Figtree on the previ
 ## 2026-11-19 - RC-ADMIN-10a sponsor and news caps in SQL
 
 **Agent/package:** Claude Code (Opus), RC-ADMIN-10a, PR #176, branch `claude/rc-admin-10a` (rebased onto `44796089`).
-**Status:** `in_progress`: the migration is on production (2026-11-19, after Christian's "push") and the
-read-only check passed; onzio-bot found no High or Medium issues at `6cc96b9` and again at `7d30bd1`. It waits
-only for Christian's merge. Christian approved the caps on
+**Status:** `done`. Merged as `01af57a7` (PR #176) on 2026-11-19 08:09 UTC by Christian, after the migration was
+on production (2026-11-19, after his "push") and the read-only check passed; onzio-bot found no High or Medium
+issues at `6cc96b9`, `7d30bd1` and `fee6b6c`. Christian approved the caps on
 2026-11-19 (UTC): news 200 live, sponsors 30 / 10 / 6, increases only, slideshow constant only.
 
 **Completed work:**

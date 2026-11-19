@@ -1,3 +1,15 @@
+## 2026-11-19 - RC-ADMIN-10c: staging upload needs a live reservation
+
+- **Status:** `in_progress`. PR open and ready; production not touched. Record in `STATUS.md`.
+- **What:** migration `20261119090000_staging_insert_requires_reservation.sql` adds
+  `onzio_private.staging_upload_reserved(name)` to `onzio_staging_member_insert` (otherwise byte for byte the
+  `20260808160000` policy), so a club editor can no longer stage a file without going through `/authorize` and
+  its quota and rate limit. Ready rollback: `docs/phase-11/diverse-city/RC-ADMIN-10C-ROLLBACK.sql`.
+- **Checks (Christian, 2026-11-19):** (a) passed, re-run with the then-available log hour before the dry run;
+  (b) fresh B1-a, raw output to Christian, wait for his review before the dry run; (c) a real photo and a real
+  graphic upload right after apply.
+- **Exact next step:** onzio-bot clean, then (a) and (b) for Christian's review.
+
 ## 2026-11-18 - RC-PREVIEW: Rose City public-site preview for Sam (app code only)
 
 - **Status:** `in_progress`, PR open; merges only on Christian's word. No migration, env, data or production change.
@@ -16,8 +28,8 @@
 
 ## 2026-11-19 - RC-ADMIN-10a: sponsor and news caps in SQL
 
-- **Status:** `in_progress`. PR #176: the migration is on production (2026-11-19, after Christian's "push") and the
-  read-only check passed; onzio-bot clean. Waiting for Christian's merge. Record in `STATUS.md`.
+- **Status:** `done`. PR #176 merged as `01af57a7` on 2026-11-19, after the migration was on production and the
+  read-only check passed; onzio-bot clean. Record in `STATUS.md`.
 - **What:** migration `20261119010000_sponsor_and_news_caps.sql` adds two row triggers that refuse increases
   past the caps: sponsors 30 total / 10 homepage / 6 footer (`SPONSOR_LIMIT_*`) and News 200 live articles
   (`NEWS_LIMIT_REACHED`), errcode 23514. The one-list Sponsors save now turns switches off before turning any on.
@@ -26,7 +38,7 @@
   2026-11-18 order (10c before 10a). He lifted 10c's time gate; it keeps three checks: (a) passed on DB evidence and
   is re-run with the then-available log hour before the dry run, (b) a fresh B1-a he reviews before the dry run,
   (c) a real photo and graphic upload right after apply.
-- **Exact next step:** Christian merges #176, then RC-ADMIN-10c.
+- **Exact next step:** RC-ADMIN-10c (in progress).
 
 ## 2026-11-18 - RC-ADMIN-10b: media upload quota, rate limit and one-time reservations
 
