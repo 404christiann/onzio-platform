@@ -161,6 +161,8 @@ begin
   insert into onzio_private.club_media_limits (club_id, max_assets) values (c, 2000) on conflict do nothing;
   insert into onzio_private.media_upload_reservations (id, club_id, actor_id, surface, kind, staging_path, claimed_size, expires_at)
     select r, c, owner, 'homepage', 'photo', c::text || '/homepage/' || r::text || '.jpg', 1000, now() + interval '5 minutes' from gen_random_uuid() r;
+  insert into onzio_private.media_pins (club_id, object_path, reason)
+    values (c, c::text || '/branding/' || gen_random_uuid()::text || '.webp', 'fixture');
 
   -- Rose City (cinematic@2) tables, with each page's starter content. Ticket
   -- page images must be published Homepage graphics.

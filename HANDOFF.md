@@ -1,3 +1,16 @@
+## 2026-11-19 - RC-ADMIN-10d: orphan-media sweep (dry-run by default)
+
+- **Status:** `in_progress`. PR #180: the migration is on production (2026-11-19, after Christian's "push") and
+  the read-only check passed; onzio-bot clean. Waiting for his merge. Record in `STATUS.md`.
+- **What:** migration `20261119120000_media_orphan_sweep.sql` (the `unreferenced_since` clock, `onzio_private.media_pins`
+  with Rose City's 14 hard-coded files, a registry for JSON media columns inside the one reference function, a
+  service-role scan RPC, and the private `onzio-media-trash` bucket) plus a daily cron at 10:30 UTC that runs in
+  dry-run and stores each report in `audit_events`.
+- **Rules (Christian, 2026-11-19):** dry-run only until he has reviewed 7+ days of reports and says "enforce". Today
+  60% (Diverse City) and 76% (Rose City) of published assets are unreferenced, so enforce would halt on the 30% club
+  limit; the backlog plan is his call at that point.
+- **Exact next step:** Christian merges #180; then the daily dry-run reports accumulate for his review.
+
 ## 2026-11-19 - RC-PREVIEW follow-up: preview fonts, and the rc-sam rollout for Sam
 
 - **Status:** `in_progress`, PR open. The preview for Sam is live on branch `rc-sam`, behind Deployment Protection,
@@ -13,9 +26,8 @@
 
 ## 2026-11-19 - RC-ADMIN-10c: staging upload needs a live reservation
 
-- **Status:** `in_progress`. PR #178: the migration is on production (2026-11-19, after Christian's "push"); the
-  read-only check and a real photo and graphic upload passed; onzio-bot clean. Waiting for his merge. Record in
-  `STATUS.md`.
+- **Status:** `done`. PR #178 merged as `90c459d6` on 2026-11-19 after the migration was on production and the
+  read-only check and a real photo and graphic upload passed; onzio-bot clean. Record in `STATUS.md`.
 - **What:** migration `20261119090000_staging_insert_requires_reservation.sql` adds
   `onzio_private.staging_upload_reserved(name)` to `onzio_staging_member_insert` (otherwise byte for byte the
   `20260808160000` policy), so a club editor can no longer stage a file without going through `/authorize` and
@@ -23,7 +35,7 @@
 - **Checks (Christian, 2026-11-19):** (a) passed, re-run with the then-available log hour before the dry run;
   (b) fresh B1-a, raw output to Christian, wait for his review before the dry run; (c) a real photo and a real
   graphic upload right after apply.
-- **Exact next step:** Christian merges #178, then RC-ADMIN-10d.
+- **Exact next step:** RC-ADMIN-10d (in progress).
 
 ## 2026-11-18 - RC-PREVIEW: Rose City public-site preview for Sam (app code only)
 
@@ -53,7 +65,7 @@
   2026-11-18 order (10c before 10a). He lifted 10c's time gate; it keeps three checks: (a) passed on DB evidence and
   is re-run with the then-available log hour before the dry run, (b) a fresh B1-a he reviews before the dry run,
   (c) a real photo and graphic upload right after apply.
-- **Exact next step:** RC-ADMIN-10c (in progress).
+- **Exact next step:** none for 10a (done); 10c is done and 10d is in progress.
 
 ## 2026-11-18 - RC-ADMIN-10b: media upload quota, rate limit and one-time reservations
 

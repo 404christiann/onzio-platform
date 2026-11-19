@@ -1,5 +1,120 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-10d orphan-media sweep (dry-run by default)
+
+**Agent/package:** Claude Code (Opus, with a Sonnet implementation subagent), RC-ADMIN-10d, branch
+`claude/rc-admin-10d` on `90c459d6`. **Status:** `in_progress`: PR #180; the migration is on production (2026-11-19, after Christian's
+"push") and the read-only check passed; onzio-bot fully clean at `e526aae` (five reviews, every Low fixed at
+Christian's request). Waiting only for his merge. It stays in dry-run until he has reviewed 7+ days of reports and
+says "enforce".
+
+**Findings before building (read-only on production, 2026-11-19):**
+- By the existing reference check, 41 of 68 Diverse City published assets (60%) and 393 of 515 Rose City assets
+  (76%) are unreferenced. None of Diverse City's 41 appear on its 10 live public pages.
+- 14 Rose City files are hard-coded in app code (6 roster flags in `lib/flags.ts`, 8 affiliation logos in
+  `components/Nav.tsx`). All 14 have published rows and stored files, and the check calls all 14 unreferenced.
+  Christian chose `onzio_private.media_pins` to protect them.
+- JSONB media on production: only `club_logo_page_content.color_cards/features` (already checked) and
+  `homepage_save_receipts.response` (a historical receipt, not a live reference).
+- The planned halts (club over 30% candidates, run over 200) would stop every run for both clubs. Christian did
+  not answer the dry-run question, so: dry-run lists every candidate with `wouldHaltClub` / `wouldHaltRun`, and the
+  halts apply only in enforce. The first enforce needs his call on the backlog (today's numbers would halt).
+
+**Completed work:**
+- Migration `20261119120000_media_orphan_sweep.sql`:
+  - `onzio.media_assets.unreferenced_since` (nullable): set by a scan when an asset is unreferenced, cleared when
+    referenced again. A candidate needs both it and `published_at` older than 24 hours, so a file needs two scans a
+    day apart before it can ever be a candidate.
+  - `onzio_private.media_pins (club_id, object_path, reason, created_at)`, service role only, seeded with the 14
+    Rose City paths (no-op where the club does not exist).
+  - `onzio_private.media_reference_columns`: registry of JSON/text columns holding media paths, seeded with the logo
+    page JSON and `site_social_links.icon`.
+  - `onzio_private.media_asset_has_references` (same signature, still the one reference check): a pinned path counts
+    as referenced first; the FK and url/_path loops are unchanged; the two hard-coded checks became a loop over the
+    registry. The retire core uses it, so a pinned asset can never be retired by any path.
+  - `onzio.media_orphan_sweep_scan(p_grace)` (service role only): one pass that updates the clock and returns per
+    club the pinned, waiting and candidate assets, plus a report-only count of stray objects. Its updates on
+    `media_assets` take the statement lock `734901281` (existing `serialize_homepage_write` trigger), so homepage
+    saves and retirements wait for the scan (seconds, at 10:30 UTC).
+  - Private bucket `onzio-media-trash` (same limits as `onzio-media`, no policies).
+- `lib/media-orphan-sweep.ts` and `/api/cron/media-orphan-sweep` (CRON_SECRET; `vercel.json` `30 10 * * *`):
+  - `MEDIA_ORPHAN_SWEEP_MODE`: `off`, `enforce`, anything else (including unset) is `dry-run`.
+  - Dry-run calls only the scan and the report insert: no copy, retire, remove or queue.
+  - Enforce: copy to trash, then `retire_unreferenced_media_asset` (re-checks under its lock), then remove from
+    `onzio-media` (retry queue on failure); a `referenced`/`not-published` result deletes the trash copy. Limits
+    50 per run, 25 per club; club halt over 30%, run halt over 200; trash older than 30 days purged.
+  - Report persisted per run as `audit_events` rows (`media.orphan_sweep_report`, one per club plus a summary),
+    because Vercel Hobby keeps logs about an hour. Pinned assets are listed as `pinned`.
+- Ready rollback: `docs/phase-11/diverse-city/RC-ADMIN-10D-ROLLBACK.sql`.
+- Tests: `tests/database/media-orphan-sweep.test.ts` (pins, registry, FK/url references, clock set/keep/clear,
+  grace, archived clubs, report, grants, and a catalog test that classifies every json/jsonb column on club tables);
+  `tests/contracts/media-pins-hardcoded.test.ts` (finds exactly the 14 hard-coded paths and fails on an unpinned
+  one or a stale pin); `tests/contracts/media-orphan-sweep-cron.test.ts`; `lib/__tests__/media-orphan-sweep.test.ts`
+  (modes, caps, halts, enforce order, trash purge). `purge-archived-club.test.ts` gains a `media_pins` fixture row;
+  the three migration-order pins gain the new file; the architecture test approves the new service-role file.
+
+**Verification (local; reset with this branch's migrations inside one DB lock hold):** full `test:db` 79 files,
+1355 tests (1356 after round 1); `db:types:check`; `test:unit` 344 files, 3990 tests; architecture 18 files, 432 passed, 1 skipped
+(existing); the two new contract tests 6/6; `tsc`; `next build` (subagent run).
+
+**onzio-bot round 1 (no High or Medium; Christian asked for every Low fixed):**
+- Low 1, fixed: enforce treated an existing trash copy as copied, and the 30-day purge later in the same run could
+  delete a stale copy of a file retired that day. Now a stale copy is removed and the file copied again, and a
+  failed replacement means no retirement. Two unit tests.
+- Low 2, fixed: the scan now computes every reference first and writes the clock in two set-based statements at
+  the end, so lock `734901281` (taken by `media_assets`' `serialize_homepage_write`) is held only for those two
+  updates, not the whole scan. The scan's speed against production is timed read-only at the gate.
+- Low 3, fixed: a new DB test fails when a `media_reference_columns` row has no `guard_media_reference` trigger
+  (write-side lock against retirement); the migration comment says so. Mutation check: with the social-icon guard
+  dropped, the test fails.
+- Note 5, fixed: the cron test no longer claims it runs after the staging cleanup (Hobby may fire anywhere in the
+  hour; nothing depends on the order).
+- Note 4, left: `unreferenced_since` is readable by anon/authenticated through `media_assets`' table-level grant.
+  Hiding it means moving the clock off `media_assets`, against the approved design; low sensitivity.
+- Re-verified: full `test:db` 79 files, 1356 tests; `db:types:check`; sweep unit and cron tests 21/21; `tsc`.
+
+**onzio-bot round 2 (no High or Medium; both optional Lows fixed):**
+- The stray-object count now runs before the two clock updates, so lock `734901281` covers only those updates.
+- A retire call that errored after committing no longer leaks the public object: enforce reads the asset back,
+  and if it is already retired (`orphaned`, `deleted_at` set) removes the public object; otherwise it keeps both
+  copies and records `RETIRE_FAILED`. Two unit tests.
+- Re-verified: full `test:db` 79 files, 1356 tests; `db:types:check`; `test:unit` 345 files, 4030 tests;
+  architecture 432 passed, 1 skipped; `tsc`.
+
+**onzio-bot round 3 (no High or Medium; the optional Low fixed):** the read-back after a retire error now counts
+the asset as this run's retirement only when `deleted_at` is at or after the run started; an asset another path
+retired earlier is recorded as skipped (`already-retired`), its trash copy removed, and its public object left to
+the path that retired it. One unit test; `test:unit` and architecture re-run (code only, migration unchanged).
+
+**onzio-bot round 4 (no High or Medium; the optional Low fixed):** to remove app/database clock skew, the run start
+used by that read-back is now the scan's `scannedAt` (database clock, stamped before any retirement), the same
+clock as `deleted_at`. The two tests use an app clock 10 hours ahead to prove skew doesn't change the outcome.
+
+**Known limit:** cinematic JSON content stores asset ids that are mirrored into `*_media_asset_id` FK columns or
+child tables; the catalog test forces a decision on any new JSON column but cannot prove a mirror exists.
+
+**Production gate (2026-11-19 UTC, from Christian's Mac, Supabase CLI 2.122.0):**
+1. Ledger: the only local-only version was `20261119120000`; main had not moved.
+2. Timing (read-only): `media_asset_has_references` over all 587 published assets took 6.2 s (149 referenced), so
+   the daily scan should take about 6-7 s, inside the cron's 60 s.
+3. Snapshot: 2 clubs, 4 active domains, audit `1034:1041`, 587 published assets, 4 buckets; no clock column and no
+   new tables yet.
+4. Backup (Christian typed the password):
+   `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-20261119-0742-pre-rcadmin10d.dump`, 1,309,782 bytes,
+   94 table-data entries, SHA-256 `f7a96873942900707ea48feef7ad760c52558d76a6cc19a39ee472f5a52929a3`. Kept.
+5. Dry run: exactly `20261119120000_media_orphan_sweep.sql`, no seeds, no roles (repeated right before the apply).
+   Christian said "push". Applied with `db push --linked --skip-vault`.
+6. Read-only check: no local-only or remote-only versions; a second dry run says "up to date"; 14 pins, all
+   matching published assets and all counting as referenced (163 referenced now = 149 + 14); 3 registry rows;
+   both scan functions; `onzio-media-trash` private (5 buckets); no clock set yet (0); snapshot unchanged.
+7. The copied link files were deleted.
+
+**Blockers or unresolved decisions:** Christian's merge of #180. After it, enforce and the backlog plan for it are
+his call once he has read 7+ days of reports (`audit_events` operation `media.orphan_sweep_report`).
+
+**Exact next step:** Christian merges #180. The first cron run (10:30 UTC daily, Hobby may fire anywhere in the
+hour) writes the first dry-run report; day one shows no candidates because of the two-scan grace.
+
 ## 2026-11-19 - RC-PREVIEW follow-up: static fonts on the preview host, and the rc-sam rollout
 
 **Agent/package:** Claude Code (Opus 5.5), RC-PREVIEW (follow-up), branch `claude/rc-preview-static` on
@@ -96,9 +211,9 @@ Re-verified: all six gates pass, the kit-dialog axe scan is empty at 390 and 144
 ## 2026-11-19 - RC-ADMIN-10c staging upload needs a live reservation
 
 **Agent/package:** Claude Code (Opus), RC-ADMIN-10c, branch `claude/rc-admin-10c` on `84142ca3`.
-**Status:** `in_progress`: PR #178; the migration is on production (2026-11-19 08:5x UTC, after Christian's
-"push"), the read-only check and check (c) passed; onzio-bot clean at `4ad5e71` after one fix round. Waiting only
-for Christian's merge. He lifted the 2026-11-20 04:00 UTC time gate on 2026-11-19 and kept checks (a), (b), (c).
+**Status:** `done`. Merged as `90c459d6` (PR #178) on 2026-11-19 09:01 UTC by Christian, after the migration was on
+production and the read-only check and check (c) passed; onzio-bot clean at `4ad5e71` (one fix round) and
+`27e7647`. He lifted the 2026-11-20 04:00 UTC time gate on 2026-11-19 and kept checks (a), (b), (c).
 
 **Completed work:**
 - Migration `20261119090000_staging_insert_requires_reservation.sql`:
