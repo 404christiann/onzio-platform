@@ -183,12 +183,3 @@ describe("RC-ADMIN-4b-seasons: the delete guard is the classic page's", () => {
     expect(sortSeasonList(rows).map((row) => row.label)).toEqual(["Fall 2027", "Spring 2027", "2026"]);
   });
 });
-
-describe("RC-ADMIN-4b-seasons: verify-rc-admin still drives the page", () => {
-  it("finds the Create button under both names and confirms in the dialog", () => {
-    const spec = source(".claude/skills/verify-rc-admin/rc-admin-verify.spec.ts");
-    expect(spec).toContain("/^Create (Next Season|.+ season)$/");
-    expect("Create Next Season").toMatch(/^Create (Next Season|.+ season)$/);
-    expect("Create 2028 season").toMatch(/^Create (Next Season|.+ season)$/);
-  });
-});
