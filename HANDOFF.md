@@ -1,3 +1,12 @@
+## 2026-11-19 - RC-ADMIN-4a-policies: Rose City Policies editor on the editor kit
+
+- **Status:** `in_progress`, PR open; merges on Christian's word. App code only. Details and evidence in `STATUS.md`.
+- **What:** `/admin/policies` for Rose City now uses PageFrame, section cards (Page heading plus one per row) and the kit
+  dialog for answer lines. One Save, same POST body, same recovery key; the reducer and schemas are untouched. The hint now
+  says every answered row starts open, as the public page does. A conflict offers "Load latest and keep my edits".
+- **Not done by design:** no live preview, no row show/hide (row keys are fixed in SQL), no content (the Fan Code and four
+  Guidelines answers are still with the club).
+
 ## 2026-11-19 - RC-ADMIN-4a-about: Rose City About editor on the editor kit (app code only)
 
 - **Status:** `in_progress`, PR open; verify-rc-admin PASS (6/6). No migration, schema, validator, RPC or env change. Merges only on
@@ -16,6 +25,7 @@
   byte-identical to the old editor's. Field messages now show the schema's own strings. Conflict gains "Load latest and keep my edits".
   Diverse City's Contact editor is unchanged.
 - **Exact next step:** onzio-bot review, then Christian merges.
+
 
 ## 2026-11-19 - Rose City admin wave 4: old editors onto the editor kit (plan), and RC-ADMIN-4-0b
 

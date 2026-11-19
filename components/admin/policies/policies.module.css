@@ -1,0 +1,23 @@
+/* Policies editor pieces that the shared list-cards and kit styles do not cover. */
+.switchRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.otherEdited { display: inline-flex; min-block-size: 28px; padding: 0 10px; align-items: center; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); font-size: .8125rem; font-weight: 500; }
+.section { display: grid; min-inline-size: 0; gap: 10px; margin-block-start: 12px; }
+.sectionHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.sectionHead h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
+.sectionHead .count { margin-inline-start: 10px; color: hsl(var(--muted-foreground)); font-size: .8125rem; font-weight: 500; }
+.needed { color: hsl(var(--destructive)); font-weight: 600; }
+.empty { display: grid; justify-items: start; gap: 12px; padding: 20px; border: 1px dashed hsl(var(--input)); border-radius: 14px; color: hsl(var(--muted-foreground)); font-size: .875rem; }
+.empty p { margin: 0; }
+.lines { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.line { display: grid; min-inline-size: 0; gap: 12px; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); }
+.lineHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.lineTitle { display: flex; align-items: center; gap: 8px; font-size: .875rem; font-weight: 600; }
+.lineTitle select { min-block-size: 44px; padding: 0 10px; border: 1px solid hsl(var(--input)); border-radius: 10px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: .875rem; font-weight: 400; }
+.lineTitle select:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.lineTools { display: flex; gap: 6px; }
+.answerHead { margin: 0; font-size: .8125rem; font-weight: 600; }
+.noAnswer { margin: 0; padding: 12px 14px; border: 1px dashed hsl(var(--input)); border-radius: 12px; color: hsl(var(--muted-foreground)); font-size: .875rem; }
+.adds { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.limit { color: hsl(var(--muted-foreground)); font-size: .8125rem; }
+.removeRow { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid hsl(var(--destructive) / .5); border-radius: 12px; }
+.removeRow p { margin: 0; font-size: .875rem; }

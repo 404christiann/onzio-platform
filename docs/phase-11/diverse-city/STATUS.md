@@ -1,5 +1,50 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4a-policies Rose City Policies editor on the editor kit
+
+**Agent/package:** Claude Code (Sonnet worker, orchestrated), RC-ADMIN-4a-policies, branch `claude/rc-admin-4a-policies`.
+**Status:** `in_progress`, PR open. It merges only on Christian's word. App code only. No migration, schema, validator,
+RPC, env, data or production change. Ships no content: the Fan Code and the four empty Guidelines answers are still with
+the club, and the editor edits whatever is in the database.
+
+**Completed work:**
+- `/admin/policies` (Rose City, cinematic@2) is rebuilt on the editor kit: `PageFrame` (breadcrumb, Open page that follows the
+  page switch, Save grey, blue, then green check), the Guidelines / Fan Code switch kept, a Page heading card, then one
+  `SectionCards` card per row (up to 30). Each row card says "Starts open" or "Coming soon" plus a count of its lines.
+- Answer lines are edited in the kit `EditorDialog`: two panes on desktop (Page heading and every row on the left), a
+  full-screen sheet on phone. Same line rules as before: Subheading or Paragraph, 12 lines, move up and down, remove,
+  blank lines dropped at save. Row move earlier or later and remove row keep today's behaviour; removing a row asks inline
+  inside the dialog (a second modal over the kit dialog was avoided).
+- One Save still writes both pages with the same POST body to `/api/admin/cinematic-policies`. The reducer
+  (`lib/cinematic-policies-draft.ts`), the content schema, the load and save helpers and the localStorage recovery key are
+  unchanged.
+- Hint corrected to match the public page: every answered row starts open (the old hint said only the first one did).
+- New: "Load latest and keep my edits" on a conflict (the old editor had only a reload). Validation now shows on the field
+  and on the row card; the old one-line message is still shown.
+- The old live preview was dropped, as designed. Row show/hide and "open by default" were not added: row keys are fixed in SQL.
+
+**Files changed:** `components/admin/policies/CinematicPolicyEditor.tsx` (rewritten); new `PolicyDialogFields.tsx`,
+`policies-sections.ts`, `policies.module.css`; new `tests/contracts/rc-admin-4a-policies.test.ts` (19 tests: request bytes
+identical to the old editor for six edit scripts and for a pending resend, field errors, card summaries, dialog ids, Save
+states, dialog fields render, kit and copy checks). Selector debt untouched (same reads and literals as before).
+
+**Verification:** verify-rc-admin `--route /admin/policies --touched policies`. Run 7 (pre-rebase, report
+`test-results/rc-admin-verify/20261119-094605-RC-ADMIN-4a-policies/report.html`): PASS on all six gates.
+- Gate 1: 5 app files. Gate 2: 13/13 identical, touched `policies`. Gate 3: kit path, clean, dirty, saving, saved, retry,
+  conflict and discard pass. Gate 4: CLS at most 0.00032, new axe 0, reduced motion 0 offenders.
+- Gate 5: tsc ok; unit 346 files, 4050 tests; architecture 152; selector debt unchanged. Gate 6: Diverse City 8/8 identical.
+- Final run (run 10) on `b73a5bc9` (this branch on `b2ecd39d`, with the #183 skill fixes), report
+  `test-results/rc-admin-verify/20261119-104409-RC-ADMIN-4a-policies/report.html`: PASS on all six gates. Gate 1: 5 app files,
+  2 doc warnings. Gate 2: 13/13 identical. Gate 3: all seven states pass. Gate 4: CLS at most 0.00032, new axe 0. Gate 5: tsc ok;
+  unit 348 files, 4088 tests; architecture 152; selector debt unchanged. Gate 6: 8/8 identical.
+- Run 9 (on `1fd26b31`, before #183, so without `settle.mjs`) failed only gate 3 "saved": the Save button colour was sampled
+  mid-transition (`rgb(46, 189, 102)`), the known skill flake. The identical rerun on the fixed skill passed, so #183 held here.
+- Flakes (infrastructure, no code change between runs): two runs failed at seed with "An invalid response was received
+  from the upstream server" right after the DB reset, one at sign-in (`Enter your code` timed out), one stopped on the disk
+  check (3.7 GB free).
+
+**Blockers or unresolved decisions:** none for the code. Content for the Fan Code and four Guidelines answers is the club's.
+
 ## 2026-11-19 - RC-ADMIN-4a-about: Rose City About editor on the editor kit (app code only)
 
 **Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4a-about, branch `claude/rc-admin-4a-about`.
@@ -90,6 +135,7 @@ shows its `h1`: origin/main's Chick-fil-A in gate 2 (run `075435-...-shop1`) and
 gate 4 (run `101619-...-home6`, screenshot in its `playwright/` folder). Both passed on an identical rerun. It may be a
 real intermittent hang in the editors' data load rather than a skill problem, so the skill does not retry around it.
 Next: on the next occurrence capture the pending and failed requests at that moment.
+
 
 ## 2026-11-19 - RC-ADMIN-4a-contact: Rose City Contact editor on the editor kit (app code only)
 
