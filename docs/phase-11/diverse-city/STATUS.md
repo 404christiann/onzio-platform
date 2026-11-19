@@ -43,7 +43,14 @@ schema, RPC, data or production change, and nothing under `components/cinematic/
 **Not captured:** the Roster-left blocked state on screen. The seed has no Roster players or partners; contract
 tests cover it.
 
-**Next step:** onzio-bot review, then Christian merges.
+**Bot fix round 1 (#173 review, Lows):**
+- L1: the grid now passes the card's dialog id to `rememberMove`, so focus moves to the remaining enabled button
+  after a move to first or last place. `moveFocusSelectors` is shared by the hook and its test.
+- L3: an upload that commits after a club or epoch change is retired through the existing cleanup call.
+- L2 (Injury Report breadcrumb "Partners") is unchanged and correct: the hub groups injury-report under Partners.
+- Re-verified: all six gates pass on both routes. Unit: 338 files, 3821 tests.
+
+**Next step:** onzio-bot re-review, then Christian merges.
 
 ## 2026-11-18 - RC-ADMIN-14 Rose City Sponsors editor on the editor kit (Previews layout)
 

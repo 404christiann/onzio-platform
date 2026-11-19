@@ -3,6 +3,7 @@ import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ItemPreviewCards } from "@/components/admin/list-cards/ItemPreviewCards";
+import { moveFocusSelectors } from "@/components/admin/list-cards/useMoveFocus";
 import { ListField, PositionTools } from "@/components/admin/list-cards/ListField";
 import {
   changedBlocks, changedEntryIds, entryDialogId, injuryDirty, mergeMedia, parseInjuryDialogId, playerLabel, reportFor,
@@ -364,5 +365,42 @@ describe("both editors use the kit and the real public components", () => {
   it("Remove is a plain remove: no hide-and-keep flag was added to the content", () => {
     expect(Object.keys(starterCinematicPartnersContent().partners)).toEqual([]);
     expect(Object.keys(addPartner(starterCinematicPartnersContent()).partners[0]).sort()).toEqual(["id", "logoAssetId", "name", "role", "tone"]);
+  });
+});
+
+describe("move focus finds the card the grid draws (fix loop 1, L1)", () => {
+  const cardId = partnerDialogId(id(1));
+  const markup = html(createElement(ItemPreviewCards, {
+    items: [{ id: cardId, label: "Foothill Transit" }, { id: partnerDialogId(id(2)), label: "Niky" }], noun: "partner", label: "Partners", disabled: false, lazy: false,
+    renderPreview: () => null, onEdit: () => {}, onMove: () => {}, add: { label: "Add partner", count: "2 of 24", disabled: false, onAdd: () => {} },
+  }));
+  it("the selectors built from the dialog id match data-item-card and data-move", () => {
+    for (const delta of [-1, 1] as const) {
+      const { root, button } = moveFocusSelectors(cardId, delta, false);
+      expect(root).toBe(`[data-item-card="${cardId}"]`);
+      expect(markup).toContain(`data-item-card="${cardId}"`);
+      expect(button).toBe(`[data-move="${cardId}:${delta}"]`);
+      expect(markup).toContain(`data-move="${cardId}:${delta}"`);
+    }
+    expect(cardId).toBe(`partner:${id(1)}`);
+  });
+  it("both editors pass the dialog id, not the raw row id, from the grid", () => {
+    expect(read("components/admin/partners/CinematicPartnersEditor.tsx")).toContain("rememberMove(partnerDialogId(partner.id), delta, inDialog)");
+    expect(read("components/admin/injury-report/CinematicInjuryReportEditor.tsx")).toContain("rememberMove(entryDialogId(entry.id), delta, inDialog)");
+  });
+  it("the dialog path looks up the dialog's own buttons", () => {
+    expect(moveFocusSelectors(cardId, -1, true)).toEqual({ root: "[data-editor-dialog]", button: "[data-move-earlier]" });
+    expect(moveFocusSelectors(cardId, 1, true).button).toBe("[data-move-later]");
+  });
+  it("the hook falls back to the other enabled button after a move to first or last place", () => {
+    const hook = read("components/admin/list-cards/useMoveFocus.ts");
+    expect(hook).toContain("[pick(move.delta), pick(move.delta === 1 ? -1 : 1)].find(button => button && !button.disabled)?.focus()");
+  });
+});
+
+describe("an upload that finishes after the page changed is retired (fix loop 1, L3)", () => {
+  it("both editors retire the just-committed asset before returning", () => {
+    expect(read("components/admin/partners/CinematicPartnersEditor.tsx")).toContain("if (generation !== epoch.current) { void retireUploads([result.data.assetId]); return; }");
+    expect(read("components/admin/injury-report/CinematicInjuryReportEditor.tsx")).toContain("if (generation !== epoch.current) { void retireUploads([result.data.assetId]); return false; }");
   });
 });

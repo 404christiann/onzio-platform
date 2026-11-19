@@ -233,7 +233,8 @@ export default function CinematicInjuryReportEditor() {
       if (result.error || !result.data?.assetId) throw new Error(result.error?.message ?? `The ${config.label} upload failed.`);
       const bitmap = await createImageBitmap(file), dimensions = { width: bitmap.width, height: bitmap.height };
       bitmap.close();
-      if (generation !== epoch.current) return false;
+      // The page changed under this upload: nothing will ever reference the asset, so retire it now.
+      if (generation !== epoch.current) { void retireUploads([result.data.assetId]); return false; }
       const item: InjuryMedia = { id: result.data.assetId, storage_path: result.data.path, ...dimensions, kind: config.kind };
       setMedia(current => mergeMedia([item], current));
       setUploads(current => [...current, item.id]);
@@ -256,7 +257,7 @@ export default function CinematicInjuryReportEditor() {
     if (!draft || locked) return;
     const entry = draft.entries[index];
     if (!entry || index + delta < 0 || index + delta >= draft.entries.length) return;
-    rememberMove(entry.id, delta, inDialog);
+    rememberMove(entryDialogId(entry.id), delta, inDialog);
     update(content => moveInjuryEntry(content, index, delta));
     setStatus(`${playerLabel(entry, players, index)} is now number ${index + delta + 1}.`);
   };

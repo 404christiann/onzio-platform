@@ -218,7 +218,8 @@ export default function CinematicPartnersEditor() {
       if (result.error || !result.data?.assetId) throw new Error(result.error?.message ?? "Logo upload failed.");
       const bitmap = await createImageBitmap(file), dimensions = { width: bitmap.width, height: bitmap.height };
       bitmap.close();
-      if (generation !== epoch.current) return;
+      // The page changed under this upload: nothing will ever reference the asset, so retire it now.
+      if (generation !== epoch.current) { void retireUploads([result.data.assetId]); return; }
       const logo: PartnerLogoMedia = { id: result.data.assetId, storage_path: result.data.path, ...dimensions, label: file.name.replace(/\.[^.]+$/, "") };
       setLogos(current => mergeLogos([logo], current));
       setUploads(current => [...current, logo.id]);
@@ -239,7 +240,7 @@ export default function CinematicPartnersEditor() {
     if (!draft || locked) return;
     const partner = draft.partners[index];
     if (!partner || index + delta < 0 || index + delta >= draft.partners.length) return;
-    rememberMove(partner.id, delta, inDialog);
+    rememberMove(partnerDialogId(partner.id), delta, inDialog);
     update(content => movePartner(content, index, delta));
     setStatus(`${partnerName(partner, index)} is now number ${index + delta + 1}.`);
   };
