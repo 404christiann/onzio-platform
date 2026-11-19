@@ -41,7 +41,14 @@ report `test-results/rc-admin-verify/20261119-135156-RC-ADMIN-4b-seasons/report.
   neither (`PageFrame` without `onSave` renders no Save button, and there is no dialog button of its own other than `AdminConfirmDialog`),
   so verify was not rerun; tsc and unit were rerun on the rebased head (below).
 - Not driven by verify (gate 3 n/a): Make active and Delete (Rose City's seed has one season, so neither button shows). Their
-  write code is the classic page's and pinned by the contract tests above.
+  write code is the classic page's and pinned by the contract tests above. Driven by hand instead: manual check on the head build
+  (one DB-lock hold: reset, seed, sign-in, `next start`, Playwright), `test-results/manual-seasons/20261119-144654/`, 3 of 3 pass, Rose
+  City at 390 and 1440: create 2028 (cancel, then confirm; 10 zero stat rows), Make active (confirm names Roster, Schedule and Stats;
+  cancel changed nothing), Roster and Schedule follow the new active season, delete the empty season (cancel, then confirm), and a 500
+  on the insert, update and delete each shows an error and leaves the data unchanged. Diverse City's classic page still creates and
+  activates a season at both sizes. The first three runs failed on locator races in the script, not on the page.
+- onzio-coder (one loop): Medium that the contract test did not pin the delete-guard refusal or the `club_id` filter on the server
+  reads, fixed in `e2c4212f` with two tests, mutation-checked; clean on that head.
 
 **Blockers or unresolved decisions:** none for this package. Open for Christian: the wrong "does not change with the season" copy on
 Diverse City's classic Seasons page.
