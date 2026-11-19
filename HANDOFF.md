@@ -4,16 +4,16 @@
   (`components/admin/ui/editor-kit`). Diverse City keeps the classic admin unchanged throughout. Record per package in
   `STATUS.md`.
 - **Order (app code only, one PR each, no schema, RPC or env change):**
-  - **4-0 polish:** RC-ADMIN-4-0b (this PR: Partners and Injury Report Previews-card spacing, Registrations hidden for
-    Rose City) and RC-ADMIN-4-0a (verify-skill flake fixes, a separate PR).
+  - **4-0 polish:** RC-ADMIN-4-0b (this PR: Partners and Injury Report Previews-card spacing, Registrations and
+    Standings hidden for Rose City) and RC-ADMIN-4-0a (verify-skill flake fixes, a separate PR).
   - **4a:** About, Contact, Policies.
-  - **4b:** Roster, then Seasons, then Stats + Standings.
+  - **4b:** Roster, then Seasons, then Stats. Standings is not rebuilt: it is hidden for Rose City (below).
   - **4c:** Club settings only: design first, Christian reviews, then the PR.
-- **Registrations is out for Rose City** (it outsources tryouts): hidden everywhere in its admin and
-  `/admin/registrations` answers 404. The code, data, API routes, public routes and Stripe Connect setup are kept,
-  because Diverse City still uses them. The hide is a per-club list in `lib/admin-route-manifest.ts`
+- **Registrations and Standings are out for Rose City** (it outsources tryouts, and its public site never shows
+  standings): both hidden everywhere in its admin, and `/admin/registrations` and `/admin/standings` answer 404.
+  The code, data, API routes, public routes and Stripe Connect setup are kept, because Diverse City still uses them. The hide is a per-club list in `lib/admin-route-manifest.ts`
   (`ADMIN_ROUTES_HIDDEN_BY_CLUB`, keyed on the club slug, not on `cinematic@2`), so a future cinematic club is not
-  affected. `/api/admin/registrations/*` is unchanged and still answers a signed-in Rose City admin.
+  affected; a page's 404 is a server layout calling `notFoundIfAdminRouteHidden` (`lib/admin-hidden-route.ts`). `/api/admin/registrations/*` is unchanged and still answers a signed-in Rose City admin.
 - **Exact next step:** RC-ADMIN-4-0b review and merge, then 4a.
 
 ## 2026-11-19 - RC-ADMIN-10d: orphan-media sweep (dry-run by default)

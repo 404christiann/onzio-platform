@@ -1,6 +1,6 @@
 # Diverse City FC Status
 
-## 2026-11-19 - RC-ADMIN-4-0b: Partners/Injury Report card spacing, Registrations hidden for Rose City
+## 2026-11-19 - RC-ADMIN-4-0b: Partners/Injury Report card spacing, Registrations and Standings hidden for Rose City
 
 **Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4-0b, branch `claude/rc-admin-4-0b` off `1177645d`.
 **Status:** `in_progress`: PR open (app code only, no migration, schema, validator, RPC or env change); all six
@@ -20,6 +20,13 @@ verify-rc-admin gates pass on both routes. Waiting for onzio-bot and Christian's
   metrics). The reimagined Payments page drops its "Registration money" link.
   `app/admin/(protected)/registrations/layout.tsx` (new) calls `notFound()` for Rose City, which covers the page and
   any page under it; `/admin/sign-ups` does the same. Diverse City and any other club render exactly as before.
+- **Standings hidden too (scope added by Christian, 2026-11-19, via the wave 4 orchestrator):** `standings` joins
+  Rose City's hide list. Gone from the Competition sidebar group, search, the reimagined More "League table" row, and
+  the reimagined Seasons hub's "Update the table" link (now `null` for that club). A new shared server helper,
+  `lib/admin-hidden-route.ts` (`notFoundIfAdminRouteHidden`), backs `app/admin/(protected)/registrations/layout.tsx`
+  and the new `standings/layout.tsx`, so `/admin/standings` (and any page under it) answers 404 for Rose City. The
+  Standings page, `league_standings` data, storage and Diverse City's page are untouched; Rose City's public site
+  never rendered standings. The contract test now covers both.
 - **Not touched:** registration code, data, `/api/admin/registrations/*`, `/api/register`, public routes, Stripe Connect.
   **API reachability:** `/api/admin/registrations/*` stays reachable for a signed-in Rose City owner or admin (it
   authorizes by role only, with no club check). Left as is, per the brief.
@@ -31,7 +38,9 @@ verify-rc-admin gates pass on both routes. Waiting for onzio-bot and Christian's
 `app/admin/(protected)/page.tsx`, `payments/page.tsx`, `sign-ups/page.tsx`, `registrations/layout.tsx` (new),
 `components/admin/reimagined/PaymentsPlan.tsx`, `components/admin/list-cards/ListEditor.module.css`,
 `components/admin/partners/PartnerCardPreview.module.css`, `components/admin/injury-report/InjuryCardPreview.module.css`,
-`tests/contracts/admin-rose-city-registrations-hidden.test.ts` (new, 11 tests), `HANDOFF.md`, this file.
+`lib/admin-hidden-route.ts` (new), `app/admin/(protected)/standings/layout.tsx` (new),
+`app/admin/(protected)/seasons/page.tsx`,
+`tests/contracts/admin-rose-city-registrations-hidden.test.ts` (new, 14 tests), `HANDOFF.md`, this file.
 
 **Verification:** verify-rc-admin, package `RC-ADMIN-4-0b`, from this worktree.
 - `/admin/partners` (`--touched partners`): gates 1-6 PASS. Report

@@ -654,13 +654,14 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
 /**
  * Rows a specific club never sees, keyed on the club's slug (not on its site
  * design, so a future cinematic@2 club is unaffected). Rose City outsources
- * tryouts, so its admin has no Registrations: no sidebar row, hub row, search
- * result, quick action or home job, and /admin/registrations answers 404. The
- * registration code, data, API routes and public pages stay for the clubs that
- * use them (Diverse City).
+ * tryouts, so its admin has no Registrations, and its public site never shows
+ * standings, so it has no Standings either: no sidebar row, hub row, search
+ * result, quick action, home job or More row, and /admin/registrations and
+ * /admin/standings answer 404. The code, data, API routes and public pages stay
+ * for the clubs that use them (Diverse City).
  */
 export const ADMIN_ROUTES_HIDDEN_BY_CLUB: Readonly<Record<string, readonly AdminRouteId[]>> = {
-  "rose-city": ["registrations", "sign-ups"],
+  "rose-city": ["registrations", "sign-ups", "standings"],
 };
 
 /** Whether this club's admin hides a row (see ADMIN_ROUTES_HIDDEN_BY_CLUB). */

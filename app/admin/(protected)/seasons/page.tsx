@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import ClassicSeasonsPage from "@/components/admin/ClassicSeasonsPage";
 import { SeasonsHub } from "@/components/admin/reimagined/SeasonsHub";
 import { readAdminPortal } from "@/lib/admin-portal";
-import { getAdminRouteHref } from "@/lib/admin-route-manifest";
+import { getAdminRouteHref, isAdminRouteHiddenForClub } from "@/lib/admin-route-manifest";
 import { loadSeasonsHub } from "@/lib/admin-seasons-data";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
@@ -61,7 +61,7 @@ export default async function SeasonsPage({
       canChange={canMutateContent}
       savedText={savedLabel(websiteState(club))}
       links={{
-        league: getAdminRouteHref("standings"),
+        league: isAdminRouteHiddenForClub(club.slug, "standings") ? null : getAdminRouteHref("standings"),
         // ADMIN-RE-11c-2: the Season totals page (design cd-season-totals), games added up plus what is added by hand.
         totals: `${getAdminRouteHref("seasons")}/totals`,
         games: getAdminRouteHref("schedule"),

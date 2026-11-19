@@ -14,6 +14,7 @@ vi.mock("@/lib/auth-session", () => ({ requireFreshClubSession: async () => ({ u
 vi.mock("@/lib/club-context", () => ({ getClubContext: mocks.club }));
 
 import RegistrationsLayout from "@/app/admin/(protected)/registrations/layout";
+import StandingsLayout from "@/app/admin/(protected)/standings/layout";
 import SignUpsPage from "@/app/admin/(protected)/sign-ups/page";
 import {
   getVisibleAdminHomeJobs,
@@ -28,8 +29,9 @@ import {
 import { getAdminSearchItems } from "@/lib/admin-search";
 import { getVisibleAdminTabs } from "@/lib/admin-tabs";
 
-// Rose City outsources tryouts, so its admin has no Registrations. The hide is
-// keyed on the club's slug (not on cinematic@2), and Diverse City is untouched.
+// Rose City outsources tryouts, so its admin has no Registrations, and its public
+// site never shows standings, so it has no Standings either. The hide is keyed on
+// the club's slug (not on cinematic@2), and Diverse City is untouched.
 
 const BASE: AdminRouteAccessContext = {
   role: "owner",
@@ -43,7 +45,7 @@ const DIVERSE_CITY: AdminRouteAccessContext = { ...BASE, presentationTemplateKey
 // A future cinematic@2 club: same design as Rose City, different club.
 const FUTURE_CINEMATIC: AdminRouteAccessContext = { ...BASE, clubSlug: "future-cinematic-fc" };
 
-const HIDDEN = ["registrations", "sign-ups"];
+const HIDDEN = ["registrations", "sign-ups", "standings"];
 const reimagined = (context: AdminRouteAccessContext): AdminRouteAccessContext => ({
   ...context,
   adminPortal: "reimagined",
@@ -56,10 +58,14 @@ function navIds(context: AdminRouteAccessContext) {
   );
 }
 
-describe("Rose City admin hides Registrations (RC-ADMIN-4-0b)", () => {
+describe("Rose City admin hides Registrations and Standings (RC-ADMIN-4-0b)", () => {
   it("keys the hide on the club slug, nothing else", () => {
     expect(isAdminRouteHiddenForClub("rose-city", "registrations")).toBe(true);
     expect(isAdminRouteHiddenForClub("rose-city", "sign-ups")).toBe(true);
+    expect(isAdminRouteHiddenForClub("rose-city", "standings")).toBe(true);
+    expect(isAdminRouteHiddenForClub("rose-city", "schedule")).toBe(false);
+    expect(isAdminRouteHiddenForClub("diverse-city", "standings")).toBe(false);
+    expect(isAdminRouteHiddenForClub("future-cinematic-fc", "standings")).toBe(false);
     expect(isAdminRouteHiddenForClub("rose-city", "roster")).toBe(false);
     expect(isAdminRouteHiddenForClub("diverse-city", "registrations")).toBe(false);
     expect(isAdminRouteHiddenForClub("future-cinematic-fc", "registrations")).toBe(false);
@@ -74,7 +80,7 @@ describe("Rose City admin hides Registrations (RC-ADMIN-4-0b)", () => {
     ["owner", ROSE_CITY],
     ["admin", { ...ROSE_CITY, role: "admin" as const, isBillingAuthorized: false }],
     ["owner on the reimagined admin", reimagined(ROSE_CITY)],
-  ])("removes Registrations from the routes, sidebar, hub and quick actions (%s)", (_name, context) => {
+  ])("removes Registrations and Standings from the routes, sidebar, hub and quick actions (%s)", (_name, context) => {
     const ids = getVisibleAdminRoutes(context).map((route) => route.id);
     for (const id of HIDDEN) expect(ids).not.toContain(id);
     for (const id of HIDDEN) expect(navIds(context)).not.toContain(id);
@@ -82,7 +88,10 @@ describe("Rose City admin hides Registrations (RC-ADMIN-4-0b)", () => {
     // Registrations is not a Website row, so the hub is unchanged.
     expect(getWebsiteHubSections(context).flatMap((section) => section.routes.map((route) => route.id))).not.toContain("registrations");
     // The rest of the admin is still there.
-    expect(ids).toEqual(expect.arrayContaining(["dashboard", "analytics", "roster", "schedule", "branding"]));
+    expect(ids).toEqual(expect.arrayContaining(["dashboard", "analytics", "roster", "schedule", "seasons", "match-stats", "branding"]));
+    // Standings sits in the Competition group: the rest of the group stays.
+    const competition = getVisibleAdminNavigation(context).find((entry) => entry.type === "group" && entry.id === "competition");
+    expect(competition?.type === "group" ? competition.routes.map((route) => route.id) : []).toEqual(["seasons", "roster", "schedule", "match-stats"]);
     expect(getVisibleAdminQuickActions(context).map((action) => action.id)).toEqual(expect.arrayContaining(["manage-roster", "manage-schedule"]));
   });
 
@@ -91,9 +100,12 @@ describe("Rose City admin hides Registrations (RC-ADMIN-4-0b)", () => {
     expect(getVisibleAdminHomeJobs(context).map((job) => job.id)).not.toContain("see-registrations");
     expect(getVisibleAdminMoreRows(context).map((row) => row.href)).not.toEqual(expect.arrayContaining(["/admin/registrations"]));
     expect(getVisibleAdminMoreRows(context).map((row) => row.id)).not.toContain("sign-up-forms");
+    expect(getVisibleAdminMoreRows(context).map((row) => row.id)).not.toContain("league-table");
+    expect(getVisibleAdminMoreRows(context).map((row) => row.href)).not.toContain("/admin/standings");
     const search = getAdminSearchItems(context);
     expect(search.map((item) => item.href)).not.toContain("/admin/registrations");
     expect(search.map((item) => item.href)).not.toContain("/admin/sign-ups");
+    expect(search.map((item) => item.href)).not.toContain("/admin/standings");
     expect(search.map((item) => item.label.toLowerCase())).not.toContain("registrations");
     expect(getVisibleAdminTabs(context).length).toBeGreaterThan(0);
   });
@@ -103,11 +115,13 @@ describe("Rose City admin hides Registrations (RC-ADMIN-4-0b)", () => {
       expect(getVisibleAdminRoutes(context).map((route) => route.id)).toContain("registrations");
       expect(navIds(context)).toContain("registrations");
       expect(getVisibleAdminQuickActions(context).map((action) => action.id)).toContain("registrations");
+      expect(getVisibleAdminRoutes(context).map((route) => route.id)).toContain("standings");
+      expect(navIds(context)).toContain("standings");
     }
     const home = reimagined(DIVERSE_CITY);
     expect(getVisibleAdminHomeJobs(home).map((job) => job.id)).toContain("see-registrations");
-    expect(getVisibleAdminMoreRows(home).map((row) => row.id)).toContain("sign-up-forms");
-    expect(getAdminSearchItems(home).map((item) => item.href)).toEqual(expect.arrayContaining(["/admin/registrations", "/admin/sign-ups"]));
+    expect(getVisibleAdminMoreRows(home).map((row) => row.id)).toEqual(expect.arrayContaining(["sign-up-forms", "league-table"]));
+    expect(getAdminSearchItems(home).map((item) => item.href)).toEqual(expect.arrayContaining(["/admin/registrations", "/admin/sign-ups", "/admin/standings"]));
   });
 
   it("does not hide anything on another cinematic@2 club, or when no club is named", () => {
@@ -115,6 +129,7 @@ describe("Rose City admin hides Registrations (RC-ADMIN-4-0b)", () => {
       expect(getVisibleAdminRoutes(context).map((route) => route.id)).toContain("registrations");
       expect(navIds(context)).toContain("registrations");
       expect(getVisibleAdminQuickActions(context).map((action) => action.id)).toContain("registrations");
+      expect(navIds(context)).toContain("standings");
     }
   });
 
@@ -125,7 +140,7 @@ describe("Rose City admin hides Registrations (RC-ADMIN-4-0b)", () => {
   });
 });
 
-describe("/admin/registrations route (RC-ADMIN-4-0b)", () => {
+describe("/admin/registrations and /admin/standings routes (RC-ADMIN-4-0b)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -140,6 +155,19 @@ describe("/admin/registrations route (RC-ADMIN-4-0b)", () => {
       mocks.club.mockResolvedValue({ id: slug, slug, presentationTemplateKey: slug === "diverse-city" ? "academy@1" : "cinematic@2" });
       const tree = await RegistrationsLayout({ children: createElement("p", null, "Registrations editor") });
       expect(renderToStaticMarkup(tree)).toBe("<p>Registrations editor</p>");
+    }
+  });
+
+  it("answers 404 for Rose City on /admin/standings (the layout covers the page and any page under it)", async () => {
+    mocks.club.mockResolvedValue({ id: "rc", slug: "rose-city", presentationTemplateKey: "cinematic@2" });
+    await expect(StandingsLayout({ children: createElement("p", null, "Standings editor") })).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("renders Standings as before for Diverse City and for another cinematic club", async () => {
+    for (const slug of ["diverse-city", "future-cinematic-fc"]) {
+      mocks.club.mockResolvedValue({ id: slug, slug, presentationTemplateKey: slug === "diverse-city" ? "academy@1" : "cinematic@2" });
+      const tree = await StandingsLayout({ children: createElement("p", null, "Standings editor") });
+      expect(renderToStaticMarkup(tree)).toBe("<p>Standings editor</p>");
     }
   });
 
