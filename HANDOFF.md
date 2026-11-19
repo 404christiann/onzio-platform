@@ -1,6 +1,7 @@
 ## 2026-11-19 - RC-ADMIN-10d: orphan-media sweep (dry-run by default)
 
-- **Status:** `in_progress`. PR open and ready; production not touched. Record in `STATUS.md`.
+- **Status:** `in_progress`. PR #180: the migration is on production (2026-11-19, after Christian's "push") and
+  the read-only check passed; onzio-bot clean. Waiting for his merge. Record in `STATUS.md`.
 - **What:** migration `20261119120000_media_orphan_sweep.sql` (the `unreferenced_since` clock, `onzio_private.media_pins`
   with Rose City's 14 hard-coded files, a registry for JSON media columns inside the one reference function, a
   service-role scan RPC, and the private `onzio-media-trash` bucket) plus a daily cron at 10:30 UTC that runs in
@@ -8,7 +9,7 @@
 - **Rules (Christian, 2026-11-19):** dry-run only until he has reviewed 7+ days of reports and says "enforce". Today
   60% (Diverse City) and 76% (Rose City) of published assets are unreferenced, so enforce would halt on the 30% club
   limit; the backlog plan is his call at that point.
-- **Exact next step:** onzio-bot clean, then the production gate up to the dry run, and his "push".
+- **Exact next step:** Christian merges #180; then the daily dry-run reports accumulate for his review.
 
 ## 2026-11-19 - RC-PREVIEW follow-up: preview fonts, and the rc-sam rollout for Sam
 

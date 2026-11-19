@@ -3,8 +3,10 @@
 ## 2026-11-19 - RC-ADMIN-10d orphan-media sweep (dry-run by default)
 
 **Agent/package:** Claude Code (Opus, with a Sonnet implementation subagent), RC-ADMIN-10d, branch
-`claude/rc-admin-10d` on `90c459d6`. **Status:** `in_progress`: PR open and ready. Production not touched. It stays in
-dry-run until Christian has reviewed 7+ days of reports and says "enforce".
+`claude/rc-admin-10d` on `90c459d6`. **Status:** `in_progress`: PR #180; the migration is on production (2026-11-19, after Christian's
+"push") and the read-only check passed; onzio-bot fully clean at `e526aae` (five reviews, every Low fixed at
+Christian's request). Waiting only for his merge. It stays in dry-run until he has reviewed 7+ days of reports and
+says "enforce".
 
 **Findings before building (read-only on production, 2026-11-19):**
 - By the existing reference check, 41 of 68 Diverse City published assets (60%) and 393 of 515 Rose City assets
@@ -91,11 +93,27 @@ clock as `deleted_at`. The two tests use an app clock 10 hours ahead to prove sk
 **Known limit:** cinematic JSON content stores asset ids that are mirrored into `*_media_asset_id` FK columns or
 child tables; the catalog test forces a decision on any new JSON column but cannot prove a mirror exists.
 
-**Blockers or unresolved decisions:** onzio-bot review; then the production gate up to the dry run and Christian's
-"push". Enforce, and the backlog plan for it, are his later call.
+**Production gate (2026-11-19 UTC, from Christian's Mac, Supabase CLI 2.122.0):**
+1. Ledger: the only local-only version was `20261119120000`; main had not moved.
+2. Timing (read-only): `media_asset_has_references` over all 587 published assets took 6.2 s (149 referenced), so
+   the daily scan should take about 6-7 s, inside the cron's 60 s.
+3. Snapshot: 2 clubs, 4 active domains, audit `1034:1041`, 587 published assets, 4 buckets; no clock column and no
+   new tables yet.
+4. Backup (Christian typed the password):
+   `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-20261119-0742-pre-rcadmin10d.dump`, 1,309,782 bytes,
+   94 table-data entries, SHA-256 `f7a96873942900707ea48feef7ad760c52558d76a6cc19a39ee472f5a52929a3`. Kept.
+5. Dry run: exactly `20261119120000_media_orphan_sweep.sql`, no seeds, no roles (repeated right before the apply).
+   Christian said "push". Applied with `db push --linked --skip-vault`.
+6. Read-only check: no local-only or remote-only versions; a second dry run says "up to date"; 14 pins, all
+   matching published assets and all counting as referenced (163 referenced now = 149 + 14); 3 registry rows;
+   both scan functions; `onzio-media-trash` private (5 buckets); no clock set yet (0); snapshot unchanged.
+7. The copied link files were deleted.
 
-**Exact next step:** onzio-bot clean, then ledger, backup, dry run listing only `20261119120000_media_orphan_sweep.sql`,
-and stop for his "push".
+**Blockers or unresolved decisions:** Christian's merge of #180. After it, enforce and the backlog plan for it are
+his call once he has read 7+ days of reports (`audit_events` operation `media.orphan_sweep_report`).
+
+**Exact next step:** Christian merges #180. The first cron run (10:30 UTC daily, Hobby may fire anywhere in the
+hour) writes the first dry-run report; day one shows no candidates because of the two-scan grace.
 
 ## 2026-11-19 - RC-PREVIEW follow-up: static fonts on the preview host, and the rc-sam rollout
 
