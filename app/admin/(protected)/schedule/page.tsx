@@ -13,7 +13,7 @@ import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { cn } from "@/lib/utils";
 import { matchReplayEmbedUrl } from "@/lib/youtube-embed";
-import { EMPTY_MATCH_SUMMARY, matchSummaryColumns, readMatchSummary } from "@/lib/match-summary";
+import { EMPTY_MATCH_SUMMARY, readMatchSummary } from "@/lib/match-summary";
 import { Button } from "@/components/ui/button";
 import { AdminDialog, AdminDialogFooter } from "@/components/admin/ui/AdminDialog";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
@@ -22,13 +22,18 @@ import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import LegacySchedulePage from "@/components/admin/schedule/LegacySchedulePage";
+import RoseCityScheduleEditor from "@/components/admin/schedule/rose-city/RoseCityScheduleEditor";
 import { MatchForm } from "@/components/admin/schedule/ScheduleMatchForm";
 import { ScheduleMatchList, ScheduleListSkeleton } from "@/components/admin/schedule/ScheduleMatchList";
 import { emptyForm, matchTooLong, normalizeScore, deleteUnusedMatchImageUrls, monthGroupKey, hasResult, formatShortDate, MAX_MATCH_SCORE, type Match, type FormState, type ResultFilter } from "@/components/admin/schedule/schedule-model";
 
 export default function SchedulePage() {
   const portal = useAdminPortal();
-  return portal.portal === "reimagined" ? <LegacySchedulePage /> : <ClassicSchedulePage />;
+  const club = useClubContext();
+  // cinematic@2 gets its own editor in the classic admin; every other design keeps the page below.
+  const isCinematic = club.presentationTemplateKey === "cinematic@2";
+  if (portal.portal === "reimagined") return <LegacySchedulePage />;
+  return isCinematic ? <RoseCityScheduleEditor /> : <ClassicSchedulePage />;
 }
 
 function ClassicSchedulePage() {
@@ -37,12 +42,12 @@ function ClassicSchedulePage() {
   // hidden and nothing is copied forward into a new match for that template.
   const schedulePolicy = codeSiteAdminFor(club)?.schedule;
   const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false;
-  const isCinematic = club.presentationTemplateKey === "cinematic@2";
-  // Attendance and the Match Summary are edited only for cinematic@2 clubs, so other designs never
-  // overwrite those columns. Scorers follow the timeline's goals (lib/match-summary.ts).
+  // This page never sees a cinematic@2 club (SchedulePage sends it to RoseCityScheduleEditor, which saves attendance
+  // and the Match Summary), so those columns are left out and other designs never overwrite them.
   function summaryColumnsFor(form: FormState) {
     const { summary, attendance, ...rest } = form;
-    return isCinematic ? { ...rest, attendance, ...matchSummaryColumns(summary) } : rest;
+    void summary; void attendance;
+    return rest;
   }
   const carrySponsor = useCallback(
     (list: Match[], seasonId: string) =>

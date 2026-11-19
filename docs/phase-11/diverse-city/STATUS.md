@@ -1,5 +1,61 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-13 Rose City Schedule editor on the editor kit (Previews layout)
+
+**Agent/package:** Claude Code (Sonnet worker W13, orchestrated), RC-ADMIN-13, branch `claude/rc-admin-13` on `44796089`.
+**Status:** `in_progress`, PR open. It merges only on Christian's word. App code only, plus one skill change approved by
+Christian. No migration, schema, RPC, data or production change, and nothing under `components/cinematic/` or `lib/`.
+
+**Completed work:**
+- `/admin/schedule` for Rose City (cinematic@2, classic portal) renders `RoseCityScheduleEditor`.
+  - The page reads the template once. Classic's dead `isCinematic` branch was removed; it was never reached by other
+    clubs, so their payloads are byte-identical (gate 6 confirms).
+  - Diverse City and the new-admin portal are unchanged.
+- The editor:
+  - Match cards render the real public match card, fed by the draft.
+  - A split dialog has a section rail and a live card.
+  - PageFrame (Competition / Schedule, Open page, one page Save).
+  - Quick "Add result" and Delete stay immediate.
+- One page Save sends each edited match through the existing per-match write (`buildMatchWrite`).
+  - If any match is invalid, nothing is sent.
+  - One failing match no longer stops the others.
+- Conflict: `onzio.matches.updated_at` is kept current by the `set_matches_updated_at` trigger, so before writing the
+  editor re-reads the edited matches. A change or deletion elsewhere gives a conflict with "Load latest and keep my edits"
+  (a per-field rebase) or "Reload saved page". No new column was needed.
+- Retry: a write, or the re-read, that gets no answer stays pending, and Retry resends the identical request. A lost insert
+  is looked up before it is resent, so it cannot duplicate.
+- Skill change (approved by Christian): gate 4 now records an empty baseline when origin/main's page has nothing to open,
+  as with the old Schedule list. Every violation then counts as new. Routes with an openable base page are unchanged.
+
+**Files changed:** `app/admin/(protected)/schedule/page.tsx`. `ScheduleMatchForm.tsx` only exports three helpers. New
+`components/admin/schedule/rose-city/` (editor, fields, preview, model, save, CSS). Tests: new
+`tests/contracts/rose-city-schedule-editor.test.ts` (21 tests); `admin-add-game` and `admin-classic-schedule`
+expectations updated. Skill: `rc-admin-verify.spec.ts` and `SKILL.md`.
+
+**Verification:** verify-rc-admin `--route /admin/schedule --touched none` on `44796089`, with the #174 synthetic seed:
+PASS on all six gates.
+- Gate 1 (scope): 11 app files.
+- Gate 2 (payload identity): 14/14 identical.
+- Gate 3 (save states): kit path, all seven pass, including retry and conflict.
+- Gate 4 (visual): CLS at most 0.00001, new axe 0, overflow 0, reduced motion 0; baseline none.
+- Gate 5 (repo): tsc ok; unit 341 files, 3924 tests; architecture 152; selector debt unchanged.
+- Gate 6: Diverse City 8/8 identical.
+- `verify.test.mjs`: 30/30.
+
+**Contrast fix:** the dialog's "No logo" text from the reused `LeagueLogoUpload` (`text-black/50`) was under 4.5:1.
+It is darkened only inside the Rose City dialog through a scoped CSS override; `LeagueLogoUpload` itself is unchanged.
+Re-verified: all six gates pass, the kit-dialog axe scan is empty at 390 and 1440 in light and dark, and unit is 3925.
+
+**Bot fix round 1 (#177, Medium):** a reload no longer moves the baseline or `updated_at` stamp of an open draft.
+- Each draft keeps its own anchor, `{ stamp, baseline }`, from when it was opened. The conflict re-read and dirty check use it.
+- A quick result moves only its own match's anchor, and only if the server had not moved on.
+- A regression test covers the bot's scenario: a stale draft after a reload gives a conflict and sends no write.
+- Re-verified: all six gates pass. Unit: 342 files, 3992 tests.
+- Skill flake noted: one run's gate 6 caught Contact and Shop still loading (6/8). The immediate re-run was 8/8
+  identical with no code change.
+
+**Next step:** onzio-bot re-review, then Christian merges.
+
 ## 2026-11-19 - RC-ADMIN-10c staging upload needs a live reservation
 
 **Agent/package:** Claude Code (Opus), RC-ADMIN-10c, branch `claude/rc-admin-10c` on `84142ca3`.

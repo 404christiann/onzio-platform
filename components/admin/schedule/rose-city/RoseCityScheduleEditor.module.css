@@ -1,0 +1,81 @@
+.toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.toolbarSkeleton { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.search { position: relative; min-inline-size: 0; flex: 1 1 220px; max-inline-size: 360px; }
+.searchIcon { position: absolute; inset-inline-start: 12px; inset-block-start: 50%; translate: 0 -50%; color: hsl(var(--muted-foreground)); pointer-events: none; }
+.filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 10px; background: hsl(var(--muted) / .6); }
+.filter { display: inline-flex; min-block-size: 36px; padding: 0 12px; align-items: center; gap: 6px; border: 0; border-radius: 8px; background: transparent; color: hsl(var(--muted-foreground)); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+.filter[aria-pressed="true"] { background: hsl(var(--card)); color: hsl(var(--primary)); box-shadow: 0 1px 2px rgb(0 0 0 / 8%); }
+.filter:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.filter b { display: inline-block; min-inline-size: 2ch; font-weight: 500; text-align: end; font-variant-numeric: tabular-nums; }
+.addButton { margin-inline-start: auto; }
+@media (max-width: 767px) {
+  .search { max-inline-size: none; flex-basis: 100%; }
+  .filter { min-block-size: 44px; }
+  .addButton { margin-inline-start: 0; inline-size: 100%; min-block-size: 44px; }
+}
+
+.months { display: grid; gap: 24px; }
+.month { display: grid; gap: 10px; }
+.monthHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.monthHead h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.monthHead span { color: hsl(var(--muted-foreground)); font-size: .8125rem; }
+.grid { display: grid; margin: 0; padding: 0; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 14px; list-style: none; }
+.card { min-inline-size: 0; }
+.card[data-saving] { opacity: .7; }
+
+/* One public Schedule row in a fixed-ratio box. The ratio is set inline, so a loading or edited row never moves the page. */
+.thumb[data-preview-box] { block-size: auto; aspect-ratio: var(--thumb-ratio, 1100 / 215); contain-intrinsic-size: auto 100px; }
+
+.foot { display: grid; gap: 8px; padding: 10px 12px; }
+.footRow { display: flex; min-block-size: 44px; align-items: center; justify-content: space-between; gap: 10px; }
+.footText { display: grid; min-inline-size: 0; gap: 2px; }
+.cardTitle { display: flex; min-inline-size: 0; margin: 0; align-items: center; gap: 8px; font-size: .9375rem; font-weight: 600; line-height: 1.3; }
+.cardTitleText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cardSub { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: .8125rem; text-overflow: ellipsis; white-space: nowrap; }
+.tag { display: inline-flex; min-block-size: 22px; padding: 0 8px; align-items: center; border-radius: 999px; background: hsl(var(--warning) / .16); color: hsl(var(--warning)); font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.tagNew { background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+.actions { display: flex; flex: none; align-items: center; gap: 8px; }
+.smallButton { display: inline-flex; min-block-size: 32px; padding: 0 12px; align-items: center; justify-content: center; gap: 6px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+.smallButton:disabled { opacity: .5; cursor: default; }
+.smallButton:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.smallPrimary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.smallGhost { border-color: transparent; background: transparent; color: hsl(var(--muted-foreground)); }
+@media (max-width: 767px) { .smallButton { min-block-size: 44px; padding: 0 16px; } }
+.quick { display: grid; gap: 6px; padding-block-start: 2px; }
+.quickFields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.quickFields input { inline-size: 64px; min-block-size: 36px; padding: 0 8px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--background)); color: inherit; font-size: 1rem; text-align: center; }
+.quickFields input:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
+.quickFields input[aria-invalid="true"] { border-color: hsl(var(--destructive)); }
+@media (max-width: 767px) { .quickFields input { min-block-size: 44px; font-size: 16px; } }
+.quickError { margin: 0; color: hsl(var(--destructive)); font-size: .8125rem; }
+.score { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; font-weight: 600; font-size: .875rem; }
+.score b { display: inline-grid; inline-size: 20px; block-size: 20px; place-items: center; border-radius: 6px; font-size: .75rem; background: hsl(var(--secondary)); }
+.score[data-outcome="W"] b { background: hsl(var(--success) / .18); color: hsl(var(--success)); }
+.score[data-outcome="L"] b { background: hsl(var(--destructive) / .15); color: hsl(var(--destructive)); }
+
+.empty { display: grid; min-block-size: 180px; padding: 24px; place-content: center; justify-items: center; gap: 8px; border: 1px dashed hsl(var(--border)); border-radius: 14px; text-align: center; }
+.empty p { margin: 0; }
+.emptyHint { color: hsl(var(--muted-foreground)); font-size: .875rem; }
+
+.notice { display: grid; gap: 10px; }
+.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Dialog fields. */
+.fields { display: grid; gap: 22px; }
+.fields fieldset { min-inline-size: 0; }
+.group { display: grid; gap: 14px; margin: 0; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 12px; }
+.group legend { padding: 0 6px; font-size: .875rem; font-weight: 600; }
+.groupHint { margin: 0; color: hsl(var(--muted-foreground)); font-size: .875rem; line-height: 1.5; }
+.row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.rowCity { display: grid; grid-template-columns: minmax(0, 1fr) 9rem; gap: 14px; }
+@media (max-width: 600px) { .row2, .rowCity { grid-template-columns: minmax(0, 1fr); } }
+.danger { display: grid; justify-items: start; gap: 8px; }
+.danger p { margin: 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; }
+.lock { margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+
+/* The live card in the dialog: one real, narrow viewport (an iframe), so the page's own phone layout applies. */
+.live :global(.hp-preview-frame) { block-size: min(520px, calc(100dvh - 260px)); min-block-size: 300px; }
+
+/* LeagueLogoUpload (shared with the classic Schedule page, so left alone) prints "No logo" in text-black/50 on its always-white box: under 4.5:1. Darkened here, for this dialog only. */
+.leagueLogo :global(.text-black\/50) { color: #595959; }

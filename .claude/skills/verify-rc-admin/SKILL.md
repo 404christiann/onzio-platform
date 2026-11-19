@@ -179,6 +179,7 @@ Extra checks that only run on the kit path:
 Gate 4's origin/main comparison needs the old page's discard dialog for the axe ratchet; an old editor
 with no discard control at all (the old Shop) has no baseline, so every violation in the package's
 discard dialog counts as new.
+A route with no `open` step whose origin/main page has no editable field and no kit control (the old Schedule opens its editor from a side panel) is probed for 8 s on a throwaway page; with nothing to open the baseline is empty (`baseline: none` in the result), so every axe violation in the package's page and dialog counts as new.
 
 On a route outside `EDITORS` with no text field, no kit control and no Save button, gates 3 and 4 stay
 `N/A`; the N/A visual samples also record `cls` and `baseCls` (the same route on origin/main), for

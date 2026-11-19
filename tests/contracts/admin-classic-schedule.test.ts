@@ -8,7 +8,8 @@ const legacy = readFileSync("components/admin/schedule/LegacySchedulePage.tsx", 
 
 describe("classic Schedule regression boundaries", () => {
   it("enters the classic guard only inside the classic component", () => {
-    expect(page).toContain('return portal.portal === "reimagined" ? <LegacySchedulePage /> : <ClassicSchedulePage />');
+    expect(page).toContain('if (portal.portal === "reimagined") return <LegacySchedulePage />;');
+    expect(page).toContain("return isCinematic ? <RoseCityScheduleEditor /> : <ClassicSchedulePage />;");
     expect(page.indexOf("useUnsavedGuard({")).toBeGreaterThan(page.indexOf("function ClassicSchedulePage()"));
     expect(legacy).not.toContain("useUnsavedGuard");
     expect(legacy).toContain("<AdminSidePanel");

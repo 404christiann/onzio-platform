@@ -475,11 +475,11 @@ export function MatchForm({
   );
 }
 
-function OpponentLogoUpload(props: LogoUploadProps & { opponentName: string }) {
+export function OpponentLogoUpload(props: LogoUploadProps & { opponentName: string }) {
   return <MatchLogoUpload {...props} label="Opponent logo" name={props.opponentName} bucket="opponent-logos" folder="match-opponents" />;
 }
 
-function SponsorLogoUpload(props: LogoUploadProps & { sponsorName: string }) {
+export function SponsorLogoUpload(props: LogoUploadProps & { sponsorName: string }) {
   return <MatchLogoUpload {...props} label="Sponsor logo" name={props.sponsorName} bucket="sponsors" folder="match-sponsors" />;
 }
 
@@ -521,7 +521,7 @@ function MatchLogoUpload({ inputId, logoUrl, onUploaded, onRemove, onUploadBusyC
   );
 }
 
-function Field({
+export function Field({
   id,
   label,
   required,
