@@ -12,6 +12,7 @@ import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { SignInPeople } from "@/components/admin/reimagined/SignInPeople";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { siteFor } from "@/lib/site-for";
 import { memberLabel } from "@/lib/admin-greeting";
 import { cn } from "@/lib/utils";
 
@@ -337,8 +338,10 @@ function ClassicMembersPage() {
   }
 
   const disabled = loading || loadFailed || pending !== null || uncertain;
-  return (
-    <ClubSettingsFrame active="team">
+  // A club whose site package supplies its own Club settings frame uses it; the team logic below is the same for every club.
+  const SiteFrame = siteFor(club)?.adminEditors?.clubSettingsFrame;
+  const body = (
+    <>
       {!isOwner ? (
         <section className={styles.card} aria-labelledby="team-access-heading">
           <h2 id="team-access-heading">Team access</h2>
@@ -402,6 +405,9 @@ function ClassicMembersPage() {
         <p>{removing?.email} will be signed out and can’t sign in until you add them again.</p>
         {message && pending !== "remove" && <p role="alert" className={styles.error}>{message.text}</p>}
       </AdminConfirmDialog>
-    </ClubSettingsFrame>
+    </>
   );
+  return SiteFrame
+    ? <SiteFrame active="team">{body}</SiteFrame>
+    : <ClubSettingsFrame active="team">{body}</ClubSettingsFrame>;
 }

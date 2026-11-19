@@ -1,3 +1,13 @@
+## 2026-11-19 - RC-ADMIN-4c: Rose City Club settings on the editor kit (app code only)
+
+- **Status:** `in_progress`, PR open; verify-rc-admin PASS on `/admin/branding` and `/admin/members` (Diverse City 15/15 identical). No migration,
+  schema, validator, RPC or env change; selector debt and the `lib/code-site.ts` ceilings untouched. Record in `STATUS.md`.
+- **What:** `/admin/branding` (two section cards, a two-pane dialog with the footer preview, one Save) and `/admin/members` (same behaviour) for Rose City
+  sit in one kit frame with the same two tabs, plus a Payments link card on the Team tab. Rose City's five legacy-id social links now load filled through one
+  shared mapper used by load and save; Rose City gets the footer tagline field (shown as "not set" when the column is blank). Chosen through the site
+  package (`lib/site-for.ts`), so the shared pages carry no club or template conditional.
+- **Exact next step:** onzio-bot review, then Christian merges.
+
 ## 2026-11-19 - RC-ADMIN-4b-seasons: Rose City Seasons on the editor kit (app code only)
 
 - **Status:** `in_progress`, PR open; verify-rc-admin PASS (gate 3 declared n/a, Diverse City 15/15 identical). No migration, schema, validator, RPC,
