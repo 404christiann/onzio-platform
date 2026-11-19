@@ -7,12 +7,18 @@ import {
 } from "../helpers/database-security";
 import { createFreshLocalClient } from "../helpers/mfa";
 import {
+  consumeStagingReservation,
+  reserveStagingPath,
+} from "../helpers/staging-reservation";
+import {
   createLocalClients,
   requirePlannedDatabase,
   type LocalClients,
 } from "../helpers/supabase";
 
 let clients: LocalClients;
+/** admin@bravo.local in the local seed. */
+const BRAVO_ADMIN_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa7";
 let originalAlphaBrandingPath: string | null | undefined;
 
 beforeEach(async () => {
@@ -139,6 +145,7 @@ describe("admin media staging signed-upload contract", () => {
         userId: USER_IDS.ownerAal2,
       });
       memberCleanups.push(session.cleanup);
+      memberCleanups.push(await reserveStagingPath(path, USER_IDS.ownerAal2));
 
       const { data, error } = await session.client.storage
         .from("onzio-upload-staging")
@@ -154,12 +161,15 @@ describe("admin media staging signed-upload contract", () => {
     },
   );
 
-  it("still refuses to sign a staging upload for another club", async () => {
+  it("still refuses to sign a staging upload for another club, even with a live reservation for that path", async () => {
     const session = await createFreshLocalClient({
       email: "owner-aal2@alpha.local",
       userId: USER_IDS.ownerAal2,
     });
     memberCleanups.push(session.cleanup);
+    // RC-ADMIN-10c: with a live reservation in place, only the entitlement clause
+    // (can_mutate_feature) can refuse this, so the test still guards it.
+    memberCleanups.push(await reserveStagingPath(CROSS_CLUB_PATH, USER_IDS.ownerAal2));
 
     const { data, error } = await session.client.storage
       .from("onzio-upload-staging")
@@ -267,11 +277,12 @@ describe("admin media staging signed-upload coverage, every surface", () => {
     async (surface, index) => {
       const session = await createFreshLocalClient({
         email: "admin@bravo.local",
-        userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa7",
+        userId: BRAVO_ADMIN_ID,
       });
       sessionCleanups.push(session.cleanup);
 
       const path = pathFor(surface, index);
+      sessionCleanups.push(await reserveStagingPath(path, BRAVO_ADMIN_ID));
       const { data, error } = await session.client.storage
         .from("onzio-upload-staging")
         .createSignedUploadUrl(path, { upsert: false });
@@ -284,6 +295,102 @@ describe("admin media staging signed-upload coverage, every surface", () => {
       expect(typeof data?.token).toBe("string");
     },
   );
+});
+
+// RC-ADMIN-10c: staging needs a live reservation for the exact path, which only the
+// service-role reserve RPC behind /api/admin/media/authorize writes. Before this, a club editor
+// could skip /authorize (and its quota and rate limit) and stage with their own session.
+describe("staging upload needs a reservation", () => {
+  const RESERVED_PATH = `${CLUB_IDS.alpha}/homepage/cccccccc-cccc-4ccc-8ccc-cccccccc0001.png`;
+  const cleanups: Array<() => Promise<void>> = [];
+
+  afterEach(async () => {
+    while (cleanups.length > 0) await cleanups.pop()?.();
+    await clients.service.storage.from("onzio-upload-staging").remove([RESERVED_PATH]);
+  });
+
+  async function owner() {
+    const session = await createFreshLocalClient({
+      email: "owner-aal2@alpha.local",
+      userId: USER_IDS.ownerAal2,
+    });
+    cleanups.push(session.cleanup);
+    return session.client;
+  }
+
+  async function expectSignRefused(label: string) {
+    const client = await owner();
+    const { data, error } = await client.storage
+      .from("onzio-upload-staging")
+      .createSignedUploadUrl(RESERVED_PATH, { upsert: false });
+    expect(data).toBeNull();
+    expectStorageError(
+      error,
+      { statusCode: "403", message: "new row violates row-level security policy" },
+      label,
+    );
+  }
+
+  it("refuses to sign without a reservation", async () => {
+    await expectSignRefused("staging signed upload with no reservation");
+  });
+
+  it("refuses to sign with a consumed reservation", async () => {
+    cleanups.push(await reserveStagingPath(RESERVED_PATH, USER_IDS.ownerAal2, { consumed: true }));
+    await expectSignRefused("staging signed upload with a consumed reservation");
+  });
+
+  it("refuses to sign with an expired reservation", async () => {
+    cleanups.push(await reserveStagingPath(RESERVED_PATH, USER_IDS.ownerAal2, { expired: true }));
+    await expectSignRefused("staging signed upload with an expired reservation");
+  });
+
+  it("refuses to sign with a live reservation for a different file in the same club", async () => {
+    cleanups.push(await reserveStagingPath(`${CLUB_IDS.alpha}/homepage/cccccccc-cccc-4ccc-8ccc-cccccccc0002.png`, USER_IDS.ownerAal2));
+    await expectSignRefused("staging signed upload with a reservation for another path");
+  });
+
+  it("refuses a direct upload (no signed URL) without a reservation", async () => {
+    const client = await owner();
+    const { error } = await client.storage
+      .from("onzio-upload-staging")
+      .upload(RESERVED_PATH, validTransparentPng(), { contentType: "image/png" });
+    expectStorageError(
+      error,
+      { statusCode: "403", message: "new row violates row-level security policy" },
+      "direct staging upload with no reservation",
+    );
+  });
+
+  it("signs and uploads with a live reservation, with no metadata at sign time", async () => {
+    cleanups.push(await reserveStagingPath(RESERVED_PATH, USER_IDS.ownerAal2));
+    const client = await owner();
+    const signed = await client.storage
+      .from("onzio-upload-staging")
+      .createSignedUploadUrl(RESERVED_PATH, { upsert: false });
+    expect(signed.error?.message).toBeUndefined();
+    const uploaded = await client.storage
+      .from("onzio-upload-staging")
+      .uploadToSignedUrl(RESERVED_PATH, signed.data!.token, validTransparentPng(), { contentType: "image/png" });
+    expect(uploaded.error?.message).toBeUndefined();
+  });
+
+  it("is checked when Storage signs: a token signed while the reservation was live still uploads after finalize-style consume", async () => {
+    cleanups.push(await reserveStagingPath(RESERVED_PATH, USER_IDS.ownerAal2));
+    const client = await owner();
+    const signed = await client.storage
+      .from("onzio-upload-staging")
+      .createSignedUploadUrl(RESERVED_PATH, { upsert: false });
+    expect(signed.error?.message).toBeUndefined();
+    await consumeStagingReservation(RESERVED_PATH);
+    const uploaded = await client.storage
+      .from("onzio-upload-staging")
+      .uploadToSignedUrl(RESERVED_PATH, signed.data!.token, validTransparentPng(), { contentType: "image/png" });
+    // Storage checks the INSERT policy when it signs, not again when the token is used. That is
+    // fine: every token cost a reservation (quota and rate), the path is write-once, finalize
+    // refuses a consumed or expired reservation, and the staging cleanup removes the leftover.
+    expect(uploaded.error?.message ?? "uploaded").toBe("uploaded");
+  });
 });
 
 describe("database audit contract", () => {

@@ -1,5 +1,81 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-10c staging upload needs a live reservation
+
+**Agent/package:** Claude Code (Opus), RC-ADMIN-10c, branch `claude/rc-admin-10c` on `84142ca3`.
+**Status:** `in_progress`: PR #178; the migration is on production (2026-11-19 08:5x UTC, after Christian's
+"push"), the read-only check and check (c) passed; onzio-bot clean at `4ad5e71` after one fix round. Waiting only
+for Christian's merge. He lifted the 2026-11-20 04:00 UTC time gate on 2026-11-19 and kept checks (a), (b), (c).
+
+**Completed work:**
+- Migration `20261119090000_staging_insert_requires_reservation.sql`:
+  - New `onzio_private.staging_upload_reserved(p_name)` (security definer, stable, `search_path ''`, execute for
+    authenticated): true when a reservation exists for exactly that staging path and the path's club, not
+    consumed and not expired. It uses the unique `staging_path` index.
+  - `onzio_staging_member_insert` is recreated from `20260808160000` byte for byte, plus
+    `and onzio_private.staging_upload_reserved(name)`. Still no `metadata` condition (empty at sign time).
+  - SELECT and DELETE policies unchanged; the service role (finalize, cleanup, scripts) bypasses RLS.
+- Ready rollback: `docs/phase-11/diverse-city/RC-ADMIN-10C-ROLLBACK.sql` recreates the `20260808160000` policy
+  exactly and drops the helper, in one transaction.
+- Finding (pinned by a test): Storage evaluates the INSERT policy when it signs, not again when the token is
+  used. A token signed while the reservation was live still uploads after the reservation is consumed. That is
+  acceptable: every token cost a reservation (quota and rate), the path is write-once (`upsert: false`), finalize
+  refuses a consumed or expired reservation, and the staging cleanup removes leftovers after 24 hours.
+- Tests: new `tests/helpers/staging-reservation.ts` writes a reservation row directly for member staging tests
+  (no quota or rate, so reruns never hit the hourly limit) and deletes it afterwards.
+  `tests/database/storage-audit.test.ts`: the existing member sign tests reserve first; a new block refuses
+  signing with no, a consumed, an expired or another club's reservation, refuses a direct upload with no
+  reservation, signs and uploads with a live one (no metadata at sign time), and pins the sign-time-only check.
+  `tests/database/authenticated-rls.test.ts`: the every-surface member upload test reserves each path.
+  Migration-order pins in the three contract tests gain the new file.
+
+**onzio-bot M1 (round 1, fixed, tests only):** with the reservation clause added, the cross-club signing test
+was refused by the missing reservation instead of the entitlement clause (`can_mutate_feature`), so nothing
+guarded that clause. The test now holds a live reservation for the other club's path and still expects 403; the
+misleading "another club's reservation" case (a state the 10b CHECK forbids) became "a live reservation for a
+different file in the same club", and the helper lost its `clubId` option. Mutation check: with the entitlement
+clause removed from the local policy, the cross-club test fails; with the real policy all 39 storage and RLS
+tests pass. Low also fixed: the bravo admin id is a named constant.
+
+**Verification (local; reset with this branch's migrations inside one DB lock hold):** full `test:db` 78 files,
+1339 tests; `db:types:check` passed; `test:unit` 341 files, 3967 tests; architecture checks; `tsc`; `next build`.
+The DB test that signs as the club member after a reservation is exactly what `/api/admin/media/authorize`
+does (service-role reserve, then sign with the member's session); finalize is unchanged from 10b.
+
+**Production gate (2026-11-19 UTC, from Christian's Mac, Supabase CLI 2.122.0):**
+1. Check (a), re-run at 08:49 UTC: 1 `media.publish` since 10b went live (03:56:24 UTC), 1 with a consumed
+   reservation (asset side 1 / 1), 0 during the rollout, 1 reservation in total (consumed), 0 expired, 0 overrides.
+   Logs available 07:51:42 to 08:44:28 UTC (17 records): 0 media requests, 0 responses with status 503, 0
+   `MEDIA_QUOTA_*` / `MEDIA_RATE_LIMITED` mentions. (The 03:56 to 06:43 UTC gap was accepted earlier.)
+2. Check (b), fresh B1-a, raw output sent to Christian, who reviewed it: four buckets (`onzio-media` 583 objects /
+   65 MB, newest 2026-11-19 03:59:46; `onzio-upload-staging` the same 5 objects from 2026-08-09, 7.8 MB, waiting for
+   SEC-01's first 10:00 UTC run; `onzio-branding` 1; `onzio-fonts` 2); exactly four storage policies, none on
+   `storage.buckets`; the live INSERT policy matched `20260808160000` exactly.
+3. Ledger: the only local-only version was `20261119090000`; main had not moved.
+4. Snapshot: 2 clubs, 4 active domains, audit `1027:1034`, 582 published assets, 1 reservation, 4 storage
+   policies, helper absent, no reservation clause.
+5. Backup (Christian typed the password):
+   `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-20261119-0050-pre-rcadmin10c.dump`, 1,307,300 bytes,
+   94 table-data entries, SHA-256 `5e2df1c0ef6b7bfdddb70e0bf68811de1e3882dbc483138724a68e7c1fc48208`. Kept.
+6. Dry run: exactly `20261119090000_staging_insert_requires_reservation.sql`, no seeds, no roles (repeated right
+   before the apply). Christian said "push". Applied with `db push --linked --skip-vault`.
+7. Read-only check: no local-only or remote-only versions; a second dry run says "up to date"; the helper exists;
+   the INSERT policy now contains `staging_upload_reserved`; still 4 storage policies; snapshot unchanged.
+8. Check (c), immediately after, through the real admin in Christian's signed-in Chrome, on Diverse City:
+   - Photo: About, Story feature image, a generated 4000x2667 JPEG of 3,640,015 bytes. Reservation issued
+     08:55:27, consumed 08:55:33; published 08:55:34 as a 2400x1600 WebP of 640,018 bytes; no staging object left.
+   - Graphic: Sponsors, "Add sponsor logos", a generated 800x400 transparent PNG of 11,209 bytes. Reservation
+     (kind graphic) issued 08:57:03, consumed 08:57:05; published as an 800x400 WebP of 5,722 bytes; no staging
+     object left.
+   - Both edits discarded. Diverse City still has its 3 sponsors (3 / 3 / 1) and the original About feature image
+     (`552e351b…`). Removing the sponsor draft retired the graphic (`de1cee23…`, now orphaned); the test photo
+     (`20986642…`, 640 KB) stays published and unused, for 10d's report-only run to flag (or retire on his say).
+9. The copied link files, the test images and the Chrome tab are gone.
+
+**Blockers or unresolved decisions:** Christian's merge of #178.
+
+**Exact next step:** Christian merges #178. Then RC-ADMIN-10d (orphan sweep, dry-run only until he says "enforce").
+
 ## 2026-11-18 - RC-PREVIEW: Sam previews Rose City's public site on one Vercel Preview host
 
 **Agent/package:** Claude Code (Opus 5.5), RC-PREVIEW, branch `claude/rc-preview` on `44796089`. **Status:**
@@ -55,9 +131,9 @@ unless the preview branch gets it too, Avenir falls back to Figtree on the previ
 ## 2026-11-19 - RC-ADMIN-10a sponsor and news caps in SQL
 
 **Agent/package:** Claude Code (Opus), RC-ADMIN-10a, PR #176, branch `claude/rc-admin-10a` (rebased onto `44796089`).
-**Status:** `in_progress`: the migration is on production (2026-11-19, after Christian's "push") and the
-read-only check passed; onzio-bot found no High or Medium issues at `6cc96b9` and again at `7d30bd1`. It waits
-only for Christian's merge. Christian approved the caps on
+**Status:** `done`. Merged as `01af57a7` (PR #176) on 2026-11-19 08:09 UTC by Christian, after the migration was
+on production (2026-11-19, after his "push") and the read-only check passed; onzio-bot found no High or Medium
+issues at `6cc96b9`, `7d30bd1` and `fee6b6c`. Christian approved the caps on
 2026-11-19 (UTC): news 200 live, sponsors 30 / 10 / 6, increases only, slideshow constant only.
 
 **Completed work:**

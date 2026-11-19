@@ -4,6 +4,7 @@ import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { validTransparentPng } from "../fixtures/media";
 import { expectPostgrestError } from "../helpers/database-security";
 import { createFreshLocalClient } from "../helpers/mfa";
+import { reserveStagingPath } from "../helpers/staging-reservation";
 import {
   createLocalClients,
   requirePlannedDatabase,
@@ -11,6 +12,15 @@ import {
 } from "../helpers/supabase";
 
 let clients: LocalClients;
+const STAGING_UPLOAD_PATHS = (brandingPath: string) => [
+  brandingPath,
+  DCFC_302_BRAVO_MEDIA_PATH,
+  DCFC_301_ALPHA_MEDIA_PATH,
+  DCFC_301_BRAVO_MEDIA_PATH,
+  DCFC_303_ALPHA_MEDIA_PATH,
+  DCFC_303_BRAVO_MEDIA_PATH,
+  `${CLUB_IDS.bravo}/shop/99999999-9999-4999-8999-999999999992.png`,
+];
 const cleanups: Array<() => Promise<void>> = [];
 const DCFC_301_PROGRAM_IDS = [
   "66666666-6666-4666-8666-666666666601",
@@ -293,6 +303,10 @@ describe("tier-free database and Storage contract", () => {
 
     const brandingPath =
       `${CLUB_IDS.bravo}/branding/99999999-9999-4999-8999-999999999991.png`;
+    // RC-ADMIN-10c: staging needs a live reservation for each exact path.
+    for (const path of STAGING_UPLOAD_PATHS(brandingPath)) {
+      cleanups.push(await reserveStagingPath(path, USER_IDS.multiClub));
+    }
     const branding = await session.client.storage
       .from("onzio-upload-staging")
       .upload(brandingPath, validTransparentPng(), {
