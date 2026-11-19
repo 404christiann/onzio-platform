@@ -29,6 +29,7 @@ type Opts = {
   retire?: (args: any) => { data?: any; error?: any };
   copyError?: (path: string) => any;
   removeError?: boolean;
+  assetRow?: { status: string; deleted_at: string | null } | null;
   trash?: Record<string, Array<{ name: string; id?: string; created_at?: string }>>;
 };
 
@@ -48,13 +49,24 @@ function harness(clubs: Club[], opts: Opts = {}) {
         retireCalls.push(args);
         return opts.retire ? { error: null, ...opts.retire(args) } : { data: { status: "retired", storagePath: "x" }, error: null };
       },
-      from: (table: string) => ({
-        insert: async (rows: any[]) => {
-          calls.push(`insert:${table}`);
-          audit.push(...rows);
-          return { error: null };
-        },
-      }),
+      from: (table: string) => {
+        const read = {
+          select: () => read,
+          eq: () => read,
+          maybeSingle: async () => {
+            calls.push(`select:${table}`);
+            return { data: opts.assetRow ?? null, error: null };
+          },
+        };
+        return {
+          ...read,
+          insert: async (rows: any[]) => {
+            calls.push(`insert:${table}`);
+            audit.push(...rows);
+            return { error: null };
+          },
+        };
+      },
     }),
     storage: {
       from: (bucket: string) => ({
@@ -231,6 +243,36 @@ describe("enforce", () => {
     expect(result.retired).toBe(0);
     expect(result.failed).toBe(1);
     expect(h.calls).not.toContain("rpc:retire_unreferenced_media_asset");
+  });
+
+  it("finishes a retirement whose call errored after it committed: the public object is removed", async () => {
+    silence();
+    const c = club("a", { published: 100, candidates: 1 });
+    const path = c.candidates[0].path;
+    const h = harness([c], {
+      retire: () => ({ data: null, error: { message: "fetch failed" } }),
+      assetRow: { status: "orphaned", deleted_at: "2026-11-19T10:30:00Z" },
+    });
+    const result = await runMediaOrphanSweep({ ...h.deps, mode: "enforce" });
+    expect(result.retired).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(h.calls).toContain("select:media_assets");
+    expect(h.calls).toContain(`remove:onzio-media:${path}`);
+  });
+
+  it("keeps the public object and the trash copy when a failed retire call did not commit", async () => {
+    silence();
+    const c = club("a", { published: 100, candidates: 1 });
+    const path = c.candidates[0].path;
+    const h = harness([c], {
+      retire: () => ({ data: null, error: { message: "fetch failed" } }),
+      assetRow: { status: "published", deleted_at: null },
+    });
+    const result = await runMediaOrphanSweep({ ...h.deps, mode: "enforce" });
+    expect(result.failed).toBe(1);
+    expect(result.retired).toBe(0);
+    expect(h.calls).not.toContain(`remove:onzio-media:${path}`);
+    expect(h.calls).not.toContain(`remove:onzio-media-trash:${path}`);
   });
 
   it("queues the removal for retry when the public object cannot be removed", async () => {

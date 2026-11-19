@@ -279,10 +279,18 @@ async function retireCandidate(
     p_asset_id: asset.assetId,
     p_actor_id: null,
   });
-  const status = (data as { status?: string } | null)?.status;
+  let status = (data as { status?: string } | null)?.status;
   if (error || !status) {
-    // The outcome is unknown, so keep the trash copy; it expires with the rest of the trash.
-    return { status: "failed", reason: "RETIRE_FAILED" };
+    // The call may have committed before the error reached us. Read the asset back: if it is
+    // already retired, finish the job (remove the public object) instead of leaking it.
+    const { data: row, error: readError } = await service.schema("onzio").from("media_assets")
+      .select("status, deleted_at").eq("club_id", clubId).eq("id", asset.assetId).maybeSingle();
+    const retiredRow = row as { status?: string; deleted_at?: string | null } | null;
+    if (readError || retiredRow?.status !== "orphaned" || !retiredRow.deleted_at) {
+      // The outcome is unknown, so keep the trash copy; it expires with the rest of the trash.
+      return { status: "failed", reason: "RETIRE_FAILED" };
+    }
+    status = "retired";
   }
 
   if (status !== "retired") {

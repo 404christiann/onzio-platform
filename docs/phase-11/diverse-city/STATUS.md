@@ -71,6 +71,14 @@ dry-run until Christian has reviewed 7+ days of reports and says "enforce".
   Hiding it means moving the clock off `media_assets`, against the approved design; low sensitivity.
 - Re-verified: full `test:db` 79 files, 1356 tests; `db:types:check`; sweep unit and cron tests 21/21; `tsc`.
 
+**onzio-bot round 2 (no High or Medium; both optional Lows fixed):**
+- The stray-object count now runs before the two clock updates, so lock `734901281` covers only those updates.
+- A retire call that errored after committing no longer leaks the public object: enforce reads the asset back,
+  and if it is already retired (`orphaned`, `deleted_at` set) removes the public object; otherwise it keeps both
+  copies and records `RETIRE_FAILED`. Two unit tests.
+- Re-verified: full `test:db` 79 files, 1356 tests; `db:types:check`; `test:unit` 345 files, 4030 tests;
+  architecture 432 passed, 1 skipped; `tsc`.
+
 **Known limit:** cinematic JSON content stores asset ids that are mirrored into `*_media_asset_id` FK columns or
 child tables; the catalog test forces a decision on any new JSON column but cannot prove a mirror exists.
 

@@ -225,6 +225,17 @@ begin
       'pinned', v_pinned, 'waiting', v_waiting, 'candidates', v_candidates));
   end loop;
 
+  -- Report-only: onzio-media objects that have no media_assets row at all. The sweep never
+  -- touches these. Null when Storage is not readable from here.
+  begin
+    select count(*) into v_stray from storage.objects o
+    where o.bucket_id = 'onzio-media'
+      and not exists (select 1 from onzio.media_assets m
+                      where m.storage_bucket = 'onzio-media' and m.storage_path = o.name);
+  exception when others then
+    v_stray := null;
+  end;
+
   -- The clock is written in two set-based statements after every reference has been computed.
   -- media_assets' statement trigger (serialize_homepage_write) takes lock 734901281, which homepage
   -- saves and retirements also take, so it is held only for these two updates, not the whole scan.
@@ -238,17 +249,6 @@ begin
     update onzio.media_assets set unreferenced_since = v_now
       where id = any(v_set) and unreferenced_since is null;
   end if;
-
-  -- Report-only: onzio-media objects that have no media_assets row at all. The sweep never
-  -- touches these. Null when Storage is not readable from here.
-  begin
-    select count(*) into v_stray from storage.objects o
-    where o.bucket_id = 'onzio-media'
-      and not exists (select 1 from onzio.media_assets m
-                      where m.storage_bucket = 'onzio-media' and m.storage_path = o.name);
-  exception when others then
-    v_stray := null;
-  end;
 
   return pg_catalog.jsonb_build_object(
     'graceSeconds', extract(epoch from p_grace)::bigint,
