@@ -19,10 +19,13 @@ no migration, schema, RPC, data or production change, and nothing under `compone
 - **Kit Remove contrast:** the old CinematicEditorKit `.remove` colour is now the destructive red mixed
   75/25 with the foreground. A harness measured about 6.3:1 in light (4.48:1 before) and about 7.5:1 in
   dark.
-- **Not done:** removing the dead "Edit in …" chip code in `HomepageEditor.tsx` and
-  `lib/cinematic-editor-shortcuts.ts`. That would lower the cinematic@2 selector-debt pin (`literal`
-  4→2, `read:templateKey` 2→0), and verify-rc-admin forbids editing the debt baseline, so it waits for
-  Christian.
+- **Dead "Edit in …" code removed (Christian approved lowering the pin by exactly what the removal
+  eliminates):** the chip line, the `CINEMATIC_PAGE_SHORTCUTS` push and the import are gone from
+  `HomepageEditor.tsx`, and `lib/cinematic-editor-shortcuts.ts` is deleted. In the selector-debt
+  baseline only the `HomepageEditor.tsx` entry changed: `literal:cinematic@2` went from 4 to 2,
+  `read:templateKey` from 2 to removed, and `read:presentationTemplateKey` stayed at 2. Four contract
+  tests that asserted the shortcuts file now assert that each editor is a cinematicOnly Website route
+  listed on the Hub page.
 
 **Files changed:**
 - New: `components/admin/editor-copy.ts`.
@@ -37,8 +40,9 @@ no migration, schema, RPC, data or production change, and nothing under `compone
 - One earlier Shop run failed gate 3 "saved" on a colour sampled mid-transition (`rgb(52,199,90)`), and
   an identical rerun passed. That is a skill flake, noted for a skill fix.
 
-**Blockers or unresolved decisions:** dead-code removal waits on Christian's decision about the
-selector-debt pin.
+**Blockers or unresolved decisions:** none. verify-rc-admin gates 1 and 5 forbid changing the debt
+baseline, so for the pin change the repo gates were run directly; Christian approved this one
+exception.
 
 **Exact next step:** bot review; Christian decides the merge.
 

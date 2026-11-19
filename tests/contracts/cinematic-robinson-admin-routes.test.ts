@@ -6,7 +6,18 @@ import RobinsonStadiumEditor from "@/components/admin/stadium/RobinsonStadiumEdi
 import StadiumEditor from "@/components/admin/stadium/StadiumEditor";
 import StadiumAdminPage from "@/app/admin/(protected)/stadium/page";
 import FoothillTransitAdminPage from "@/app/admin/(protected)/foothill-transit/page";
-import { CINEMATIC_PAGE_SHORTCUTS } from "@/lib/cinematic-editor-shortcuts";
+import { ADMIN_ROUTE_MANIFEST, getWebsiteHubSections } from "@/lib/admin-route-manifest";
+
+const CINEMATIC_OWNER = { role: "owner", presentationTemplateKey: "cinematic@2", isBillingAuthorized: true, canMutateContent: true, storeEnabled: true } as const;
+const hubRouteIds = (presentationTemplateKey: string) =>
+  getWebsiteHubSections({ ...CINEMATIC_OWNER, presentationTemplateKey }).flatMap((section) => section.routes.map((route) => route.id));
+/** The editor is a cinematicOnly Website route: visible in the Hub for cinematic@2, and not for another design. */
+function expectHubRoute(id: string, href: string) {
+  const route = ADMIN_ROUTE_MANIFEST.find((candidate) => candidate.id === id);
+  expect(route, id).toMatchObject({ href, groupId: "website", cinematicOnly: true });
+  expect(hubRouteIds("cinematic@2")).toContain(id);
+  expect(hubRouteIds("academy@1")).not.toContain(id);
+}
 
 describe("Robinson Stadium and Foothill Transit admin routes", () => {
   it("opens the Robinson editor at /admin/stadium and the Bus Route editor at /admin/foothill-transit", () => {
@@ -14,16 +25,14 @@ describe("Robinson Stadium and Foothill Transit admin routes", () => {
     expect(FoothillTransitAdminPage().type).toBe(StadiumEditor);
   });
 
-  it("lists both pages among the Homepage editor's cinematic@2 shortcuts", () => {
-    expect(CINEMATIC_PAGE_SHORTCUTS).toEqual([
-      { label: "Edit in Robinson Stadium", short: "Stadium", href: "/admin/stadium" },
-      { label: "Edit in Foothill Transit", short: "Foothill Transit", href: "/admin/foothill-transit" },
-      { label: "Edit in Chick-fil-A", short: "Chick-fil-A", href: "/admin/chick-fil-a" },
-      { label: "Edit Stadium Guidelines & Fan Code", short: "Policies", href: "/admin/policies" },
-      { label: "Edit in Partners", short: "Partners", href: "/admin/partners" },
-      { label: "Edit in Injury Report", short: "Injury Report", href: "/admin/injury-report" },
-      { label: "Edit in Season Ticket Membership", short: "Season Tickets", href: "/admin/season-membership" },
-      { label: "Edit in Know Before You Go", short: "Know Before You Go", href: "/admin/know-before-you-go" },
-    ]);
+  it("lists the Robinson Stadium page and the other cinematic@2 editors in the Website Hub", () => {
+    expectHubRoute("stadium", "/admin/stadium");
+    expectHubRoute("foothill-transit", "/admin/foothill-transit");
+    expectHubRoute("chick-fil-a", "/admin/chick-fil-a");
+    expectHubRoute("policies", "/admin/policies");
+    expectHubRoute("partners", "/admin/partners");
+    expectHubRoute("injury-report", "/admin/injury-report");
+    expectHubRoute("season-membership", "/admin/season-membership");
+    expectHubRoute("know-before-you-go", "/admin/know-before-you-go");
   });
 });

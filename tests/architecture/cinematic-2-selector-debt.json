@@ -167,9 +167,8 @@
     "read:presentationTemplateKey": 3
   },
   "components/admin/homepage/HomepageEditor.tsx": {
-    "literal:cinematic@2": 4,
-    "read:presentationTemplateKey": 2,
-    "read:templateKey": 2
+    "literal:cinematic@2": 2,
+    "read:presentationTemplateKey": 2
   },
   "components/admin/injury-report/CinematicInjuryReportEditor.tsx": {
     "literal:cinematic@2": 2,
