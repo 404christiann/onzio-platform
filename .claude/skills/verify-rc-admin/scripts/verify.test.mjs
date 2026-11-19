@@ -728,3 +728,17 @@ test("4b-0-3: the Stats rows serve main's old workspace and Rose City's dialog t
   assert.match(spec, /const planNow = \(\) => gate3Plan\(editor, kind\)/, "gate 3 reads the plan after the page's Save button kind is known");
   assert.match(spec, /async function lacksDiscard\(page: Page, editor: Editor\)/, "gate 4 skips the discard dialog by the page's Save button kind too");
 });
+
+test("4b-0-4: the conflict step's two sessions bump a number field by different amounts, so the kept edit stays dirty", async () => {
+  const { numberBump } = await import("./editors.mjs");
+  assert.equal(numberBump("c2"), 2, "the other session adds 2");
+  for (const marker of ["c1", "d1", "r1", "m1", "v1", "rcv"]) assert.equal(numberBump(marker), 1, marker);
+  // The scenario from Rose City's Stats: both sessions start at V; the other saves first; "Load latest and keep my edits" keeps the first draft.
+  const V = 0;
+  const latest = V + numberBump("c2"), draft = V + numberBump("c1");
+  assert.notEqual(draft, latest, "the kept draft differs from the latest saved value, so the page is dirty (it was clean when both added 1)");
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  assert.match(spec, /Number\(await field\.inputValue\(\)\) \+ numberBump\(marker\)/, "mark() bumps by numberBump(marker)");
+  assert.match(spec, /await mark\(otherField, "c2"\)/, "the other session of the conflict step marks c2");
+  assert.match(spec, /const mine = await mark\(field, "c1"\)/, "the first session marks c1");
+});

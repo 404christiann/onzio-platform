@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { KIT_ANY_FIELD_SELECTOR, KIT_DIALOG_SELECTOR, KIT_DONE_SELECTOR, KIT_EDIT_SELECTOR, KIT_ENABLED_FIELD_SELECTOR, KIT_LIST_SELECTOR, KIT_WAIT_MS, chooseOpenPath, firstMarkableIndex, isPhoneWidth, listProblems, retryLockCheck, sectionTryOrder, sheetBarProblems } from "./scripts/kit-path.mjs";
-import { ROSTER_SAVE_BUTTON, SEASON_CREATE_BUTTON, gate3Plan, isAdminDataRead, isEditorSave, isMutating, stepsPass } from "./scripts/editors.mjs";
+import { ROSTER_SAVE_BUTTON, SEASON_CREATE_BUTTON, gate3Plan, isAdminDataRead, isEditorSave, isMutating, numberBump, stepsPass } from "./scripts/editors.mjs";
 import { BUSY_SELECTOR, LOADING_TEXT, isEnvironmentNoise, savedColourProblems, waitUntilSettled } from "./scripts/settle.mjs";
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type Request } from "@playwright/test";
 
@@ -428,8 +428,8 @@ async function openEditor(page: Page, base: string, editor: Editor, options: { s
 
 // Deterministic edit: append a marker, trimming first if the field would overflow maxlength.
 async function mark(field: Locator, marker: string) {
-  if (await field.evaluate((el) => (el as HTMLInputElement).type === "number")) { // a stat: bump it by one instead of appending text
-    const next = String(Number(await field.inputValue()) + 1);
+  if (await field.evaluate((el) => (el as HTMLInputElement).type === "number")) { // a stat: bump it (by 1; by 2 for the conflict step's other session) instead of appending text
+    const next = String(Number(await field.inputValue()) + numberBump(marker));
     await field.fill(next);
     return next;
   }

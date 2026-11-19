@@ -67,3 +67,13 @@ export function isAdminDataRead({ method, pathname, body }) {
 
 /** The roster dialog's save button: "Save" / "Save changes" on main, "Save player" on Rose City's rebuilt roster dialog. Anchored. */
 export const ROSTER_SAVE_BUTTON = /^Save( changes| player)?$/;
+
+/**
+ * How much `mark()` adds to a number field (a stat). Every marker adds 1 except "c2", the conflict step's OTHER session, which adds 2:
+ * with +1 on both sides the other session saved V+1 and the first session's draft was also V+1, so after "Load latest and keep my
+ * edits" the draft equalled the latest, the page was rightly clean, and the step wrongly expected "dirty" (found on Rose City's Stats).
+ * Text and URL fields already differ by marker (" ·c1" / " ·c2", "?rcv=c1" / "?rcv=c2").
+ */
+export function numberBump(marker) {
+  return marker === "c2" ? 2 : 1;
+}
