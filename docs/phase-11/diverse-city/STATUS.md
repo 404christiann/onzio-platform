@@ -3,8 +3,7 @@
 ## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)
 
 **Agent/package:** Claude Code (Sonnet 5.5), RC-ADMIN-4b-roster, branch `claude/rc-admin-4b-roster` off `3d52ab65`.
-**Status:** `in_progress`: code, tests and typecheck done; **verify-rc-admin not run yet** (waits for RC-ADMIN-4b-0 to be on main and the
-orchestrator's "Roster: go"). No PR yet. App code only: no migration, schema, RPC, validator or env change; selector debt and the
+**Status:** `in_progress`, PR open; verify-rc-admin PASS (gate 3 declared n/a). Merges only on Christian's word. App code only: no migration, schema, RPC, validator or env change; selector debt and the
 `lib/code-site.ts` ceilings untouched.
 
 **Completed work:**
@@ -32,9 +31,15 @@ orchestrator's "Roster: go"). No PR yet. App code only: no migration, schema, RP
 tests: the same write bodies and order as the classic editor for new, edit, show, hide and photo replace; classic messages; Goalkeepers
 first; filters; card numbers; rendered card and fields; Diverse City branch pins; no template selector in new files).
 
-**Verification so far:** `npx tsc --noEmit` exit 0; `npm run test:unit` 350 files, 4138 tests pass (it prints the known
-`fatal: Not a valid object name origin/main`); contract test 26/26. **Not run:** verify-rc-admin (all six gates), a real-browser look at the
-page.
+**Verification:** verify-rc-admin `--route /admin/roster --package RC-ADMIN-4b-roster --touched roster` on `69de5a64` (this branch on
+`0a80031a`, with #186), report `test-results/rc-admin-verify/20261119-125409-RC-ADMIN-4b-roster/report.html`: PASS.
+- Gate 1: 15 app files, 2 doc warnings, 0 forbidden. Gate 2: 19/19 identical, touched `roster`. Gate 3: n/a, declared in `EDITORS`
+  (a player is saved from its own dialog; there is no page Save). Gate 4: CLS at most 0.00003 at 390 and 1440, light and dark; new axe 0;
+  reduced motion 0 offenders. Gate 5: tsc ok; unit 350 files, 4138 tests; architecture 152; selector debt unchanged.
+  Gate 6: Diverse City 15/15 pages identical to origin/main.
+- Not covered by any gate: the player dialog itself (open, edit, Save) was not driven by verify, because gate 3 is n/a here; the dialog's
+  writes are covered by the contract test against the classic editor's bodies.
+- Free disk at the start of the run: 21 GB; verify base cache 1.8 GB.
 
 **Blockers or unresolved decisions:**
 - The 4b-0 `roster` row (WIP) clicks a dialog button named `/^Save( changes)?$/`; this editor's button reads "Save", which matches.
@@ -43,8 +48,7 @@ page.
 - The player editor's stats keep the classic quirk: changing a player's position after creation does not move the season row between the
   field and keeper tables (existing behaviour, not fixed here).
 
-**Exact next step:** orchestrator says 4b-0 is merged and "Roster: go"; rebase, run
-`verify.sh run --worktree <this worktree> --route /admin/roster --package RC-ADMIN-4b-roster --touched roster`, then open the PR.
+**Exact next step:** onzio-bot review, then Christian merges.
 
 ## 2026-11-19 - RC-ADMIN-4b-0-2 verify-rc-admin: three small fixes for the Seasons, Roster and kit-editor rebuilds
 
