@@ -1,5 +1,18 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-ADMIN-4b-0-2 follow-up: seasons row reason text (onzio-bot Low on #188)
+
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-2 follow-up, branch `claude/rc-admin-4b-0-2-low` on `e8190f83`. **Status:** `in_progress`:
+PR open. Skill only; a label text, no behaviour change.
+
+**Completed work:** the `seasons` row's declared `lacks.pageSave` reason said only "Create Next Season"; it now names both create labels
+("Create Next Season (or Create <year> season)"), as the matcher beside it does. One self-test pins the text. 55 self-tests pass.
+
+**Verification:** `node --test .claude/skills/verify-rc-admin/scripts/verify.test.mjs`. No verify run: the text appears only in the gate 3 / 4
+"not applicable" reason line of the report; no selector, matcher or gate logic changed.
+
+**Next step:** onzio-bot, then Christian merges.
+
 ## 2026-11-19 - Rose City launch gate: LEMON MILK accepted without a receipt (docs only)
 
 **Agent/package:** Claude Code (Opus, RC-ADMIN wave 4 orchestrator), docs only, branch `claude/rc-lemon-milk-accepted` on `9e1dee1c`.

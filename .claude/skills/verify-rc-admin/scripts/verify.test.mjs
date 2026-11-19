@@ -688,3 +688,9 @@ test("4b-0-2: the roster row's dialog save button matches 'Save', 'Save changes'
   const row = spec.slice(spec.indexOf('{ key: "roster"'), spec.indexOf('{ key: "stats-match"'));
   assert.match(row, /getByRole\("button", \{ name: ROSTER_SAVE_BUTTON \}\)/, "the roster row uses the shared matcher");
 });
+
+test("4b-0-2 follow-up: the seasons row's declared reason names both create labels, like the matcher it sits beside", () => {
+  const spec = readFileSync(join(here, "..", "rc-admin-verify.spec.ts"), "utf8");
+  const row = spec.slice(spec.indexOf('{ key: "seasons"'), spec.indexOf('{ key: "roster"'));
+  assert.match(row, /lacks: \{ pageSave: "Create Next Season \(or Create <year> season\), Set active and Delete act at once; there is no page Save"/);
+});
