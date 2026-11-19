@@ -52,6 +52,32 @@ press Back between sections (fixed on main by RC-ADMIN-4b-0-2, #188) and gate 2 
 
 **Blockers or unresolved decisions:** none. Questions for Christian are in the PR body (Payments link on the Team tab; tagline shown as "not set" for Rose City).
 **Exact next step:** onzio-bot review, then Christian merges.
+
+## 2026-11-19 - RC-ADMIN-4b-0-3 verify-rc-admin: Stats rows drive main's workspace and Rose City's dialog table
+
+**Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-3, branch `claude/rc-admin-4b-0-3` on `313a63b1`. **Status:** `in_progress`: PR open,
+onzio-bot clean at `4787c48`. Skill only: no app code, no migration. Starting point: the Stats worker's patch, reviewed and changed (see below).
+
+**Completed work:**
+- Both stats rows open "Edit <player>" (Rose City's table, which opens a dialog whose number boxes edit the draft live) or "Select <player>" (main).
+- `closeDialog` / `reopenDialog` hooks on an editor row, used where the kit's Done is used (before Save, Discard and the gate 2 save; to pin the
+  field again). They do nothing where there is no dialog, so main's old workspace passes with the same row. Changed from the patch: its
+  `reopenDialog` clicked "Edit" unconditionally and would have timed out on main; the dialog is now the one holding a stat input, not any dialog.
+- `lacksOnAdminButton`: lacks that hold only while the page saves with the old AdminSaveButton (read from the page's own button). The patch dropped
+  `conflict`, `discard` and `status` from `lacks` for all builds, which would fail gate 3/4 on main's old Stats (no conflict control, no Discard, no
+  status line). Now the old button skips them with reasons and the kit's PageSaveButton runs them: conflict runs for real ("Load latest and keep my
+  edits", state `conflict`, a second session saving through the dialog hooks), Discard and the status check too.
+- `retry` is declared for both rows with the reason "re-sends the draft; /api/admin/data has no operationId, so there is no \"Retry same save\" pending state".
+- Gate 4 screenshots and axe-scans the open stats dialog (informational) and skips the discard dialog by the page's Save button kind.
+- 56 self-tests pass (2 new for the plan by button kind and the row/hook shape).
+
+**Verification** (`--touched none`, clean main; reports under `/Users/christianalcala/Downloads/onzio-platform/.claude/worktrees/rc-admin-4b-0-2/test-results/rc-admin-verify/`):
+- `/admin/stats?view=match`: all six gates pass (gate 3: retry, conflict, discard n/a through `lacksOnAdminButton`): `20261119-135030-RC-ADMIN-4b-0-3-t3m`.
+- `/admin/stats?view=season`: all six gates pass (gate 3: retry, conflict, discard n/a through `lacksOnAdminButton`; 20/20 payloads, Diverse City 15/15): `20261119-141735-RC-ADMIN-4b-0-3-t3s`.
+- Not exercised live: the new build path (PageSaveButton, dialog, real conflict). The Stats branch verifies against this after it lands.
+
+**Next step:** onzio-bot; then `verify.sh cleanup --worktree` on this worktree.
+
 ## 2026-11-19 - RC-ADMIN-4b-0-2 follow-up: seasons row reason text (onzio-bot Low on #188)
 
 **Agent/package:** Claude Code (Sonnet), RC-ADMIN-4b-0-2 follow-up, branch `claude/rc-admin-4b-0-2-low` on `e8190f83`. **Status:** `in_progress`:
@@ -70,10 +96,11 @@ PR open. Skill only; a label text, no behaviour change.
 **Agent/package:** Claude Code (Opus, RC-ADMIN wave 4 orchestrator), docs only, branch `claude/rc-lemon-milk-accepted` on `9e1dee1c`.
 **Status:** `done`, PR open.
 **Completed work:** recorded Christian's 2026-11-19 decision to launch with LEMON MILK without a receipt, next to the 2026-11-17 Avenir decision; closed the PR 151 gate as an accepted risk; checked every LEMON MILK use and its fallback.
-**Files changed:** `docs/rose-city-2027-fonts.md`, `HANDOFF.md`, this file.
+**Files changed:** `docs/rose-city-2027-fonts.md`, `HANDOFF.md`, this file, `components/cinematic/cinematic.css`, `tests/contracts/cinematic-fonts.test.ts`.
 **Verification:** `git grep -i lemon` over `app components lib styles packages public` on `9e1dee1c`: one `@font-face` and one rule (`.cinematic-site .footer-brand strong`, stack `'LEMON MILK', sans-serif`) in `components/cinematic/cinematic.css`; `CinematicFooter.tsx:40` renders it only without a footer logo. The `--font-lemon-milk` variable maps to other fonts. No code changed.
-**Blockers or unresolved decisions:** the fallback is generic sans-serif, not Figtree; making it Figtree is a one-line public-site CSS change that needs Christian's approval.
-**Exact next step:** Christian decides on the one-line fallback change; follow-up purchase of the LEMON MILK license.
+**Fallback fix (Christian approved 2026-11-19):** `components/cinematic/cinematic.css` footer stack is now `'LEMON MILK','CinematicFigtree',sans-serif`; `tests/contracts/cinematic-fonts.test.ts` gains a LEMON MILK fallback check (red before the fix, 8/8 after); font + architecture tests 160/160.
+**Blockers or unresolved decisions:** LEMON MILK is served from the repo (`public/fonts/lemon-milk/`), not the `onzio-fonts` bucket; Christian decides whether to move it. Render check at 390/1440 is blocked locally by the public-site hold.
+**Exact next step:** Christian's merge; post-launch, buy LEMON MILK and Avenir webfont licenses.
 
 ## 2026-11-19 - RC-ADMIN-4b-roster: Rose City Roster on the editor kit (app code only)
 

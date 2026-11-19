@@ -36,8 +36,11 @@ export const OPTIONAL_STEPS = ["retry", "conflict", "discard"];
  * What gate 3 asks of an editor, from its declared `lacks`: { applicable, reason } for the whole gate (`pageSave`), and
  * `skipped`: { step: reason } for steps it lacks. Only OPTIONAL_STEPS can be skipped: clean, dirty, saving and saved always run.
  */
-export function gate3Plan(editor) {
-  const lacks = editor?.lacks ?? {};
+export function gate3Plan(editor, kind) {
+  // `lacksOnAdminButton`: lacks that hold only while the editor still saves with the old AdminSaveButton (it has no conflict state, no
+  // "Unsaved changes" line of its own beside every editor, no discard control on some). Once the page uses the kit's PageSaveButton
+  // (kind "page") those steps run for real. `kind` is read from the page's own Save button, never assumed.
+  const lacks = { ...(editor?.lacks ?? {}), ...(kind === "admin" ? editor?.lacksOnAdminButton ?? {} : {}) };
   if (lacks.pageSave) return { applicable: false, reason: `${editor.key} has no page Save button (declared in EDITORS): ${lacks.pageSave}`, skipped: {}, noStatus: undefined };
   const skipped = {};
   for (const step of OPTIONAL_STEPS) if (lacks[step]) skipped[step] = lacks[step];

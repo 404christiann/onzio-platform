@@ -34,6 +34,11 @@ type Editor = {
   open?: (page: Page) => Promise<void>;         // make the field editable (open a piece, a panel, an article)
   field?: (page: Page) => Locator;              // default: first enabled text field in main or an open dialog
   beforeSave?: (page: Page) => Promise<void>;   // close the panel or dialog, if Save needs it
+  // An editor whose fields sit in its own dialog (not the kit's EditorDialog): `closeDialog` closes it so the page Save is reachable,
+  // `reopenDialog` opens it again if it was closed and pins the same field. Gates 3 and 4 use them where they would use the kit's Done.
+  // Both must be no-ops on a build that has no such dialog (main's old workspace), so one row serves main and the rebuild.
+  closeDialog?: (page: Page) => Promise<void>;
+  reopenDialog?: (page: Page) => Promise<void>;
   saveButton?: (page: Page) => Locator;         // default: the visible Save button, either kind (see SAVE_BUTTON)
   // Editors that save through the shared POST /api/admin/data (reads are POSTs too): narrow `save` by the body's operation and table.
   ops?: string[]; tables?: string[];
@@ -43,6 +48,9 @@ type Editor = {
   // What the editor does not have, with the reason, so gate 3 reports those as "not applicable" for this editor only.
   // pageSave: the whole of gate 3. retry / conflict / discard: just that step. clean, dirty, saving and saved are never skippable.
   lacks?: Partial<Record<"pageSave" | "retry" | "conflict" | "discard" | "status", string>>;
+  // Lacks that hold only while the page still saves with the old AdminSaveButton (read from the page's own button). With the kit's
+  // PageSaveButton those parts run for real, so one row serves main's old editor and its rebuild.
+  lacksOnAdminButton?: Partial<Record<"retry" | "conflict" | "discard" | "status", string>>;
 };
 const saveOf = (editor: Editor, request: Request) => isEditorSave(editor, { method: request.method(), pathname: new URL(request.url()).pathname, body: request.postData() ?? "" });
 // page.route() sees only the URL; a shared endpoint needs the body too, so match the path and hand every other request on.
@@ -72,6 +80,31 @@ async function openHomepagePiece(page: Page, piece: string) {
   await expect(page.locator(".hp-panel")).toBeVisible();
 }
 const visibleButton = (page: Page, name: string) => page.getByRole("button", { name, exact: true }).filter({ visible: true }).first();
+// Rose City's Stats tables: "Edit <player>" opens a dialog whose number boxes change the page draft at once; Done closes it; the page Save
+// publishes. Main's old workspace has no such dialog: its stat inputs sit on the page, so both hooks do nothing there.
+const statsDialog = (page: Page) => page.locator("[role=dialog]").filter({ has: page.locator("[data-slot=stat-input]") });
+const STATS_DIALOG: Pick<Editor, "closeDialog" | "reopenDialog"> = {
+  closeDialog: async (page) => {
+    const dialog = statsDialog(page);
+    if (await dialog.count()) { await dialog.getByRole("button", { name: "Done", exact: true }).click(); await expect(dialog).toHaveCount(0, { timeout: 10_000 }); }
+  },
+  reopenDialog: async (page) => {
+    if (await statsDialog(page).count() === 0) {
+      const edit = page.getByRole("button", { name: /^Edit / }).filter({ visible: true }).first();
+      if (await edit.count()) await edit.click(); // Rose City; on main there is no Edit button and the input is already on the page
+    }
+    const scope = (await statsDialog(page).count()) ? statsDialog(page) : page.locator("main");
+    const input = scope.locator("[data-slot=stat-input]").filter({ visible: true }).first();
+    await expect(input).toBeVisible({ timeout: 30_000 });
+    await page.evaluate(() => document.querySelectorAll("[data-rcv-field]").forEach((el) => el.removeAttribute("data-rcv-field")));
+    await input.evaluate((element) => element.setAttribute("data-rcv-field", ""));
+  },
+};
+const STATS_OLD_BUTTON_LACKS = {
+  conflict: "Main's old Stats header Save (AdminSaveButton) has no conflict control: its writes are upserts with no revision check",
+  discard: "Main's old Stats has no Reload or Discard control",
+  status: "Main's old Stats header Save has no \"Unsaved changes\" line beside it",
+};
 export const EDITORS: Editor[] = [
   { key: "stadium", route: "/admin/stadium", save: /\/api\/admin\/visitor-pages\/robinson$/ },
   { key: "foothill-transit", route: "/admin/foothill-transit", save: /\/api\/admin\/visitor-pages\/stadium$/ },
@@ -128,15 +161,20 @@ export const EDITORS: Editor[] = [
     // No stat input exists until a match is chosen (the season's first match is enough).
     open: async (page) => {
       await page.locator("main select").filter({ has: page.locator("option", { hasText: "Select a match" }) }).first().selectOption({ index: 1 });
-      await page.getByRole("button", { name: /^Select / }).filter({ visible: true }).first().click(); // on a phone the player list shows first
+      // Rose City's tables list "Edit <player>"; main's workspace lists "Select <player>" (on a phone the player list shows first).
+      await page.getByRole("button", { name: /^(Edit|Select) / }).filter({ visible: true }).first().click();
     },
     field: (page) => page.locator("[data-slot=stat-input]").filter({ visible: true }).first(),
-    lacks: { retry: "Stats has no \"Retry same save\" control", conflict: "Stats has no conflict control: its writes are upserts with no revision check", discard: "Stats has no Reload or Discard control", status: "the header Save button has no \"Unsaved changes\" line beside it" } },
+    ...STATS_DIALOG,
+    lacks: { retry: "re-sends the draft; /api/admin/data has no operationId, so there is no \"Retry same save\" pending state" },
+    lacksOnAdminButton: STATS_OLD_BUTTON_LACKS },
   { key: "stats-season", route: "/admin/stats?view=season", save: /\/api\/admin\/data$/, ops: ["upsert"],
-    open: async (page) => { await page.getByRole("button", { name: /^Select / }).filter({ visible: true }).first().click(); }, // on a phone the player list shows first
+    open: async (page) => { await page.getByRole("button", { name: /^(Edit|Select) / }).filter({ visible: true }).first().click(); }, // "Edit <player>" on Rose City, "Select <player>" on main
     tables: ["player_season_stats", "goalkeeper_season_stats", "player_season_adjustments", "goalkeeper_season_adjustments"],
     field: (page) => page.locator("[data-slot=stat-input]").filter({ visible: true }).first(),
-    lacks: { retry: "Stats has no \"Retry same save\" control", conflict: "Stats has no conflict control: its writes are upserts with no revision check", discard: "Stats has no Reload or Discard control", status: "the header Save button has no \"Unsaved changes\" line beside it" } },
+    ...STATS_DIALOG,
+    lacks: { retry: "re-sends the draft; /api/admin/data has no operationId, so there is no \"Retry same save\" pending state" },
+    lacksOnAdminButton: STATS_OLD_BUTTON_LACKS },
 ];
 const editorFor = (route: string) => EDITORS.find((e) => e.route === route);
 
@@ -163,6 +201,12 @@ const saveLocator = (page: Page) => page.locator(SAVE_BUTTON).filter({ visible: 
 // A row's saveButton names the OLD page's button ("Save homepage"); a kit page has the one PageSaveButton, so the row is ignored there.
 const saveButton = (page: Page, editor?: Editor) => (kitState.get(page)?.kit ? undefined : editor?.saveButton?.(page)) ?? saveLocator(page);
 type SaveKind = "admin" | "page";
+// Does this editor declare it has no discard control, given which Save button the page actually has (see Editor.lacksOnAdminButton)?
+async function lacksDiscard(page: Page, editor: Editor) {
+  const button = saveLocator(page);
+  const kind = (await button.count()) ? await saveKind(button) : undefined;
+  return Boolean(gate3Plan(editor, kind).skipped.discard);
+}
 const saveKind = (button: Locator): Promise<SaveKind> => button.evaluate((el) => (el.hasAttribute("data-page-save-button") ? "page" : "admin"));
 // The editor's own "Reload saved page" control, or PageFrame's "Discard changes" (which opens the same confirmation).
 // The confirm dialog's button: "Discard and reload" on the older editors, "Discard changes" where a kit page words it so.
@@ -203,7 +247,7 @@ const kitEditLocator = (page: Page) => page.locator(`main ${KIT_EDIT_SELECTOR}`)
 const kitDialog = (page: Page) => page.locator(KIT_DIALOG_SELECTOR);
 // Where the field lives: `index` is its position among ALL text fields of the section's panel (enabled or not),
 // `section` the dialog section to switch to first (null: the section the clicked part opened).
-type KitState = { kit: boolean; index: number; section: number | null; clsBeforeOpen?: number };
+type KitState = { kit: boolean; index: number; section: number | null; clsBeforeOpen?: number; ownDialog?: Editor };
 const kitState = new WeakMap<Page, KitState>();
 const pinned = (page: Page) => page.locator("[data-rcv-field]");
 const panelOf = (page: Page) => kitDialog(page).locator("[data-editor-dialog-panel]");
@@ -270,6 +314,7 @@ async function findKitField(page: Page): Promise<{ index: number; section: numbe
 /** Reopen the kit dialog (first Edit control) if it is closed, go to the section the field lives in, and pin the same field again. No-op off the kit path. */
 async function revealKit(page: Page) {
   const state = kitState.get(page);
+  if (state?.ownDialog?.reopenDialog) { await state.ownDialog.reopenDialog(page); return; }
   if (!state?.kit) return;
   if (await kitDialog(page).count() === 0) {
     await kitEditLocator(page).click();
@@ -283,6 +328,8 @@ async function revealKit(page: Page) {
 }
 /** Close the kit dialog with Done (the phone sheet's Done is the same control) so Save and Discard are reachable. Returns false off the kit path. */
 async function commitKit(page: Page) {
+  const own = kitState.get(page)?.ownDialog;
+  if (own?.closeDialog) { await own.closeDialog(page); return true; }
   if (!kitState.get(page)?.kit) return false;
   const dialog = kitDialog(page);
   if (await dialog.count()) {
@@ -358,7 +405,7 @@ async function openEditor(page: Page, base: string, editor: Editor, options: { s
   await page.goto(base + editor.route);
   await expect(page.locator("h1").first()).toBeVisible({ timeout: LOAD_MS });
   const path = await detectOpenPath(page, editor);
-  kitState.set(page, { kit: path === "kit", index: -1, section: null });
+  kitState.set(page, { kit: path === "kit", index: -1, section: null, ownDialog: path === "kit" || !editor.closeDialog ? undefined : editor });
   if (path === "kit") {
     if (options.settle) {
       await page.waitForTimeout(1_500);
@@ -489,9 +536,11 @@ test.describe("gate 3: save behaviour", () => {
       return;
     }
     const steps: Record<string, string> = {};
-    const plan = gate3Plan(editor);
+    // The plan is read when each step starts: `kind` (old AdminSaveButton or the kit's PageSaveButton) is only known once the "clean" step has looked at the page.
+    const planNow = () => gate3Plan(editor, kind);
     const step = async (name: string, body: () => Promise<void>) => {
-      if (plan.skipped[name]) { steps[name] = `n/a: ${plan.skipped[name]}`; return; } // declared in EDITORS `lacks`, optional steps only
+      const skip = planNow().skipped[name];
+      if (skip) { steps[name] = `n/a: ${skip}`; return; } // declared in EDITORS `lacks` / `lacksOnAdminButton`, optional steps only
       try { await body(); steps[name] = "pass"; } catch (error) { steps[name] = `FAIL: ${String(error).split("\n").slice(0, 3).join(" ")}`; }
     };
     const context = await browser.newContext({ storageState: STORAGE, viewport: { width: 1440, height: 900 } });
@@ -517,7 +566,7 @@ test.describe("gate 3: save behaviour", () => {
       listBefore = kitState.get(page)?.kit ? await listState(field) : null;
       await mark(field, "d1");
       await expect(button).toHaveAttribute("data-state", "dirty");
-      if (kind === "admin" && !plan.noStatus) await expect(page.locator("[data-cinematic-save-bar] [role=status], [data-admin-save-status]").first()).toHaveText("Unsaved changes");
+      if (kind === "admin" && !planNow().noStatus) await expect(page.locator("[data-cinematic-save-bar] [role=status], [data-admin-save-status]").first()).toHaveText("Unsaved changes");
       else if (kind === "admin") await expect(button).toHaveAttribute("aria-disabled", "false"); // declared in EDITORS lacks.status: the text line is not checked
       else { // PageSaveButton has no status line: it is the enabled "Save" button
         await expect(button).toHaveAttribute("aria-disabled", "false");
@@ -802,6 +851,12 @@ test.describe("gate 4: visual", () => {
       // Kit editor: the fields are in the dialog. Record it open (screenshot, axe), then close it so the page itself is what gets checked.
       let kitDialogViolations: AxeViolation[] = [];
       const sheetProblems: string[] = [];
+      if (kitState.get(page)?.ownDialog && await page.getByRole("dialog").count()) { // the editor's own dialog (Rose City's Stats): scan it open, informational, then close it
+        await page.screenshot({ path: join(OUT, "screenshots", `${slug}-edit-dialog.png`) });
+        kitDialogViolations = await axe(page, ["[role=dialog]"]);
+        await commitKit(page);
+        await page.waitForTimeout(300);
+      }
       if (kitState.get(page)?.kit) {
         await page.screenshot({ path: join(OUT, "screenshots", `${slug}-edit-dialog.png`) });
         kitDialogViolations = await axe(page, ["[role=dialog]"]);
@@ -832,7 +887,8 @@ test.describe("gate 4: visual", () => {
       await commitKit(page);
       // An editor that declares it has no discard control (EDITORS `lacks.discard`, e.g. Stats) has no discard dialog to scan.
       let dialogViolations: AxeViolation[] = [];
-      if (!editor.lacks?.discard) {
+      const noDiscard = await lacksDiscard(page, editor);
+      if (!noDiscard) {
         await discardTrigger(page).click();
         const dialog = page.getByRole("dialog");
         await expect(dialog).toBeVisible();
@@ -865,7 +921,7 @@ test.describe("gate 4: visual", () => {
         await commitKit(basePage);
         // An older editor on origin/main may have no discard control at all (the old Shop): then there is no baseline dialog, so every
         // violation in the package's discard dialog counts as new.
-        if (!editor.lacks?.discard && await discardTrigger(basePage).waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false)) {
+        if (await discardTrigger(basePage).waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false)) {
           await discardTrigger(basePage).click();
           await expect(basePage.getByRole("dialog")).toBeVisible();
           await basePage.waitForTimeout(400);
@@ -920,7 +976,7 @@ test.describe("gate 4: visual", () => {
     await mark(field, "m1");
     if (await commitKit(page)) await page.waitForTimeout(400); // let the kit dialog finish closing before sampling the page
     samples.push({ moment: "dirty", moving: await movingAnimations(page) });
-    if (!editor.lacks?.discard) { // an editor that declares no discard control has no discard dialog to open and close
+    if (!(await lacksDiscard(page, editor))) { // an editor that declares no discard control has no discard dialog to open and close
       await discardTrigger(page).click();
       await page.waitForTimeout(60);
       samples.push({ moment: "dialog opening", moving: await movingAnimations(page) });
