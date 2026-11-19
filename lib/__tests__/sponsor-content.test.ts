@@ -12,11 +12,13 @@ import {
   SPONSOR_PLACEMENT_SWITCH,
   sponsorDraftFromRow,
   sponsorLimitForPlacement,
+  sponsorLimitMessage,
   sponsorListProblems,
   sponsorNameFromFile,
   sponsorsForPlacement,
   sponsorStoragePathFromPublicUrl,
   sponsorWebsiteDomain,
+  switchesOnLast,
   type SponsorDraft,
 } from "@/lib/sponsor-content";
 
@@ -148,6 +150,40 @@ describe("one-list page", () => {
     expect(result.toInsert).toEqual([
       { name: "Summit Coffee", logo_url: "s.png", sort_order: 1, show_on_homepage: true, show_in_footer: true, website_url: "https://summitcoffee.com" },
     ]);
+  });
+
+  it("turns switches off before turning any on, so a swap at a full place stays under the SQL cap (RC-ADMIN-10a)", () => {
+    const full = [row("on", 0, true, true), row("off", 1, false, false)];
+    const [on, off] = full.map(sponsorDraftFromRow);
+    const result = diffSponsorList(full, [
+      { ...off, homepage: true, footer: true },
+      { ...on, homepage: false, footer: false, name: "Renamed" },
+    ]);
+    expect(result.toUpdate).toEqual([
+      { id: "off", changes: { sort_order: 0 } },
+      { id: "on", changes: { name: "Renamed", sort_order: 1, show_on_homepage: false, show_in_footer: false } },
+      { id: "off", changes: { show_on_homepage: true, show_in_footer: true } },
+    ]);
+  });
+
+  it("splits one row's switch-on from the rest of its changes, and keeps updates with no switch-on in order", () => {
+    expect(switchesOnLast([
+      { id: "a", changes: { show_on_homepage: true, show_in_footer: false } },
+      { id: "b", changes: { name: "B" } },
+      { id: "c", changes: { show_in_footer: true } },
+    ])).toEqual([
+      { id: "a", changes: { show_in_footer: false } },
+      { id: "b", changes: { name: "B" } },
+      { id: "a", changes: { show_on_homepage: true } },
+      { id: "c", changes: { show_in_footer: true } },
+    ]);
+  });
+
+  it("puts plain words on the caps the database refuses, and only on those", () => {
+    expect(sponsorLimitMessage("SPONSOR_LIMIT_TOTAL")).toBe("You can list 30 sponsors. Remove one before adding another.");
+    expect(sponsorLimitMessage("SPONSOR_LIMIT_HOMEPAGE")).toBe("Your homepage can show 10 sponsors. Turn Homepage off for one first.");
+    expect(sponsorLimitMessage("SPONSOR_LIMIT_FOOTER")).toBe("Your footer can show 6 sponsors. Turn Footer off for one first.");
+    expect(sponsorLimitMessage("duplicate key value")).toBeNull();
   });
 
   it.each([

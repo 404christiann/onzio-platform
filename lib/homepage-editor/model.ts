@@ -1,4 +1,5 @@
 import { cinematicHomepageEditableContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { HOMEPAGE_SLIDESHOW_PHOTO_LIMITS } from "@/lib/homepage-content";
 export type HomepageSection = "hero" | "photos" | "story" | "video" | "revamp";
 
 export type HeroFields = {
@@ -252,7 +253,7 @@ export function createHomepageEditorState(input: {
     editableSections: input.editableSections.filter(isSection),
     allowedPieces: input.allowedPieces?.filter(isPiece) ??
       PIECES.filter((piece) => input.editableSections.includes(sectionForPiece(piece))),
-    maxPhotos: input.maxPhotos ?? 6,
+    maxPhotos: input.maxPhotos ?? HOMEPAGE_SLIDESHOW_PHOTO_LIMITS.other,
     editableFields: input.editableFields ? [...input.editableFields] : [...DEFAULT_EDITABLE_FIELDS],
     selection: null,
     disclosure: null,

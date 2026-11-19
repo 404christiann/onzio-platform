@@ -111,7 +111,7 @@ describe("Rose City shop and homepage migration, reconciled with main", () => {
     const later = others.filter((file) => file > NAME);
     // Only Rose City's own later migrations may sort after it (today: the archived-club purge tables),
     // plus main packages named here, which the loop below checks do not redefine its functions.
-    const laterMainPackages = ["20261118200000_media_upload_quota.sql"]; // RC-ADMIN-10b
+    const laterMainPackages = ["20261118200000_media_upload_quota.sql", "20261119010000_sponsor_and_news_caps.sql"]; // RC-ADMIN-10b, 10a
     expect(later.every((file) => file.includes("_cinematic_") || laterMainPackages.includes(file)), later.join(", ")).toBe(true);
     const ours = /function (onzio_private\.validate_cinematic_shop_section|onzio\.save_shop_page|onzio_private\.validate_cinematic_shop_content|onzio_private\.homepage_binding_identity|onzio_private\.homepage_snapshot|onzio\.save_homepage)\(/;
     for (const file of later) expect(ours.test(readFileSync(resolve(MIGRATIONS, file), "utf8")), file).toBe(false);

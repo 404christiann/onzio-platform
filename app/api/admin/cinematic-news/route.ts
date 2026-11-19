@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { getClubContext } from "@/lib/club-context";
-import { newsArticleSaveSchema, type NewsArticleSave } from "@/lib/cinematic-news";
+import { NEWS_LIMITS, newsArticleSaveSchema, type NewsArticleSave } from "@/lib/cinematic-news";
 import { ContractError } from "@/lib/contract-error";
 import { retirePublishedMedia } from "@/lib/media-processing";
 import { createClient } from "@/lib/supabase-server";
@@ -15,12 +15,13 @@ const messages: Record<string, string> = {
   INVALID_CINEMATIC_NEWS_PAYLOAD: "Review the article fields and the button link.",
   NEWS_COVER_INVALID: "Upload the cover photo again before saving.",
   NEWS_ARTICLE_NOT_FOUND: "This article no longer exists. Reload News.",
+  NEWS_LIMIT_REACHED: `News can show ${NEWS_LIMITS.liveArticles} articles at once. Remove one before adding or restoring another.`,
   CINEMATIC_NEWS_CHANGED: "Another editor changed this article. Reload News before saving again.",
   OPERATION_REUSED: "This save could not be confirmed. Check its status before trying again.",
   NOT_AUTHORIZED: "You no longer have permission to edit News.",
   DATABASE_OPERATION_FAILED: "The News save could not be confirmed.",
 };
-const STATUS: Record<string, number> = { CINEMATIC_NEWS_CHANGED: 409, OPERATION_REUSED: 409, NOT_AUTHORIZED: 403, PAGE_UNAVAILABLE: 404, NEWS_ARTICLE_NOT_FOUND: 404, DATABASE_OPERATION_FAILED: 500 };
+const STATUS: Record<string, number> = { CINEMATIC_NEWS_CHANGED: 409, OPERATION_REUSED: 409, NOT_AUTHORIZED: 403, PAGE_UNAVAILABLE: 404, NEWS_ARTICLE_NOT_FOUND: 404, NEWS_LIMIT_REACHED: 409, DATABASE_OPERATION_FAILED: 500 };
 
 function failure(code: string, status: number) {
   return NextResponse.json({ error: { code, message: messages[code] ?? messages.DATABASE_OPERATION_FAILED } },

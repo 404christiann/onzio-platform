@@ -1,5 +1,5 @@
 import type { DBSiteSponsorLogo, SponsorLogoPlacement } from "@/lib/db-types";
-import type { DraftSponsorLogo, SponsorLogoDiff } from "@/lib/sponsor-content";
+import { sponsorLimitMessage, type DraftSponsorLogo, type SponsorLogoDiff } from "@/lib/sponsor-content";
 
 export type SponsorEditorLogo = DraftSponsorLogo & { key: string };
 
@@ -51,7 +51,7 @@ export async function persistSponsorAttempt(attempt: SponsorSaveAttempt, writer:
   while (attempt.updates < attempt.changes.toUpdate.length) {
     const update = attempt.changes.toUpdate[attempt.updates];
     const result = await writer.update(update.id, update.changes);
-    if (result.error) throw new Error(result.error.message);
+    if (result.error) throw new Error(sponsorLimitMessage(result.error.message) ?? result.error.message);
     attempt.updates += 1;
   }
   if (attempt.inserted === null && attempt.changes.toInsert.length > 0) {
@@ -62,7 +62,7 @@ export async function persistSponsorAttempt(attempt: SponsorSaveAttempt, writer:
       attempt.insertUncertain = true;
       throw error;
     }
-    if (result.error) throw new Error(result.error.message);
+    if (result.error) throw new Error(sponsorLimitMessage(result.error.message) ?? result.error.message);
     if (!Array.isArray(result.data) || !confirmSponsorInserts(attempt, result.data as DBSiteSponsorLogo[])) {
       attempt.insertUncertain = true;
       throw new Error("The saved sponsor logos could not be confirmed. Try again.");

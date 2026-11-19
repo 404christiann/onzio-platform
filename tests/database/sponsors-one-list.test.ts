@@ -180,6 +180,8 @@ describe("the migration on rows that were there before it", () => {
   // Put the table back to how production is, load rows shaped like today's
   // (one row per placement), run the migration file, and read what it did.
   async function stepBack() {
+    // RC-ADMIN-10a's cap trigger reads the switch columns, so it goes first (rolled back with the test).
+    await db.query("drop trigger site_sponsor_logos_caps on onzio.site_sponsor_logos");
     await db.query("drop trigger site_sponsor_logo_placement_switches on onzio.site_sponsor_logos");
     await db.query("drop function onzio_private.site_sponsor_logo_placement_switches()");
     await db.query(
