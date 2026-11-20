@@ -9,6 +9,7 @@ import NativeImage from "@/components/ResilientNativeImage";
 import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { CINEMATIC_NAV_ITEMS } from "@/lib/cinematic-homepage-content";
 import { useCinematicContent } from "./CinematicContent";
+import { useNavIndicator } from "./nav-indicator";
 
 function NavIcon({ name }: { name: "menu" | "close" | "arrow-left" | "caret-right" }) {
   return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href={`/icons/cinematic-navigation/sprite.svg#${name}`} /></svg>;
@@ -21,6 +22,17 @@ function drawerDuration(style: CSSStyleDeclaration) {
   const value = style.getPropertyValue("--drawer-duration").trim();
   const duration = parseFloat(value) * (value.endsWith("ms") ? 1 : 1000);
   return Number.isFinite(duration) ? duration : 240;
+}
+
+const pathOf = (href: string) => href.split("#")[0];
+const section = (path: string) => path.split("/")[1] ?? "";
+
+/** The drop-down whose page is open, so its top-level tab reads as current. A page listed in two drop-downs
+ * (Know Before You Go sits under Stadium and Tickets) belongs to the one whose own landing page shares its section. */
+function currentNavGroup(items: NavItem[], pathname: string): string | null {
+  const groups = items.filter(item => item.children?.some(child => pathOf(child.href) === pathname));
+  if (groups.length < 2) return groups[0]?.id ?? null;
+  return (groups.find(group => section(pathOf(group.children![0].href)) === section(pathname)) ?? groups[0]).id;
 }
 
 export default function CinematicNav({ editing = false }: { editing?: boolean }) {
@@ -54,6 +66,9 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
   const items: NavItem[] = CINEMATIC_NAV_ITEMS.filter(item => item.id !== "shop" || club.storeEnabled);
   const selectedGroup = items.find(item => item.id === mobileGroup);
   const isCurrent = (href?: string) => preview ? href === "/" : pathname === href;
+  const currentGroup = preview ? null : currentNavGroup(items, pathname);
+  // Re-place the underline whenever the current tab, the open drop-down or the labels change.
+  const { nav: desktopNav, bar: indicator } = useNavIndicator([pathname, open, currentGroup, content]);
 
   useEffect(() => {
     if (!open) return;
@@ -192,9 +207,9 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
   return <>
     <header {...navigationPiece} className="club-header" ref={header} data-navigation-editing={editing || undefined} data-keyboard-input={keyboardInput || undefined}>
       <Link className="crest-link" href="/" aria-label={`${club.name} home`}>{clubLogoUrl && <NativeImage src={clubLogoUrl} alt={`${club.name} crest`} />}</Link>
-      <nav className="desktop-nav" aria-label="Main navigation">
+      <nav ref={desktopNav} className="desktop-nav" aria-label="Main navigation">
         {items.map(item => item.children?.length ? <div key={item.id} className={`nav-group${open === item.id ? " open" : ""}`} data-group={item.id}>
-          <button type="button" className="nav-item" data-nav-id={item.id} aria-expanded={open === item.id} aria-controls={`${prefix}-${item.id}`} onClick={event => {
+          <button type="button" className={`nav-item${currentGroup === item.id ? " active" : ""}`} data-nav-id={item.id} aria-expanded={open === item.id} aria-controls={`${prefix}-${item.id}`} onClick={event => {
             const button = event.currentTarget;
             const panel = button.parentElement?.querySelector<HTMLElement>(".dropdown");
             if (panel) panel.style.transformOrigin = `${button.offsetLeft + button.offsetWidth / 2 - panel.offsetLeft}px 0`;
@@ -203,9 +218,10 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
             {label(item.id, item.label)}<span className="nav-caret" aria-hidden="true" />
           </button>
           <div className="dropdown" id={`${prefix}-${item.id}`} aria-hidden={open !== item.id} inert={open !== item.id}>
-            {item.children.map(child => <Link key={child.id} href={child.href} onClick={() => setOpen(null)}>{childLabel(child.id, child.label)}</Link>)}
+            {item.children.map(child => <Link key={child.id} href={child.href} aria-current={currentGroup === item.id && child.href === pathname ? "page" : undefined} onClick={() => setOpen(null)}>{childLabel(child.id, child.label)}</Link>)}
           </div>
         </div> : <Link key={item.id} data-nav-id={item.id} className={`nav-item${isCurrent(item.href) ? " active" : ""}`} href={item.href ?? "/"} aria-current={isCurrent(item.href) ? "page" : undefined}>{label(item.id, item.label)}</Link>)}
+        <span ref={indicator} className="nav-indicator" aria-hidden="true" />
       </nav>
       {partner?.url && <div className="header-partner" data-transparent-mark={foothillPartner || undefined}><NativeImage src={foothillPartner ? "/images/cinematic/foothill-going-good-places.png" : partner.url} alt={partner.alt} /></div>}
       <button ref={menuButton} type="button" className="menu-toggle" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls={`${prefix}-drawer`} onClick={openPhone}><span className="menu-word">Menu</span><NavIcon name="menu" /></button>
