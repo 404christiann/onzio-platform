@@ -1341,9 +1341,9 @@ export async function fetchLeagueStandings(
 }
 
 /** Fetches editable footer social media links. */
-export async function fetchSiteSocialLinks(clubId?: string): Promise<DBSiteSocialLink[]> {
+export async function fetchSiteSocialLinks(clubId?: string, client: typeof supabase = supabase): Promise<DBSiteSocialLink[]> {
   const tenantId = requireClubId(clubId);
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("site_social_links")
     .select("*")
     .eq("club_id", tenantId)

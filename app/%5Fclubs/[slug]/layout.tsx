@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import CinematicShell from "@/components/cinematic/CinematicShell";
+import CinematicDisplayFont from "@/components/cinematic/CinematicDisplayFont";
 import { fetchCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { createClient } from "@/lib/supabase-server";
 import Nav from "@/components/Nav";
@@ -95,7 +96,7 @@ export default async function TenantLayout({
 
   if (club.presentationTemplateKey === "cinematic@2") {
     const initialContent = await fetchCinematicHomepageContent(club.id, (await createClient()).schema("onzio")).catch(() => null);
-    return <ClubContextProvider club={club}><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></ClubContextProvider>;
+    return <ClubContextProvider club={club}><CinematicDisplayFont /><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></ClubContextProvider>;
   }
 
   // The header remains usable while branding or page content is pending.

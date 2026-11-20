@@ -1,7 +1,7 @@
 /* RC2027-TICKET-PAGES: Season Ticket Membership + Know Before You Go (Sam's 2027 Final Masters, 2484px and 2342px wide).
    Ported from the approved preview (outer design-explorations/ticket-pages-2027).
    Desktop sizes are Sam's proportions in vw; phone sizes are fixed below 700px. */
-.cinematic-site .tp-page{--tp-red:#E80B25;--tp-heading-red:#E80B25;--tp-grey:#8f8f8f;--tp-ink:#141414;--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;background:#fff;color:var(--tp-ink);overflow:hidden}
+.cinematic-site .tp-page{--tp-red:#E80B25;--tp-heading-red:#E80B25;--tp-grey:#8f8f8f;--tp-ink:#141414;--heavy:'CinematicAvenirHeavy','CinematicAvenirHeavyLocal','CinematicAvenirHeavyMetric','CinematicFigtree',sans-serif;background:#fff;color:var(--tp-ink);overflow:hidden}
 .cinematic-site .tp-page :is(h1,h2){text-transform:none}
 
 /* Title band: same as Stadium Guidelines and Contact. */
@@ -69,7 +69,7 @@
 .cinematic-site .tp-teams{display:flex;align-items:center;justify-content:center;gap:1.8vw;margin:2.4vw 0 1.6vw}
 .cinematic-site .tp-teams strong{font:800 clamp(22px,3.5vw,82px)/1 var(--heavy)}
 .cinematic-site .tp-monogram{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#f1f1f1;color:#555;font:800 clamp(20px,3vw,64px)/1 var(--heavy)}
-.cinematic-site .tp-teams .tp-crest{--opponent-crest-size:clamp(56px,8.1vw,190px);width:var(--opponent-crest-size);height:var(--opponent-crest-size);object-fit:contain}
+.cinematic-site .tp-teams .tp-crest{--opponent-crest-size:clamp(56px,8.1vw,190px);width:var(--opponent-crest-size);height:var(--opponent-crest-size);object-fit:contain;flex:none}
 .cinematic-site .tp-versus{font:400 clamp(22px,3.5vw,82px)/1 var(--body);margin:0 1vw}
 .cinematic-site .tp-watch{display:inline-flex;align-items:center;gap:.7vw;font:400 clamp(13px,1.2vw,28px)/1 var(--body);min-height:44px}
 /* Sam's YouTube file is a 655 x 146 canvas; at 5.15vw tall its play button matches the design's size. */

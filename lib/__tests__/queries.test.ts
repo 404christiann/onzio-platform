@@ -432,6 +432,19 @@ describe('fetchSiteSocialLinks', () => {
     expect(result[1].id).toBe('facebook')
   })
 
+  it('reads with the client it is given (the server request client) for that club only', async () => {
+    const row = { id: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@club', icon: '/images/logo/youtubeLogo.svg', sort_order: 4, updated_at: '2026-11-20T00:00:00Z' }
+    const query = chain({ data: [row], error: null })
+    const client = { from: vi.fn().mockReturnValue(query) }
+
+    const result = await fetchSiteSocialLinks('club-a', client as never)
+
+    expect(client.from).toHaveBeenCalledWith('site_social_links')
+    expect(mockFrom).not.toHaveBeenCalled()
+    expect(query.eq).toHaveBeenCalledWith('club_id', 'club-a')
+    expect(result).toEqual([row])
+  })
+
   it('falls back to blank platform links when the query fails', async () => {
     mockFrom.mockReturnValueOnce(chain({
       data: null,

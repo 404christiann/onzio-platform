@@ -1,5 +1,110 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-CLS-2: Rose City pages stop shifting on load with production content (app code only)
+
+**Agent/package:** Claude Code (Opus 5.5), RC-CLS-2, branch `claude/rc-cls-2`, rebased onto main `e1021427` (after #205; measured on `04fa6ae6`, after #204). **Status:**
+`ready for review` (PR into `main`; not merged, not deployed, `rc-sam` not updated). No migration, schema, env, Supabase,
+Stripe or admin change.
+
+**Completed:**
+- Captured every layout shift on `rc-sam` (node, previous and current box, time) on the eight pages over 0.01. Four causes:
+  1. Web-font swap (every page). Text first painted in the fallback, then moved when Avenir (about 1.1 to 1.4 s, found only
+     when the body `<style>` was parsed) and MuseoModerno (188 KB, about 1.4 s) arrived. Avenir's line height (1.55) differs
+     from the installed Avenir Book / Figtree, so the nav, the indicator and every line moved 2 to 3 px; MuseoModerno
+     re-wrapped headings and team names (Shop's heading −59 px, Schedule's card −24 px at 390, `/sponsors`' intro +29 px).
+  2. `/stadium`: the seating plan had no size, so the caption and story below it jumped (0.38 to 0.44, in some runs).
+  3. Know Before You Go: the match box was fetched in the browser and pushed the page down 155 to 175 px; its crests also
+     shrank in the flex row until they loaded, and the club crest appeared late because the shell loads branding in the browser.
+  4. Schedule at 390 and Shop: the MuseoModerno inline face (below) decoded one frame after first paint.
+- Fixes:
+  - Avenir: preloaded from the document head (React `preload`, both files) and given stand-in faces that copy its metrics:
+    the installed Avenir Medium/Heavy on Apple devices (same widths, Avenir's ascent 108.4 % / descent 46.6 % or 47.8 %), and
+    elsewhere the bundled Figtree file scaled to Avenir's width (`size-adjust` 101.8 % / 101.3 %, same overrides,
+    `font-display: swap`), also preloaded. No Arial anywhere; stacks still end `'CinematicFigtree', sans-serif`; with no
+    `NEXT_PUBLIC_FONT_BASE_URL` none of this is emitted, so the exit plan in `docs/rose-city-2027-fonts.md` is unchanged.
+  - MuseoModerno: a 900-weight, Latin-only instance (24.8 KB, same advances as the variable font at 900) is inlined as a
+    `data:` URL by a server component (`CinematicDisplayFont`) that only the cinematic branch of the tenant layout renders,
+    after `cinematic.css`'s full face and with a `unicode-range`; the full file still loads for other characters. A
+    one-line inline script next to it asks for the face as soon as the stylesheets have loaded, so it is decoded before the
+    first layout (without it the face decoded one frame late and Schedule's team names still re-wrapped at 390). Recipe
+    and checksum in `public/fonts/museomoderno/README.md`.
+  - Robinson images get their stored width/height. Know Before You Go reads its match box on the server
+    (`loadKnowBeforeYouGoMatch`, the browser fetch remains as the fallback when the server read fails); crests are
+    `flex: none`, and the club crest's box is held while branding is pending.
+- Changed contracts: `cinematic-fonts` now expects the stand-in families in every Avenir stack, six faces from the font
+  URL, three preloads, and the inlined MuseoModerno face; the Robinson fixture comparison strips the new image sizes.
+
+**Files changed:** `components/cinematic/{CinematicAvenirFonts,CinematicKnowBeforeYouGo,CinematicRobinson}.tsx`, new
+`components/cinematic/{CinematicDisplayFont.tsx,museo-moderno-latin-900.ts,know-before-you-go-match.ts}`,
+`components/cinematic/{cinematic,injury-report,match-summary,news,roster,stadium,ticket-pages}.css`,
+`app/%5Fclubs/[slug]/{layout.tsx,tickets/know-before-you-go/page.tsx}`, `lib/queries.ts` (`fetchSiteSocialLinks` takes an
+optional client), `public/fonts/museomoderno/README.md`, and tests (`cinematic-fonts`, `cinematic-ticket-pages-renderer`,
+`cinematic-robinson-renderer`).
+
+**Verification:**
+- CLS on `rc-sam` (production data, main `75684008`), worst of 3 fresh runs, Playwright layout-shift observer on load, 1440 /
+  1280 / 390. "After" injects this branch's CSS from first paint (`addInitScript`), preloads the same fonts and makes the same
+  early font request; the Robinson image size is injected as its `aspect-ratio`. "No local Avenir" leaves out the installed-
+  Avenir stand-in, as on Windows and Android.
+
+  | Page | main | after | after, no local Avenir | main + #204 (1440 / 1280) | after + #204 |
+  |---|---|---|---|---|---|
+  | `/stadium` | 0.384 / 0.443 / 0.214 | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 | 0.384 / 0.406 | 0.000 / 0.000 |
+  | `/sponsors` | 0.103 / 0.013 / 0.002 | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 | 0.111 / 0.013 | 0.000 / 0.000 |
+  | `/tickets/know-before-you-go` | 0.061 / 0.083 / 0.080 | 0.047 / 0.059 / 0.079 (match box, server fix) | 0.051 / 0.059 / 0.079 | 0.061 / 0.070 | 0.047 / 0.059 |
+  | `/tickets` | 0.031 / 0.035 / 0.003 | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 | 0.068 / 0.059 | 0.000 / 0.000 |
+  | `/shop` | 0.019 / 0.020 / 0.001 | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 | 0.019 / 0.020 | 0.000 / 0.000 |
+  | Season Membership | 0.017 / 0.017 / 0.012 | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 | 0.017 / 0.029 | 0.000 / 0.000 |
+  | `/schedule` | 0.012 / 0.014 / 0.063 | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 | 0.011 / 0.014 | 0.000 / 0.000 |
+  | Injury Report | 0.012 / 0.012 / 0.011 | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 | 0.013 / 0.012 | 0.000 / 0.000 |
+
+  Know Before You Go cannot be fixed by injection (its fix is the server read); see the local build.
+- Local production builds (main `04fa6ae6` and this branch, `NEXT_PUBLIC_FONT_BASE_URL` = the `onzio-fonts` bucket), served on
+  the preview-unhold path as on `rc-sam`, shared local stack in one `with-local-db-lock.sh` hold, browser throttled to 70 ms /
+  12 Mbps, worst of 3:
+
+  | Page (local build) | main | this branch |
+  |---|---|---|
+  | `/tickets/know-before-you-go` | 0.054 / 0.065 / 0.064 | 0.000 / 0.000 / 0.000 |
+  | `/tickets` | 0.001 / 0.002 / 0.003 | 0.000 / 0.000 / 0.000 |
+  | `/tickets/season-membership` | 0.002 / 0.002 / 0.011 | 0.000 / 0.000 / 0.000 |
+  | `/shop` | 0.001 / 0.001 / 0.001 | 0.000 / 0.000 / 0.000 |
+  | `/schedule` | 0.002 / 0.005 / 0.063 | 0.000 / 0.000 / 0.000 |
+  | `/stadium` | 0.003 / 0.003 / 0.005 | 0.001 / 0.001 / 0.003 |
+  | `/sponsors` | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 |
+  | `/news/injury-report` | 0.003 / 0.005 / 0.021 | 0.000 / 0.000 / 0.000 |
+  | `/` | 0.001 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 |
+  | `/club/about` | 0.002 / 0.007 / 0.001 | 0.000 / 0.000 / 0.000 |
+  | `/news` | 0.003 / 0.003 / 0.002 | 0.000 / 0.000 / 0.000 |
+  | `/contact` | 0.000 / 0.001 / 0.001 | 0.000 / 0.001 / 0.000 |
+
+  Local data is synthetic and partial (the Partners, Robinson and Injury Report seeds need production assets and players), so
+  those pages show their empty states there; their production content is covered by the `rc-sam` table.
+- The server HTML carries the three font preloads in `<head>`, the warm-up script, and Know Before You Go's match box.
+- Diverse City: `site-public-pages-scope` passes. Decoded `/_next/static` JS and CSS per page, main → branch: `/` JS 1037.2 → 1038.4 KB, CSS 264.2 → 264.3; `/roster` 1059.0 → 1060.2, 272.7 → 272.9; `/schedule` 997.9 →
+  999.2, 281.4 → 281.5; `/shop` 848.3 → 849.5, 285.1 → 285.1. All within 1.3 KB. (A first version inlined the font in
+  `cinematic.css`, which Diverse City also loads because the tenant layout imports the shell: +32.7 KB CSS. That is why it moved
+  to a server component in the cinematic layout branch, guarded by `cinematic-fonts`.)
+- `tsc` clean; tests: `test:unit` 4356/4356, `test:contracts` 3395/3395. ESLint on the changed files: clean (3 existing
+  `react/no-children-prop` errors in the unchanged `cinematic-shell.test.ts`).
+
+- onzio-bot review of `7ca18eb` (1 Medium, 1 Low), both fixed with tests that fail when the line they guard is removed:
+  - Medium: `tests/contracts/cinematic-kbyg-no-refetch.test.ts` runs Know Before You Go's match effect by hand (as
+    `cinematic-news-partners-server` does) and asserts no browser fetch when the server served the match, and exactly one
+    when it did not. Deleting the `seeded.current === club.id` early return fails it.
+  - Low: `lib/__tests__/queries.test.ts` asserts `fetchSiteSocialLinks(clubId, client)` reads through the given client,
+    filtered to that club, and never the default one. Swapping `client` back to `supabase` fails it.
+- Rebased onto #205 (RC-SAM-FIXES). Conflicts were its colour-token edits on the same CSS lines and a sixth Avenir Heavy stack
+  (Robinson's directions headings), which now gets the stand-ins too; the fonts contract expects six. After the rebase: `tsc`
+  clean, `test:unit` 4380/4380, `test:contracts` 3418/3418. The CLS tables above were measured before #205; #205 changes
+  Shop, Schedule and Roster layout, so the post-merge `rc-sam` re-measure covers the combination.
+
+**Blockers or unresolved decisions:** Christian's merge, and a fast-forward of `rc-sam` on his word to re-measure there. Still
+open from RC-MATCH-AREA: whether the cinematic shell should read branding and social links on the server (the footer shift on
+short pages at 390); this package only holds the crest's place on Know Before You Go.
+
+**Exact next step:** onzio-bot review, Christian merges; then update `rc-sam` and re-run the eight pages at 1440, 1280 and 390.
+
 ## 2026-11-20 - RC-SAM-FIXES follow-up: `rc-sam` updated to #205; Sam's admin content entered in production
 
 **Agent/package:** Claude Code (Opus 5.5), RC-SAM-FIXES follow-up. **Status:** `done` for the `rc-sam` update and the admin

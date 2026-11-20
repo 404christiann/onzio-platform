@@ -1,3 +1,16 @@
+## 2026-11-20 - RC-CLS-2: Rose City pages stop shifting on load with production content (app code only)
+
+- **Status:** `ready for review`, PR open from `claude/rc-cls-2` (rebased onto main `e1021427`, after #205). onzio-bot's Medium and Low on `7ca18eb` are
+  fixed with mutation-checked tests. No migration, schema, env, Supabase, Stripe or
+  admin change. Details and tables: `STATUS.md` (RC-CLS-2).
+- **What:** the eight Rose City pages over 0.01 on `rc-sam` (Stadium up to 0.44, Sponsors 0.10, Know Before You Go 0.08) now
+  measure 0.000 worst of 3 at 1440, 1280 and 390 (font fixes injected on `rc-sam`; Know Before You Go's server read checked on a
+  local production build, 0.065 → 0.000). Avenir is preloaded with metric-matched stand-ins (installed Avenir, else scaled
+  Figtree; no Arial); MuseoModerno's Latin set is inlined by a Rose City-only server component; Robinson images carry their
+  size; Know Before You Go's match box is read on the server. Diverse City bundles within 1.3 KB of main.
+- **Open:** whether the cinematic shell reads branding and socials on the server (from RC-MATCH-AREA) is still Christian's call.
+- **Exact next step:** onzio-bot review, Christian merges, then update `rc-sam` on his word and re-measure the eight pages.
+
 ## 2026-11-20 - RC-SAM-FIXES follow-up: `rc-sam` on #205; Sam's admin content in production
 
 - **Status:** `done`. `rc-sam` fast-forwarded to `e1021427`. Sam's link was re-pointed with `vercel alias set` because Vercel now
