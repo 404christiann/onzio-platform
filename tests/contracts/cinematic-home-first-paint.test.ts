@@ -23,6 +23,10 @@ vi.mock("@/lib/queries", () => ({
 vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: mocks.fetchClubIdentity }));
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: mocks.getClubContextBySlug }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: mocks.createClient }));
+// The site-pages registry also lists Rose City's Roster, Schedule and Shop pages (RC-CLS-B); this file tests Home only.
+vi.mock("@/components/sites/rose-city/RoseCityRosterPage", () => ({ default: () => null }));
+vi.mock("@/components/sites/rose-city/RoseCitySchedulePage", () => ({ default: () => null }));
+vi.mock("@/components/sites/rose-city/RoseCityShopPage", () => ({ default: () => null }));
 const homePageClient = vi.hoisted(() => vi.fn(() => null));
 vi.mock("@/components/HomePageClient", () => ({ default: homePageClient }));
 
