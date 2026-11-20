@@ -22,7 +22,7 @@
 .hp-notification-success { background:#edfbf2; border-color:#b8e8c8; color:#176b37; }
 .hp-notification-success .hp-notification-icon { background:#209447; }
 .hp-notification-warning { background:#fff8e9; border-color:#f3dcae; color:#795700; }
-.hp-notification-warning .hp-notification-icon { background:#b7791f; }
+.hp-notification-warning .hp-notification-icon { background:hsl(var(--warning)); color:hsl(var(--warning-foreground)); }
 .hp-notification-error { background:#fff1ef; border-color:#ffd5d0; color:#9d3028; }
 .hp-notification-error .hp-notification-icon { background:#d14338; }
 @keyframes hp-notification-spin { to { transform:rotate(360deg); } }

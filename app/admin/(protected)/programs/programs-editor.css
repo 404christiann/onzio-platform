@@ -22,7 +22,7 @@
 .program-editor-canvas-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .program-editor-canvas-heading h2{font-size:19px;font-weight:600;letter-spacing:-.025em}
 .program-editor-canvas-heading p,.program-editor-canvas-heading span{font-size:12px;color:hsl(var(--muted-foreground))}
-.program-editor-directory-save{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0 0 10px;padding:10px 12px;border:1px solid hsl(var(--warning) / .3);border-radius:12px;background:hsl(var(--warning) / .08);color:hsl(var(--warning));font-size:12px}
+.program-editor-directory-save{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0 0 10px;padding:10px 12px;border:1px solid hsl(var(--warning) / .3);border-radius:12px;background:hsl(var(--warning) / .08);color:hsl(var(--warning-ink));font-size:12px}
 .program-editor-directory-save button{min-height:44px;padding:9px 14px;border:0;border-radius:12px;background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-size:14px;font-weight:600}
 .program-canvas-browser{overflow:hidden;border:1px solid hsl(var(--border));border-radius:16px;background:#fff}
 .program-canvas-browser-bar{display:flex;gap:14px;align-items:center;min-height:36px;padding:7px 11px;background:#f7f8fa;color:#657083;font-size:12px}

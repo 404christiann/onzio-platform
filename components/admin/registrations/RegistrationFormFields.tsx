@@ -550,7 +550,7 @@ export function RegistrationFormFields({ model, section, readOnly = false }: { m
                   />
                   <p
                     id="registration-waiver-guidance"
-                    className="mt-2 rounded-xl border border-warning/25 bg-warning/10 px-3 py-2.5 text-sm leading-relaxed text-warning"
+                    className="mt-2 rounded-xl border border-warning/25 bg-warning/10 px-3 py-2.5 text-sm leading-relaxed text-warning-ink"
                   >
                     {REGISTRATION_WAIVER_LEGAL_HINT}
                   </p>

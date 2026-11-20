@@ -345,7 +345,7 @@ export default function ShopPageEditor() {
       <div className="mt-5 space-y-4">
         {storeOff && (
           <p className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-foreground">
-            <IconShop size={18} className="flex-none text-warning" />
+            <IconShop size={18} className="flex-none text-warning-ink" />
             {SHOP_OFF_BANNER}
           </p>
         )}

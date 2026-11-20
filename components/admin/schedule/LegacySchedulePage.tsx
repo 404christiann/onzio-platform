@@ -721,7 +721,7 @@ export default function SchedulePage() {
                       </span>
                     </span>
                   ) : (
-                    <span className="font-body text-xs text-warning">No result yet</span>
+                    <span className="font-body text-xs text-warning-ink">No result yet</span>
                   );
 
                   return (

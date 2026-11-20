@@ -107,7 +107,7 @@ export function ScheduleMatchList({ groups, clubName, today, showSponsors, flash
                         </div>
                         {quick.error && <p role="alert">{quick.error}</p>}
                       </form>
-                    ) : <Button variant="outline" className="min-h-9 border-warning/50 px-3 text-warning" data-result-for={match.id} onClick={() => requestNavigation({ kind: "switch", label: "another result", continue: () => setQuick({ id: match.id, home: "", away: "", error: null, saving: false }) })}>Add result</Button>
+                    ) : <Button variant="outline" className="min-h-9 border-warning/50 px-3 text-warning-ink" data-result-for={match.id} onClick={() => requestNavigation({ kind: "switch", label: "another result", continue: () => setQuick({ id: match.id, home: "", away: "", error: null, saving: false }) })}>Add result</Button>
                     : <span className="text-xs text-muted-foreground">Upcoming</span>}
                   </div>
                   <p className={styles.venue} title={[match.venue, match.city, match.state, match.address].filter(Boolean).join(", ")}>{[match.venue, match.city, match.state].filter(Boolean).join(", ")}{match.address ? ` · ${match.address}` : ""}</p>

@@ -92,7 +92,7 @@
 .aep-value-actions > div { display:flex; gap:.3rem; }
 .aep-value-actions button { display:grid; place-items:center; min-width:44px; min-height:44px; border:1px solid hsl(var(--border)); border-radius:.5rem; }
 .aep-value-actions button:disabled { opacity:.35; }
-.aep-inline-error { color:hsl(var(--warning, 38 92% 50%)); font-size:.8125rem; }
+.aep-inline-error { color:hsl(var(--warning-ink, var(--warning, 38 92% 50%))); font-size:.8125rem; }
 @media(max-width:700px) {
   .aep-classic .aep-browser { padding:.6rem; }
   .aep-classic .aep-canvas-top { padding:.6rem; }

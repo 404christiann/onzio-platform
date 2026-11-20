@@ -16,7 +16,7 @@ export function RegistrationPaymentAccount({ model }: { model: RegistrationsEdit
               </p>
               <p className="text-xs text-muted-foreground">Payments by Stripe</p>
             </div>
-            <span className="ml-auto inline-flex items-center gap-x-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
+            <span className="ml-auto inline-flex items-center gap-x-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning-ink">
               Not ready
             </span>
           </div>
@@ -38,12 +38,12 @@ export function RegistrationPaymentAccount({ model }: { model: RegistrationsEdit
                 ) : (
                   <AlertCircle
                     aria-hidden="true"
-                    className="size-4 flex-none rounded-full bg-warning/10 p-0.5 text-warning"
+                    className="size-4 flex-none rounded-full bg-warning/10 p-0.5 text-warning-ink"
                   />
                 )}
                 <span className="text-sm text-foreground">{step.label}</span>
                 {!step.done && (
-                  <span className="ml-auto text-xs font-semibold text-warning">
+                  <span className="ml-auto text-xs font-semibold text-warning-ink">
                     Pending
                   </span>
                 )}
