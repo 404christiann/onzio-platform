@@ -86,11 +86,12 @@ export default function CinematicRoster({ roster, staff = [] }: { roster: Cinema
         <span>{staff.length}<span className="sr-only"> staff members</span></span>
       </div>
       <div className="squad-grid">
-        {staff.map((member) => (
-          <article className="squad-card squad-staff" key={`${member.role}-${member.name}`}>
+        {staff.map((member) => {
+          const portrait = getRosterImageSrc(member.image, clubLogoUrl);
+          return <article className="squad-card squad-staff" key={`${member.role}-${member.name}`}>
             <div className="squad-portrait">
-              <ResilientImage src={getRosterImageSrc(member.image, clubLogoUrl)} alt={member.name.trim()} fill unoptimized
-                sizes="(max-width: 600px) 85vw, (max-width: 900px) 42vw, 28vw" data-roster-card-image="true" />
+              {portrait && <ResilientImage src={portrait} alt={member.name.trim()} fill unoptimized
+                sizes="(max-width: 600px) 85vw, (max-width: 900px) 42vw, 28vw" data-roster-card-image="true" />}
             </div>
             <div className="squad-summary">
               <div className="squad-number-flag"><span className="squad-number" aria-hidden="true">{member.initials}</span>
@@ -99,8 +100,8 @@ export default function CinematicRoster({ roster, staff = [] }: { roster: Cinema
               <h3>{member.name.trim()}</h3>
               <p className="squad-hometown">{member.role}</p>
             </div>
-          </article>
-        ))}
+          </article>;
+        })}
       </div>
     </section>}
     {selected ? <PlayerModal player={selected} seasonLabel={roster.seasonLabel} presentation="cinematic" onClose={closeProfile} /> : null}
