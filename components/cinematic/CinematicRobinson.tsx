@@ -6,7 +6,8 @@ import { emptyStadiumContent, hydrateStadiumContent } from '@/lib/stadium-conten
 import './robinson-page.css';
 
 const STEP_SLOTS = ['step1', 'step2', 'step3'] as const;
-const picture = (image: RobinsonImage, className?: string) => image.url ? <NativeImage className={className} src={image.url} alt={image.alt} /> : null;
+// The stored size lets the browser reserve each image's box before it loads, so the text below does not jump.
+const picture = (image: RobinsonImage, className?: string) => image.url ? <NativeImage className={className} src={image.url} alt={image.alt} width={image.width ?? undefined} height={image.height ?? undefined} /> : null;
 
 /** Flat siblings: robinson-page.css styles `.r-directions > p` and `h3:last-of-type`. */
 function DirectionsBlock({ block }: { block: RobinsonBlock }) {

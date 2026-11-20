@@ -41,8 +41,17 @@ describe("Robinson Stadium public page", () => {
       .replace("<h3>Directions By Foothill Transit</h3>", '<h3 id="foothill-transit">Directions By Foothill Transit</h3>')
       .replace("<h3>Line 187: Azusa – Arcadia – Pasadena</h3>", '<h3 id="line-187">Line 187: Azusa – Arcadia – Pasadena</h3>')
       .replace("<h3>Foothill Transit Service Areas</h3>", '<h3 id="service-areas">Foothill Transit Service Areas</h3>');
-    const html = render(page()).replace(new RegExp(MEDIA.replaceAll(".", "\\.") + "([a-zA-Z0-9]+)\\.png", "g"), "{{$1}}");
+    const rendered = render(page());
+    // RC-CLS-2: every page image now carries its stored size so the browser reserves its box; the fixture predates that.
+    expect(rendered.match(/ width="1000" height="600"/g)).toHaveLength(8);
+    const html = rendered.replaceAll(' width="1000" height="600"', "").replace(new RegExp(MEDIA.replaceAll(".", "\\.") + "([a-zA-Z0-9]+)\\.png", "g"), "{{$1}}");
     expect(html).toBe(expected);
+  });
+
+  it("gives the seating plan its stored size, so the caption and story below it do not jump when it loads", () => {
+    expect(render(page())).toMatch(/<figure class="r-seating"><img src="[^"]+seating\.png" alt="[^"]*" width="1000" height="600"\/>/);
+    const unsized = page(); unsized.images.seating = { ...unsized.images.seating, width: null, height: null };
+    expect(render(unsized)).toMatch(/<figure class="r-seating"><img src="[^"]+seating\.png" alt="[^"]*"\/>/);
   });
 
   it("keeps the Stadium parking anchor on the parking block even after its heading is renamed", () => {

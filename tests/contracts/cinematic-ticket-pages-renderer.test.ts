@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { hydrateTicketPage, type KnowBeforeYouGoContent, type SeasonMembershipContent } from "@/lib/cinematic-ticket-pages-content";
 import { knowBeforeYouGoReferenceContent, seasonMembershipReferenceContent } from "@/lib/ticket-pages-reference-content";
@@ -8,7 +9,8 @@ import type { Fixture } from "@/lib/data";
 
 const route = vi.hoisted(() => ({ template: "cinematic@2", fetch: vi.fn() }));
 vi.mock("@/components/ClubContextProvider", () => ({ useClubContext: () => ({ id: "tenant", name: "Rose City FC" }) }));
-vi.mock("@/components/ClubBrandingProvider", () => ({ useClubBranding: () => ({ clubLogoUrl: "/crest.png" }) }));
+const branding = vi.hoisted(() => ({ clubLogoUrl: "/crest.png", brandingPending: false }));
+vi.mock("@/components/ClubBrandingProvider", () => ({ useClubBranding: () => branding }));
 vi.mock("@/components/cinematic/CinematicContent", () => ({ useCinematicContent: () => ({ content: { match: { emptyMessage: "Shared announcement" } } }) }));
 vi.mock("@/components/ResilientNativeImage", () => ({ default: (props: Record<string, unknown>) => createElement("img", props) }));
 vi.mock("@/lib/queries", () => ({ fetchSchedule: vi.fn(), fetchSiteSocialLinks: vi.fn() }));
@@ -17,6 +19,9 @@ vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NEXT_NOT_
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: async () => ({ id: "tenant", presentationTemplateKey: route.template }) }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: async () => ({ schema: () => ({}) }) }));
 vi.mock("@/lib/cinematic-ticket-pages-query", () => ({ fetchTicketPage: route.fetch }));
+vi.mock("@/lib/public-club-time-zone", () => ({ readPublicClubTimeZone: async () => "America/Los_Angeles" }));
+import { fetchSchedule, fetchSiteSocialLinks } from "@/lib/queries";
+import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import CinematicSeasonMembership from "@/components/cinematic/CinematicSeasonMembership";
 import { KnowBeforeYouGoView, type KnowBeforeYouGoMatch } from "@/components/cinematic/CinematicKnowBeforeYouGo";
 import SeasonMembershipRoute from "@/app/%5Fclubs/[slug]/tickets/season-membership/page";
@@ -153,6 +158,48 @@ describe("Know Before You Go public page", () => {
 });
 
 describe("ticket page routes", () => {
+  it("Know Before You Go paints the next home match fetched on the server, not a loading line (RC-CLS-2)", async () => {
+    route.fetch.mockResolvedValueOnce(kbygView());
+    vi.mocked(fetchSchedule).mockResolvedValueOnce([{ ...fixture, date: "2099-03-20" }]);
+    vi.mocked(fetchClubIdentity).mockResolvedValueOnce({ shortName: "RCFC" } as never);
+    vi.mocked(fetchSiteSocialLinks).mockResolvedValueOnce([]);
+    const html = renderToStaticMarkup(await KnowBeforeYouGoRoute({ params: Promise.resolve({ slug: "rose-city" }) }));
+    expect(html).toContain("Friday March 20, 2099 | Robinson Stadium");
+    expect(html).toContain("<strong>RCFC</strong>");
+    expect(html).not.toContain("Loading next home match");
+    // Read with the request's server client, not the browser one.
+    const serverClient = vi.mocked(fetchSchedule).mock.calls.at(-1)![2];
+    expect(serverClient).toBeDefined();
+    expect(vi.mocked(fetchClubIdentity).mock.calls.at(-1)![1]).toBe(serverClient);
+    expect(vi.mocked(fetchSiteSocialLinks).mock.calls.at(-1)![1]).toBe(serverClient);
+  });
+
+  it("Know Before You Go keeps the club crest's place while the club's branding is still loading (RC-CLS-2)", () => {
+    try {
+      Object.assign(branding, { clubLogoUrl: "", brandingPending: true });
+      expect(kbyg()).toContain('<strong>RCFC</strong><span class="tp-crest" aria-hidden="true"></span><span class="tp-versus"');
+      Object.assign(branding, { brandingPending: false });
+      expect(kbyg()).toContain('<strong>RCFC</strong><span class="tp-versus"');
+    } finally {
+      Object.assign(branding, { clubLogoUrl: "/crest.png", brandingPending: false });
+    }
+  });
+
+  it("Know Before You Go crests keep their size while they load, so the team names do not re-wrap (RC-CLS-2)", () => {
+    const css = readFileSync("components/cinematic/ticket-pages.css", "utf8");
+    expect(css).toMatch(/\.cinematic-site \.tp-teams \.tp-crest\{[^}]*width:var\(--opponent-crest-size\);height:var\(--opponent-crest-size\);[^}]*flex:none\}/);
+  });
+
+  it("Know Before You Go still renders, loading the match in the browser, when the server read fails", async () => {
+    route.fetch.mockResolvedValueOnce(kbygView());
+    vi.mocked(fetchSchedule).mockRejectedValueOnce(new Error("down"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const html = renderToStaticMarkup(await KnowBeforeYouGoRoute({ params: Promise.resolve({ slug: "rose-city" }) }));
+    expect(html).toContain("Loading next home match…");
+    expect(error).toHaveBeenCalledWith("KnowBeforeYouGoPage:", expect.any(Error));
+    error.mockRestore();
+  });
+
   it("serve cinematic@2 clubs from their saved content and 404 for other designs", async () => {
     route.fetch.mockResolvedValueOnce(seasonView()).mockResolvedValueOnce(kbygView());
     const params = Promise.resolve({ slug: "rose-city" });
