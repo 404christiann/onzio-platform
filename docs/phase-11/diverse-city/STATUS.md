@@ -4,8 +4,8 @@
 
 **Agent/package:** Claude Code (Opus 5.5), RC-SAM-FIXES, branch `claude/rc-sam-fixes` (worktree
 `~/Downloads/onzio-platform/.claude/worktrees/rc-sam-fixes`, rebased on main `75684008`, the commit `rc-sam` serves).
-**Status:** `in_progress`: code done and committed locally (not pushed, no PR). Christian is checking it on the local dev
-server first. No migration, schema, RPC, env, Stripe, Vercel or production change. Diverse City untouched.
+**Status:** `ready for review`: Christian checked it locally ("Looks good, open PR"); pushed, PR open for onzio-bot review and
+Christian's merge. No migration, schema, RPC, env, Stripe, Vercel or production change. Diverse City untouched.
 
 **Sam's list (Christian, 2026-11-20) and what was done:**
 1. Shop: Sam's three pills (Home / Away / Foothill Transit Edition, $115) and no number buttons. Code: the kit photos loop with
@@ -56,13 +56,22 @@ injury report, national anthem, tickets, ticket pages, visitor pages, home updat
 logo only the schedule seed publishes, and the schedule seed would overwrite local fixtures), form links (an owner already set
 them), schedule (already populated). Robinson directions headings confirmed Avenir Heavy 800 in the browser.
 
-**Not done yet:** Diverse City bundle check and CLS runs (need a production build; the dev server is using `.next`); Robinson
-headings checked on the preview after merge (the local stack has no Robinson content); PR; admin edits; `rc-sam` update.
+- Diverse City bundles (production build `ONZIO_ENVIRONMENT=staging next build`, `diverse-city.localhost`, client JS from
+  `/_next/static` in the browser, decoded KB, main as recorded by RC-MATCH-AREA -> this branch): `/` 1037.2 -> 1037.3, `/roster`
+  1058.9 -> 1060.3, `/schedule` 997.9 -> 998.5, `/shop` 848.2 -> 848.3. Rose City's Roster/Schedule/Shop code was already reachable
+  from those shared tenant routes (see RC-CLS); the +1.4 KB on `/roster` is the Staff group and `fetchStaff`. Diverse City renders
+  unchanged (`site-public-pages-scope` passes).
+- CLS: not measured with the production build; Christian stopped the local server before the CLS runs. The changes add no
+  late-loading content above the fold: the staff group and schedule order are in the server-rendered first paint, the drop-down
+  is hidden until opened, and the shop's kit photos keep the existing portrait box. To recheck on `rc-sam` after merge.
 
-**Blockers or unresolved decisions:** Christian's local check.
+**Not done yet:** admin edits after merge (#1 pill labels and Foothill kit, #5 Stem/Sub-mark/top image, #6 `/tickets` title,
+#13 crest); `rc-sam` fast-forward and preview recheck (Robinson headings, hero button, CLS).
 
-**Exact next step:** after Christian's local check, revert `lib/public-site-hold.ts`, run the bundle check and CLS, push and
-open the PR; after merge, fast-forward `rc-sam`, make the admin edits (#1, #5, #6 title, #13), recheck on the preview.
+**Blockers or unresolved decisions:** Christian's merge.
+
+**Exact next step:** after Christian merges, fast-forward `rc-sam` to main and push, wait for the preview to be Ready, recheck
+the fixed sections there, then make the admin edits Christian approved.
 
 ## 2026-11-20 - RC-DESKTOP-FIT: Rose City sections fit one desktop screen (CSS only, wider than 1024 px)
 

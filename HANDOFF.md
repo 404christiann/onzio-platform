@@ -1,3 +1,15 @@
+## 2026-11-20 - RC-SAM-FIXES: Sam's rc-sam review fixes for Rose City (app code only)
+
+- **Status:** `ready for review`, branch `claude/rc-sam-fixes` (on main `75684008`), PR open. No migration, schema, RPC, env, Stripe or
+  deploy change; Diverse City unchanged. Record in `STATUS.md` (RC-SAM-FIXES).
+- **What:** Rose Parade Red `#E80B25` everywhere but Chick-fil-A; square, 94% see-through drop-downs; Tickets drop-down reordered with
+  "Match tickets"; phone menu "Robinson Stadium"; shop photos loop without number buttons and the third kit borrows Away photos;
+  Staff on the Roster; bold Robinson directions headings; Schedule shows next match then played matches newest first with the
+  YouTube logo on every row; MEET THE SQUAD loses Tailwind's `.outline` ring.
+- **Open:** admin content Christian approved for after merge (shop pills and Foothill kit, crest page Stem/Sub-mark/top image,
+  `/tickets` title, new crest upload). CLS not yet measured on a production build.
+- **Exact next step:** after merge, fast-forward `rc-sam`, recheck on the preview, then the admin edits.
+
 ## 2026-11-20 - RC-DESKTOP-FIT: Rose City sections fit one desktop screen (CSS only, wider than 1024 px)
 
 - **Status:** `ready for review`, PR open. Appended `@media (min-width:1025px)` blocks in 10 `components/cinematic/*.css` files;
