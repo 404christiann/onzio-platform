@@ -1,8 +1,10 @@
 import type { ComponentType } from "react";
+import RoseCityHomePage from "@/components/sites/rose-city/RoseCityHomePage";
 import RoseCityRosterPage from "@/components/sites/rose-city/RoseCityRosterPage";
 import RoseCitySchedulePage from "@/components/sites/rose-city/RoseCitySchedulePage";
 import RoseCityShopPage from "@/components/sites/rose-city/RoseCityShopPage";
 import type { getClubContextBySlug } from "@/lib/club-context";
+import type { DBHomepageHeroContent } from "@/lib/db-types";
 
 type Club = Awaited<ReturnType<typeof getClubContextBySlug>>;
 
@@ -12,6 +14,7 @@ type Club = Awaited<ReturnType<typeof getClubContextBySlug>>;
  * pages read with the request's Supabase client.
  */
 export type SitePublicPages = {
+  home?: ComponentType<{ club: Club; initialHeroContent: DBHomepageHeroContent | null }>;
   roster?: ComponentType<{ club: Club }>;
   schedule?: ComponentType<{ club: Club }>;
   shop?: ComponentType<{ club: Club }>;
@@ -20,7 +23,7 @@ export type SitePublicPages = {
 // Chosen by slug, as in lib/site-for.ts (a template key may not be read in new code). Not imported from there so the
 // public routes don't pull the site packages' admin editors into their bundles. The key matches roseCitySite.id.
 const PUBLIC_PAGES_BY_SLUG: Readonly<Record<string, SitePublicPages>> = {
-  "rose-city": { roster: RoseCityRosterPage, schedule: RoseCitySchedulePage, shop: RoseCityShopPage },
+  "rose-city": { home: RoseCityHomePage, roster: RoseCityRosterPage, schedule: RoseCitySchedulePage, shop: RoseCityShopPage },
 };
 
 export function publicPagesFor(club: Readonly<{ slug: string }>): SitePublicPages | null {

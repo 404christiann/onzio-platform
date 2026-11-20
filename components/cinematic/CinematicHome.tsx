@@ -19,20 +19,26 @@ import CinematicSponsors from "./CinematicSponsors";
 import CinematicEpisode from "./CinematicEpisode";
 import { cinematicMatchDate, cinematicMatchTime, latestResultFixture, nextHomeFixture } from "./next-home-fixture";
 import { CinematicLatestResult, CinematicReplay } from "./CinematicMatchResult";
+import type { CinematicHomeInitialData } from "./cinematic-home-data";
 
-export default function CinematicHome({ initialHeroContent }: { initialHeroContent: DBHomepageHeroContent | null }) {
+/**
+ * With `initialData` (server-rendered public page) the body is complete on first paint and nothing is refetched.
+ * Without it (admin editor preview, standalone previews) the body loads on the client as before.
+ */
+export default function CinematicHome({ initialHeroContent, initialData }: { initialHeroContent: DBHomepageHeroContent | null; initialData?: CinematicHomeInitialData }) {
   const club = useClubContext();
   const branding = useClubBranding();
   const preview = useHomepagePreview();
   const { content: revamp } = useCinematicContent();
   const editing = preview !== null;
-  const [loaded, setLoaded] = useState<HomepageContent | null>(null);
-  const [fixture, setFixture] = useState<Fixture | null>(null);
-  const [latest, setLatest] = useState<Fixture | null>(null);
-  const [clubLabel, setClubLabel] = useState("");
-  const [scheduleLoading, setScheduleLoading] = useState(true);
-  const [shop, setShop] = useState<ShopKitContent | null>(null);
-  const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>([]);
+  const served = initialData && !editing ? initialData : undefined;
+  const [loaded, setLoaded] = useState<HomepageContent | null>(served?.homepage ?? null);
+  const [fixture, setFixture] = useState<Fixture | null>(served?.fixture ?? null);
+  const [latest, setLatest] = useState<Fixture | null>(served?.latest ?? null);
+  const [clubLabel, setClubLabel] = useState(served?.clubLabel ?? "");
+  const [scheduleLoading, setScheduleLoading] = useState(!served);
+  const [shop, setShop] = useState<ShopKitContent | null>(served?.shop ?? null);
+  const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>(served?.sponsors ?? []);
   const shopPiece = useHomepagePiece("shared.shop");
   const rafflePiece = useHomepagePiece("revamp.raffle");
   const ticketPiece = useHomepagePiece("revamp.ticket");
@@ -40,6 +46,7 @@ export default function CinematicHome({ initialHeroContent }: { initialHeroConte
   const pricesPiece = useHomepagePiece("revamp.prices");
   const championsPiece = useHomepagePiece("revamp.championship");
   useEffect(() => {
+    if (served) return;
     let active = true;
     setLoaded(null); setFixture(null); setLatest(null); setShop(null); setSponsors([]); setScheduleLoading(true);
     if (!editing) fetchHomepageContent(club.id).then(value => { if (active) setLoaded(value); }).catch(error => console.error("Cinematic home:", error));
@@ -47,7 +54,7 @@ export default function CinematicHome({ initialHeroContent }: { initialHeroConte
     fetchShopKitContent("home", "home", club.id).then(value => { if (active) setShop(value); }).catch(error => console.error("Cinematic shop:", error));
     fetchSiteSponsorLogos("carousel", club.id).then(value => { if (active) setSponsors(value); }).catch(error => console.error("Cinematic sponsors:", error));
     return () => { active = false; };
-  }, [club.id, editing]);
+  }, [club.id, editing, served]);
   const hero = preview?.draft.hero ?? loaded?.hero ?? initialHeroContent ?? EMPTY_HOMEPAGE_HERO_CONTENT;
   const photos = preview ? preview.draft.photos.items.filter(photo => photo.upload === "ready" && photo.url).map(photo => ({ id: photo.clientId, url: photo.url!, alt: photo.alt })) : loaded?.slideshowPhotos ?? [];
   const behind = loaded?.behindTheRose;

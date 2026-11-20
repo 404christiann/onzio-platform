@@ -39,6 +39,7 @@ describe("academy homepage response", () => {
         fetchHomepageHeroContent: fetchHero,
         fetchHomepageStorySection: fetchStory,
       },
+      "@/lib/site-public-pages": { publicPagesFor: () => null },
       "@/lib/supabase-server": { createClient },
       "react/jsx-runtime": { jsx: (_type: unknown, props: unknown) => ({ props }) },
     };
