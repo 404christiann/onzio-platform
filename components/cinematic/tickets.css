@@ -66,3 +66,15 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 
 
 .cinematic-site .tickets-intro[data-empty-banner]{display:block}.cinematic-site .tickets-directions p,.cinematic-site .tickets-includes p{white-space:pre-line}.cinematic-site .tickets-buy{display:flex;align-items:center;justify-content:center}.cinematic-site .tickets-match-date{font-size:16px;color:#888;margin-top:8px}.cinematic-site .tickets-teams{display:flex;align-items:center;justify-content:center;gap:20px;border-top:1px solid #ddd;padding:28px 0;margin-top:10px}.cinematic-site .tickets-teams img{width:90px;height:90px;object-fit:contain}.cinematic-site .tickets-teams strong{font:900 30px/1.2 var(--display)}.cinematic-site .tickets-venue{font-size:16px;color:#888;text-align:center;margin-bottom:24px}@media(max-width:700px){.cinematic-site .tickets-teams{gap:12px}.cinematic-site .tickets-teams img{width:65px;height:65px}.cinematic-site .tickets-teams strong{font-size:25px}}
+
+/* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
+@media (min-width:1025px){
+/* Single Match Tickets: the heading and the prices card share the left column, the ticket artwork sits beside them. The page keeps its stacked layout when either the artwork or the prices are missing. */
+.cinematic-site .tickets-top:has(.ticket-banner):has(.tickets-prices){display:grid;grid-template-columns:1.05fr 1fr;grid-template-rows:auto auto;column-gap:30px;align-items:center;padding-bottom:44px}
+.cinematic-site .tickets-top:has(.ticket-banner):has(.tickets-prices)>:is(.tickets-intro,.tickets-price-wrap){display:contents}
+.cinematic-site .tickets-top:has(.ticket-banner):has(.tickets-prices) .tickets-title{grid-column:1;grid-row:1}
+.cinematic-site .tickets-top:has(.ticket-banner):has(.tickets-prices) .ticket-banner{grid-column:2;grid-row:1 / span 2;align-self:center}
+.cinematic-site .tickets-top:has(.ticket-banner):has(.tickets-prices) .tickets-prices{grid-column:1;grid-row:2;margin-top:24px;padding:20px 36px 22px}
+.cinematic-site .tickets-top:has(.ticket-banner):has(.tickets-prices) .tickets-prices .tickets-price-row{margin-top:18px}
+.cinematic-site .tickets-top:has(.ticket-banner):has(.tickets-prices) .tickets-prices .tickets-footnote{margin-top:18px}
+}
