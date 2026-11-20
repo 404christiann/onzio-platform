@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -99,5 +101,12 @@ describe("cinematic Schedule", () => {
     expect(cleared).toContain('class="league-name">Sample League');
     expect(cleared).not.toContain("/league.webp");
     expect(cleared).not.toContain("Presented by");
+  });
+  it("keeps long dates out of the opponent column: they wrap after the comma, and the desktop column fits \"September 30,\" (RC-SCHEDULE-DATE-FIT)", () => {
+    const css = readFileSync(resolve(process.cwd(), "components/cinematic/schedule.css"), "utf8");
+    // "November 20, 2026" at 20px is 180px wide but the desktop column was 132px, so it ran 36px under the crest.
+    expect(css).not.toMatch(/\.fixture-date time\{white-space:nowrap\}/);
+    expect(css).toContain(".cinematic-site .cinematic-schedule .fixture-date time{white-space:normal}");
+    expect(css).toMatch(/\.fixture-card\{grid-template-columns:136px minmax\(0,1fr\) 118px 58px 112px 118px 168px;gap:12px\}/);
   });
 });
