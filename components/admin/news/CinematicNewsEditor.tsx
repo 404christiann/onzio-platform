@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { DISCARD_CONFIRM } from "@/components/admin/editor-copy";
 import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
@@ -20,7 +21,6 @@ import CinematicShell from "@/components/cinematic/CinematicShell";
 import type { NewsPublicArticle } from "@/lib/cinematic-news-query";
 import { createClient } from "@/lib/admin-client";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
-import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { NEWS_CATEGORIES, newsCategory, newsInstantToLocal, newsLocalToInstant, type NewsEditorArticle } from "@/lib/cinematic-news";
 import { loadNewsEditor, newsDraftFromArticle, saveNewsArticle, type NewsDraft, type NewsDraftProblems } from "@/lib/cinematic-news-editor";
 import "@/components/admin/homepage/homepage-editor.css";
@@ -49,7 +49,7 @@ export default function CinematicNewsEditor() {
   const club = useClubContext();
   const [articles, setArticles] = useState<NewsEditorArticle[] | null>(null);
   const [entries, setEntries] = useState<Record<string, NewsEntry>>({});
-  const [timeZone, setTimeZone] = useState("UTC");
+  const timeZone = useClubTimeZone();
   const [shared, setShared] = useState<CinematicHomepageContent | null>(null);
   const [loadedClubId, setLoadedClubId] = useState<string | null>(null);
   const [problems, setProblems] = useState<Record<string, NewsDraftProblems>>({});
@@ -85,9 +85,9 @@ export default function CinematicNewsEditor() {
     setArticles(null); setEntries({}); setProblems({}); setPending(null); setBusy(false); setUploading(false); setMessage(""); setFailed(false);
     setStatus(""); setConflict(null); setSaveFailed(false); setInvalid(null); setOpenKey(null); setLoadedClubId(null); setShared(null);
     if (club.presentationTemplateKey !== "cinematic@2") return;
-    Promise.all([loadNewsEditor(), fetchClubIdentity(club.id), fetchCinematicHomepageContent(club.id)]).then(([loaded, identity, homepage]) => {
+    Promise.all([loadNewsEditor(), fetchCinematicHomepageContent(club.id)]).then(([loaded, homepage]) => {
       if (!active) return;
-      setArticles(loaded.articles); setTimeZone(identity?.timeZone || "UTC"); setShared(homepage); setLoadedClubId(club.id);
+      setArticles(loaded.articles); setShared(homepage); setLoadedClubId(club.id);
     }).catch(error => { if (active) { setMessage(error instanceof Error ? error.message : "Unable to load News."); setFailed(true); } });
     return () => { active = false; epoch.current += 1; };
   }, [club.id, club.presentationTemplateKey]);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
@@ -27,6 +28,7 @@ import type { CinematicHomeInitialData } from "./cinematic-home-data";
  */
 export default function CinematicHome({ initialHeroContent, initialData }: { initialHeroContent: DBHomepageHeroContent | null; initialData?: CinematicHomeInitialData }) {
   const club = useClubContext();
+  const timeZone = useClubTimeZone();
   const branding = useClubBranding();
   const preview = useHomepagePreview();
   const { content: revamp } = useCinematicContent();
@@ -50,11 +52,11 @@ export default function CinematicHome({ initialHeroContent, initialData }: { ini
     let active = true;
     setLoaded(null); setFixture(null); setLatest(null); setShop(null); setSponsors([]); setScheduleLoading(true);
     if (!editing) fetchHomepageContent(club.id).then(value => { if (active) setLoaded(value); }).catch(error => console.error("Cinematic home:", error));
-    Promise.all([fetchSchedule(undefined, club.id), fetchClubIdentity(club.id)]).then(([fixtures, identity]) => { if (active) { setFixture(nextHomeFixture(fixtures, new Date(), identity?.timeZone || "UTC")); setLatest(latestResultFixture(fixtures)); setClubLabel(identity?.initials || ""); } }).catch(error => console.error("Cinematic next home match:", error)).finally(() => { if (active) setScheduleLoading(false); });
+    Promise.all([fetchSchedule(undefined, club.id), fetchClubIdentity(club.id)]).then(([fixtures, identity]) => { if (active) { setFixture(nextHomeFixture(fixtures, new Date(), timeZone)); setLatest(latestResultFixture(fixtures)); setClubLabel(identity?.initials || ""); } }).catch(error => console.error("Cinematic next home match:", error)).finally(() => { if (active) setScheduleLoading(false); });
     fetchShopKitContent("home", "home", club.id).then(value => { if (active) setShop(value); }).catch(error => console.error("Cinematic shop:", error));
     fetchSiteSponsorLogos("carousel", club.id).then(value => { if (active) setSponsors(value); }).catch(error => console.error("Cinematic sponsors:", error));
     return () => { active = false; };
-  }, [club.id, editing, served]);
+  }, [club.id, editing, served, timeZone]);
   const hero = preview?.draft.hero ?? loaded?.hero ?? initialHeroContent ?? EMPTY_HOMEPAGE_HERO_CONTENT;
   const photos = preview ? preview.draft.photos.items.filter(photo => photo.upload === "ready" && photo.url).map(photo => ({ id: photo.clientId, url: photo.url!, alt: photo.alt })) : loaded?.slideshowPhotos ?? [];
   const behind = loaded?.behindTheRose;

@@ -1,5 +1,6 @@
 import type { Fixture } from "@/lib/data";
 import type { DBSiteSponsorLogo } from "@/lib/db-types";
+import { readPublicClubTimeZone } from "@/lib/public-club-time-zone";
 import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { fetchHomepageContent, fetchSchedule, fetchShopKitContent, fetchSiteSponsorLogos, type HomepageContent, type ShopKitContent } from "@/lib/queries";
 import { latestResultFixture, nextHomeFixture } from "./next-home-fixture";
@@ -23,16 +24,17 @@ export type CinematicHomeInitialData = {
 const degrade = <T,>(label: string, fallback: T) => (error: unknown): T => { console.error(`Cinematic home ${label}:`, error); return fallback; };
 
 export async function loadCinematicHomeData(clubId: string, client: Client, now = new Date()): Promise<CinematicHomeInitialData> {
-  const [homepage, schedule, shop, sponsors] = await Promise.all([
+  const [homepage, schedule, shop, sponsors, timeZone] = await Promise.all([
     fetchHomepageContent(clubId, client).catch(degrade<HomepageContent | null>("content", null)),
     Promise.all([fetchSchedule(undefined, clubId, client), fetchClubIdentity(clubId, client)]).catch(degrade<null>("schedule", null)),
     fetchShopKitContent("home", "home", clubId, client).catch(degrade<ShopKitContent | null>("shop", null)),
     fetchSiteSponsorLogos("carousel", clubId, client).catch(degrade<DBSiteSponsorLogo[]>("sponsors", [])),
+    readPublicClubTimeZone(clubId),
   ]);
   const [fixtures, identity] = schedule ?? [[] as Fixture[], null];
   return {
     homepage,
-    fixture: nextHomeFixture(fixtures, now, identity?.timeZone || "UTC"),
+    fixture: nextHomeFixture(fixtures, now, timeZone),
     latest: latestResultFixture(fixtures),
     clubLabel: identity?.initials || "",
     shop,

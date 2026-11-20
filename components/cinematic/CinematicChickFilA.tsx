@@ -2,12 +2,12 @@
 
 import { useEffect, useId, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { fetchSchedule } from "@/lib/queries";
-import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { isTicketPurchaseUrl, type TicketsPageContent } from "@/lib/tickets-content";
 import type { ChickFilAArtwork, ChickFilAPageContent } from "@/lib/chick-fil-a-content";
 import { useCinematicContent } from "./CinematicContent";
@@ -18,18 +18,18 @@ export default function CinematicChickFilA({ content, purchase }: {
   content: ChickFilAPageContent;
   purchase: Pick<TicketsPageContent, "purchaseUrl" | "missingPurchaseLabel">;
 }) {
-  const club = useClubContext(), branding = useClubBranding();
+  const club = useClubContext(), branding = useClubBranding(), timeZone = useClubTimeZone();
   const { content: shared } = useCinematicContent();
   const purchaseNoteId = useId();
   const [match, setMatch] = useState<{ clubId: string; fixture: Fixture | null; loading: boolean }>({ clubId: club.id, fixture: null, loading: true });
   useEffect(() => {
     let active = true;
     setMatch({ clubId: club.id, fixture: null, loading: true });
-    Promise.all([fetchSchedule(undefined, club.id), fetchClubIdentity(club.id)])
-      .then(([fixtures, identity]) => { if (active) setMatch({ clubId: club.id, fixture: nextHomeFixture(fixtures, new Date(), identity?.timeZone || "UTC"), loading: false }); })
+    fetchSchedule(undefined, club.id)
+      .then(fixtures => { if (active) setMatch({ clubId: club.id, fixture: nextHomeFixture(fixtures, new Date(), timeZone), loading: false }); })
       .catch(() => { if (active) setMatch({ clubId: club.id, fixture: null, loading: false }); });
     return () => { active = false; };
-  }, [club.id]);
+  }, [club.id, timeZone]);
   const fixture = match.clubId === club.id ? match.fixture : null;
   const loading = match.clubId !== club.id || match.loading;
   const art = (image: ChickFilAArtwork, className?: string, lazy = false) => image.url ? <NativeImage className={className} src={image.url} alt={image.alt} width={image.width ?? undefined} height={image.height ?? undefined} loading={lazy ? "lazy" : "eager"} /> : null;
