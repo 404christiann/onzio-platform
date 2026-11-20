@@ -23,8 +23,8 @@ function renderAndRunEffects(initial?: CinematicRosterInitial) {
   const brandingProps = { initialBranding: { logoPath: "/logo.webp", inverseLogoPath: "/logo.webp", footerTagline: "Sample City" } } as ComponentProps<typeof ClubBrandingProvider>;
   const html = renderToStaticMarkup(createElement(ClubContextProvider, { club } as ComponentProps<typeof ClubContextProvider>,
     createElement(ClubBrandingProvider, brandingProps, createElement(CinematicRosterPage, { initial }))));
-  for (const effect of mocks.effects.splice(0)) effect();
-  return html;
+  const cleanups = mocks.effects.splice(0).map(effect => effect());
+  return { html, cleanups };
 }
 
 beforeEach(() => {
@@ -36,9 +36,12 @@ beforeEach(() => {
 
 describe("cinematic Roster page starts its browser load", () => {
   it("fetches the squad and staff for the club when the server sent nothing", () => {
-    expect(renderAndRunEffects()).toContain("Loading the squad");
+    const { html, cleanups } = renderAndRunEffects();
+    expect(html).toContain("Loading the squad");
     expect(mocks.roster).toHaveBeenCalledWith(undefined, club.id);
     expect(mocks.staff).toHaveBeenCalledWith(club.id);
+    // The load hands React its cancel, so a club change drops the old club's late result.
+    expect(cleanups.some(cleanup => typeof cleanup === "function")).toBe(true);
   });
   it("fetches nothing when the server already sent the squad, or its failure", () => {
     renderAndRunEffects({ roster, staff: [], failed: false });
