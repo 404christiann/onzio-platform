@@ -226,3 +226,38 @@
   .cinematic-site .nav-indicator{transition:opacity 150ms var(--ease-out)}
   .cinematic-site .nav-indicator[data-snap]{transition:none}
 }
+
+/* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
+@media (min-width:1025px){
+  /* Jersey "City of Roses": the section is Sam's 55vw tall (the viewport at most), the copy is centred in it and its spacing is
+     tightened so the Includes list no longer pushes it past one screen. The photo is a whole, uncropped contain-fit, so it takes the
+     section height. The copy itself is 43.6vw tall at most, so on a wide, short window the top and bottom padding gives back
+     whatever is needed (never below 1.5vw). */
+  .cinematic-site .jersey{align-items:center;min-height:min(55vw,97svh)}
+  .cinematic-site .jersey-copy{padding-top:clamp(1.5vw,calc((97svh - 43.6vw) / 2),3.6vw);padding-bottom:clamp(1.5vw,calc((97svh - 43.6vw) / 2),3.6vw)}
+  .cinematic-site .jersey h2{margin:.5vw 0 .9vw}
+  .cinematic-site .jersey .red-rule{margin:0 0 1.2vw}
+  .cinematic-site .jersey .includes-label{margin-top:1.4vw}
+  .cinematic-site .jersey .includes-label+ul{margin:.7vw 0 1.8vw 2.7vw;gap:.4vw}
+  .cinematic-site .jersey .store-note{margin-bottom:1.8vw}
+
+  /* Behind the Rose: less padding, and the player never grows past what is left of one screen under the heading
+     (chrome = padding + eyebrow + title + one body line + gap = 19.6vw). Overlay sizes follow the player width. */
+  .cinematic-site .behind-rose{padding:2.8vw 0 3.4vw;--fit-w:min(65.1vw,max(36vw,calc((97svh - 19.6vw) * 16 / 9)))}
+  .cinematic-site .behind-rose .body-copy{margin-bottom:1.6vw}
+  .cinematic-site .behind-rose .episode-player{width:min(65.1%,max(36vw,calc((97svh - 19.6vw) * 16 / 9)))}
+  .cinematic-site .behind-rose .episode-title{font-size:calc(var(--fit-w) * .01843);gap:calc(var(--fit-w) * .01229)}
+  .cinematic-site .behind-rose .episode-title img{width:calc(var(--fit-w) * .03533);height:calc(var(--fit-w) * .03533)}
+  .cinematic-site .behind-rose .youtube-play{width:calc(var(--fit-w) * .06912);height:calc(var(--fit-w) * .04608);border-radius:calc(var(--fit-w) * .00998);font-size:calc(var(--fit-w) * .02458);line-height:calc(var(--fit-w) * .04608)}
+  .cinematic-site .behind-rose .watch-youtube{font-size:calc(var(--fit-w) * .01459)}
+
+  /* Replay the match: same idea (chrome = padding + eyebrow + title + gap = 17.1vw). The crest, "vs" and "Coming soon" keep
+     their share of the card as it narrows. */
+  .cinematic-site .replay{padding:3vw 0 3.4vw;--fit-w:min(65.1vw,max(36vw,calc((97svh - 17.1vw) * 16 / 9)))}
+  .cinematic-site .replay h2{margin-bottom:1.8vw}
+  .cinematic-site .replay-card{width:min(65.1%,max(36vw,calc((97svh - 17.1vw) * 16 / 9)))}
+  .cinematic-site .replay-side.away{--opponent-crest-size:calc(var(--fit-w) * .31)}
+  .cinematic-site .replay-soon{font-size:calc(var(--fit-w) * .02919)}
+  .cinematic-site .replay-vs{font-size:calc(var(--fit-w) * .05223)}
+  .cinematic-site .replay-watch{gap:calc(var(--fit-w) * .00922)}
+}

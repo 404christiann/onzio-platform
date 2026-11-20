@@ -1,3 +1,11 @@
+## 2026-11-20 - RC-DESKTOP-FIT: Rose City sections fit one desktop screen (CSS only, wider than 1024 px)
+
+- **Status:** `ready for review`, PR open. Appended `@media (min-width:1025px)` blocks in 10 `components/cinematic/*.css` files;
+  no existing rule, TSX, data, schema, env or admin change. Details and the before/after table: `STATUS.md` (RC-DESKTOP-FIT).
+- **What:** 18 of the 19 sections Christian picked now fit one screen at 1280x720 to 1920x1080 (Road to the Match 2.52 → 1.86
+  at 1280). Logos, maps and artwork with text are never cropped. ≤1024 unchanged (loaded CSS equals main's plus only the new
+  blocks). Diverse City JS identical and 0 matching elements.
+- **Exact next step:** onzio-bot review, Christian merges, then fast-forward `rc-sam` on his word.
 ## 2026-11-20 - RC-MATCH-AREA: Rose City match pages work on the preview host (app code only)
 
 - **Status:** `ready for review`, branch `worktree-agent-abe06445fb6ef593f` (from main `323bed2f`), not pushed, no PR yet. No migration, schema, RPC, env,

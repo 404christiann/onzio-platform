@@ -1,5 +1,86 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-DESKTOP-FIT: Rose City sections fit one desktop screen (CSS only, wider than 1024 px)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator; Sonnet workers B1 Home+Shop, B2 Club identity+Stadium, B3
+Tickets+Partners), RC-DESKTOP-FIT, branch `claude/rc-desktop-fit` on main `75684008`. **Status:** `ready for review` (PR
+into `main`; not merged, not deployed, `rc-sam` not updated). No migration, schema, env, Supabase, Stripe, admin or TSX
+change.
+
+**Completed:**
+- Audit first (all 21 Rose City pages on `rc-sam`, every section, at 1280x720, 1440x900, 1536x864, 1920x1080). Christian
+  picked the set. Skipped by his choice: raffle poster, seating chart, bus map, ticket artwork, locker crop, news hero crop.
+- Each changed stylesheet gets one appended block, `/* RC-DESKTOP-FIT … */ @media (min-width:1025px){…}`, with no existing rule
+  edited (+161 lines, 0 deleted). The existing styles switch at `max-width:1024px`, so 1025 is the first desktop pixel.
+  Logos, crests, maps and artwork with text are shown whole (contain or a smaller box); nothing is cropped.
+- Section height ÷ viewport height, before → after (1280 / 1440 / 1536 / 1920, `rc-sam` production content):
+
+  | Section | Before | After | How |
+  |---|---|---|---|
+  | Home Replay | 1.01 / 0.91 / 1.01 / 1.01 | 0.95 / 0.86 / 0.95 / 0.95 | padding; 16:9 card capped to the screen |
+  | Home Jersey | 1.14 / 1.02 / 1.14 / 1.13 | 0.97 / 0.88 / 0.97 / 0.97 | photo capped at 97svh (whole); copy spacing |
+  | Home Behind the Rose | 1.09 / 0.98 / 1.09 / 1.09 | 0.97 / 0.90 / 0.97 / 0.97 | padding; player capped to the screen |
+  | Club logo intro | 1.00 / 0.80 / 0.84 / 0.67 | 0.96 / 0.77 / 0.80 / 0.64 | padding |
+  | Club logo feature cards | 3.06 / 2.45 / 2.55 / 2.04 | 0.94 / 0.76 / 0.80 / 0.66 | 2 columns (fifth spans), crest 128 px |
+  | Shop City of the Roses | 1.15 / 0.93 / 1.02 / 1.00 | 0.97 / 0.89 / 0.97 / 0.97 | photo box capped; list spacing |
+  | Shop Jersey details | 1.37 / 1.19 / 1.29 / 1.17 | 0.97 / 0.97 / 0.97 / 0.94 | slots sized from screen height (349/334 kept) |
+  | Shop Jersey information | 1.12 / 0.89 / 0.93 / 0.77 | 0.97 / 0.89 / 0.93 / 0.77 | padding (svh-scaled, original as max) |
+  | Stadium Food & Beverage | 1.12 / 0.90 / 0.94 / 0.75 | 0.95 / 0.77 / 0.80 / 0.64 | spacing; Meal Pass card 285 px |
+  | Stadium Road to the Match | 2.52 / 2.17 / 2.37 / 1.87 | 1.86 / 1.69 / 1.78 / 1.53 | directions in 2 columns; map `min(100%,135vh)` |
+  | Foothill directions | 1.40 / 1.13 / 1.18 / 0.91 | 0.94 / 0.76 / 0.79 / 0.55 | 2 columns |
+  | Chick-fil-A next home match | 1.02 / 0.82 / 0.85 / 0.68 | 0.92 / 0.74 / 0.77 / 0.61 | padding |
+  | Fan code / Guidelines | 1.17 / 0.98 / 1.00 / 0.80 | 0.96 / 0.81 / 0.82 / 0.66 | title band, rows, padding |
+  | Tickets Single Match | 1.34 / 1.12 / 1.19 / 1.02 | 0.92 / 0.75 / 0.78 / 0.63 | prices beside the art (only when both exist) |
+  | Season Member Benefits | 1.46 / 1.32 / 1.46 / 1.46 | 0.74 / 0.66 / 0.74 / 0.74 | 5 tiles across |
+  | KBYG Match day facts | 2.14 / 1.92 / 2.14 / 2.13 | 0.87 / 0.79 / 0.87 / 0.88 | 5 tiles across |
+  | KBYG Halftime raffle | 1.15 / 1.04 / 1.15 / 1.15 | 0.89 / 0.80 / 0.89 / 0.89 | photo `max-height:27vw`, contain |
+  | Partnership body | 1.26 / 1.02 / 1.07 / 0.83 | 0.98 / 0.81 / 0.86 / 0.67 | spacing |
+  | Sponsors body | 1.18 / 0.95 / 1.00 / 0.77 | 0.90 / 0.74 / 0.79 / 0.61 | spacing |
+
+  Road to the Match can't fit one screen (map plus about 1,700 px of directions); the map wasn't shrunk below readable.
+- Sam list: the Shop "Jersey details" photos are still empty placeholders (admin content). Already on Sam's list
+  (RC-CONTENT blockers, "jersey detail photos"); the new slot sizes were checked with real images swapped in.
+
+**Files changed:** `components/cinematic/{cinematic,shop,crest,robinson-page,stadium,chick-fil-a,policies,tickets,
+ticket-pages,partners}.css` (appended blocks only).
+
+**Verification:**
+- Desktop before/after: `rc-sam` (main, production content) with the branch's appended blocks injected, at the 4 sizes.
+  Only the 19 targeted sections changed height; every other section on the 20 pages is unchanged. Composites (before |
+  after, red line = one screen) are in the session-group notes folder, `rc-desktop-fit-screens/`.
+- ≤1024 unchanged: the CSS a page loads on the branch build is main's CSS rule for rule, in the same file count and order,
+  plus only the new `@media (min-width:1025px)` blocks (compared on `/roster`, `/tickets/season-membership`, `/stadium`
+  against `rc-sam`'s main build). Screenshots: `rc-sam` with vs without the blocks, 345/347 identical at 390/768/1024
+  (the 2 differ only in an image's decode); local production builds main vs branch, 55/57 identical full pages, and the 2
+  that differ also differ between two runs of the same branch build (late partner logos, icon antialiasing).
+- CLS, local production builds (shared stack, synthetic Rose City seed, +300 ms on browser Supabase requests), 1440 / 390:
+  branch equals main within run noise on all 19 pages. On `rc-sam` production content (main, 3 runs, 1440 and 1280,
+  branch CSS added from first paint): main is already over 0.01 on several pages (`/stadium` 0.35–0.44, `/sponsors` 0.10,
+  KBYG 0.06, `/tickets` 0.03, Shop 0.02). The shift is the web-font swap moving text 2–3 px, plus a 29 px partner-grid
+  move on `/sponsors`, and it is identical in source on both. The branch adds no new shift, but puts more text in the
+  first screen, so the same swap counts for more on `/tickets` (1280: 0.026 → 0.055, one run 0.177; 1440: 0.031 →
+  0.049) and `/sponsors` (1440: 0.10 → 0.11–0.15). Season Membership improves (0.029 → 0.017 at 1440). Fixing the font
+  swap is a separate package (RC-CLS-2).
+- Diverse City: `site-public-pages-scope` passes. JS identical on `/`, `/roster`, `/schedule`, `/shop`, `/contact`. CSS
+  +1.8 KB (+3.4 KB on `/shop`): the new rules ride the shared CSS chunk the cinematic styles already ship in, all scoped
+  to `.cinematic-site`, and those pages have 0 `.cinematic-site` elements, so nothing can match.
+- tsc clean; `test:unit` 4294/4294; `test:contracts` 3333/3333.
+- onzio-bot review at `4cf7087` (0 High, 0 Medium, 2 Low), both fixed:
+  - The About editor's "Add the first crest feature" placeholder now spans both columns (`crest.css`, inside the desktop
+    block).
+  - New `tests/contracts/cinematic-desktop-fit.test.ts` (14 cases) checks each of the 10 files ends with exactly one
+    desktop-only block whose rules are all `.cinematic-site`-scoped and crop nothing (no `object-fit:cover`). It also
+    checks the key layouts: two-column crest cards plus the spanning placeholder, five tiles across, tickets two-column
+    only with art and prices, and two-column directions. Putting all 10 files back to main fails 14/14; removing only
+    the placeholder rule fails 1.
+  - `test:contracts` is now 3387/3387 (on main `75684008`, after #203's tests); tsc clean.
+
+**Blockers/decisions:** CLS on production content is over 0.01 on main already (font swap); this branch raises `/tickets` and `/sponsors` somewhat (see above) and Christian decides whether to merge before RC-CLS-2. The local seed has no content for Shop, Stadium, KBYG or the ticket art, so the
+desktop before/after rests on `rc-sam` with the CSS injected (the loaded-CSS comparison shows the build adds exactly
+those blocks).
+
+**Exact next step:** onzio-bot review, then Christian merges; on his word fast-forward `rc-sam` to main (env untouched)
+and check the 19 sections on the preview at the 4 sizes.
 ## 2026-11-20 - RC-MATCH-AREA: Rose City match pages stop saying "Match area unavailable" on a preview host (app code only)
 
 **Agent/package:** Claude Code (Sonnet 5.5 worker A), RC-MATCH-AREA, branch `worktree-agent-abe06445fb6ef593f` (cut from
