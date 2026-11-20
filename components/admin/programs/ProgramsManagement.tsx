@@ -120,7 +120,7 @@ function ThisProgramStat({
     tone === "success"
       ? "text-success"
       : tone === "warning"
-        ? "text-warning"
+        ? "text-warning-ink"
         : tone === "muted"
           ? "text-muted-foreground"
           : "text-foreground";

@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ADMIN_THEME_COOKIE_NAME,
@@ -76,5 +76,69 @@ describe("protected admin theme contract", () => {
     expect(source("app/layout.tsx")).not.toContain("AdminThemeProvider");
     expect(source("app/admin/layout.tsx")).not.toContain("AdminThemeProvider");
     expect(source("app/admin/login/page.tsx")).not.toContain("AdminThemeProvider");
+  });
+
+  it("ADMIN-WARN: light warnings are yellow fills with readable dark-gold text; dark is unchanged", () => {
+    const css = source("styles/globals.css");
+    const block = (selector: string) => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start, selector).toBeGreaterThanOrEqual(0);
+      return css.slice(start, css.indexOf("\n}", start));
+    };
+    const token = (text: string, name: string) => {
+      const match = text.match(new RegExp(`--${name}: (\\d+) (\\d+)% (\\d+)%;`));
+      expect(match, name).not.toBeNull();
+      return match!.slice(1).map(Number) as [number, number, number];
+    };
+    const luminance = ([h, s, l]: [number, number, number]) => {
+      const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+      const channel = (n: number) => {
+        const k = (n + h / 30) % 12;
+        const v = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * channel(0) + 0.7152 * channel(8) + 0.0722 * channel(4);
+    };
+    const contrast = (a: [number, number, number], b: [number, number, number]) => {
+      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const white: [number, number, number] = [0, 0, 100];
+
+    const light = block('.admin-theme[data-admin-theme="light"],\n.admin-theme[data-admin-theme="light"] > .dark');
+    const warning = token(light, "warning");
+    expect(warning[0]).toBeGreaterThanOrEqual(45);
+    expect(warning[0]).toBeLessThanOrEqual(60);
+    expect(warning[2]).toBeGreaterThanOrEqual(50);
+    expect(contrast(token(light, "warning-foreground"), warning)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token(light, "warning-ink"), white)).toBeGreaterThanOrEqual(4.5);
+    // Badges draw ink on a 15% yellow tint over white. For a fully saturated hue that tint is the same hue
+    // at 15% of its distance from white (48 100% 93% = #fff8dc; the browser blend is #fff8dd).
+    const tint: [number, number, number] = [warning[0], warning[1], Math.round(100 - (100 - warning[2]) * 0.15)];
+    expect(contrast(token(light, "warning-ink"), tint)).toBeGreaterThanOrEqual(4.5);
+    expect(block('.admin-theme[data-admin-theme="light"] .admin-portal')).not.toContain("--warning");
+
+    const dark = block('.admin-theme[data-admin-theme="dark"],\n.admin-theme[data-admin-theme="dark"] > .dark,\n.admin-theme .dark,\nmain.dark');
+    expect(token(dark, "warning")).toEqual([41, 96, 58]);
+    expect(token(dark, "warning-foreground")).toEqual([222, 47, 11]);
+    expect(token(dark, "warning-ink")).toEqual([41, 96, 58]);
+  });
+
+  it("ADMIN-WARN: admin warning text and glyphs draw in --warning-ink, never the yellow fill", () => {
+    // Light --warning is a yellow fill (1.45:1 on white); readable warning text depends on these call sites.
+    expect(source("tailwind.config.ts")).toMatch(/warning:\s*\{[^}]*\bink:\s*"hsl\(var\(--warning-ink\)\)"/);
+
+    const files = (dir: string): string[] =>
+      readdirSync(resolve(root, dir), { recursive: true, encoding: "utf8" })
+        .filter(file => /\.(tsx?|css)$/.test(file) && !/\.(test|spec)\.tsx?$/.test(file))
+        .map(file => join(dir, file));
+    const offenders = ["app/admin", "components/admin"].flatMap(files).flatMap(file =>
+      source(file).split("\n").flatMap((line, index) =>
+        /\btext-warning(?![-\w])/.test(line) || /(?<![-\w])color:\s*hsl\(var\(--warning[,)]/.test(line)
+          ? [`${file}:${index + 1}`]
+          : [],
+      ),
+    );
+    expect(offenders).toEqual([]);
   });
 });

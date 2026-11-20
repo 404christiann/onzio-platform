@@ -162,7 +162,7 @@ export function LegacyProgramsEditor({ editor, previews }: { editor: ProgramsEdi
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
             {dirty && (
-              <span className="inline-flex items-center gap-1.5 font-body text-xs font-semibold text-warning">
+              <span className="inline-flex items-center gap-1.5 font-body text-xs font-semibold text-warning-ink">
                 <span
                   aria-hidden="true"
                   className="h-1.5 w-1.5 flex-none rounded-full bg-warning"

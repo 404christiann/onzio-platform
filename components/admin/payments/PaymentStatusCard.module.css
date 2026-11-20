@@ -30,6 +30,7 @@
 .summaryHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .eyebrow { font-family: inherit; text-transform: none; letter-spacing: 0; margin: 0; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 600; line-height: 20px; }
 .pill { flex: none; max-width: 100%; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--payments-tone) 14%, hsl(var(--card))); color: var(--payments-tone); font-size: 12px; font-weight: 600; line-height: 20px; }
+.layout[data-tone="warn"] .pill { color: hsl(var(--warning-ink)); }
 .layout[data-tone="danger"] .pill { color: color-mix(in srgb, var(--payments-tone) 80%, hsl(var(--foreground))); }
 .price { font-family: inherit; margin: 0; overflow-wrap: anywhere; font-size: 42px; font-weight: 600; line-height: 1.15; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .priceUnit { margin-inline-start: 4px; color: hsl(var(--muted-foreground)); font-size: 20px; font-weight: 500; letter-spacing: 0; }

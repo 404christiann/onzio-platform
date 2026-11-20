@@ -539,7 +539,7 @@ function LegacyAdminTryoutsPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
             {dirty && (
-              <span className="inline-flex items-center gap-1.5 font-body text-xs font-semibold text-warning">
+              <span className="inline-flex items-center gap-1.5 font-body text-xs font-semibold text-warning-ink">
                 <span
                   aria-hidden="true"
                   className="h-1.5 w-1.5 flex-none rounded-full bg-warning"
@@ -596,7 +596,7 @@ function LegacyAdminTryoutsPage() {
                     </p>
                   </div>
                   {pageCopyDirty && (
-                    <span className="self-start rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">
+                    <span className="self-start rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning-ink">
                       Unsaved changes
                     </span>
                   )}
@@ -701,7 +701,7 @@ function LegacyAdminTryoutsPage() {
                           <span className="mt-1 block font-body text-xs text-muted-foreground">
                             {tryout.eventDate || "Date TBA"}
                           </span>
-                          <span className={`mt-2 inline-flex rounded-full px-2 py-1 font-display text-[0.65rem] font-bold uppercase tracking-wider ${tryout.status === "open" ? "bg-success/10 text-success" : tryout.status === "closed" ? "bg-card text-muted-foreground" : "bg-warning/10 text-warning"}`}>
+                          <span className={`mt-2 inline-flex rounded-full px-2 py-1 font-display text-[0.65rem] font-bold uppercase tracking-wider ${tryout.status === "open" ? "bg-success/10 text-success" : tryout.status === "closed" ? "bg-card text-muted-foreground" : "bg-warning/10 text-warning-ink"}`}>
                             {tryout.status}
                           </span>
                         </button>
@@ -735,7 +735,7 @@ function LegacyAdminTryoutsPage() {
                         </h2>
                       </div>
                       <div className="flex items-center gap-3 self-start">
-                        {dirty && <span className="rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">Unsaved changes</span>}
+                        {dirty && <span className="rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning-ink">Unsaved changes</span>}
                         {draft.id && (
                           <div ref={deleteMenuRef} className="relative">
                             <button

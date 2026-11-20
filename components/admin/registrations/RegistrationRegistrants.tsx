@@ -161,7 +161,7 @@ export function RegistrationRegistrants({ model, onView }: { model: Registration
                                 ? "bg-destructive/10 text-destructive"
                                 : entry.status === "paid"
                                   ? "bg-success/10 text-success"
-                                  : "bg-warning/10 text-warning"
+                                  : "bg-warning/10 text-warning-ink"
                             }`}
                           >
                             {!recovery && entry.status === "paid" && (
@@ -247,7 +247,7 @@ export function RegistrationRegistrants({ model, onView }: { model: Registration
                                     ? "bg-destructive/10 text-destructive"
                                     : entry.status === "paid"
                                       ? "bg-success/10 text-success"
-                                      : "bg-warning/10 text-warning"
+                                      : "bg-warning/10 text-warning-ink"
                                 }`}
                               >
                                 {entry.payment_recovery_required

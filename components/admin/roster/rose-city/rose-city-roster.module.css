@@ -31,7 +31,7 @@
 .foot { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 12px; border-top:1px solid hsl(var(--border)); }
 .flags { display:flex; flex-wrap:wrap; gap:6px; min-inline-size:0; }
 .flag { border-radius:999px; padding:2px 8px; font-size:.6875rem; font-weight:600; white-space:nowrap; background:hsl(var(--secondary)); color:hsl(var(--muted-foreground)); }
-.flagWarn { background:hsl(var(--warning)/.15); color:hsl(var(--warning)); }
+.flagWarn { background:hsl(var(--warning)/.15); color:hsl(var(--warning-ink)); }
 .visibility { display:inline-flex; align-items:center; gap:8px; margin-inline-start:auto; font-size:.75rem; color:hsl(var(--muted-foreground)); }
 
 .empty { padding:40px 20px; text-align:center; }
