@@ -1,5 +1,5 @@
 html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
-.cinematic-site .tickets-page{--ticket-red:#ff0018;--ticket-aqua:#00cdbb;--ticket-lime:#90d800}
+.cinematic-site .tickets-page{--ticket-red:#E80B25;--ticket-aqua:#00cdbb;--ticket-lime:#90d800}
 /* Offset the artwork canvas so the seat legs reach the section boundary. */
 .cinematic-site .tickets-top{background-position:center bottom -14vw;background-repeat:no-repeat;background-size:100% auto;padding:34px 3.1% 70px}
 .cinematic-site .tickets-intro{display:grid;grid-template-columns:1.05fr 1fr;gap:30px;align-items:center}

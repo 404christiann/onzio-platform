@@ -57,13 +57,18 @@ describe("cinematic navigation preserves club content", () => {
   it("opens Season Ticket Membership and Know Before You Go from a Tickets drop-down, and Stadium's Know before you from the same page", () => {
     fixture.content!.navigation.labels["season-membership"] = "Season tickets";
     const html = render();
-    expect(html).toMatch(/Tickets<span[\s\S]*href="\/tickets">Tickets<\/a>[\s\S]*href="\/tickets\/season-membership">Season tickets<\/a>[\s\S]*href="\/tickets\/know-before-you-go">Know before you go<\/a>/);
+    // RC-SAM-FIXES: Sam wants Season tickets first and the single-match page called Match tickets.
+    expect(html).toMatch(/Tickets<span[\s\S]*href="\/tickets\/season-membership">Season tickets<\/a>[\s\S]*href="\/tickets">Match tickets<\/a>[\s\S]*href="\/tickets\/know-before-you-go">Know before you go<\/a>/);
     expect(html).toContain('href="/tickets/know-before-you-go">Know before you</a>');
     expect(html).not.toContain('href="/stadium/know-before-you"');
   });
   it("normalizes the stock stadium dropdown title without replacing an editor's custom wording", () => {
     fixture.content!.navigation.labels.stadium = "ROBINSON STADIUM";
     expect(render()).toContain('href="/stadium">Robinson Stadium</a>');
+    // RC-SAM-FIXES: the phone menu's group button shows the group label as typed, so it gets the same wording.
+    fixture.content!.navigation.labels["stadium-group"] = "ROBINSON STADIUM";
+    expect(render()).toContain('data-phone-group="stadium-group"');
+    expect(render()).not.toContain("ROBINSON STADIUM");
     fixture.content!.navigation.labels.stadium = "Our home ground";
     expect(render()).toContain('href="/stadium">Our home ground</a>');
   });

@@ -1,5 +1,5 @@
 /* RC2027-INJURY-REPORT: Sam's "Injury report page 1 2027 Final.jpg" (2416px wide); approved preview outer design-explorations/injury-report-2027. vw values are his px / 24.16. */
-.cinematic-site .cinematic-injury{--injury-red:#fc1618;--injury-grey:#8a8a8a;--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;color:#0b0b0b;background:#fff;overflow:hidden}
+.cinematic-site .cinematic-injury{--injury-red:#E80B25;--injury-grey:#8a8a8a;--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;color:#0b0b0b;background:#fff;overflow:hidden}
 .cinematic-site .cinematic-injury :is(h1,h2){text-transform:none}
 
 /* ───── Heading ───── */

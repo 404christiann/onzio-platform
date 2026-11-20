@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { fetchRoster } from "@/lib/queries";
+import { fetchRoster, fetchStaff } from "@/lib/queries";
+import type { Staff } from "@/lib/data";
 import CinematicRoster, { type CinematicRosterData } from "./CinematicRoster";
 
 /** Server-fetched result for the first paint; without it the page fetches in the browser as before. */
-export type CinematicRosterInitial = { roster: CinematicRosterData | null; failed: boolean };
+export type CinematicRosterInitial = { roster: CinematicRosterData | null; staff?: Staff[]; failed: boolean };
 
 export default function CinematicRosterPage({ initial }: { initial?: CinematicRosterInitial }) {
   const { id: clubId } = useClubContext();
@@ -14,19 +15,20 @@ export default function CinematicRosterPage({ initial }: { initial?: CinematicRo
   const [state, setState] = useState<{
     clubId: string;
     roster: CinematicRosterData | null;
+    staff: Staff[];
     failed: boolean;
-  }>({ clubId, roster: initial?.roster ?? null, failed: initial?.failed ?? false });
+  }>({ clubId, roster: initial?.roster ?? null, staff: initial?.staff ?? [], failed: initial?.failed ?? false });
 
   useEffect(() => {
     if (seeded.current === clubId) return;
     let current = true;
-    setState({ clubId, roster: null, failed: false });
-    void fetchRoster(undefined, clubId).then(
-      (roster) => {
-        if (current) setState({ clubId, roster, failed: false });
+    setState({ clubId, roster: null, staff: [], failed: false });
+    void Promise.all([fetchRoster(undefined, clubId), fetchStaff(clubId)]).then(
+      ([roster, staff]) => {
+        if (current) setState({ clubId, roster, staff, failed: false });
       },
       () => {
-        if (current) setState({ clubId, roster: null, failed: true });
+        if (current) setState({ clubId, roster: null, staff: [], failed: true });
       },
     );
     return () => { current = false; };
@@ -38,5 +40,5 @@ export default function CinematicRosterPage({ initial }: { initial?: CinematicRo
       {active?.failed ? "The squad is temporarily unavailable. Please try again." : "Loading the squad…"}
     </p>;
   }
-  return <CinematicRoster key={clubId} roster={active.roster} />;
+  return <CinematicRoster key={clubId} roster={active.roster} staff={active.staff} />;
 }

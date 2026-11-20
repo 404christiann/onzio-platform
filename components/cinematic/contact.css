@@ -2,12 +2,12 @@
 .cinematic-site .contact-heading{min-height:152px;display:flex;align-items:center;justify-content:flex-end;padding:28px 5%;box-shadow:0 5px 12px #0002}
 .cinematic-site .contact-heading>div{text-align:right}
 .cinematic-site .contact-heading h1{font:900 clamp(36px,4vw,64px)/1 var(--display);text-transform:uppercase;letter-spacing:-.035em;margin:0}
-.cinematic-site .contact-heading p{font:400 clamp(17px,1.5vw,23px)/1.2 var(--body);color:#f00;text-transform:uppercase;margin:0}
+.cinematic-site .contact-heading p{font:400 clamp(17px,1.5vw,23px)/1.2 var(--body);color:#E80B25;text-transform:uppercase;margin:0}
 .cinematic-site .contact-actions{width:min(1050px,90%);margin:28px auto 0;display:grid;gap:12px}
 .cinematic-site .contact-row{min-height:75px;padding:10px 15px 10px 25px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:#fff;box-shadow:0 4px 17px #0002}
 .cinematic-site .contact-row>span:first-child{font:400 clamp(16px,1.55vw,22px)/1.25 var(--body);color:#858585;text-transform:uppercase}
-.cinematic-site .contact-row>a,.cinematic-site .contact-pending{width:155px;min-width:155px;min-height:54px;padding:10px 12px;display:flex;align-items:center;justify-content:center;background:#f00;color:white;text-align:center;text-decoration:none;text-transform:uppercase;font:700 17px/1.1 var(--body)}
-.cinematic-site .contact-row>a:hover,.cinematic-site .contact-row>a:focus-visible{background:#d60000}
+.cinematic-site .contact-row>a,.cinematic-site .contact-pending{width:155px;min-width:155px;min-height:54px;padding:10px 12px;display:flex;align-items:center;justify-content:center;background:#E80B25;color:white;text-align:center;text-decoration:none;text-transform:uppercase;font:700 17px/1.1 var(--body)}
+.cinematic-site .contact-row>a:hover,.cinematic-site .contact-row>a:focus-visible{background:#C4091F}
 .cinematic-site .contact-pending{flex-direction:column;gap:3px;background:#dedede;color:#555}
 .cinematic-site .contact-pending small{font:400 11px/1 var(--body)}
 @media(max-width:700px){.cinematic-site .contact-heading{min-height:112px;padding:22px 20px}.cinematic-site .contact-heading h1{font-size:38px}.cinematic-site .contact-heading p{font-size:16px;margin-top:6px}.cinematic-site .contact-actions{width:calc(100% - 28px);gap:9px;margin-top:18px}.cinematic-site .contact-row{min-height:78px;padding:10px 11px 10px 15px;gap:9px}.cinematic-site .contact-row>span:first-child{font-size:13px;line-height:1.25}.cinematic-site .contact-row>a,.cinematic-site .contact-pending{width:110px;min-width:110px;min-height:52px;font-size:13px}.cinematic-site .contact-pending small{font-size:9px}}

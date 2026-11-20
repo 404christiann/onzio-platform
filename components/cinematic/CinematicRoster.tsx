@@ -6,7 +6,7 @@ import NationalityFlag from "@/components/NationalityFlag";
 import ResilientImage from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { getRosterImageSrc } from "@/lib/roster-images";
-import type { Player } from "@/lib/data";
+import type { Player, Staff } from "@/lib/data";
 import type { fetchRoster } from "@/lib/queries";
 import "./roster.css";
 
@@ -26,7 +26,7 @@ function Stats({ player }: { player: Player }) {
   </div>;
 }
 
-export default function CinematicRoster({ roster }: { roster: CinematicRosterData }) {
+export default function CinematicRoster({ roster, staff = [] }: { roster: CinematicRosterData; staff?: Staff[] }) {
   const { clubLogoUrl } = useClubBranding();
   const [selected, setSelected] = useState<Player | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
@@ -78,6 +78,31 @@ export default function CinematicRoster({ roster }: { roster: CinematicRosterDat
         </div>
       </section>
     )) : <p className="cinematic-roster-empty" role="status">The squad will be announced soon.</p>}
+    {/* Sam: the coaching staff sits under the players. Staff cards have no profile, so they are not buttons. */}
+    {staff.length > 0 && <section className="squad-group" aria-labelledby="roster-staff">
+      <div className="squad-group-heading">
+        <h2 id="roster-staff">Staff</h2>
+        <div aria-hidden="true" />
+        <span>{staff.length}<span className="sr-only"> staff members</span></span>
+      </div>
+      <div className="squad-grid">
+        {staff.map((member) => (
+          <article className="squad-card squad-staff" key={`${member.role}-${member.name}`}>
+            <div className="squad-portrait">
+              <ResilientImage src={getRosterImageSrc(member.image, clubLogoUrl)} alt={member.name.trim()} fill unoptimized
+                sizes="(max-width: 600px) 85vw, (max-width: 900px) 42vw, 28vw" data-roster-card-image="true" />
+            </div>
+            <div className="squad-summary">
+              <div className="squad-number-flag"><span className="squad-number" aria-hidden="true">{member.initials}</span>
+                <NationalityFlag nationality={member.nationality} width={33} className="squad-flag" />
+              </div>
+              <h3>{member.name.trim()}</h3>
+              <p className="squad-hometown">{member.role}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>}
     {selected ? <PlayerModal player={selected} seasonLabel={roster.seasonLabel} presentation="cinematic" onClose={closeProfile} /> : null}
   </div>;
 }

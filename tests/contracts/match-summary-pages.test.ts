@@ -42,11 +42,11 @@ describe("Schedule Summary and Rewatch columns", () => {
     expect(html).not.toContain('href="/schedule/aysd"');
   });
 
-  it("links the one optional video, and shows the placeholder without one", () => {
+  it("links the one optional video, and shows Sam's logo unlinked without one (RC-SAM-FIXES)", () => {
     const html = schedule();
     expect(html).toContain('href="https://www.youtube.com/watch?v=fJf_A4LdKDw"');
-    expect(html).toContain("Replay coming soon");
-    expect(html).toContain("Stream coming soon");
+    expect(html.match(/alt="Watch on YouTube"/g)).toHaveLength(2);
+    expect(html).not.toContain("coming soon");
   });
 
   it("puts Directions under the venue", () => {

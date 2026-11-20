@@ -65,10 +65,11 @@ describe("Schedule Directions and Watch on YouTube links", () => {
     }
   });
 
-  it("is not clickable without a YouTube link", () => {
+  it("shows Sam's logo without a link when there is no YouTube link (RC-SAM-FIXES)", () => {
     const row = card(schedule(), "lasol");
     expect(row).not.toContain("youtube.com");
-    expect(row).toContain("Replay coming soon");
+    expect(row).toMatch(/<div class="fixture-watch"><img[^>]*watch-on-youtube-[^>]*alt="Watch on YouTube"/);
+    expect(row).not.toContain("coming soon");
   });
 
   it("lets the owner enter each match's directions address in the Schedule editor", () => {

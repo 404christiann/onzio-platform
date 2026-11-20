@@ -7,13 +7,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // presentational page, so the first paint is the real page (no "Loading…" line that later pushes the footer down).
 const mocks = vi.hoisted(() => ({
   club: vi.fn(), schema: vi.fn(), trusted: { tag: "trusted" },
-  roster: vi.fn(), season: vi.fn(), schedule: vi.fn(), kits: vi.fn(), photos: vi.fn(), sponsors: vi.fn(),
+  roster: vi.fn(), staff: vi.fn(), season: vi.fn(), schedule: vi.fn(), kits: vi.fn(), photos: vi.fn(), sponsors: vi.fn(),
   identity: vi.fn(), zone: vi.fn(), purchase: vi.fn(), content: vi.fn(),
 }));
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: mocks.club }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: async () => ({ schema: mocks.schema }) }));
 vi.mock("@/lib/queries", () => ({
-  fetchRoster: mocks.roster, fetchActiveSeason: mocks.season, fetchSchedule: mocks.schedule,
+  fetchRoster: mocks.roster, fetchStaff: mocks.staff, fetchActiveSeason: mocks.season, fetchSchedule: mocks.schedule,
   fetchShopKitVariants: mocks.kits, fetchShopCarouselPhotos: mocks.photos, fetchSiteSponsorLogos: mocks.sponsors,
 }));
 vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: mocks.identity }));
@@ -49,6 +49,7 @@ beforeEach(() => {
   mocks.schema.mockReturnValue(mocks.trusted);
   mocks.club.mockResolvedValue(cinematic);
   mocks.roster.mockResolvedValue({ seasonId: "s", seasonLabel: "2027", goalkeepers: [], defenders: [], midfielders: [], forwards: [] });
+  mocks.staff.mockResolvedValue([{ initials: "HC", name: "Head Coach Name", role: "Head Coach", hometown: "", nationality: "", bio: null, image: "" }]);
   mocks.season.mockResolvedValue({ id: "season-1", label: "2027" });
   mocks.schedule.mockResolvedValue([{ id: "f1", date: "2027-05-01", time: "19:00", opponent: "Rivals", home: true, venue: "Park" }]);
   mocks.identity.mockResolvedValue(null);
@@ -66,11 +67,13 @@ describe("cinematic@2 Roster route", () => {
     expect(markup).toContain('data-page="cinematic-roster"');
     expect(mocks.schema).toHaveBeenCalledWith("onzio");
     expect(mocks.roster).toHaveBeenCalledWith(undefined, "tenant-id", {}, mocks.trusted);
-    expect(parse(markup)).toMatchObject({ failed: false, roster: { seasonLabel: "2027" } });
+    // RC-SAM-FIXES: the staff group is server-fetched with the same request client, so it is in the first paint.
+    expect(mocks.staff).toHaveBeenCalledWith("tenant-id", mocks.trusted);
+    expect(parse(markup)).toMatchObject({ failed: false, roster: { seasonLabel: "2027" }, staff: [{ name: "Head Coach Name" }] });
   });
   it("passes a failed read as data instead of crashing", async () => {
     mocks.roster.mockRejectedValue(new Error("boom"));
-    expect(parse(await html(RosterRoute))).toEqual({ failed: true, roster: null });
+    expect(parse(await html(RosterRoute))).toEqual({ failed: true, roster: null, staff: [] });
   });
   it.each(["diverse-city", "alpha", "bravo"])("renders the existing client page for %s and fetches nothing", async (slug) => {
     mocks.club.mockResolvedValue({ ...cinematic, slug, presentationTemplateKey: "academy@1" });

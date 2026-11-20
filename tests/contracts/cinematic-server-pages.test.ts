@@ -41,7 +41,9 @@ describe("seeded cinematic client pages", () => {
     expect(html).toContain("Future FC");
     expect(html).not.toContain("Loading fixtures");
     expect(html.match(/next-badge/g)).toHaveLength(1);
-    expect(html.indexOf("next-badge")).toBeGreaterThan(html.indexOf("Past FC"));
+    // RC-SAM-FIXES: the next match leads, then played matches newest first.
+    expect(html.indexOf("next-badge")).toBeLessThan(html.indexOf("Past FC"));
+    expect(html).toContain("Past FC");
   });
   it("Schedule keeps its alert and retry button on a failed server read", () => {
     const html = render(createElement(CinematicSchedulePage, { initial: { data: null, failed: true, nowIso: "2027-02-01T00:00:00.000Z" } }));

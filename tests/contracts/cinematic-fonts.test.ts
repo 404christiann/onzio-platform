@@ -61,7 +61,7 @@ describe("cinematic fonts", () => {
     const body = all.find(({ name, stack }) => name === "cinematic.css" && stack.startsWith("'CinematicAvenir'"));
     expect(body?.stack).toBe("'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif");
     const heavy = all.filter(({ stack }) => stack.includes("CinematicAvenirHeavy"));
-    expect(heavy.length).toBe(5);
+    expect(heavy.length).toBe(6); // RC-SAM-FIXES adds Robinson's bold directions headings
     for (const { stack } of heavy) expect(stack).toBe("'CinematicAvenirHeavy','CinematicFigtree',sans-serif");
   });
 

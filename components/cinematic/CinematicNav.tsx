@@ -42,11 +42,13 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
   const { content } = useCinematicContent();
   const preview = useHomepagePreview();
   const pathname = usePathname().replace(/^\/_clubs\/[^/]+/, "") || "/";
-  const label = (id: string, fallback: string) => content?.navigation.labels[id] || fallback;
-  const childLabel = (id: string, fallback: string) => {
-    const value = label(id, fallback);
-    return id === "stadium" && value.trim().toLowerCase() === "robinson stadium" ? "Robinson Stadium" : value;
+  // The stock "ROBINSON STADIUM" wording reads as "Robinson Stadium" wherever the phone menu shows it as typed
+  // (Sam); an editor's own wording is kept. Desktop tabs are uppercased by CSS either way.
+  const label = (id: string, fallback: string) => {
+    const value = content?.navigation.labels[id] || fallback;
+    return (id === "stadium" || id === "stadium-group") && value.trim().toLowerCase() === "robinson stadium" ? "Robinson Stadium" : value;
   };
+  const childLabel = label;
   const [open, setOpen] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);

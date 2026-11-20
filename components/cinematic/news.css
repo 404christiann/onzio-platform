@@ -1,5 +1,5 @@
 /* RC2027-NEWS: Sam's News list and article (preview: outer design-explorations/news-2027). */
-.cinematic-site :is(.cinematic-news,.cinematic-news-article){--news-red:#fc1618;--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;color:#0b0b0b;background:#fff}
+.cinematic-site :is(.cinematic-news,.cinematic-news-article){--news-red:#E80B25;--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;color:#0b0b0b;background:#fff}
 
 /* ───── List ───── */
 .cinematic-site .cinematic-news{position:relative;isolation:isolate}

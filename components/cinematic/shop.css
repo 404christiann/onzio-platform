@@ -1,5 +1,5 @@
 html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
-.cinematic-site .shop-2027{--shop-red:#ff0018;color:#141414;background:#fff}
+.cinematic-site .shop-2027{--shop-red:#E80B25;color:#141414;background:#fff}
 .cinematic-site .shop-feature{width:84%;max-width:1200px;margin:0 2.7% 0 13.3%;padding:64px 0 62px;display:grid;grid-template-columns:.92fr 1.08fr;gap:6%;align-items:center}
 .cinematic-site .shop-portrait{position:relative;aspect-ratio:.92;box-shadow:0 0 15px #0004;overflow:hidden;background:white}
 .cinematic-site .shop-portrait img{position:absolute;top:var(--lead-top,5%);left:var(--lead-left,10%);display:block;width:var(--lead-scale,80%);height:auto;max-width:none}
@@ -50,7 +50,7 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 }
 @media(max-width:360px){.cinematic-site .shop-feature{padding-left:18px;padding-right:18px}.cinematic-site .shop-details{padding-left:18px;padding-right:18px}.cinematic-site .shop-detail-grid h3{font-size:19px}}
 
-.cinematic-site .shop-description{white-space:pre-line}.cinematic-site .shop-empty-message{padding:80px 24px;text-align:center;font:400 16px/1.5 var(--body)}.cinematic-site .shop-empty-slot{display:flex;align-items:center;justify-content:center;min-height:140px;padding:24px;font:400 16px/1.5 var(--body);color:#666;background:#f8f8f8;border:1px dashed #bbb}.cinematic-site .shop-portrait>.shop-empty-slot{height:100%}.cinematic-site .shop-section-hidden{position:relative;opacity:.65}.cinematic-site .shop-hidden-label{display:block;padding:12px;text-align:center;color:#555;background:#f5f5f5;font:400 14px/1.4 var(--body)}.cinematic-site .shop-buy-unavailable{opacity:.55}.cinematic-site .shop-photo-controls{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 16px);z-index:2;gap:3px;background:#ffffffe6;border-radius:24px;padding:2px}.cinematic-site .shop-photo-controls button{min-width:44px;min-height:44px;font:400 12px/1.3 var(--body);border:0;border-radius:50%;background:transparent;color:#141414}.cinematic-site .shop-photo-controls button[aria-pressed=true]{background:#141414;color:white}.cinematic-site .shop-photo-controls button:focus-visible{outline:3px solid #141414;outline-offset:3px}
+.cinematic-site .shop-description{white-space:pre-line}.cinematic-site .shop-empty-message{padding:80px 24px;text-align:center;font:400 16px/1.5 var(--body)}.cinematic-site .shop-empty-slot{display:flex;align-items:center;justify-content:center;min-height:140px;padding:24px;font:400 16px/1.5 var(--body);color:#666;background:#f8f8f8;border:1px dashed #bbb}.cinematic-site .shop-portrait>.shop-empty-slot{height:100%}.cinematic-site .shop-section-hidden{position:relative;opacity:.65}.cinematic-site .shop-hidden-label{display:block;padding:12px;text-align:center;color:#555;background:#f5f5f5;font:400 14px/1.4 var(--body)}.cinematic-site .shop-buy-unavailable{opacity:.55}
 
 
 /* RC2027-SHOP-UPDATE: Sam's Oct 28 Shop layout (approved preview: outer design-explorations/shop-update-2027).
@@ -91,7 +91,7 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-information .shop-detail-grid article{min-height:170px;padding:26px 28px 24px}
 .cinematic-site .shop-information .shop-detail-grid h3{display:flex;align-items:center;gap:9px;color:#333;font-weight:300;font-size:clamp(19px,2.05vw,29px);margin-bottom:12px}
 .cinematic-site .shop-information .shop-info-icon{flex:none;display:block;width:auto;max-width:none;height:.9em}
-.cinematic-site .shop-information svg.shop-info-icon.video{width:1.1em;height:1.1em;color:#e93c2f}
+.cinematic-site .shop-information svg.shop-info-icon.video{width:1.1em;height:1.1em;color:#E80B25}
 .cinematic-site .shop-information .shop-info-icon.box{height:.82em}
 .cinematic-site .shop-information .shop-info-icon.no-access{height:.8em}
 .cinematic-site .shop-information .shop-detail-grid article>div{color:#333;font-size:12.5px;line-height:1.3}
@@ -173,7 +173,7 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-jersey-options{display:flex;flex-direction:column;align-items:center;text-align:center;margin:0 0 12px}
 .cinematic-site .shop-options-heading{font:400 clamp(18px,1.68vw,26px)/1.2 var(--body);text-transform:uppercase;color:#141414;margin:0 0 18px}
 .cinematic-site .shop-options{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 20px}
-.cinematic-site .shop-option{--option:#e93c2f;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:6px clamp(12px,1.03vw,16px);border:0;border-radius:999px;background:var(--option);color:#fff;font:500 clamp(12px,.9vw,14px)/1.2 var(--body);text-transform:uppercase;text-align:center;flex:0 0 auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s ease}
+.cinematic-site .shop-option{--option:#E80B25;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:6px clamp(12px,1.03vw,16px);border:0;border-radius:999px;background:var(--option);color:#fff;font:500 clamp(12px,.9vw,14px)/1.2 var(--body);text-transform:uppercase;text-align:center;flex:0 0 auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s ease}
 .cinematic-site .shop-option-2{--option:#141414}
 .cinematic-site .shop-option-3{--option:#223c85}
 .cinematic-site .shop-option[aria-pressed=true]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--option)}

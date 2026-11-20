@@ -1,4 +1,4 @@
-.cinematic-site .robinson-2027{--route-blue:#4f9ac6;--route-red:#ff0018}
+.cinematic-site .robinson-2027{--route-blue:#4f9ac6;--route-red:#E80B25}
 .cinematic-site .robinson-heading{display:grid;grid-template-columns:1.1fr 1fr;gap:30px;align-items:center;padding:27px 6% 27px}
 .cinematic-site .robinson-heading h1{font:900 clamp(28px,3.75vw,52px)/1.1 var(--display);letter-spacing:-.045em;text-transform:uppercase;text-align:right;white-space:normal}
 .cinematic-site .robinson-heading p{font:400 clamp(12px,1.48vw,20px)/1.5 var(--body);text-transform:uppercase;color:var(--route-blue);text-align:right;margin-top:5px}

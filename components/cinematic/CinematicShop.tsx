@@ -28,25 +28,22 @@ function PurchaseLink({ label, href, small = false }: { label: string; href: str
     : <span data-shop-editor-target={small ? "purchase" : "cta"} className={`shop-buy shop-buy-unavailable${small ? " shop-buy-small" : ""}`} aria-disabled="true">{label}</span>;
 }
 
-function LeadPhotos({ kit, settings, editing }: { kit: ShopKitContent; settings: CinematicShopPresentation; editing: boolean }) {
+// Sam: kit photos loop on their own with no numbered buttons, like the homepage slideshow. They hold still
+// for reduced motion, a hidden tab and the editor.
+function LeadPhotos({ kit, photos, settings, editing }: { kit: ShopKitContent; photos: ShopKitContent["photos"]; settings: CinematicShopPresentation; editing: boolean }) {
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
   const { playing } = useCinematicMotion();
-  const signature = kit.photos.map(photo => photo.url).join("|");
+  const signature = photos.map(photo => photo.url).join("|");
   useEffect(() => { setActive(0); }, [signature]);
   useEffect(() => {
-    if (editing || paused || !playing || kit.photos.length < 2) return;
-    const timer = window.setInterval(() => setActive(index => (index + 1) % kit.photos.length), 4500);
+    if (editing || !playing || photos.length < 2) return;
+    const timer = window.setInterval(() => setActive(index => (index + 1) % photos.length), 4500);
     return () => window.clearInterval(timer);
-  }, [editing, paused, playing, kit.photos.length]);
-  const index = Math.min(active, Math.max(0, kit.photos.length - 1));
+  }, [editing, playing, photos.length]);
+  const index = Math.min(active, Math.max(0, photos.length - 1));
   return <div data-shop-editor-target="photos" className="shop-portrait" style={{ "--lead-scale": `${settings.leadScale}%`, "--lead-left": `${(100 - settings.leadScale) / 2}%`, "--lead-top": `${settings.leadTop}%` } as CSSProperties}>
-    {kit.photos.length ? kit.photos.map((photo, i) => <NativeImage key={photo.id} src={photo.url} alt={i === index ? `${kit.section?.title || "Kit"} photo ${i + 1} of ${kit.photos.length}` : ""} aria-hidden={i !== index || undefined} loading={i === index ? "eager" : "lazy"} fallbackVariant="shop" style={{ display: i === index ? "block" : "none" }} />)
+    {photos.length ? photos.map((photo, i) => <NativeImage key={photo.id} src={photo.url} alt={i === index ? `${kit.section?.title || "Kit"} photo ${i + 1} of ${photos.length}` : ""} aria-hidden={i !== index || undefined} loading={i === index ? "eager" : "lazy"} fallbackVariant="shop" style={{ display: i === index ? "block" : "none" }} />)
       : editing ? <span className="shop-empty-slot">Add a kit photo</span> : null}
-    {kit.photos.length > 1 && <div className="shop-photo-controls" aria-label="Kit photographs">
-      {kit.photos.map((photo, i) => <button key={photo.id} type="button" aria-label={`Show kit photo ${i + 1}`} aria-pressed={i === index} onClick={() => { setActive(i); setPaused(true); }}>{i + 1}</button>)}
-      {!editing && <button type="button" onClick={() => setPaused(value => !value)} aria-label={paused ? "Play kit photos" : "Pause kit photos"}>{paused ? "Play" : "Pause"}</button>}
-    </div>}
   </div>;
 }
 
@@ -126,14 +123,17 @@ export default function CinematicShop({ kits, photoRows, purchase, presentation,
   const edition = option?.item;
   const kit = kits[variant];
   const section = kit.section;
-  const rows = photoRows[variant];
+  // Sam: until a kit has its own photos (the Foothill Transit edition for now), the site shows the Away photos.
+  const borrow = !editing && variant === "third";
+  const leadPhotos = kit.photos.length || !borrow ? kit.photos : kits.away.photos;
+  const rows = photoRows[variant].length || !borrow ? photoRows[variant] : photoRows.away;
   const choose = (value: ShopKitVariant) => { setChosen(value); onVariantChange?.(value); };
   const details = purchase && (purchase.heading || purchase.cards.length || purchase.cta_text || purchase.cta_label);
   const buyLink = edition?.link || section?.cta_link || "";
   const bullets = section?.bullet_points.filter(Boolean) ?? [];
   return <div className="shop-2027 shop-update">
     {(section || editing) ? <section className="shop-feature" aria-labelledby="shop-title">
-      <LeadPhotos key={variant} kit={kit} settings={settings} editing={editing} />
+      <LeadPhotos key={variant} kit={kit} photos={leadPhotos} settings={settings} editing={editing} />
       <div className="shop-copy">
         <div className="shop-copy-top" data-shop-editor-target="copy"><h1 id="shop-title">{section?.title || (editing ? "Add a kit title" : "")}</h1><p className="shop-eyebrow">{section?.eyebrow}</p>{edition?.line && <p className="shop-edition-line" aria-live="polite">{edition.line}</p>}<div className="shop-rule" aria-hidden="true" /></div>
         {showVariants && <div className="shop-variants" role="group" aria-label="Kit selection">{(editing ? ["home", "away"] as const : available).map(value => <button key={value} type="button" aria-pressed={variant === value} onClick={() => choose(value)}>{value === "home" ? settings.homeLabel || "Home" : settings.awayLabel || "Away"}</button>)}</div>}
