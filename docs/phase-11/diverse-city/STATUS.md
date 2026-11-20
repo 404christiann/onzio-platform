@@ -89,6 +89,11 @@ cancel each fails the full unit suite. Also covered the two untimed Schedule pat
 the first upcoming match; an untimed past date files as played). tsc clean; `test:unit` 4365/4365; `test:contracts` +
 `test:architecture` 3836 passed, 1 skipped.
 
+**Re-review at `216859a` (clean; 1 Low):** nothing checked that the page starts the browser load. New
+`cinematic-roster-page-effect` captures the page's effects during a server render and runs them: with no server data the page
+fetches the squad and staff for the club; with a server squad or failure it fetches nothing. Making the effect return early,
+dropping the seeded check, or not calling the load each fails the full unit suite (4367 tests).
+
 **Rebase on #204 (RC-DESKTOP-FIT):** both packages appended to `cinematic.css` and `robinson-page.css`; both kept. #204's contract
 requires its desktop block to end each file, so the RC-SAM-FIXES rules sit just above it (no shared properties). After the rebase:
 tsc clean, `test:unit` and `test:contracts` + `test:architecture` green (see PR), eslint clean on changed files apart from
