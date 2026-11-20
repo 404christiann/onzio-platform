@@ -69,3 +69,22 @@
 }
 
 .cinematic-site .r-cards{align-items:start}
+
+/* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
+@media (min-width:1025px){
+  .cinematic-site .r-food-header{min-height:110px;padding-top:36px;padding-bottom:22px}
+  .cinematic-site .r-food-content{padding-bottom:36px}
+  .cinematic-site .r-food-body{min-height:0}
+  .cinematic-site .r-food-body img{max-width:285px}
+  .cinematic-site .r-food-steps p{margin-top:8px}
+  .cinematic-site .r-food-steps strong{margin-top:6px}
+  .cinematic-site .r-route{padding:38px 5.4% 56px}
+  .cinematic-site .r-route-heading{margin-bottom:18px}
+  .cinematic-site .r-route-heading>img{width:min(32%,360px)}
+  .cinematic-site .r-route-map{width:min(100%,135vh)}
+  .cinematic-site .r-directions{columns:2;column-gap:64px;max-width:1380px;margin:24px auto 0;padding:0}
+  .cinematic-site .r-directions h3{margin:28px 0 8px;break-after:avoid}
+  .cinematic-site .r-directions h3:first-child{margin-top:0}
+  .cinematic-site .r-directions h3:last-of-type{margin-top:28px}
+  .cinematic-site .r-directions ul{margin-top:10px}
+}

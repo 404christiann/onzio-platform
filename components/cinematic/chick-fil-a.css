@@ -44,3 +44,8 @@
 @media(max-width:360px){.cinematic-site .food-teams>img,.cinematic-site .food-teams>div{width:58px;height:58px}.cinematic-site .food-teams>div{--opponent-crest-size:58px}.cinematic-site .food-teams strong{font-size:22px}}
 
 .cinematic-site .food-heading h1,.cinematic-site .food-details h2,.cinematic-site .food-details p,.cinematic-site .food-steps li p{overflow-wrap:anywhere}
+
+/* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
+@media (min-width:1025px){
+  .cinematic-site .food-match-area{padding-top:60px;padding-bottom:64px;background-position:center 55px}
+}

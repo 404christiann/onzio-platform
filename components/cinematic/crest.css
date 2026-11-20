@@ -37,3 +37,18 @@
 @media(max-width:360px){.cinematic-site .identity-feature{padding:22px 16px}.cinematic-site .identity-heading h1{font-size:25px}.cinematic-site .identity-heading p{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.identity-page{scroll-behavior:auto}}
 .cinematic-site .identity-map{aspect-ratio:991/1281}.cinematic-site .identity-map img{width:100%;height:100%;object-fit:contain}.cinematic-site .identity-empty{padding:24px;min-height:80px;font:400 16px/1.5 var(--body)}.cinematic-site .identity-place .identity-empty{color:#fff}
+
+/* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
+@media (min-width:1025px){
+  .cinematic-site .identity-intro{padding-top:40px}
+  .cinematic-site .crest-diagram{margin-top:40px}
+  .cinematic-site .identity-features{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;padding-bottom:40px}
+  .cinematic-site .identity-feature{position:relative;grid-template-columns:128px minmax(0,1fr);gap:24px;min-height:0;padding:22px 5%}
+  .cinematic-site .identity-feature:last-child:nth-child(odd){grid-column:1/-1}
+  .cinematic-site .identity-feature:last-child:nth-child(odd) .feature-copy p{max-width:none}
+  .cinematic-site .feature-patch{width:128px;height:128px}
+  .cinematic-site .feature-heading{min-height:62px;gap:16px;margin-bottom:8px}
+  .cinematic-site .feature-heading h2{font-size:29px}
+  .cinematic-site .feature-icon{width:calc(var(--crest-icon-size,68px)*.8);height:61px;flex-basis:calc(var(--crest-icon-size,68px)*.8)}
+  .cinematic-site .feature-number{position:absolute;top:14px;right:18px}
+}

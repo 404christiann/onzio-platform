@@ -52,3 +52,13 @@
 
 .cinematic-site .robinson-heading[data-empty-bus]{display:block}.cinematic-site .robinson-route-full{display:block;width:100%;height:auto}.cinematic-site .robinson-directions h2,.cinematic-site .robinson-includes h3{text-transform:none;letter-spacing:normal}.cinematic-site .robinson-directions p,.cinematic-site .robinson-directions li,.cinematic-site .robinson-includes p{white-space:pre-line}.cinematic-site .robinson-buy{display:flex;align-items:center;justify-content:center}.cinematic-site .robinson-match-date{font-size:16px;color:#888;margin-top:8px}.cinematic-site .robinson-teams{display:flex;align-items:center;justify-content:center;gap:20px;border-top:1px solid #ddd;padding:28px 0;margin-top:10px}.cinematic-site .robinson-teams img{width:90px;height:90px;object-fit:contain}.cinematic-site .robinson-teams strong{font:900 30px/1.2 var(--display)}.cinematic-site .robinson-venue{font-size:16px;color:#888;text-align:center;margin-bottom:24px}.cinematic-site .robinson-match-includes[data-single-column]{grid-template-columns:1fr;max-width:760px;margin:auto}
 @media(max-width:700px){.cinematic-site .robinson-teams{gap:12px}.cinematic-site .robinson-teams img{width:65px;height:65px}.cinematic-site .robinson-teams strong{font-size:25px}}
+
+/* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
+@media (min-width:1025px){
+  .cinematic-site .robinson-directions{columns:2;column-gap:56px;padding:12px 5.8% 16px;line-height:1.6}
+  .cinematic-site .robinson-directions>div+div{margin-top:24px}
+  .cinematic-site .robinson-directions h2{margin-bottom:10px;break-after:avoid}
+  .cinematic-site .robinson-directions .robinson-parking-note{margin-top:18px}
+  .cinematic-site .robinson-directions ul{margin-top:12px}
+  .cinematic-site .robinson-directions li{margin-top:10px}
+}
