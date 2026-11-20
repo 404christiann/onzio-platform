@@ -1,5 +1,33 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-TZ: Rose City pages use the club's saved time zone (app code only)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator; Sonnet worker), RC-TZ, branch `claude/rc-club-time-zone` (from main
+`984cf012`). **Status:** `in_progress`, PR open; merges on Christian's word. No migration, schema, RPC, env or dependency change.
+
+**Cause:** production showed kickoffs as "8:00PM UTC". A read-only check found `onzio.clubs.time_zone` =
+`America/Los_Angeles` (confirmed 2026-11-08; Christian is the active owner), but the cinematic pages read the time zone
+from `onzio.club_identity` (an Editorial table; Rose City has no row) and fell back to "UTC". Not an admin setting.
+
+**Completed work:** client components use `useClubTimeZone()` (`CinematicSchedulePage`, `CinematicMatchSummaryPage`,
+`CinematicStadium`, `CinematicKnowBeforeYouGo`, `CinematicTickets`, `CinematicChickFilA`, `CinematicHome`, admin
+`CinematicNewsEditor`); server code uses `readPublicClubTimeZone()` (`RoseCitySchedulePage`, `cinematic-home-data.ts`,
+the News article route). The identity fetch stays only where it supplies `initials`/`shortName`. New
+`tests/contracts/cinematic-club-time-zone.test.ts` (red 3/3, then green): schedule kickoff reads PT, the next home match
+is picked in the club's zone, and a source guard blocks `identity?.timeZone`. `cinematic-server-routes` Schedule cases
+updated to the new source.
+
+**Verification:** tsc clean; `test:unit` 4275/4275; `test:contracts` 3314/3314 (selector ratchet and
+`site-public-pages-scope` included). The guarded tenant routes are untouched.
+
+**Also this session (content pass, production admin, nothing saved yet):** the three External form links are entered in
+the homepage editor draft; slideshow photo 6 is out of the draft; all six live slideshow photos are backed up with
+checksums in the revamp repo's `assets/prod-slideshow-backup-2026-11-19/` (git-excluded). A read-only check found no
+`homepage_revamp_content` row yet; the homepage save creates it.
+
+**Exact next step:** Christian adds the two posters in the editor; then alt text, one homepage save, confirm the row;
+graphics into empty Membership/Stadium slots; Step B rehearsal, then stop for his "go".
+
 ## 2026-11-19 - RC-CLS follow-up: News partner strip loads on the server; no-refetch test exercises the skip path
 
 **Agent/package:** Claude Code (Opus 5.5), RC-CLS follow-up, branch `claude/rc-cls-norefetch-test` (from main `3b925983`).
