@@ -1,4 +1,4 @@
-import CinematicHome from "@/components/cinematic/CinematicHome";
+import CinematicHomeDynamic from "@/components/cinematic/CinematicHomeDynamic";
 import { loadCinematicHomeData } from "@/components/cinematic/cinematic-home-data";
 import type { ClubContext } from "@/lib/club-context";
 import type { DBHomepageHeroContent } from "@/lib/db-types";
@@ -11,5 +11,5 @@ import { createClient } from "@/lib/supabase-server";
  */
 export default async function RoseCityHomePage({ club, initialHeroContent }: { club: ClubContext; initialHeroContent: DBHomepageHeroContent | null }) {
   const initialData = await loadCinematicHomeData(club.id, (await createClient()).schema("onzio"));
-  return <CinematicHome initialHeroContent={initialHeroContent} initialData={initialData} />;
+  return <CinematicHomeDynamic initialHeroContent={initialHeroContent} initialData={initialData} />;
 }

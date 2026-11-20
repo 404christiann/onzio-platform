@@ -23,10 +23,6 @@ vi.mock("@/lib/queries", () => ({
 vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: mocks.fetchClubIdentity }));
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: mocks.getClubContextBySlug }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: mocks.createClient }));
-// The site-pages registry also lists Rose City's Roster, Schedule and Shop pages (RC-CLS-B); this file tests Home only.
-vi.mock("@/components/sites/rose-city/RoseCityRosterPage", () => ({ default: () => null }));
-vi.mock("@/components/sites/rose-city/RoseCitySchedulePage", () => ({ default: () => null }));
-vi.mock("@/components/sites/rose-city/RoseCityShopPage", () => ({ default: () => null }));
 const homePageClient = vi.hoisted(() => vi.fn(() => null));
 vi.mock("@/components/HomePageClient", () => ({ default: homePageClient }));
 
@@ -34,6 +30,7 @@ import CinematicHome from "@/components/cinematic/CinematicHome";
 import CinematicPhotos from "@/components/cinematic/CinematicPhotos";
 import { loadCinematicHomeData } from "@/components/cinematic/cinematic-home-data";
 import RoseCityHomePage from "@/components/sites/rose-city/RoseCityHomePage";
+import CinematicHomeDynamic from "@/components/cinematic/CinematicHomeDynamic";
 import TenantHomePage from "@/app/%5Fclubs/[slug]/page";
 
 const fixture = (values: Partial<Fixture>): Fixture => ({ date: "2099-03-13", time: "19:45", opponent: "Visitors", home: true, venue: "Robinson Stadium", city: "Portland", state: "OR", ...values });
@@ -59,7 +56,7 @@ describe("cinematic@2 home first paint", () => {
     for (const fetcher of [mocks.fetchHomepageContent, mocks.fetchShopKitContent, mocks.fetchSiteSponsorLogos, mocks.fetchSchedule, mocks.fetchClubIdentity]) {
       expect(fetcher.mock.calls[0].at(-1)).toBe(serverClient);
     }
-    expect(home.type).toBe(CinematicHome);
+    expect(home.type).toBe(CinematicHomeDynamic);
     expect(home.props.initialData.fixture.venue).toBe("Robinson Stadium");
     expect(home.props.initialData.clubLabel).toBe("RCFC");
   });

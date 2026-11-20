@@ -1,6 +1,6 @@
 import HomePageClient from "@/components/HomePageClient";
 import { getClubContextBySlug } from "@/lib/club-context";
-import { publicPagesFor } from "@/lib/site-public-pages";
+import { siteHomePageFor } from "@/lib/site-public-pages/home";
 import { fetchHomepageHeroContent } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
 
@@ -25,7 +25,7 @@ export default async function TenantHomePage({
     },
   );
   // A site package may supply its own server-rendered home (Rose City: complete on first paint).
-  const SitePage = publicPagesFor(club)?.home;
+  const SitePage = siteHomePageFor(club);
   if (SitePage) return <SitePage club={club} initialHeroContent={heroContent} />;
   // The optional story is loaded by DevelopingNextGeneration in its own
   // section. A stalled story read must not hold the first homepage response.

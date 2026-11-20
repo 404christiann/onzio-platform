@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import ShopPage from "@/app/(public)/shop/page";
 import { getClubContextBySlug } from "@/lib/club-context";
-import { publicPagesFor } from "@/lib/site-public-pages";
+import { siteShopPageFor } from "@/lib/site-public-pages/shop";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,6 @@ export default async function TenantShopPage({
 }) {
   const club = await getClubContextBySlug((await params).slug);
   if (!club.storeEnabled) notFound();
-  const SitePage = publicPagesFor(club)?.shop;
+  const SitePage = siteShopPageFor(club);
   return SitePage ? <SitePage club={club} /> : <ShopPage />;
 }
