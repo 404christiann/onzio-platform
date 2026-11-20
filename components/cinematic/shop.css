@@ -56,9 +56,9 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 /* RC2027-SHOP-UPDATE: Sam's Oct 28 Shop layout (approved preview: outer design-explorations/shop-update-2027).
    Desktop sizes follow his 2484px-wide file. */
 
-/* Lead: title sits above the copy column; the portrait starts lower, as in Sam's file. */
+/* Lead: the portrait's top lines up with the City of the Roses title (Sam, RC-SAM-FIXES; it used to start lower). */
 .cinematic-site .shop-update .shop-feature{align-items:start;padding-top:20px}
-.cinematic-site .shop-update .shop-portrait{margin-top:9.2vw}
+.cinematic-site .shop-update .shop-portrait{margin-top:0}
 .cinematic-site .shop-update .shop-copy h1{margin-top:0;white-space:nowrap}
 .cinematic-site .shop-update .shop-eyebrow{margin-top:.6vw}
 .cinematic-site .shop-edition-line{font:400 13px/1.4 var(--body);color:#777;margin-top:4px}
@@ -66,8 +66,16 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-update .shop-variants button{font-weight:500;font-size:12.5px}
 .cinematic-site .shop-update .shop-description{line-height:1.95;margin-top:18px;max-width:600px}
 .cinematic-site .shop-includes{font:400 17px/1.2 var(--body);text-transform:uppercase;margin:26px 0 0 26px}
-.cinematic-site .shop-update .shop-bullets{margin:14px 0 34px 44px;gap:7px;font-size:11.5px}
+/* Includes: Sam's spacing, one bullet every 2.26 text heights (1.55 line + .71em gap). */
+.cinematic-site .shop-update .shop-bullets{margin:14px 0 34px 44px;gap:.71em;font-size:11.5px}
 .cinematic-site .shop-update .shop-bullets li:before{width:5px;height:5px}
+/* RC-SAM-FIXES: beside the copy, the photo box runs from the title to the bottom of the Buy button (Sam's markup). It stays at
+   least its 0.92 shape and grows with a taller copy column; the photo keeps its share of the box (--lead-scale-n, set by
+   CinematicShop) by sizing against the box height, centred, never wider than the box. Phones stack, so they keep the 0.92 box. */
+@media(min-width:701px){
+  .cinematic-site .shop-update .shop-portrait{min-height:100%;container-type:size}
+  .cinematic-site .shop-update .shop-portrait img{--lead-width:min(100%,calc(var(--lead-scale-n,80) * .92cqh));width:var(--lead-width);left:calc((100% - var(--lead-width)) / 2)}
+}
 
 /* Section headings with a rule beside them (Jersey details, Size chart, Map view). */
 .cinematic-site .shop-rule-heading{display:flex;align-items:center;gap:2.2vw}
@@ -117,7 +125,6 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-map-view .shop-rule-heading{width:85.7%;margin:20px auto 48px}
 
 @media(max-width:1024px){
- .cinematic-site .shop-update .shop-portrait{margin-top:70px}
  .cinematic-site .shop-update .shop-copy h1{white-space:normal}
  .cinematic-site .shop-detail-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 28px}
  .cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{width:100%}
@@ -189,7 +196,6 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
    and the heading centred over a pill row that sits flush with the copy column. */
 @media(min-width:1025px){
  .cinematic-site .shop-update .shop-feature{width:89.2%;max-width:1712px;margin:0 3.2% 0 7.6%;gap:5%}
- .cinematic-site .shop-update .shop-portrait{margin-top:9.8vw}
  .cinematic-site .shop-update .shop-copy h1{font-size:min(5.15vw,99px);line-height:.8;white-space:normal}
  .cinematic-site .shop-update .shop-eyebrow{margin-top:0}
  .cinematic-site .shop-update .shop-edition-line{font-size:15px;margin-top:0}
@@ -204,15 +210,15 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 /* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
 @media (min-width:1025px){
   /* Lead (City of the Roses): the photo box is capped so its bottom edge stays inside one screen (97svh less the 14px + 34px of
-     section padding and the 9.8vw it starts below the title), keeping its 0.92 shape and its crop. The copy column drops about
-     110px of spacing so the long Includes list fits beside it. */
+     section padding; it starts level with the title), keeping its 0.92 shape and its crop. The copy column drops about
+     110px of spacing so the long Includes list fits beside it; the bullets keep Sam's spacing. */
   .cinematic-site .shop-update .shop-feature{padding:14px 0 34px}
-  .cinematic-site .shop-update .shop-portrait{width:min(100%,max(300px,calc((97svh - 48px - 9.8vw) * .92)));justify-self:center}
+  .cinematic-site .shop-update .shop-portrait{width:min(100%,max(300px,calc((97svh - 48px) * .92)));justify-self:center}
   .cinematic-site .shop-update .shop-rule{margin:24px 0 14px}
   .cinematic-site .shop-update .shop-options-heading{margin-bottom:14px}
   .cinematic-site .shop-update .shop-description{line-height:27px;margin-top:14px}
   .cinematic-site .shop-includes{margin-top:16px}
-  .cinematic-site .shop-update .shop-bullets{margin:8px 0 20px 44px;gap:3px}
+  .cinematic-site .shop-update .shop-bullets{margin:8px 0 20px 44px;gap:.71em}
 
   /* Jersey details: the six photo slots (same 349/334 shape, empty placeholder or real photo) are sized so two rows plus the
      heading fit one screen. 214px is the caption allowance for two rows (18px gap, title, four text lines), plus about one more

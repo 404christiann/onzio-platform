@@ -41,7 +41,7 @@ function LeadPhotos({ kit, photos, settings, editing }: { kit: ShopKitContent; p
     return () => window.clearInterval(timer);
   }, [editing, playing, photos.length]);
   const index = Math.min(active, Math.max(0, photos.length - 1));
-  return <div data-shop-editor-target="photos" className="shop-portrait" style={{ "--lead-scale": `${settings.leadScale}%`, "--lead-left": `${(100 - settings.leadScale) / 2}%`, "--lead-top": `${settings.leadTop}%` } as CSSProperties}>
+  return <div data-shop-editor-target="photos" className="shop-portrait" style={{ "--lead-scale": `${settings.leadScale}%`, "--lead-scale-n": settings.leadScale, "--lead-left": `${(100 - settings.leadScale) / 2}%`, "--lead-top": `${settings.leadTop}%` } as CSSProperties}>
     {photos.length ? photos.map((photo, i) => <NativeImage key={photo.id} src={photo.url} alt={i === index ? `${kit.section?.title || "Kit"} photo ${i + 1} of ${photos.length}` : ""} aria-hidden={i !== index || undefined} loading={i === index ? "eager" : "lazy"} fallbackVariant="shop" style={{ display: i === index ? "block" : "none" }} />)
       : editing ? <span className="shop-empty-slot">Add a kit photo</span> : null}
   </div>;

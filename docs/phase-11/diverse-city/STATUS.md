@@ -89,6 +89,23 @@ cancel each fails the full unit suite. Also covered the two untimed Schedule pat
 the first upcoming match; an untimed past date files as played). tsc clean; `test:unit` 4365/4365; `test:contracts` +
 `test:architecture` 3836 passed, 1 skipped.
 
+**Two more Shop asks from Sam (Christian, 2026-11-20, with Sam's markup and an Includes screenshot):**
+- Lead photo: Sam's markup has the photo box running from the City of the Roses title to the bottom of the Buy button. On
+  `rc-sam` it started 9.8vw below the title and hung about 170px past Buy Now. Now `margin-top:0` (two-column widths), and beside
+  the copy the box grows to the copy column's height (`min-height:100%`, never below its 0.92 shape; `container-type:size`) while
+  the photo keeps its share of the box by sizing against the box height (`--lead-scale-n`, set by `CinematicShop`). #204's
+  one-screen cap drops the 9.8vw from its sum. Phones stack and keep the 0.92 box.
+- Includes bullets: Sam's screenshot spaces them one every 2.26 text heights (measured from the image); `rc-sam` had 1.78
+  (11.5px text every 20.8px). Gap `.71em` everywhere: 26px at 1440, 29.4px on phones. This also replaces #204's 3px desktop gap.
+- Evidence on `rc-sam` content (its `/shop` in a 1440x900 frame, the change applied as a stylesheet): title 210-269, photo
+  378-1011 and Buy Now 853-899 before (photo starts 168px low); photo 210-899 after, level with both. Screenshots:
+  `rc-sam-fixes-screens/shop-lead-*`. Local check on the branch: same photo top, 26px bullet pitch, no sideways scroll at 390.
+  Tests: `cinematic-shop-update-renderer` (alignment rules, `--lead-scale-n`, both bullet gaps). tsc clean; `test:unit`
+  4369/4369; `test:contracts` + `test:architecture` 3840 passed, 1 skipped. One earlier combined run reported 7 failures while
+  the local dev server and a queued local-DB job were running; it did not reproduce in three clean runs (contracts alone,
+  architecture alone, and the same combined run).
+- The third pill (Foothill Transit Edition) and Sam's pill labels are admin content: Christian chose to add them after merge.
+
 **Re-review at `216859a` (clean; 1 Low):** nothing checked that the page starts the browser load. New
 `cinematic-roster-page-effect` captures the page's effects during a server render and runs them: with no server data the page
 fetches the squad and staff for the club; with a server squad or failure it fetches nothing. Making the effect return early,

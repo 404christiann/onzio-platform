@@ -207,3 +207,19 @@ describe("RC-SAM-FIXES shop kit photos", () => {
     expect(render({ ...value, selectedVariant: "third" })).toContain("/row-third.png");
   });
 });
+
+describe("RC-SAM-FIXES shop lead alignment and Includes spacing", () => {
+  const css = readFileSync(resolve(process.cwd(), "components/cinematic/shop.css"), "utf8");
+  it("starts the photo level with the title and lets it reach the Buy button beside the copy", () => {
+    expect(css).toContain(".cinematic-site .shop-update .shop-portrait{margin-top:0}");
+    expect(css).not.toMatch(/\.shop-update \.shop-portrait\{margin-top:(9\.2vw|9\.8vw|70px)\}/);
+    expect(css).toMatch(/@media\(min-width:701px\)\{\s*\.cinematic-site \.shop-update \.shop-portrait\{min-height:100%;container-type:size\}/);
+    expect(css).toContain("calc(var(--lead-scale-n,80) * .92cqh)");
+    expect(css).toContain("calc((97svh - 48px) * .92)");
+    const html = render(props());
+    expect(html).toMatch(/--lead-scale-n:80/);
+  });
+  it("spaces the Includes bullets at Sam's 2.26 text heights at every width", () => {
+    expect(css.match(/\.shop-update \.shop-bullets\{[^}]*gap:([^;}]+)/g)?.map(rule => rule.replace(/.*gap:/, ""))).toEqual([".71em", ".71em"]);
+  });
+});
