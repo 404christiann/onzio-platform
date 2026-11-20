@@ -105,6 +105,49 @@ short pages at 390); this package only holds the crest's place on Know Before Yo
 
 **Exact next step:** onzio-bot review, Christian merges; then update `rc-sam` and re-run the eight pages at 1440, 1280 and 390.
 
+## 2026-11-20 - RC-SAM-FIXES follow-up: `rc-sam` updated to #205; Sam's admin content entered in production
+
+**Agent/package:** Claude Code (Opus 5.5), RC-SAM-FIXES follow-up. **Status:** `done` for the `rc-sam` update and the admin
+edits Christian approved ("You do them via admin", after merge). No code, migration, schema, env or Vercel setting change.
+
+**`rc-sam`:** #205 merged as `e1021427`; `rc-sam` fast-forwarded `04fa6ae6` -> `e1021427` (no migrations in the step). Its
+preview `dpl_DLT9WdAfUSD2m7htKUdZSa7gQ1Ky` built Ready, but Vercel aliased it only as
+`onzio-platform-git-rc-sam-404christian.vercel.app` (the team's URL slug now reads `404christian`), where Rose City is still held
+because `RC_PREVIEW_HOST` names the old host. Sam's link `onzio-platform-git-rc-sam-404christianns-projects.vercel.app` stayed on
+the 12:09 build. On Christian's answer ("This is the link") it was re-pointed with `vercel alias set dpl_DLT9Wd…
+onzio-platform-git-rc-sam-404christianns-projects.vercel.app`. **Each future `rc-sam` push needs the same alias set** (or
+`RC_PREVIEW_HOST` changed to the new host, which needs Christian's go).
+
+**Merge also deployed production:** `main` auto-deploys (`dpl_9snTn2D2QTTMeZmbo9pXjqP4ydtW`, target production: diversecityfc.com,
+rosecityfutbolclub.com). #205 had no migrations; Diverse City `/`, `/roster`, `/schedule`, `/shop` return 200; Rose City's
+domain stays 404 (public-site hold).
+
+**Rechecked on Sam's link (`e1021427`):** `--red` `#E80B25`; drop-down radius 0, `rgba(232,11,37,.94)` + blur; Tickets order
+Season ticket membership / Match tickets / Know before you go; phone menu "Robinson Stadium"; MEET THE SQUAD outline none,
+1px border; shop has no number buttons, bullets every 26px, photo starts level with the title; Schedule lists Next (#8, March 13
+2027) then 7, 6, 5 with the YouTube logo on every row and no "coming soon"; Robinson headings Avenir Heavy 800 (font loaded);
+Roster shows a Staff group (6).
+
+**Production admin edits (owner session in Chrome, each editor's own Save):**
+- Shop: pills "Home jersey $115", "Away jersey $115" (was Replica $95; line "Thorn Edition Authentic RCFC Jersey"),
+  "Foothill Transit Edition jersey $115" (line "Foothill Transit Edition Authentic RCFC Jersey"). New third kit: title
+  "Foothill Transit Edition", heading "Rose City FC Foothill Transit Edition 2027", description, bullets, store note and button
+  copied from the Away kit (Christian's pick), and copies of the 5 Away kit photos (the editor requires a photo; Sam said use the
+  Away pictures). Pills render red / black / navy.
+- Tickets: page heading "Single Match Tickets" -> "Match Tickets".
+- Club Logo page: annotated crest replaced with Sam's `Landing-Logo-Crest-Explanation.png`; added "The Stem" (Sam's
+  `Rose City FC Crest Stem.png`, icon cut from his full identity design since the folder has no stem icon, Christian's pick) and
+  "Sub-mark" (`Rose City FC Sub-mark.png`, icon `Rose City FC Red Rose Outline.png`). 7 features now.
+- Branding: club logo replaced with Sam's `Rose-City-FC-Crest-Color-2027.png` (green stem), resized 9000 -> 2000px PNG.
+- Verified on Sam's link: `/tickets` H1 "Match Tickets"; nav crest is the new logo; `/club/logo` lists all 7 features with every
+  image loaded; `/shop` shows the three pills and the Foothill kit with the Away photos.
+
+**Open (for Christian/Sam):** The Stem's description in Sam's design repeats The Key's text (entered as designed); the Foothill
+kit description is the Away copy ("green ... Thorn kit") until Sam sends Foothill copy; at very wide windows (1710px) the shop
+photo keeps its 0.92 shape and ends about 40px below Buy Now (level at 1440).
+
+**Exact next step:** send Sam the `rc-sam` link for review; re-run the alias set after any future `rc-sam` push.
+
 ## 2026-11-20 - RC-SAM-FIXES: Sam's rc-sam review fixes (Rose City cinematic@2, app code only)
 
 **Agent/package:** Claude Code (Opus 5.5), RC-SAM-FIXES, branch `claude/rc-sam-fixes` (worktree
