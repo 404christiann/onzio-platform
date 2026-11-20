@@ -1,7 +1,7 @@
 /* Sam's bold labels use Avenir Heavy (CinematicAvenirHeavy, loaded by CinematicAvenirFonts); the site's body face is Avenir Medium only. */
 .cinematic-site .match-summary{--heavy:'CinematicAvenirHeavy','CinematicFigtree',sans-serif}
 /* RC2027-MATCH-SUMMARY: Sam's Match Summary (approved preview: outer design-explorations/match-summary-2027). */
-.cinematic-site .match-summary{--summary-red:#ff0018;background:#fff;color:#141414}
+.cinematic-site .match-summary{--summary-red:#E80B25;background:#fff;color:#141414}
 .cinematic-site .summary-heading{text-align:right;padding:66px 5.4% 46px;box-shadow:inset 0 14px 14px -14px #0003}
 .cinematic-site .summary-heading h1{font:900 clamp(36px,3.9vw,62px)/1.1 var(--display);letter-spacing:-.045em;text-transform:uppercase}
 .cinematic-site .summary-heading p{font:400 clamp(15px,1.4vw,20px)/1.4 var(--body);text-transform:uppercase;color:var(--summary-red);margin-top:4px}
@@ -25,7 +25,7 @@
 .cinematic-site .event-half.club .sub-on,.cinematic-site .event-half.club .sub-off{flex-direction:row-reverse}
 .cinematic-site .arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent}
 .cinematic-site .arrow.up{border-bottom:9px solid #2fd35a}
-.cinematic-site .arrow.down{border-top:9px solid #ff2a2a}
+.cinematic-site .arrow.down{border-top:9px solid #E80B25}
 .cinematic-site .event-crest{flex:none;width:44px;height:44px;display:grid;place-items:center;--opponent-crest-size:44px}
 .cinematic-site .event-crest img{width:100%;height:100%;object-fit:contain}
 .cinematic-site .event-minute{flex:none;font:800 clamp(14px,1.25vw,18px)/1.1 var(--heavy);white-space:nowrap}

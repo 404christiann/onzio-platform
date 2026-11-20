@@ -1,5 +1,5 @@
 html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
-.cinematic-site .shop-2027{--shop-red:#ff0018;color:#141414;background:#fff}
+.cinematic-site .shop-2027{--shop-red:#E80B25;color:#141414;background:#fff}
 .cinematic-site .shop-feature{width:84%;max-width:1200px;margin:0 2.7% 0 13.3%;padding:64px 0 62px;display:grid;grid-template-columns:.92fr 1.08fr;gap:6%;align-items:center}
 .cinematic-site .shop-portrait{position:relative;aspect-ratio:.92;box-shadow:0 0 15px #0004;overflow:hidden;background:white}
 .cinematic-site .shop-portrait img{position:absolute;top:var(--lead-top,5%);left:var(--lead-left,10%);display:block;width:var(--lead-scale,80%);height:auto;max-width:none}
@@ -50,15 +50,15 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 }
 @media(max-width:360px){.cinematic-site .shop-feature{padding-left:18px;padding-right:18px}.cinematic-site .shop-details{padding-left:18px;padding-right:18px}.cinematic-site .shop-detail-grid h3{font-size:19px}}
 
-.cinematic-site .shop-description{white-space:pre-line}.cinematic-site .shop-empty-message{padding:80px 24px;text-align:center;font:400 16px/1.5 var(--body)}.cinematic-site .shop-empty-slot{display:flex;align-items:center;justify-content:center;min-height:140px;padding:24px;font:400 16px/1.5 var(--body);color:#666;background:#f8f8f8;border:1px dashed #bbb}.cinematic-site .shop-portrait>.shop-empty-slot{height:100%}.cinematic-site .shop-section-hidden{position:relative;opacity:.65}.cinematic-site .shop-hidden-label{display:block;padding:12px;text-align:center;color:#555;background:#f5f5f5;font:400 14px/1.4 var(--body)}.cinematic-site .shop-buy-unavailable{opacity:.55}.cinematic-site .shop-photo-controls{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 16px);z-index:2;gap:3px;background:#ffffffe6;border-radius:24px;padding:2px}.cinematic-site .shop-photo-controls button{min-width:44px;min-height:44px;font:400 12px/1.3 var(--body);border:0;border-radius:50%;background:transparent;color:#141414}.cinematic-site .shop-photo-controls button[aria-pressed=true]{background:#141414;color:white}.cinematic-site .shop-photo-controls button:focus-visible{outline:3px solid #141414;outline-offset:3px}
+.cinematic-site .shop-description{white-space:pre-line}.cinematic-site .shop-empty-message{padding:80px 24px;text-align:center;font:400 16px/1.5 var(--body)}.cinematic-site .shop-empty-slot{display:flex;align-items:center;justify-content:center;min-height:140px;padding:24px;font:400 16px/1.5 var(--body);color:#666;background:#f8f8f8;border:1px dashed #bbb}.cinematic-site .shop-portrait>.shop-empty-slot{height:100%}.cinematic-site .shop-section-hidden{position:relative;opacity:.65}.cinematic-site .shop-hidden-label{display:block;padding:12px;text-align:center;color:#555;background:#f5f5f5;font:400 14px/1.4 var(--body)}.cinematic-site .shop-buy-unavailable{opacity:.55}
 
 
 /* RC2027-SHOP-UPDATE: Sam's Oct 28 Shop layout (approved preview: outer design-explorations/shop-update-2027).
    Desktop sizes follow his 2484px-wide file. */
 
-/* Lead: title sits above the copy column; the portrait starts lower, as in Sam's file. */
+/* Lead: the portrait's top lines up with the City of the Roses title (Sam, RC-SAM-FIXES; it used to start lower). */
 .cinematic-site .shop-update .shop-feature{align-items:start;padding-top:20px}
-.cinematic-site .shop-update .shop-portrait{margin-top:9.2vw}
+.cinematic-site .shop-update .shop-portrait{margin-top:0}
 .cinematic-site .shop-update .shop-copy h1{margin-top:0;white-space:nowrap}
 .cinematic-site .shop-update .shop-eyebrow{margin-top:.6vw}
 .cinematic-site .shop-edition-line{font:400 13px/1.4 var(--body);color:#777;margin-top:4px}
@@ -66,8 +66,16 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-update .shop-variants button{font-weight:500;font-size:12.5px}
 .cinematic-site .shop-update .shop-description{line-height:1.95;margin-top:18px;max-width:600px}
 .cinematic-site .shop-includes{font:400 17px/1.2 var(--body);text-transform:uppercase;margin:26px 0 0 26px}
-.cinematic-site .shop-update .shop-bullets{margin:14px 0 34px 44px;gap:7px;font-size:11.5px}
+/* Includes: Sam's spacing, one bullet every 2.26 text heights (1.55 line + .71em gap). */
+.cinematic-site .shop-update .shop-bullets{margin:14px 0 34px 44px;gap:.71em;font-size:11.5px}
 .cinematic-site .shop-update .shop-bullets li:before{width:5px;height:5px}
+/* RC-SAM-FIXES: beside the copy, the photo box runs from the title to the bottom of the Buy button (Sam's markup). It stays at
+   least its 0.92 shape and grows with a taller copy column; the photo keeps its share of the box (--lead-scale-n, set by
+   CinematicShop) by sizing against the box height, centred, never wider than the box. Phones stack, so they keep the 0.92 box. */
+@media(min-width:701px){
+  .cinematic-site .shop-update .shop-portrait{min-height:100%;container-type:size}
+  .cinematic-site .shop-update .shop-portrait img{--lead-width:min(100%,calc(var(--lead-scale-n,80) * .92cqh));width:var(--lead-width);left:calc((100% - var(--lead-width)) / 2)}
+}
 
 /* Section headings with a rule beside them (Jersey details, Size chart, Map view). */
 .cinematic-site .shop-rule-heading{display:flex;align-items:center;gap:2.2vw}
@@ -91,7 +99,7 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-information .shop-detail-grid article{min-height:170px;padding:26px 28px 24px}
 .cinematic-site .shop-information .shop-detail-grid h3{display:flex;align-items:center;gap:9px;color:#333;font-weight:300;font-size:clamp(19px,2.05vw,29px);margin-bottom:12px}
 .cinematic-site .shop-information .shop-info-icon{flex:none;display:block;width:auto;max-width:none;height:.9em}
-.cinematic-site .shop-information svg.shop-info-icon.video{width:1.1em;height:1.1em;color:#e93c2f}
+.cinematic-site .shop-information svg.shop-info-icon.video{width:1.1em;height:1.1em;color:#E80B25}
 .cinematic-site .shop-information .shop-info-icon.box{height:.82em}
 .cinematic-site .shop-information .shop-info-icon.no-access{height:.8em}
 .cinematic-site .shop-information .shop-detail-grid article>div{color:#333;font-size:12.5px;line-height:1.3}
@@ -117,7 +125,6 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-map-view .shop-rule-heading{width:85.7%;margin:20px auto 48px}
 
 @media(max-width:1024px){
- .cinematic-site .shop-update .shop-portrait{margin-top:70px}
  .cinematic-site .shop-update .shop-copy h1{white-space:normal}
  .cinematic-site .shop-detail-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 28px}
  .cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{width:100%}
@@ -173,7 +180,7 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-jersey-options{display:flex;flex-direction:column;align-items:center;text-align:center;margin:0 0 12px}
 .cinematic-site .shop-options-heading{font:400 clamp(18px,1.68vw,26px)/1.2 var(--body);text-transform:uppercase;color:#141414;margin:0 0 18px}
 .cinematic-site .shop-options{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 20px}
-.cinematic-site .shop-option{--option:#e93c2f;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:6px clamp(12px,1.03vw,16px);border:0;border-radius:999px;background:var(--option);color:#fff;font:500 clamp(12px,.9vw,14px)/1.2 var(--body);text-transform:uppercase;text-align:center;flex:0 0 auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s ease}
+.cinematic-site .shop-option{--option:#E80B25;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:6px clamp(12px,1.03vw,16px);border:0;border-radius:999px;background:var(--option);color:#fff;font:500 clamp(12px,.9vw,14px)/1.2 var(--body);text-transform:uppercase;text-align:center;flex:0 0 auto;max-width:100%;white-space:normal;overflow-wrap:anywhere;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s ease}
 .cinematic-site .shop-option-2{--option:#141414}
 .cinematic-site .shop-option-3{--option:#223c85}
 .cinematic-site .shop-option[aria-pressed=true]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--option)}
@@ -189,7 +196,6 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
    and the heading centred over a pill row that sits flush with the copy column. */
 @media(min-width:1025px){
  .cinematic-site .shop-update .shop-feature{width:89.2%;max-width:1712px;margin:0 3.2% 0 7.6%;gap:5%}
- .cinematic-site .shop-update .shop-portrait{margin-top:9.8vw}
  .cinematic-site .shop-update .shop-copy h1{font-size:min(5.15vw,99px);line-height:.8;white-space:normal}
  .cinematic-site .shop-update .shop-eyebrow{margin-top:0}
  .cinematic-site .shop-update .shop-edition-line{font-size:15px;margin-top:0}
@@ -204,15 +210,15 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 /* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
 @media (min-width:1025px){
   /* Lead (City of the Roses): the photo box is capped so its bottom edge stays inside one screen (97svh less the 14px + 34px of
-     section padding and the 9.8vw it starts below the title), keeping its 0.92 shape and its crop. The copy column drops about
-     110px of spacing so the long Includes list fits beside it. */
+     section padding; it starts level with the title), keeping its 0.92 shape and its crop. The copy column drops about
+     110px of spacing so the long Includes list fits beside it; the bullets keep Sam's spacing. */
   .cinematic-site .shop-update .shop-feature{padding:14px 0 34px}
-  .cinematic-site .shop-update .shop-portrait{width:min(100%,max(300px,calc((97svh - 48px - 9.8vw) * .92)));justify-self:center}
+  .cinematic-site .shop-update .shop-portrait{width:min(100%,max(300px,calc((97svh - 48px) * .92)));justify-self:center}
   .cinematic-site .shop-update .shop-rule{margin:24px 0 14px}
   .cinematic-site .shop-update .shop-options-heading{margin-bottom:14px}
   .cinematic-site .shop-update .shop-description{line-height:27px;margin-top:14px}
   .cinematic-site .shop-includes{margin-top:16px}
-  .cinematic-site .shop-update .shop-bullets{margin:8px 0 20px 44px;gap:3px}
+  .cinematic-site .shop-update .shop-bullets{margin:8px 0 20px 44px;gap:.71em}
 
   /* Jersey details: the six photo slots (same 349/334 shape, empty placeholder or real photo) are sized so two rows plus the
      heading fit one screen. 214px is the caption allowance for two rows (18px gap, title, four text lines), plus about one more

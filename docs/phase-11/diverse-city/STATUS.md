@@ -1,5 +1,129 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-SAM-FIXES: Sam's rc-sam review fixes (Rose City cinematic@2, app code only)
+
+**Agent/package:** Claude Code (Opus 5.5), RC-SAM-FIXES, branch `claude/rc-sam-fixes` (worktree
+`~/Downloads/onzio-platform/.claude/worktrees/rc-sam-fixes`, rebased on main `04fa6ae6` (#204) before the review push).
+**Status:** `ready for review`: Christian checked it locally ("Looks good, open PR"); pushed, PR open for onzio-bot review and
+Christian's merge. No migration, schema, RPC, env, Stripe, Vercel or production change. Diverse City untouched.
+
+**Sam's list (Christian, 2026-11-20) and what was done:**
+1. Shop: Sam's three pills (Home / Away / Foothill Transit Edition, $115) and no number buttons. Code: the kit photos loop with
+   no number or pause buttons (like the homepage slideshow; still still for reduced motion, a hidden tab and the editor), and
+   the third kit borrows the Away photos and photo row until it has its own. The pill labels and the third kit are admin content
+   (Christian approved doing them through admin after merge).
+2 and 10. Every Rose City red is Rose Parade Red `#E80B25` (darker hover `#C4091F`), including the Authentic jersey pill;
+   Chick-fil-A keeps its own reds, and the YouTube/TikTok brand marks keep theirs.
+3. Hero buttons: Sam wants the thin MEET THE SQUAD border. The button's `outline` class also matches Tailwind's `.outline`
+   utility (`outline-style: solid`), which drew a 3px white ring outside the 1px border on `rc-sam`. Cancelled for the hero
+   button only; keyboard focus keeps the site's blue ring (`tests/contracts/cinematic-hero-buttons.test.ts`).
+4. Nav drop-downs are square, with a 94% Rose Parade Red panel over `backdrop-filter: blur(12px)`. Below 94% white text drops
+   under 4.5:1 where white is behind it (solid red is 4.66:1); reduced transparency gets the solid panel.
+6 and 8. Tickets drop-down: Season ticket membership first; `/tickets` is "Match tickets". The `/tickets` page H1
+   ("Single Match Tickets") is admin content, to change through admin after merge.
+7. Roster lists the club's active staff under the players, server-fetched with the request client (`fetchStaff` gained the
+   same optional client argument `fetchRoster` has; other callers unchanged). Staff cards have no stats panel or profile.
+9. Robinson directions headings use Avenir Heavy: Avenir loads only 400-600, so weight 700 rendered regular.
+11. Schedule: the Watch on YouTube logo shows on every match and links only when the match has a video (Christian: logo only
+   without a link).
+12. Schedule order (Christian: "Next, then past only"): the next match, then matches played or kicked off, newest first. Later
+   fixtures stay hidden and move up to Next on their own; the number beside each card is its place in the season.
+13. New crest everywhere: the crest is the club's branding upload, so it is an admin change after merge.
+5. Club identity page: the Stem and Sub-mark cards and the new top image are admin uploads after merge (Dropbox links in chat).
+14 (added by Christian). The phone menu showed "ROBINSON STADIUM" (a saved label override); the stock wording now reads
+   "Robinson Stadium" for the group button too, as it already did for the drop-down link. Desktop tabs stay uppercase by CSS.
+
+**Files changed:** `components/cinematic/{CinematicNav,CinematicRoster,CinematicRosterPage,CinematicSchedule,CinematicShop}.tsx`,
+`components/cinematic/{cinematic,contact,injury-report,match-summary,news,partners,policies,robinson-page,roster,schedule,shop,stadium,ticket-pages,tickets}.css`,
+`components/sites/rose-city/RoseCityRosterPage.tsx`, `lib/cinematic-homepage-content.ts`, `lib/cinematic-schedule.ts`,
+`lib/queries.ts`; tests: `cinematic-schedule` (new order and logo cases, written red first), `schedule-directions`,
+`match-summary-pages`, `cinematic-navigation`, `cinematic-fonts`, `cinematic-server-pages`, `cinematic-server-routes`.
+
+**Verification so far:** tsc clean; `test:unit` 4336/4336; `test:contracts` + `test:architecture` 3807 passed, 1 skipped
+(including `site-public-pages-scope`); eslint on the changed files clean apart from two `react/no-children-prop` errors on
+unchanged lines of `cinematic-server-pages.test.ts` that main already has. Local browser (shared stack, Rose City shop seeded
+from `scripts/seed-rose-city-shop-2027-local.ts` via an untracked local-port copy, plus local-only rows: the third kit, Sam's
+three editions and two "Local Test" staff; the public-site hold lifted by an uncommitted local edit): pills red/black/navy
+with no number buttons, the Foothill option shows the Away photo and row, the drop-down is square at rgba(232,11,37,.94) with
+the blur, Season ticket membership first, staff group renders, schedule reads Next (5) then 4, 3, 2 with the logo on every row,
+the phone menu reads "Robinson Stadium". Before/after screenshots: session notes folder `rc-sam-fixes-screens/`.
+
+**Local content (Christian asked for it before his check):** ran the repo's Rose City seed scripts against the shared stack
+through untracked local-port copies (`scripts/_local54/`, receipts redirected to the session scratchpad, tracked `assets/`
+receipts restored): About, crest (6 features incl. The Stem, 6 colours), contact, policies, Robinson, news (+ placeholders),
+injury report, national anthem, tickets, ticket pages, visitor pages, home update and the base homepage. Synthetic local players
+(the roster seed needs production JSON, so none was used). Skipped: Partners (needs a production Foothill logo and a Chick-fil-A
+logo only the schedule seed publishes, and the schedule seed would overwrite local fixtures), form links (an owner already set
+them), schedule (already populated). Robinson directions headings confirmed Avenir Heavy 800 in the browser.
+
+- Diverse City bundles (production build `ONZIO_ENVIRONMENT=staging next build`, `diverse-city.localhost`, client JS from
+  `/_next/static` in the browser, decoded KB, main as recorded by RC-MATCH-AREA -> this branch): `/` 1037.2 -> 1037.3, `/roster`
+  1058.9 -> 1060.3, `/schedule` 997.9 -> 998.5, `/shop` 848.2 -> 848.3. Rose City's Roster/Schedule/Shop code was already reachable
+  from those shared tenant routes (see RC-CLS); the +1.4 KB on `/roster` is the Staff group and `fetchStaff`. Diverse City renders
+  unchanged (`site-public-pages-scope` passes).
+- CLS: not measured with the production build; Christian stopped the local server before the CLS runs. The changes add no
+  late-loading content above the fold: the staff group and schedule order are in the server-rendered first paint, the drop-down
+  is hidden until opened, and the shop's kit photos keep the existing portrait box. To recheck on `rc-sam` after merge.
+
+**onzio-bot review of #205 at `61a4cd7` (1 Medium, 3 Low) — all addressed:**
+- Medium, Staff group untested: render cases in `cinematic-roster-renderer` (staff under the players, plain cards, no dialog,
+  crest fallback, no group without staff), `cinematic-roster-browser-fetch` (new; the browser read is now the exported
+  `fetchCinematicRoster`), and a `fetchStaff` request-client case in `cinematic-server-fetch-client`. Breaking the render, the
+  browser fetch, the server fetch or `fetchStaff`'s client each fails a test now.
+- Low, Foothill kit borrowing Away photos untested: `cinematic-shop-update-renderer` covers it (public page borrows, the editor
+  shows the empty slot, a kit with its own photos keeps them) and the absence of number/pause buttons.
+- Low, an upcoming match with no kickoff time was hidden when a later match had one: upcoming fixtures dated before Next now
+  stay listed ahead of it in date order (`cinematic-schedule` case written red first).
+- Low, admin help text still promised "coming soon" for a blank video: both Schedule editors now say the Schedule shows the
+  logo without a link and the match summary says "coming soon" (`schedule-directions` case).
+
+**Re-review at `370a9d1` (1 Medium):** dropping `staff={active.staff}` in `CinematicRosterPage` passed every test. Added a
+server-render case in `cinematic-server-pages` (Roster page with staff in `initial` shows the group; without staff it doesn't);
+dropping the prop now fails it.
+
+**Re-review at `b4b6cae` (1 Medium, browser path):** storing `staff: []` after the browser read passed every test, because
+server renders never run the effect. The browser load is now the exported `loadCinematicRoster(clubId, apply)` (loading state,
+then the fetched squad and staff or the failure; returns the cancel), and the effect only calls it. `cinematic-roster-browser-
+fetch` checks the states it applies, the failure and a cancelled late result; dropping the fetched staff, the failure flag or the
+cancel each fails the full unit suite. Also covered the two untimed Schedule paths the re-review noted (no timed Next leads with
+the first upcoming match; an untimed past date files as played). tsc clean; `test:unit` 4365/4365; `test:contracts` +
+`test:architecture` 3836 passed, 1 skipped.
+
+**Two more Shop asks from Sam (Christian, 2026-11-20, with Sam's markup and an Includes screenshot):**
+- Lead photo: Sam's markup has the photo box running from the City of the Roses title to the bottom of the Buy button. On
+  `rc-sam` it started 9.8vw below the title and hung about 170px past Buy Now. Now `margin-top:0` (two-column widths), and beside
+  the copy the box grows to the copy column's height (`min-height:100%`, never below its 0.92 shape; `container-type:size`) while
+  the photo keeps its share of the box by sizing against the box height (`--lead-scale-n`, set by `CinematicShop`). #204's
+  one-screen cap drops the 9.8vw from its sum. Phones stack and keep the 0.92 box.
+- Includes bullets: Sam's screenshot spaces them one every 2.26 text heights (measured from the image); `rc-sam` had 1.78
+  (11.5px text every 20.8px). Gap `.71em` everywhere: 26px at 1440, 29.4px on phones. This also replaces #204's 3px desktop gap.
+- Evidence on `rc-sam` content (its `/shop` in a 1440x900 frame, the change applied as a stylesheet): title 210-269, photo
+  378-1011 and Buy Now 853-899 before (photo starts 168px low); photo 210-899 after, level with both. Screenshots:
+  `rc-sam-fixes-screens/shop-lead-*`. Local check on the branch: same photo top, 26px bullet pitch, no sideways scroll at 390.
+  Tests: `cinematic-shop-update-renderer` (alignment rules, `--lead-scale-n`, both bullet gaps). tsc clean; `test:unit`
+  4369/4369; `test:contracts` + `test:architecture` 3840 passed, 1 skipped. One earlier combined run reported 7 failures while
+  the local dev server and a queued local-DB job were running; it did not reproduce in three clean runs (contracts alone,
+  architecture alone, and the same combined run).
+- The third pill (Foothill Transit Edition) and Sam's pill labels are admin content: Christian chose to add them after merge.
+
+**Re-review at `216859a` (clean; 1 Low):** nothing checked that the page starts the browser load. New
+`cinematic-roster-page-effect` captures the page's effects during a server render and runs them: with no server data the page
+fetches the squad and staff for the club; with a server squad or failure it fetches nothing. Making the effect return early,
+dropping the seeded check, not calling the load, or not returning its cancel (so a club change could let the old club's late result win) each fails the full unit suite (4367 tests).
+
+**Rebase on #204 (RC-DESKTOP-FIT):** both packages appended to `cinematic.css` and `robinson-page.css`; both kept. #204's contract
+requires its desktop block to end each file, so the RC-SAM-FIXES rules sit just above it (no shared properties). After the rebase:
+tsc clean, `test:unit` and `test:contracts` + `test:architecture` green (see PR), eslint clean on changed files apart from
+`react/no-children-prop` on unchanged render helpers in `cinematic-server-pages` and `cinematic-roster-renderer` tests (main has them).
+
+**Not done yet:** admin edits after merge (#1 pill labels and Foothill kit, #5 Stem/Sub-mark/top image, #6 `/tickets` title,
+#13 crest); `rc-sam` fast-forward and preview recheck (Robinson headings, hero button, CLS).
+
+**Blockers or unresolved decisions:** Christian's merge.
+
+**Exact next step:** after Christian merges, fast-forward `rc-sam` to main and push, wait for the preview to be Ready, recheck
+the fixed sections there, then make the admin edits Christian approved.
+
 ## 2026-11-20 - RC-DESKTOP-FIT: Rose City sections fit one desktop screen (CSS only, wider than 1024 px)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator; Sonnet workers B1 Home+Shop, B2 Club identity+Stadium, B3

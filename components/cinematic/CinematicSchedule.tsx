@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Fixture } from "@/lib/data";
 import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
-import { nextScheduleFixture, orderedSchedule, scheduleDate, scheduleKickoff, SCHEDULE_PAGE_SIZE } from "@/lib/cinematic-schedule";
+import { scheduleDate, scheduleDisplay, scheduleKickoff, SCHEDULE_PAGE_SIZE } from "@/lib/cinematic-schedule";
 import { outcomeForFixture } from "@/lib/cinematic-fixtures";
 import { youtubeWatchUrl } from "@/lib/youtube-embed";
 import { googleMapsDirectionsUrl } from "@/lib/google-maps-directions";
@@ -18,9 +18,8 @@ export default function CinematicSchedule({ schedule, initialNow }: { schedule: 
   const [visibleCount, setVisibleCount] = useState(SCHEDULE_PAGE_SIZE);
   const list = useRef<HTMLOListElement>(null);
   const newlyRevealedIndex = useRef<number | null>(null);
-  const fixtures = useMemo(() => orderedSchedule(schedule.fixtures), [schedule.fixtures]);
+  const { next, list: fixtures } = useMemo(() => scheduleDisplay(schedule.fixtures, now, schedule.timeZone), [schedule.fixtures, now, schedule.timeZone]);
   const visible = fixtures.slice(0, visibleCount);
-  const next = nextScheduleFixture(fixtures, now, schedule.timeZone);
   const hasMore = visible.length < fixtures.length;
 
   useEffect(() => {
@@ -41,7 +40,7 @@ export default function CinematicSchedule({ schedule, initialNow }: { schedule: 
     {fixtures.length === 0 ? <div className="schedule-empty"><h2>Schedule coming soon</h2><p>No official fixtures have been published yet.</p></div> : <>
       <div className="schedule-columns" aria-hidden="true"><span>Date</span><span>Opponent</span><span>Kickoff</span><span>League</span><span>Results</span><span>Summary</span><span>Rewatch the match</span></div>
       <ol ref={list} id="cinematic-schedule-fixtures" className="fixture-list">
-        {visible.map((fixture, index) => {
+        {visible.map(({ fixture, matchNumber }) => {
           const isNext = next === fixture;
           const outcome = outcomeForFixture(fixture);
           const name = fixture.opponent.trim();
@@ -51,7 +50,7 @@ export default function CinematicSchedule({ schedule, initialNow }: { schedule: 
           const directions = googleMapsDirectionsUrl(fixture.address);
           const venueLine = [fixture.venue, [fixture.city, fixture.state].filter(Boolean).join(", ")].filter(Boolean).join(" - ");
           return <li key={fixture.id ?? `${fixture.date}-${fixture.time}-${name}`} className="fixture-item" data-fixture-id={fixture.id}>
-            <span className="fixture-number" aria-hidden="true">{index + 1}</span>
+            <span className="fixture-number" aria-hidden="true">{matchNumber}</span>
             <article tabIndex={-1} className="fixture-card" data-next={isNext} aria-label={`${name}, ${scheduleDate(fixture.date)}`}>
               <div className="fixture-date"><time dateTime={fixture.date}>{scheduleDate(fixture.date)}</time>{isNext && <span className="next-badge">Next</span>}</div>
               <div className="fixture-opponent">
@@ -64,9 +63,10 @@ export default function CinematicSchedule({ schedule, initialNow }: { schedule: 
                 : fixture.competition ? <span className="league-name">{fixture.competition}</span> : <span aria-label="League to be announced">—</span>}</div>
               <div className="fixture-result">{outcome ? <><span className="result-outcome" data-outcome={outcome}>{outcome}</span><strong aria-label={`${fixture.roseCityScore} to ${fixture.opponentScore}`}>{fixture.roseCityScore}<span className="score-separator" aria-hidden="true">-</span>{fixture.opponentScore}</strong><span className="sr-only">{outcome === "W" ? "Win" : outcome === "L" ? "Loss" : "Draw"}</span></> : <span className="sr-only">Not played</span>}</div>
               <div className="fixture-summary">{played && fixture.id && <Link href={`/schedule/${fixture.id}`}>Match Summary<span className="sr-only"> for {name}, {scheduleDate(fixture.date)}</span></Link>}</div>
+              {/* Sam: the Watch on YouTube logo shows on every match; it links once the match has a video. */}
               <div className="fixture-watch">{video
                 ? <a href={video} target="_blank" rel="noopener noreferrer" aria-label={`${played ? "Rewatch" : "Watch"} ${name} on YouTube (opens in a new tab)`}><NativeImage src={`/rose-city/icons/watch-on-youtube-${isNext ? "white" : "black"}.png`} alt="" /></a>
-                : <span className="watch-soon">{played ? "Replay" : "Stream"} coming soon</span>}</div>
+                : <NativeImage src={`/rose-city/icons/watch-on-youtube-${isNext ? "white" : "black"}.png`} alt="Watch on YouTube" />}</div>
             </article>
             {fixture.sponsorLogoUrl && <div className="match-sponsor"><span>Presented by</span><NativeImage src={fixture.sponsorLogoUrl} alt={fixture.sponsorName || "Match sponsor"} width={172} height={35} /></div>}
           </li>;

@@ -1,4 +1,4 @@
-.cinematic-site .cinematic-roster{--squad-red:#ff0018;max-width:1440px;margin:auto;padding:46px 4.5% 100px;color:#0a0a0a}
+.cinematic-site .cinematic-roster{--squad-red:#E80B25;max-width:1440px;margin:auto;padding:46px 4.5% 100px;color:#0a0a0a}
 .cinematic-site .cinematic-roster .squad-heading>p{font:400 20px/1.4 var(--body);text-transform:uppercase;color:var(--squad-red)}
 .cinematic-site .cinematic-roster .squad-heading h1{font:900 clamp(58px,6.5vw,94px)/1.02 var(--display);letter-spacing:-.045em;text-transform:uppercase;margin-top:4px}
 .cinematic-site .cinematic-roster .squad-rule{width:74px;height:4px;background:var(--squad-red);margin:30px 0 60px 7px}
@@ -57,7 +57,7 @@
 
 /* Keep the original PlayerModal structure and interactions. Apply the
    accepted roster's Museo headings, Avenir UI text, and red accents here. */
-.cinematic-player-modal{--color-white:#fff;--color-black:#141414;--color-red:#ff0018;--color-gray-mid:#686868;--modal-heading:CinematicMuseoModerno,sans-serif;--font-display:'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif;--font-body:'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif;font:400 16px/1.6 var(--font-body);color:var(--color-black);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+.cinematic-player-modal{--color-white:#fff;--color-black:#141414;--color-red:#E80B25;--color-gray-mid:#686868;--modal-heading:CinematicMuseoModerno,sans-serif;--font-display:'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif;--font-body:'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif;font:400 16px/1.6 var(--font-body);color:var(--color-black);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 .cinematic-player-modal *,.cinematic-player-modal *::before,.cinematic-player-modal *::after{box-sizing:border-box;border-width:0;border-style:solid}
 .cinematic-player-modal h2{margin:0;font-weight:700;font-style:normal;line-height:1.05;letter-spacing:-.01em;text-transform:uppercase}
 .cinematic-player-modal p{margin:0}
@@ -71,3 +71,7 @@
 @media(prefers-reduced-motion:reduce){.cinematic-player-modal *{transition-duration:0s!important;animation-duration:0s!important}}
 
 .cinematic-roster-status{padding:60px 5%;min-height:50vh;font:400 16px/1.6 'CinematicAvenir',Avenir,'CinematicFigtree',sans-serif;color:#686868}.cinematic-site .cinematic-roster .cinematic-roster-empty{font:400 18px/1.6 var(--body);padding:20px 0 40px}
+/* RC-SAM-FIXES: staff cards share the player card look but have no stats panel or profile to open. */
+.cinematic-site .cinematic-roster .squad-card.squad-staff .squad-summary{transform:none}
+.cinematic-site .cinematic-roster .squad-card.squad-staff .squad-portrait::after,.cinematic-site .cinematic-roster .squad-card.squad-staff .squad-summary::before{opacity:0}
+.cinematic-site .cinematic-roster .squad-card.squad-staff:active{filter:none}

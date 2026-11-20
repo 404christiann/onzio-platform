@@ -5,7 +5,7 @@ import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
 import CinematicRoster, { type CinematicRosterData } from "@/components/cinematic/CinematicRoster";
 import type { ClubContext } from "@/lib/club-context";
-import type { Player } from "@/lib/data";
+import type { Player, Staff } from "@/lib/data";
 
 // The supplied branding context makes no network request in this SSR render.
 // Avoid constructing the browser Supabase client in a pure renderer contract.
@@ -15,11 +15,29 @@ const club: ClubContext = { id: "11111111-1111-4111-8111-111111111111", slug: "s
 const field: Player = { id: "22222222-2222-4222-8222-222222222222", number: 5, name: "Sample Defender", nationality: "American", position: "Defender", height: "6 ft", weight: "160 lbs", hometown: "Sample City", age: 25, image: "/defender.webp", stats: { goals: 7, assists: 2, tackles: 3, starts: 4, yellow: 0, red: 0, mins: 450, offsides: 0, fouls: 0, foulsSuffered: 0 } };
 const keeper: Player = { ...field, id: "33333333-3333-4333-8333-333333333333", number: 1, name: "Sample Keeper", position: "Goalkeeper", image: "/keeper.webp", stats: { saves: 11, goalsAgainst: 1, cleanSheets: 3, starts: 4, yellow: 0, red: 0, mins: 400 } };
 const empty: CinematicRosterData = { seasonId: "44444444-4444-4444-8444-444444444444", seasonLabel: "2027", defenders: [], midfielders: [], forwards: [], goalkeepers: [] };
-function render(roster: CinematicRosterData) {
+function render(roster: CinematicRosterData, staff?: Staff[]) {
   return renderToStaticMarkup(createElement(ClubContextProvider, { club, children:
     createElement(ClubBrandingProvider, { initialBranding: { logoPath: "/logo.webp", inverseLogoPath: "/logo.webp", footerTagline: "Sample City" }, children:
-      createElement(CinematicRoster, { roster }) }) }));
+      createElement(CinematicRoster, { roster, staff }) }) }));
 }
+const coach: Staff = { initials: "HC", name: "Sample Coach ", role: "Head Coach", hometown: "Sample City", nationality: "American", bio: null, image: "/coach.webp" };
+describe("cinematic roster staff group (RC-SAM-FIXES)", () => {
+  it("lists staff under the players as plain cards with their role, photo and no profile dialog", () => {
+    const html = render({ ...empty, defenders: [field] }, [coach, { ...coach, initials: "AC", name: "Sample Assistant", role: "Assistant Coach", image: "" }]);
+    expect(html).toContain('id="roster-staff"');
+    expect(html.indexOf("Sample Defender")).toBeLessThan(html.indexOf('id="roster-staff"'));
+    const staff = html.slice(html.indexOf('id="roster-staff"'));
+    for (const text of ["Sample Coach", "Head Coach", "Sample Assistant", "Assistant Coach", "/coach.webp", "/logo.webp", "2<span class=\"sr-only\"> staff members</span>"]) expect(staff).toContain(text);
+    expect(staff.match(/class="squad-card squad-staff"/g)).toHaveLength(2);
+    expect(staff).not.toContain("<button");
+    expect(staff).not.toContain('aria-haspopup="dialog"');
+  });
+  it("shows the staff group even before the squad is announced, and no group without staff", () => {
+    expect(render(empty, [coach])).toContain('id="roster-staff"');
+    expect(render({ ...empty, defenders: [field] })).not.toContain("roster-staff");
+    expect(render({ ...empty, defenders: [field] }, [])).not.toContain("roster-staff");
+  });
+});
 describe("cinematic roster consumes shared player data", () => {
   it("shows real player identities, media, season and appropriate field/goalkeeper totals", () => {
     const html = render({ ...empty, defenders: [field], goalkeepers: [keeper] });

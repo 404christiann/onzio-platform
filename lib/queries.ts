@@ -1534,15 +1534,16 @@ export async function fetchRoster(
 }
 
 /** Fetches all active staff members. */
-export async function fetchStaff(clubId?: string): Promise<Staff[]> {
+export async function fetchStaff(clubId?: string, client: typeof supabase = supabase): Promise<Staff[]> {
   const tenantId = requireClubId(clubId);
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("staff").select("*").eq("club_id", tenantId).eq("active", true).order("id", { ascending: true });
   if (error) throw new Error(`fetchStaff: ${error.message}`);
   const rows = await resolveMediaReferences(
     (data ?? []) as Record<string, unknown>[],
     tenantId,
     [{ assetId: "photo_asset_id", url: "photo_url" }],
+    client,
   );
   return (rows as unknown as DBStaff[]).map(mapStaff);
 }

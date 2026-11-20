@@ -28,6 +28,15 @@ describe("seeded cinematic client pages", () => {
     expect(html).toContain("The Squad");
     expect(html).not.toContain("Loading the squad");
   });
+  it("Roster renders the server-fetched staff group in the first paint (RC-SAM-FIXES)", () => {
+    const roster = { seasonId: "s", seasonLabel: "2027", goalkeepers: [], defenders: [], midfielders: [], forwards: [] };
+    const staff = [{ initials: "HC", name: "Seeded Coach", role: "Head Coach", hometown: "", nationality: "", bio: null, image: "/coach.webp" }];
+    const html = render(createElement(CinematicRosterPage, { initial: { roster, staff, failed: false } }));
+    expect(html).toContain('id="roster-staff"');
+    expect(html).toContain("Seeded Coach");
+    expect(html).toContain("Head Coach");
+    expect(render(createElement(CinematicRosterPage, { initial: { roster, failed: false } }))).not.toContain("roster-staff");
+  });
   it("Roster shows the unavailable message when the server read failed", () => {
     expect(render(createElement(CinematicRosterPage, { initial: { roster: null, failed: true } }))).toContain("The squad is temporarily unavailable. Please try again.");
   });
@@ -41,7 +50,9 @@ describe("seeded cinematic client pages", () => {
     expect(html).toContain("Future FC");
     expect(html).not.toContain("Loading fixtures");
     expect(html.match(/next-badge/g)).toHaveLength(1);
-    expect(html.indexOf("next-badge")).toBeGreaterThan(html.indexOf("Past FC"));
+    // RC-SAM-FIXES: the next match leads, then played matches newest first.
+    expect(html.indexOf("next-badge")).toBeLessThan(html.indexOf("Past FC"));
+    expect(html).toContain("Past FC");
   });
   it("Schedule keeps its alert and retry button on a failed server read", () => {
     const html = render(createElement(CinematicSchedulePage, { initial: { data: null, failed: true, nowIso: "2027-02-01T00:00:00.000Z" } }));

@@ -22,6 +22,7 @@ import {
   fetchShopKitVariants,
   fetchShopCarouselPhotos,
   fetchSiteSponsorLogos,
+  fetchStaff,
 } from "@/lib/queries";
 import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { EMPTY_CINEMATIC_SHOP_CONTENT } from "@/lib/cinematic-shop-content";
@@ -96,6 +97,11 @@ describe("cinematic data fetchers accept a request-scoped client", () => {
     expect(plain.tables).toEqual(expect.arrayContaining(["seasons", "players", "player_photos"]));
   });
 
+  it("fetchStaff (RC-SAM-FIXES: Rose City's server-rendered staff group)", async () => {
+    const { client, tables } = fakeClient();
+    await fetchStaff(CLUB_ID, client);
+    expect(tables).toEqual(["staff"]);
+  });
   it("fetchHomepageContent (including the hero)", async () => {
     const { client, tables } = fakeClient();
     await fetchHomepageContent(CLUB_ID, client);

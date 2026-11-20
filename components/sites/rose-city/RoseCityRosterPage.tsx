@@ -1,6 +1,6 @@
 import CinematicRosterPage from "@/components/cinematic/CinematicRosterPage";
 import type { getClubContextBySlug } from "@/lib/club-context";
-import { fetchRoster } from "@/lib/queries";
+import { fetchRoster, fetchStaff } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
 
 type Club = Awaited<ReturnType<typeof getClubContextBySlug>>;
@@ -9,10 +9,11 @@ type Club = Awaited<ReturnType<typeof getClubContextBySlug>>;
 export default async function RoseCityRosterPage({ club }: { club: Club }) {
   const initial = await (async () => {
     const client = (await createClient()).schema("onzio");
-    return { roster: await fetchRoster(undefined, club.id, {}, client), failed: false };
+    const [roster, staff] = await Promise.all([fetchRoster(undefined, club.id, {}, client), fetchStaff(club.id, client)]);
+    return { roster, staff, failed: false };
   })().catch((error) => {
     console.error("RoseCityRosterPage:", error);
-    return { roster: null, failed: true };
+    return { roster: null, staff: [], failed: true };
   });
   return <CinematicRosterPage initial={initial} />;
 }

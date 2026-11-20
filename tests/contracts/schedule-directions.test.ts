@@ -65,10 +65,19 @@ describe("Schedule Directions and Watch on YouTube links", () => {
     }
   });
 
-  it("is not clickable without a YouTube link", () => {
+  it("shows Sam's logo without a link when there is no YouTube link (RC-SAM-FIXES)", () => {
     const row = card(schedule(), "lasol");
     expect(row).not.toContain("youtube.com");
-    expect(row).toContain("Replay coming soon");
+    expect(row).toMatch(/<div class="fixture-watch"><img[^>]*watch-on-youtube-[^>]*alt="Watch on YouTube"/);
+    expect(row).not.toContain("coming soon");
+  });
+
+  it("tells the owner what a blank video link shows now (RC-SAM-FIXES review)", () => {
+    for (const file of ["components/admin/schedule/ScheduleMatchForm.tsx", "components/admin/schedule/rose-city/RoseCityMatchFields.tsx"]) {
+      const editor = readFileSync(resolve(process.cwd(), file), "utf8");
+      expect(editor, file).toContain("Left blank, the Schedule shows the Watch on YouTube logo without a link");
+      expect(editor, file).not.toContain("Leave it blank to show “coming soon”");
+    }
   });
 
   it("lets the owner enter each match's directions address in the Schedule editor", () => {
