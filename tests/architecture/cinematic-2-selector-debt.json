@@ -78,10 +78,6 @@
     "literal:cinematic@2": 1,
     "read:presentationTemplateKey": 1
   },
-  "app/(public)/schedule/[fixtureId]/page.tsx": {
-    "literal:cinematic@2": 1,
-    "read:presentationTemplateKey": 1
-  },
   "app/(public)/schedule/page.tsx": {
     "literal:cinematic@2": 1,
     "read:presentationTemplateKey": 1

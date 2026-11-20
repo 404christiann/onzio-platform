@@ -14,6 +14,7 @@ vi.mock("@/lib/supabase", () => ({
 
 import {
   fetchActiveSeason,
+  fetchFixtureById,
   fetchHomepageContent,
   fetchRoster,
   fetchSchedule,
@@ -43,7 +44,9 @@ function fakeClient() {
       const single =
         table === "cinematic_shop_content"
           ? { content: { ...EMPTY_CINEMATIC_SHOP_CONTENT }, map_media_asset_id: ASSET_ID }
-          : null;
+          : table === "matches"
+            ? { id: "fixture-1", club_id: CLUB_ID, date: "2027-05-02", time: "19:45:00", opponent: "Ocelot FC", home: true }
+            : null;
       const builder: Record<string, unknown> = {};
       for (const method of ["select", "eq", "in", "is", "order", "limit"]) {
         builder[method] = () => builder;
@@ -67,6 +70,12 @@ describe("cinematic data fetchers accept a request-scoped client", () => {
   it("fetchSchedule", async () => {
     const { client, tables } = fakeClient();
     await fetchSchedule(undefined, CLUB_ID, client);
+    expect(tables).toContain("matches");
+  });
+
+  it("fetchFixtureById", async () => {
+    const { client, tables } = fakeClient();
+    await expect(fetchFixtureById("fixture-1", CLUB_ID, client)).resolves.toMatchObject({ id: "fixture-1", opponent: "Ocelot FC" });
     expect(tables).toContain("matches");
   });
 

@@ -8,9 +8,10 @@ import type { DBShopKitSection } from "@/lib/db-types";
 import { EMPTY_CINEMATIC_SHOP_CONTENT } from "@/lib/cinematic-shop-content";
 
 // RC-CLS-B: seeded with server data the client pages render the real page on first paint, with no Loading line.
-vi.mock("@/lib/queries", () => ({ fetchClubBranding: vi.fn(), fetchRoster: vi.fn(), fetchActiveSeason: vi.fn(), fetchSchedule: vi.fn(), fetchShopKitVariants: vi.fn(), fetchShopCarouselPhotos: vi.fn(), fetchSiteSponsorLogos: vi.fn() }));
+vi.mock("@/lib/queries", () => ({ fetchClubBranding: vi.fn(), fetchFixtureById: vi.fn(), fetchRoster: vi.fn(), fetchActiveSeason: vi.fn(), fetchSchedule: vi.fn(), fetchShopKitVariants: vi.fn(), fetchShopCarouselPhotos: vi.fn(), fetchSiteSponsorLogos: vi.fn() }));
 vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: vi.fn() }));
 vi.mock("@/lib/cinematic-shop-query", () => ({ fetchCinematicShopPurchase: vi.fn(), fetchCinematicShopContent: vi.fn() }));
+import CinematicMatchSummaryPage from "@/components/cinematic/CinematicMatchSummaryPage";
 import CinematicRosterPage from "@/components/cinematic/CinematicRosterPage";
 import CinematicSchedulePage from "@/components/cinematic/CinematicSchedulePage";
 import CinematicShopPage from "@/components/cinematic/CinematicShopPage";
@@ -46,6 +47,27 @@ describe("seeded cinematic client pages", () => {
     const html = render(createElement(CinematicSchedulePage, { initial: { data: null, failed: true, nowIso: "2027-02-01T00:00:00.000Z" } }));
     expect(html).toContain("The schedule is temporarily unavailable.");
     expect(html).toContain("Try again");
+  });
+  it("Match Summary shows the played match, not the loading line, in the club's saved time zone", () => {
+    const fixture = { id: "m1", date: "2027-05-02", time: "19:45:00", opponent: "Ocelot FC", home: true, venue: "Robinson Stadium", city: "Pasadena", state: "CA", competition: "UPSL", roseCityScore: 2, opponentScore: 1 };
+    const html = render(createElement(CinematicMatchSummaryPage, { fixtureId: "m1", initial: { data: { fixture, clubLabel: "RCFC" }, failed: false } }));
+    expect(html).toContain("Match Summary");
+    expect(html).toContain("Ocelot FC");
+    expect(html).toContain("7:45PM PT");
+    expect(html).not.toContain("Loading match");
+  });
+  it("Match Summary says it could not find a match the server did not return", () => {
+    const html = render(createElement(CinematicMatchSummaryPage, { fixtureId: "m1", initial: { data: { fixture: null, clubLabel: "RCFC" }, failed: false } }));
+    expect(html).toContain("We couldn’t find this match.");
+    expect(html).not.toContain("Loading match");
+  });
+  it("Match Summary keeps its alert and retry button on a failed server read", () => {
+    const html = render(createElement(CinematicMatchSummaryPage, { fixtureId: "m1", initial: { data: null, failed: true } }));
+    expect(html).toContain("This match summary is temporarily unavailable.");
+    expect(html).toContain("Try again");
+  });
+  it("Match Summary still loads in the browser when nothing was served (admin or client-only use)", () => {
+    expect(render(createElement(CinematicMatchSummaryPage, { fixtureId: "m1" }))).toContain("Loading match…");
   });
   it("Shop shows the kit, not the loading line", () => {
     const kit = { section, photos: [] };

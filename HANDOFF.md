@@ -1,3 +1,15 @@
+## 2026-11-20 - RC-MATCH-AREA: Rose City match pages work on the preview host (app code only)
+
+- **Status:** `ready for review`, branch `worktree-agent-abe06445fb6ef593f` (from main `323bed2f`), not pushed, no PR yet. No migration, schema, RPC, env,
+  CSS or deploy change. Record in `STATUS.md` (RC-MATCH-AREA).
+- **What:** on `rc-sam` all four `/schedule/<id>` links said "Match area unavailable." The shared match page looked the club up by Host, which is not a
+  verified club domain on a preview (the middleware picks Rose City by slug there), so it fell through to the Clubhouse page. The tenant route now
+  resolves by slug and Rose City's site package (`lib/site-public-pages/match.ts`) renders the Match Summary with the match fetched on the server.
+  Every other club renders what it did; Diverse City bundles match main. Production domains were never affected.
+- **Open:** the upcoming-match page at 390 px has CLS 0.0145 from the shared footer (branding and socials fetched in the browser), not the match box;
+  `/contact` has the same shifts. Christian decides whether the cinematic shell should fetch them on the server.
+- **Exact next step:** on Christian's go, push and open the PR; after merge, push main onto `rc-sam` and open the four match links.
+
 ## 2026-11-20 - RC-CONTENT: Rose City 2027 content entered on all 13 production pages (content only)
 
 - **Status:** `done` for entry. Production writes only through the signed-in owner admin (editors and their own `/api/admin/*` routes);
