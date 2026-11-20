@@ -1,5 +1,120 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-CONTENT: Rose City production content pass (all 13 pages entered)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator), RC-CONTENT. **Status:** `done` for entry: all 13 pages have
+content in production (session 1: Home, Step B, Tickets, Season Membership, KBYG; session 2 below: the other 9). Sam's
+facts in the placeholder list remain open. Production writes went only through the signed-in owner admin (editor UI and its own
+`/api/admin/*` save routes), plus Operator SQL Step B on Christian's "go". No code, migration, schema, RPC or env change.
+
+**Completed (all verified with read-only prod queries and full-page `rc-sam` screenshots at 1440):**
+- **Home** (`homepage_revamp_content` revision saved): ticket prices (4 rows, aqua/lime accents, footnote), 2024 UPSL
+  SoCal North championship copy, both Stadium menu labels "ROBINSON STADIUM", raffle/ticket-map/trophy/footer sub-mark
+  artwork from Sam's Dropbox originals, slideshow 7 photos in order 3,1,2,4,5,6,7 with alt "Rose City FC match
+  photograph N" (the two posters left the slideshow; Step B references them). Originals of the six earlier live photos are
+  in the revamp repo's `assets/prod-slideshow-backup-2026-11-19/` (git-excluded).
+- **Step B** (`scripts/rose-city-2027-operator-sql.ts --step presentation-inputs --commit`, on Christian's "go"): header
+  partner, hero poster, seats background, episode poster; hero video Bunny `d17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91`
+  (library 723074); episode `https://www.youtube.com/embed/fJf_A4LdKDw?rel=0`; sponsor treatments Chronic Tacos =
+  dark-lettering, Modern Woodmen = invert. Rollback record `stepb-before.json` (session scratchpad). Hero video plays on
+  `rc-sam`. No operator SQL beyond Step B was run.
+- **Tickets** (`cinematic_tickets_content` revision 2): branch `copy.json` copy and alts, banner height 0.9115, 7
+  graphics (banner, seat, card, raffle, bus, route map, Chick-fil-A logo cropped to 132,590,805,181 as in the branch
+  manifest).
+- **Season Ticket Membership** (`cinematic_ticket_pages` revision 2): `lib/ticket-pages-reference-content.ts` copy; 11
+  images: Under the Lights ticket, 9 benefit icons and the General Seating badge.
+- **Know Before You Go** (revision 2): reference copy; 15 tile icons, PlayStation photo, YouTube logo, Chronic Tacos logo.
+  The donor text's trailing Wikipedia citation "[3]" was dropped.
+- Icon-to-slot mapping was checked by pixel comparison against the branch rehearsal DB (26 exact matches). The YouTube
+  logo is Sam's black logo cropped to 245,0,410,146 (exact match). The General Seating badge is the branch's 109x109 file.
+  The donor logo is Sam's logo cropped to a centred 300x300 square, because the branch square came from another source.
+
+**Session 2 (2026-11-20, Claude Code Opus 5.5).** Christian's answers: Robinson year **2001 in both** places; Niky's
+address **1726 E Colorado Blvd, Pasadena, CA 91106**; Away (Thorn) Buy Now link **blank**.
+- **Robinson Stadium** (`cinematic_robinson_content` revision 2): branch seed copy with the info note changed to
+  "Dedicated as Robinson Stadium in 2001"; all sections shown; 9 images. Lockers, meal pass, bus and route map are Sam's
+  Dropbox files byte-for-byte (or the manifest's source checksum); drive-thru and enjoy-game are Sam's originals trimmed
+  to the artwork box (905,884,4149,2629 and 2071,1731,2647,1717) and resized to the branch's 900 px (mean pixel diff vs
+  branch 1.07 and 0.52 of 255); partner = Chick-fil-A logo crop 132,590,805,181 (source checksum matches the manifest);
+  free-ticket = the branch's 600x600 decode of Sam's PSB (the PSB can't be decoded in a browser; geometry verified
+  against it); seating map = Sam's `robinson-layout-diagram-original.jpg` (revamp `assets/originals/remaining-pages/`,
+  not in Dropbox) resized to 3000x1843 WebP. The old slots held the Step B header partner and seats background; both
+  stay published (homepage FK keeps them, checked after save).
+- **Method change:** the built-in browser blocks requests to localhost, so the two files that a Dropbox link can't supply
+  (seating JPG, free-ticket decode) could not reach it. From Robinson on, images were put on the editor's file
+  inputs from Claude in Chrome (signed in as owner) with local copies of Sam's files; every save was the editor's own Save
+  or its own `/api/admin/*` route.
+- **Stadium guidelines / Fan code** (`cinematic_policy_content` revision 1): branch copy, 6 rows on each page.
+- **Foothill Transit** (`cinematic_stadium_content` revision 1): branch copy, crops and split phone map; bus, route map,
+  partner logo (same files as Robinson).
+- **Chick-fil-A** (`cinematic_chick_fil_a_content` revision 1): branch copy; 8 images (meal pass and three step icons as
+  Robinson; route map = Sam's JPG as lossless PNG, identical to the branch input; restaurant photo and seat background =
+  Sam's files unchanged; partner logo).
+- **Shop** (`/api/admin/shop`, the editor's own route, shop revision 16): branch kit text (home "City of the Roses", 9
+  bullets; away "Thorn Edition" with store note at 1726 E Colorado Blvd and a blank Buy Now link, which hides the
+  away kit's button), purchase details "Jersey information" (Niky's card at 1726 E Colorado), presentation (editions
+  $115/$95, 6 jersey details, attributes, size chart, labels, partner strip) and the route map (the Chick-fil-A map
+  PNG, whole image) uploaded and saved in the editor. The 11 live kit photos and 12 photo-row photos were kept as
+  they are (the branch had only 3 kit photos; nothing retired). Homepage kit block (surface `home`, revision 7): branch
+  copy "CITY OF ROSES", 9 bullets, "BUY NOW" → `/shop`, no store note, so "33 E Colorado" no longer shows on Home.
+- **News** (`cinematic_news_articles`, 5 rows): the branch's five articles with their slugs and dates; one cover for
+  all five (the branch's locker-room crop of Sam's article mockup, manifest checksum `c86f3c08`, uploaded once in the
+  editor and reused by the other four through the editor's save route, as in the branch).
+- **Injury Report** (revision 1, editor route): branch copy (MVMNT CULTR heading/presenter, sample quote), band = prod
+  Home slideshow "Rose City FC match photograph 3" (`ab89b87e`, 1200x670, reused as the branch reused its photo 3). No
+  presenter logo, no video. Revision 2 (Christian, 2026-11-20): the 3 sample injuries for real players were removed
+  (entries link to roster players, so fictional names were not possible); the page shows its "No current injuries"
+  state. The sample quote is now "A message from our sports recovery partner will appear here." / "MVMNT CULTR".
+- **Partners** (revision 1, editor route): branch copy for Club Partners (`/sponsors`) and Partnership Opportunities
+  (`/community/partnership`); 7 partners. Logos reuse published assets: Foothill = the Step B header-partner asset
+  (byte-identical to the branch logo), Niky's, Tepito, Pack Shot (grey tone) and Modern Woodmen = prod Sponsors library
+  logos, Chick-fil-A = today's 805x181 crop; MVMNT CULTR has no logo ("Original logo pending" shows).
+- **Contact** (revision 1, editor route): branch copy (5 rows); Information link blank, so its button stays inactive.
+
+**Placeholder rows now live on these pages (Christian, 2026-11-19: "These are all fine"; confirm with Sam later):**
+- Home: ticket prices $5 / PCC Free / PUSD Free / $5 tennis ball; the 2027 slideshow season label.
+- Tickets: purchase URL blank ("Ticket link coming soon"); 10% off Niky’s Sports and Tepito Coffee; $2.00/day parking.
+- Season Membership: 7 home games, 25 raffle tickets, 20% team store, 10% Niky’s/Tepito, U.S. Open Cup claim; prices
+  $5/$7/$14 (the $14 savings does not follow from $5 vs $7); Buy Season Membership link blank (the button still shows).
+- Know Before You Go: "UPSL Premier Regular Season", watch link `youtube.com/@RoseCityFC/live`, Gates Open 7PM, $2
+  parking, EV parking, 4,599 capacity, anthem singer Jackie Portman, tile 14 labelled "Blank" (shows UPSL icon),
+  PlayStation 5 opener prize, donor Chronic Tacos, "Donate the next raffle item" link blank (the button still shows).
+- Robinson Stadium: "Next home match" shows the 2027-03-13 AMSG FC fixture at Championship Stadium, Irvine (fixture
+  data, not this page; ask Sam). $2.00/day parking text.
+- Stadium guidelines and Fan code: Bags & Backpacks, Box Office Location & Times, Cameras/Video Equipment and a second
+  "Animals" row show headings with no answer (Sam's facts; the duplicate Animals row is as supplied).
+- Foothill Transit: 10% off Niky’s Sports and Tepito Coffee ticket benefits; $2.00/day parking.
+- Shop: Authentic $115 / Replica $95 (Replica is option 2, which shows the whole away "Thorn" kit, as in the branch);
+  edition links blank; 6 jersey-detail photo boxes empty (Sam); size chart height row identical for every size;
+  Away Buy Now link blank (Sam's away product URL); shipping/returns/"Record Jersey Being Customized" are Niky's facts.
+- Injury Report: neutral placeholder quote ("A message from our sports recovery partner will appear here.",
+  attributed to MVMNT CULTR); no entries ("No current injuries"); no MVMNT CULTR logo or video.
+- Partners: Partnership Opportunities intro repeats the Club Partners intro plus Sam's extra lines; its button link is
+  blank; MVMNT CULTR logo pending; Tepito logo is the library's 2423x485 file (branch used a 1200x240 one).
+- Contact: no email, phone or address anywhere; Information button inactive (no link).
+- News: four invented articles (bus pass raffle at every home game, Chick-fil-A "Official Partner" with giveaways,
+  Tepito Coffee cart, "RCFC Welcomes Nick Mendez"); all five use the lockers cover. The Foothill article is dated
+  2026-11-20 20:00 UTC as in the branch.
+
+**Remaining:** no page is empty. Open items are Sam's facts (placeholder list) and the Home fixture venue.
+
+**Verification:** read-only prod queries after each save (asset ids, revisions, slot counts 7/7, 11/11, 18/18); `rc-sam`
+full-page checks with no broken images on Home, `/tickets`, `/tickets/season-membership`, `/tickets/know-before-you-go`.
+Session 2: read-only prod queries after each save (revisions Robinson 2, policies 1, Foothill 1, Chick-fil-A 1, Shop 16 /
+home kit 7, News 5 rows, Injury 2 with 0 entries, Partners 1 with 7 rows, Contact 1; all new image slots `published`;
+Step B header partner and seats background still published and live). `rc-sam` full-page checks at 1440 with every
+image loaded, none broken, no horizontal overflow: `/stadium`, `/stadium/guidelines`, `/stadium/fan-code`,
+`/stadium/foothill-transit`, `/stadium/chick-fil-a`, `/shop` (home and Replica/away option), Home (kit block), `/news`,
+`/news/injury-report`, `/sponsors`, `/community/partnership`, `/contact`. Linked-project files were removed from the
+worktree afterwards.
+
+**Blockers/decisions:** #199 (club time zone) still needs onzio-bot and Christian's merge before Sam sees the link. Sam
+facts still missing: MVMNT CULTR logo, Contact email/phone/address, jersey detail photos, ticket and membership purchase
+links, donate link, tile 14.
+
+**Exact next step:** Christian reviews the pages on `rc-sam` (and merges #199 so Sam sees PT kickoffs), then sends Sam
+the placeholder list; each answer is a normal editor edit. No further content entry is pending.
+
 ## 2026-11-19 - RC-CLS follow-up: News partner strip loads on the server; no-refetch test exercises the skip path
 
 **Agent/package:** Claude Code (Opus 5.5), RC-CLS follow-up, branch `claude/rc-cls-norefetch-test` (from main `3b925983`).
