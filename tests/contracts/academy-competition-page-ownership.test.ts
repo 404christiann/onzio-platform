@@ -28,12 +28,14 @@ describe("Academy competition page ownership", () => {
   });
 
   it("keeps the existing tenant adapters and player and match detail pages in place", () => {
-    expect(source("app/%5Fclubs/[slug]/roster/page.tsx").trim()).toBe(
-      'export { default } from "@/app/(public)/roster/page";',
-    );
-    expect(source("app/%5Fclubs/[slug]/schedule/page.tsx").trim()).toBe(
-      'export { default } from "@/app/(public)/schedule/page";',
-    );
+    // RC-CLS-B: a club's site package may server-render these (Rose City does, lib/site-public-pages.ts); every
+    // other club, Diverse City included, still renders the shared public page from "@/app/(public)/...".
+    for (const page of ["roster", "schedule"] as const) {
+      const route = source(`app/%5Fclubs/[slug]/${page}/page.tsx`);
+      const component = `Public${page === "roster" ? "Roster" : "Schedule"}Page`;
+      expect(route).toContain(`import ${component} from "@/app/(public)/${page}/page";`);
+      expect(route).toContain(`return SitePage ? <SitePage club={club} /> : <${component} />;`);
+    }
     expect(source("app/(public)/roster/[playerId]/page.tsx")).toContain(
       "<ClubhousePlayerProfilePage playerId={playerId} />",
     );

@@ -23,7 +23,8 @@ export default function CinematicPhotos({ photos }: { photos: Photo[] }) {
     const next = (active + delta + photos.length) % photos.length;
     setIndex(next); setAnnouncement(`Photograph ${next + 1} of ${photos.length}`);
   };
-  if (!photos.length && !piece["data-homepage-piece"]) return null;
+  // No photographs yet: keep the slideshow's box so content below never moves when they arrive.
+  if (!photos.length && !piece["data-homepage-piece"]) return <div className="slideshow" aria-hidden="true" data-testid="slideshow-reserve" />;
   return <section {...piece} className="slideshow" aria-label="Club match photographs" aria-roledescription="carousel" tabIndex={0}
     onKeyDown={event => { piece.onKeyDown?.(event); if (event.defaultPrevented) return; if (event.key === "ArrowRight" || event.key === "ArrowLeft") { event.preventDefault(); advance(event.key === "ArrowRight" ? 1 : -1); } }}
     onPointerDown={event => { if (event.pointerType === "touch") startX.current = event.clientX; }}

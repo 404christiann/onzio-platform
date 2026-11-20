@@ -1,5 +1,67 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-CLS: Rose City cinematic pages stop shifting on load (app code only)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator; Sonnet workers RC-CLS-0, A, B, A2), RC-CLS, branch
+`claude/rc-cinematic-cls` on `9fb0bc9d` (cut from main `e628a29b`, 10 commits). **Status:** `in_progress`, local only.
+Not pushed; push and PR wait for Christian's go. No migration, schema, RPC, validator, env or dependency change.
+
+**Completed work:**
+- Home, Roster, Schedule and Shop for Rose City are fetched on the server with the request client and passed to the
+  existing cinematic components, instead of rendering a loading line and refetching in the browser. The data
+  fetchers gained an optional trailing `client` (default: the browser client, so other callers are unchanged).
+- Rose City's server pages are chosen by slug through one lookup per route (`lib/site-public-pages/<page>.ts`), not
+  by template, so the template-selector ratchet stays green. Each route's lookup references only its own page, and
+  Rose City's home reaches `CinematicHome` through a `next/dynamic` wrapper. Without that, Next shipped Rose City's
+  cinematic Home/Roster/Schedule/Shop code to Diverse City (+123 KB on Home); Diverse City's bundles now match main
+  within 2 KB per route. `tests/contracts/site-public-pages-scope.test.ts` guards this.
+- The shared route fallback fills the viewport inside the cinematic shell (`components/cinematic/route-loading.css`),
+  so the footer no longer shows under it and jumps when the page streams in. Other templates keep 60svh.
+- Home's raffle and ticket artwork reserve their box from the stored `media_assets` width/height (the raffle was
+  0 px tall until it loaded and pushed the ticket cards down). `CinematicHome` no longer loads with `ssr: false`.
+  `CinematicPhotos` renders a sized box instead of nothing when there are no photos.
+- Changed contract: `academy-competition-page-ownership.test.ts` asserted the Roster and Schedule routes were plain
+  re-exports; it now asserts every club without a site page still renders the shared public page.
+
+**Files changed:** `app/%5Fclubs/[slug]/{page,roster/page,schedule/page,shop/page}.tsx`, `components/HomePageClient.tsx`,
+`components/TenantPageLoading.tsx`, `components/cinematic/{CinematicHome,CinematicHomeDynamic,CinematicPhotos,
+CinematicRosterPage,CinematicSchedulePage,CinematicShopPage,CinematicShell}.tsx`, `components/cinematic/{cinematic-home-data.ts,
+route-loading.css}`, `components/sites/rose-city/RoseCity{Home,Roster,Schedule,Shop}Page.tsx`,
+`lib/site-public-pages/{index,home,roster,schedule,shop}.ts`, `lib/queries.ts`, `lib/cinematic-shop-query.ts`,
+`lib/cinematic-homepage-content.ts`, and tests (`cinematic-server-fetch-client`, `cinematic-server-routes`,
+`cinematic-server-pages`, `cinematic-home-first-paint`, `cinematic-route-loading`, `site-public-pages-scope`,
+`academy-competition-page-ownership`, `academy-homepage-story-stall`).
+
+**Verification:**
+- tsc clean; `test:unit` 4267/4267 (includes the template-selector ratchet); `test:contracts` 3306/3306; hold and routing
+  (`rose-city-public-lock`, `rose-city-preview-unhold`, `cinematic-routing-middleware`) pass. The slow `pilot` project
+  was not run.
+- CLS on a local `next build` against the shared local stack's synthetic Rose City data, with 300 ms added to browser
+  Supabase requests (production-like), through the preview-unhold path. Worst of 5 runs, 1440 / 390:
+
+  | Page | main | branch |
+  |---|---|---|
+  | Home | 0.380 / 0.390 | 0.001 / 0.000 |
+  | Roster | 0.317 / 0.423 | 0.003 / 0.000 |
+  | Schedule | 0.132 / 0.522 | 0.003 / 0.000 |
+  | Shop | 0.343 / 0.450 | 0.001 / 0.000 |
+  | Club logo | 0.208 / 0.000 | 0.001 / 0.000 |
+  | News | 0.003 / 0.000 | 0.003 / 0.000 |
+
+- Diverse City: Roster, Schedule, Shop 0 at both widths (News is 404 there). Home's own shifts are pre-existing and
+  flaky on main too; 20 runs per build: the extra 0.472 at 1440 appeared 4/20 on main and 2/20 on the branch; the
+  0.853 at 390 appeared 15/20 on main and 7/20 on the branch. Fully loaded (scrolled, networkidle, motion frozen),
+  Home is pixel- and box-identical to main at 1440 (2979 px) and same height at 390 (4056 px); the only 390 difference
+  is the fixed header's transition position, which also differs between two captures of main (top 36 vs 28).
+- Screenshots with motion frozen: Rose Roster, Schedule, Shop, Club logo and News pixel-identical to main at both
+  widths; Rose Home same height, differing only where below-the-fold lazy images had not loaded in the capture.
+
+**Blockers or unresolved decisions:** Christian's go for push and PR. Not measured on production data; re-check on
+`rc-sam` after merge. Artwork rows with no stored width/height would still shift.
+
+**Exact next step:** on Christian's go, push `claude/rc-cinematic-cls` and open a ready PR. After onzio-bot is clean
+and he merges, rebuild `rc-sam` from main and re-walk the six pages before he sends Sam the link.
+
 ## 2026-11-19 - RC-ADMIN-4b-stats Rose City Stats on the editor kit
 
 **Agent/package:** Claude Code (Sonnet worker, orchestrated), RC-ADMIN-4b-stats, branch `claude/rc-admin-4b-stats` on `0a80031a`.

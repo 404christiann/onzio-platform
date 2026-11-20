@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { fetchShopKitVariants, fetchShopCarouselPhotos, fetchSiteSponsorLogos } from "@/lib/queries";
 import { fetchCinematicShopContent, fetchCinematicShopPurchase } from "@/lib/cinematic-shop-query";
@@ -9,11 +9,16 @@ import { useCinematicContent } from "./CinematicContent";
 
 type Content = Omit<CinematicShopProps, "treatments" | "selectedVariant" | "onVariantChange" | "editing">;
 
-export default function CinematicShopPage() {
+/** Server-fetched result for the first paint; without it the page fetches in the browser as before. */
+export type CinematicShopInitial = { content: Content | null; failed: boolean };
+
+export default function CinematicShopPage({ initial }: { initial?: CinematicShopInitial }) {
   const club = useClubContext();
   const { content: shell } = useCinematicContent();
-  const [state, setState] = useState<{ clubId: string; content: Content | null; failed: boolean }>({ clubId: club.id, content: null, failed: false });
+  const seeded = useRef(initial ? club.id : null);
+  const [state, setState] = useState<{ clubId: string; content: Content | null; failed: boolean }>({ clubId: club.id, content: initial?.content ?? null, failed: initial?.failed ?? false });
   useEffect(() => {
+    if (seeded.current === club.id) return;
     let active = true;
     setState({ clubId: club.id, content: null, failed: false });
     void Promise.all([

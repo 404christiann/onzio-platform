@@ -7,7 +7,7 @@ import type { DBHomepageHeroContent } from "@/lib/db-types";
 import type { HomepageStoryContent } from "@/lib/homepage-story-content";
 import { codeSiteFor } from "@/lib/code-site";
 
-const CinematicHome = nextDynamic(() => import("@/components/cinematic/CinematicHome"), { ssr: false });
+const CinematicHome = nextDynamic(() => import("@/components/cinematic/CinematicHome"));
 const Hero = nextDynamic(() => import("@/components/Hero"), { ssr: false });
 const NextMatchCard = nextDynamic(() => import("@/components/NextMatchCard"), { ssr: false });
 const ChampionsBadge = nextDynamic(() => import("@/components/ChampionsBadge"), { ssr: false });

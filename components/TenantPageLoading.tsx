@@ -6,7 +6,7 @@ import { codeSiteFor } from "@/lib/code-site";
 
 function OtherTemplatePageLoading() {
   return (
-    <div className="flex min-h-[60svh] items-center justify-center px-6 text-slate-600" role="status" aria-busy="true" aria-label="Loading page">
+    <div className="tenant-page-loading flex min-h-[60svh] items-center justify-center px-6 text-slate-600" role="status" aria-busy="true" aria-label="Loading page">
       <div className="flex items-center gap-3 text-sm">
         <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-600 motion-safe:animate-spin" aria-hidden="true" />
         Loading page…
