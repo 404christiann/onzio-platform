@@ -63,6 +63,15 @@ describe("cinematic Schedule", () => {
     expect(display.next?.id).toBe("timed");
     expect(display.list.map(item => item.fixture.id)).toEqual(["untimed", "timed", "played"]);
   });
+  it("without a timed Next, leads with the first upcoming match and files an untimed past date as played (RC-SAM-FIXES review)", () => {
+    const played = { ...fixture, id: "played", date: "2027-04-24", roseCityScore: 2, opponentScore: 2 };
+    const untimedPast = { ...fixture, id: "untimed-past", date: "2027-04-30", time: "TBD" };
+    const untimedNext = { ...fixture, id: "untimed-next", date: "2027-05-09", time: "" };
+    const untimedLater = { ...fixture, id: "untimed-later", date: "2027-05-16", time: "" };
+    const display = scheduleDisplay([untimedLater, untimedNext, untimedPast, played], now, "America/Los_Angeles");
+    expect(display.next).toBeNull();
+    expect(display.list.map(item => item.fixture.id)).toEqual(["untimed-next", "untimed-past", "played"]);
+  });
   it("limits a long season to four cards and exposes the remaining count", () => {
     const fixtures = Array.from({ length: 13 }, (_, i) => ({ ...fixture, id: `match-${i}`, date: `2027-05-${String(i + 1).padStart(2, "0")}` }));
     // May 13, 7pm in California: twelve matches have kicked off and May 13 is next.

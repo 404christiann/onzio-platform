@@ -81,6 +81,14 @@ them), schedule (already populated). Robinson directions headings confirmed Aven
 server-render case in `cinematic-server-pages` (Roster page with staff in `initial` shows the group; without staff it doesn't);
 dropping the prop now fails it.
 
+**Re-review at `b4b6cae` (1 Medium, browser path):** storing `staff: []` after the browser read passed every test, because
+server renders never run the effect. The browser load is now the exported `loadCinematicRoster(clubId, apply)` (loading state,
+then the fetched squad and staff or the failure; returns the cancel), and the effect only calls it. `cinematic-roster-browser-
+fetch` checks the states it applies, the failure and a cancelled late result; dropping the fetched staff, the failure flag or the
+cancel each fails the full unit suite. Also covered the two untimed Schedule paths the re-review noted (no timed Next leads with
+the first upcoming match; an untimed past date files as played). tsc clean; `test:unit` 4365/4365; `test:contracts` +
+`test:architecture` 3836 passed, 1 skipped.
+
 **Rebase on #204 (RC-DESKTOP-FIT):** both packages appended to `cinematic.css` and `robinson-page.css`; both kept. #204's contract
 requires its desktop block to end each file, so the RC-SAM-FIXES rules sit just above it (no shared properties). After the rebase:
 tsc clean, `test:unit` and `test:contracts` + `test:architecture` green (see PR), eslint clean on changed files apart from

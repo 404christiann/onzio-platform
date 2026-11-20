@@ -15,29 +15,27 @@ export async function fetchCinematicRoster(clubId: string): Promise<{ roster: Ci
   return { roster, staff };
 }
 
+export type CinematicRosterState = { clubId: string; roster: CinematicRosterData | null; staff: Staff[]; failed: boolean };
+
+/** The browser load: a loading state, then the squad and staff (or the failure). Returns a cancel for a club change. */
+export function loadCinematicRoster(clubId: string, apply: (state: CinematicRosterState) => void): () => void {
+  let current = true;
+  apply({ clubId, roster: null, staff: [], failed: false });
+  void fetchCinematicRoster(clubId).then(
+    ({ roster, staff }) => { if (current) apply({ clubId, roster, staff, failed: false }); },
+    () => { if (current) apply({ clubId, roster: null, staff: [], failed: true }); },
+  );
+  return () => { current = false; };
+}
+
 export default function CinematicRosterPage({ initial }: { initial?: CinematicRosterInitial }) {
   const { id: clubId } = useClubContext();
   const seeded = useRef(initial ? clubId : null);
-  const [state, setState] = useState<{
-    clubId: string;
-    roster: CinematicRosterData | null;
-    staff: Staff[];
-    failed: boolean;
-  }>({ clubId, roster: initial?.roster ?? null, staff: initial?.staff ?? [], failed: initial?.failed ?? false });
+  const [state, setState] = useState<CinematicRosterState>({ clubId, roster: initial?.roster ?? null, staff: initial?.staff ?? [], failed: initial?.failed ?? false });
 
   useEffect(() => {
     if (seeded.current === clubId) return;
-    let current = true;
-    setState({ clubId, roster: null, staff: [], failed: false });
-    void fetchCinematicRoster(clubId).then(
-      ({ roster, staff }) => {
-        if (current) setState({ clubId, roster, staff, failed: false });
-      },
-      () => {
-        if (current) setState({ clubId, roster: null, staff: [], failed: true });
-      },
-    );
-    return () => { current = false; };
+    return loadCinematicRoster(clubId, setState);
   }, [clubId]);
 
   const active = state.clubId === clubId ? state : null;
