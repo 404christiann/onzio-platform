@@ -169,7 +169,7 @@ function deltaTone(delta: string): DeltaTone {
 
 const DELTA_TONE_CLASSES: Record<DeltaTone, string> = {
   positive: "text-success",
-  negative: "text-warning",
+  negative: "text-warning-ink",
   neutral: "text-muted-foreground",
 };
 
@@ -626,7 +626,7 @@ function PlayerDashboard({
               disciplineScore >= 85
                 ? "bg-success/15 text-success"
                 : disciplineScore >= 60
-                  ? "bg-warning/15 text-warning"
+                  ? "bg-warning/15 text-warning-ink"
                   : "bg-destructive/15 text-destructive"
             }`}
           >

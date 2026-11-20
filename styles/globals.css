@@ -66,8 +66,12 @@
   --brand-foreground: 0 0% 100%;
   --success: 158 64% 36%;
   --success-foreground: 0 0% 100%;
-  --warning: 35 92% 44%;
-  --warning-foreground: 0 0% 100%;
+  /* ADMIN-WARN: one warning yellow (the editor kit's) for fills, dots and
+     borders, with dark ink on solid yellow. Yellow text fails on white, so
+     warning text and glyphs use --warning-ink, a dark gold (5.9:1 on white). */
+  --warning: 48 100% 56%;
+  --warning-foreground: 40 90% 12%;
+  --warning-ink: 45 100% 25%;
   --border: 220 10% 88%;
   --input: 220 10% 88%;
   --ring: 211 100% 42%;
@@ -109,6 +113,7 @@ main.dark {
   --success-foreground: 222 47% 11%;
   --warning: 41 96% 58%;
   --warning-foreground: 222 47% 11%;
+  --warning-ink: 41 96% 58%;
   --border: 217 20% 23%;
   --input: 217 20% 23%;
   --ring: 230 86% 70%;
@@ -154,7 +159,6 @@ main.dark {
 .admin-theme[data-admin-theme="light"] .admin-portal {
   --admin-selected-foreground: 211 100% 36%;
   --success: 158 64% 27%;
-  --warning: 35 92% 30%;
 }
 
 .admin-theme[data-admin-theme="dark"] .admin-portal {

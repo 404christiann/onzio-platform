@@ -56,7 +56,7 @@ export function LegacyRegistrationsEditor() {
                 Club payment account
               </span>
               <span
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${connect?.chargesEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${connect?.chargesEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning-ink"}`}
               >
                 {connect?.chargesEnabled ? "Charges enabled" : "Not ready"}
               </span>
@@ -100,7 +100,7 @@ export function LegacyRegistrationsEditor() {
               </p>
               <p className="text-xs text-muted-foreground">Payments by Stripe</p>
             </div>
-            <span className="ml-auto inline-flex items-center gap-x-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
+            <span className="ml-auto inline-flex items-center gap-x-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning-ink">
               Not ready
             </span>
           </div>
@@ -122,12 +122,12 @@ export function LegacyRegistrationsEditor() {
                 ) : (
                   <AlertCircle
                     aria-hidden="true"
-                    className="size-4 flex-none rounded-full bg-warning/10 p-0.5 text-warning"
+                    className="size-4 flex-none rounded-full bg-warning/10 p-0.5 text-warning-ink"
                   />
                 )}
                 <span className="text-sm text-foreground">{step.label}</span>
                 {!step.done && (
-                  <span className="ml-auto text-xs font-semibold text-warning">
+                  <span className="ml-auto text-xs font-semibold text-warning-ink">
                     Pending
                   </span>
                 )}
@@ -243,7 +243,7 @@ export function LegacyRegistrationsEditor() {
                               ? "bg-success/10 text-success"
                             : status === "Archived"
                               ? "bg-muted text-muted-foreground"
-                              : "bg-warning/10 text-warning"
+                              : "bg-warning/10 text-warning-ink"
                         }`}
                       >
                         <span
@@ -277,7 +277,7 @@ export function LegacyRegistrationsEditor() {
                             type="button"
                             disabled={saving}
                             onClick={() => void runFormAction(form, "stop")}
-                            className={`${button} border border-warning/40 bg-background text-warning hover:bg-warning/10`}
+                            className={`${button} border border-warning/40 bg-background text-warning-ink hover:bg-warning/10`}
                           >
                             <Square aria-hidden="true" className="size-4" />
                             Stop registrations
@@ -390,10 +390,10 @@ export function LegacyRegistrationsEditor() {
                 className="mt-1.5 hidden size-2 flex-none rounded-full bg-warning sm:block"
               />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-warning">
+                <p className="text-sm font-semibold text-warning-ink">
                   This form is live, so fields and prices are locked
                 </p>
-                <p className="mt-1 text-sm text-warning/90">
+                <p className="mt-1 text-sm text-warning-ink/90">
                   Stop registrations to edit the structure. Name and
                   description stay editable.
                 </p>
@@ -404,7 +404,7 @@ export function LegacyRegistrationsEditor() {
                 onClick={() =>
                   selectedFormRow && void runFormAction(selectedFormRow, "stop")
                 }
-                className={`${button} flex-none border border-warning/40 bg-background text-warning hover:bg-warning/10`}
+                className={`${button} flex-none border border-warning/40 bg-background text-warning-ink hover:bg-warning/10`}
               >
                 <Square aria-hidden="true" className="size-4" />
                 Stop registrations

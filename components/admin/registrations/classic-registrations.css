@@ -13,7 +13,7 @@
 .registration-form-status{display:inline-flex;align-items:center;gap:6px;flex:none;width:max-content;max-width:100%;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600;line-height:18px;background:hsl(var(--muted));color:hsl(var(--muted-foreground));white-space:nowrap}
 .registration-form-status i{width:6px;height:6px;flex:none;border-radius:50%;background:currentColor}
 .registration-form-status[data-status=open]{background:hsl(var(--success)/.1);color:hsl(var(--success))}
-.registration-form-status[data-status=draft],.registration-form-status[data-status=closed]{background:hsl(var(--warning)/.1);color:hsl(var(--warning))}
+.registration-form-status[data-status=draft],.registration-form-status[data-status=closed]{background:hsl(var(--warning)/.1);color:hsl(var(--warning-ink))}
 .registration-workspace-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0;flex-wrap:wrap}
 .registration-workspace-heading>div:first-child{display:flex;align-items:center;gap:10px;min-width:0}
 .registration-workspace-heading h2{font-size:17px;font-weight:600;overflow-wrap:anywhere;min-width:0}

@@ -1,5 +1,56 @@
 # Diverse City FC Status
 
+## 2026-11-20 - ADMIN-WARN: admin light-mode warnings are yellow, not brown (app code only)
+
+**Agent/package:** Claude Code (Opus 5.5), ADMIN-WARN. **Status:** `ready for review` (PR open; merge and deploy wait for
+Christian). App code only: no migration, schema, env, Supabase, Stripe or deploy.
+
+**Cause:** the protected light theme set `--warning: 35 92% 44%`, and `.admin-theme[data-admin-theme="light"] .admin-portal`
+darkened it to `35 92% 30%` for text contrast. Every warning fill, dot, tint and label in the light admin therefore drew
+in that brown. The tokens only exist under `.admin-theme` (and `main.dark` for login), so public club sites never shared them.
+
+**Completed:**
+- Light admin: `--warning: 48 100% 56%` (the editor kit's existing warning yellow, already used by ValidationMessage and
+  PageSaveButton), `--warning-foreground: 40 90% 12%` (dark ink on solid yellow, 9.8:1). The `.admin-portal` brown override
+  is removed.
+- Yellow text fails on white (1.45:1), so a new `--warning-ink` token carries warning text and glyphs: light
+  `45 100% 25%` (#806000, dark yellow-gold; 5.9:1 on white, 5.5:1 on the 15% yellow tint). Dark sets `--warning-ink`
+  equal to its existing `--warning` (`41 96% 58%`), so dark mode renders the same. Tailwind gains `warning.ink`.
+- 26 `text-warning` uses in admin TSX became `text-warning-ink`; 9 admin CSS rules that coloured text with `--warning`
+  now use `--warning-ink`; the Payments status pill's warn text uses the ink; the homepage editor's warning notice icon
+  (hard-coded brown `#b7791f`) is now the yellow with dark glyph. Fills, dots, tints and borders keep `--warning` (yellow).
+- Not changed: destructive, success, every dark-mode token value, public sites, and the Reimagined portal's own designed
+  amber (`#b45309` in `components/admin/reimagined/*.module.css`, its "Enter a score" hue, not the warning token).
+- Contract: `tests/contracts/admin-theme.test.ts` asserts the light warning is a yellow hue with >=4.5:1 dark foreground,
+  ink >=4.5:1 on white, no `.admin-portal` warning override, and pins the dark warning tokens.
+
+**Files changed:** `styles/globals.css`, `tailwind.config.ts`, `tests/contracts/admin-theme.test.ts`,
+`app/admin/(protected)/{tryouts/page.tsx,programs/programs-editor.css}`, `components/admin/ClassicAnalyticsPage.tsx`,
+`components/admin/{about/about-editor.css,contact/contact-editor.css,homepage/homepage-editor.css,payments/PaymentStatusCard.module.css}`,
+`components/admin/programs/{LegacyProgramsEditor,ProgramsManagement}.tsx`,
+`components/admin/registrations/{LegacyRegistrationsEditor,RegistrationFormFields,RegistrationPaymentAccount,RegistrationRegistrants}.tsx`,
+`components/admin/registrations/classic-registrations.css`, `components/admin/roster/{classic-roster,rose-city/rose-city-roster}.module.css`,
+`components/admin/schedule/{LegacySchedulePage,ScheduleMatchList}.tsx`, `components/admin/schedule/rose-city/RoseCityScheduleEditor.module.css`,
+`components/admin/shop/ShopPageEditor.tsx`, `components/admin/stats/stats-workspace.module.css`, this file.
+
+**Verification:**
+- `npx tsc --noEmit` clean; `npm run test:unit` 361 files / 4276 tests passed; `npm run test:contracts` 279 files /
+  3315 tests passed.
+- Local admin (Alpha FC, classic portal, shared stack reset + sign-in + capture inside `scripts/with-local-db-lock.sh`),
+  1280 px, before/after in light and dark: Registrations payment account ("Not ready" badge, Pending labels and glyph
+  tiles), Analytics ("Avg" labels, yellow-card swatch), Roster ("No photo" badge). Light: brown became yellow tints and
+  swatch with dark-gold text. Dark: Registrations and Analytics byte-identical before/after; Roster identical apart from
+  header anti-aliasing and page height (badge unchanged). Screenshots are in the session notes folder
+  `admin-warn-screenshots/` (outside the repo).
+- Not captured: an "Unsaved changes" dot/label (Alpha's classic pages use the editor kit, already yellow; the legacy
+  Tryouts page did not finish loading in the dev server). Those surfaces use the same `bg-warning` / `text-warning-ink`
+  classes covered above.
+
+**Blockers/decisions:** none. Christian may prefer the brief's `222 47% 11%` navy as `--warning-foreground`; I matched
+the editor kit's warm `40 90% 12%` so all solid yellow tiles read the same.
+
+**Next step:** Christian reviews the PR and screenshots; merge, then a normal app deploy (no migration involved).
+
 ## 2026-11-20 - RC-CONTENT: Rose City production content pass (all 13 pages entered)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator), RC-CONTENT. **Status:** `done` for entry: all 13 pages have
