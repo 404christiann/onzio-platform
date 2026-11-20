@@ -61,7 +61,7 @@ export default function CinematicHome({ initialHeroContent, initialData }: { ini
   const video = preview ? { id: 1, updated_at: "", ...preview.draft.video, video_url: preview.videoSource } : behind;
   const kit = shop?.section;
   const player = shop?.photos[0];
-  const art = (asset: { url: string | null; alt: string }, className: string) => asset.url ? <section className={`artwork ${className}`} aria-label={asset.alt}><NativeImage src={asset.url} alt={asset.alt} loading="lazy" /></section> : null;
+  const art = (asset: { url: string | null; alt: string; width?: number | null; height?: number | null }, className: string) => asset.url ? <section className={`artwork ${className}`} aria-label={asset.alt}><NativeImage src={asset.url} alt={asset.alt} width={asset.width ?? undefined} height={asset.height ?? undefined} loading="lazy" /></section> : null;
   return <>
     <CinematicHero content={hero} />
     {revamp && <>

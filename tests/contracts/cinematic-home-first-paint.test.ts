@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Fixture } from "@/lib/data";
-import { defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { defaultCinematicHomepageContent, fetchCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 
 const CLUB_ID = "00000000-0000-4000-8000-000000000001";
 const club = { id: CLUB_ID, slug: "rose-city", name: "Rose City FC", storeEnabled: true, presentationTemplateKey: "cinematic@2" };
@@ -98,6 +98,31 @@ describe("cinematic@2 home first paint", () => {
     const html = renderToStaticMarkup(createElement(CinematicPhotos, { photos: [] }));
     expect(html).toContain('class="slideshow"');
     expect(html).not.toContain("<img");
+  });
+  it("reads the raffle and ticket artwork dimensions from media_assets", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
+    const assets = [
+      { id: "11111111-1111-4111-8111-111111111111", storage_bucket: "onzio-media", storage_path: "c/raffle.png", width: 1600, height: 500 },
+      { id: "22222222-2222-4222-8222-222222222222", storage_bucket: "onzio-media", storage_path: "c/ticket.png", width: null, height: null },
+    ];
+    const row = { content: { ...defaultCinematicHomepageContent(), raffle: { alt: "Raffle" }, ticket: { alt: "Ticket", visible: true } }, raffle_media_asset_id: assets[0].id, ticket_media_asset_id: assets[1].id, presentation_config: {} };
+    const selected: string[] = [];
+    const chain = (result: unknown, table: string) => { const q: Record<string, unknown> = {}; for (const name of ["select", "eq", "is", "in"]) q[name] = (...args: unknown[]) => { if (name === "select") selected.push(`${table}:${args[0]}`); return q; }; q.maybeSingle = async () => ({ data: result, error: null }); q.then = (resolve: (value: unknown) => void) => resolve({ data: result, error: null }); return q; };
+    const client = { from: (table: string) => chain(table === "media_assets" ? assets : row, table) };
+    const content = await fetchCinematicHomepageContent(CLUB_ID, client as never);
+    expect(selected.find(entry => entry.startsWith("media_assets:"))).toContain("width,height");
+    expect(content.raffle).toMatchObject({ width: 1600, height: 500 });
+    expect(content.ticket).toMatchObject({ width: null, height: null });
+    vi.unstubAllEnvs();
+  });
+  it("sizes the raffle artwork from its stored dimensions on the first render, so the box exists before the image loads", () => {
+    const sized = { ...revamp, raffle: { assetId: null, url: "/raffle.png", alt: "Raffle", width: 1600, height: 500 }, ticket: { assetId: null, url: "/ticket.png", alt: "Ticket", visible: true, width: 1200, height: 800 } };
+    const before = { raffle: revamp.raffle, ticket: revamp.ticket };
+    Object.assign(revamp, { raffle: sized.raffle, ticket: sized.ticket });
+    const html = renderToStaticMarkup(createElement(CinematicHome, { initialHeroContent: null }));
+    Object.assign(revamp, before);
+    expect(html).toMatch(/<img[^>]*width="1600"[^>]*height="500"[^>]*>|<img[^>]*height="500"[^>]*width="1600"[^>]*>/);
+    expect(html).toMatch(/<img[^>]*width="1200"[^>]*height="800"[^>]*>|<img[^>]*height="800"[^>]*width="1200"[^>]*>/);
   });
   it("HomePageClient server-renders the cinematic home and leaves every other dynamic import alone", () => {
     const source = readFileSync("components/HomePageClient.tsx", "utf8");

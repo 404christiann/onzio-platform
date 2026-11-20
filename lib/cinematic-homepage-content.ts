@@ -54,7 +54,7 @@ export function isSafeCinematicDestination(value: string): boolean {
 }
 const externalDestination = z.string().max(2000).refine(value => value === "" || isSafeCinematicDestination(value), "Enter a valid HTTPS URL.");
 const artworkInput = z.object({ assetId: z.uuid().nullable(), alt: z.string().max(1000) }).strict();
-const artwork = artworkInput.extend({ url: z.string().nullable(), upload: z.enum(["queued", "uploading", "ready", "failed"]).optional(), localFileKey: z.string().optional(), error: z.string().optional() });
+const artwork = artworkInput.extend({ url: z.string().nullable(), width: z.number().int().positive().nullable().optional(), height: z.number().int().positive().nullable().optional(), upload: z.enum(["queued", "uploading", "ready", "failed"]).optional(), localFileKey: z.string().optional(), error: z.string().optional() });
 export const cinematicHomepageSaveSchema = z.object({
   sponsors: z.object({ heading }).strict(),
   raffle: artworkInput,
@@ -152,13 +152,13 @@ export async function fetchCinematicHomepageContent(clubId: string, client?: typ
   const stored = row.content as CinematicHomepageSaveContent;
   const config = row.presentation_config as { heroVideoGuid?: string; heroVideoLibraryId?: string; sponsorTreatments?: Record<string, "invert" | "dark-lettering">; artworkAlt?: Record<string,string> };
   const ids = Object.values(CINEMATIC_MEDIA_COLUMNS).map(column => row[column]).filter((id): id is string => typeof id === "string");
-  const assets = ids.length ? await queryClient.from("media_assets").select("id,storage_bucket,storage_path").eq("club_id", clubId).eq("status", "published").is("deleted_at", null).in("id", ids) : { data: [], error: null };
+  const assets = ids.length ? await queryClient.from("media_assets").select("id,storage_bucket,storage_path,width,height").eq("club_id", clubId).eq("status", "published").is("deleted_at", null).in("id", ids) : { data: [], error: null };
   if (assets.error) throw new Error(`fetchCinematicHomepageContent media: ${assets.error.message}`);
   const byId = new Map((assets.data ?? []).map(asset => [asset.id, asset]));
   const resolve = (key: keyof typeof CINEMATIC_MEDIA_COLUMNS, alt: string): CinematicArtwork => {
     const id = row[CINEMATIC_MEDIA_COLUMNS[key]];
     const asset = typeof id === "string" ? byId.get(id) : null;
-    return { assetId: typeof id === "string" ? id : null, url: asset && asset.storage_bucket === "onzio-media" && process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/${asset.storage_path.split("/").map(encodeURIComponent).join("/")}` : null, alt };
+    return { assetId: typeof id === "string" ? id : null, url: asset && asset.storage_bucket === "onzio-media" && process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/${asset.storage_path.split("/").map(encodeURIComponent).join("/")}` : null, width: asset?.width ?? null, height: asset?.height ?? null, alt };
   };
   return cinematicHomepageContentSchema.parse({
     ...stored, raffle: resolve("raffle", stored.raffle.alt), ticket: { ...resolve("ticket", stored.ticket.alt), visible: stored.ticket.visible },
