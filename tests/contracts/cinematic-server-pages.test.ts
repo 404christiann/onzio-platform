@@ -28,6 +28,15 @@ describe("seeded cinematic client pages", () => {
     expect(html).toContain("The Squad");
     expect(html).not.toContain("Loading the squad");
   });
+  it("Roster renders the server-fetched staff group in the first paint (RC-SAM-FIXES)", () => {
+    const roster = { seasonId: "s", seasonLabel: "2027", goalkeepers: [], defenders: [], midfielders: [], forwards: [] };
+    const staff = [{ initials: "HC", name: "Seeded Coach", role: "Head Coach", hometown: "", nationality: "", bio: null, image: "/coach.webp" }];
+    const html = render(createElement(CinematicRosterPage, { initial: { roster, staff, failed: false } }));
+    expect(html).toContain('id="roster-staff"');
+    expect(html).toContain("Seeded Coach");
+    expect(html).toContain("Head Coach");
+    expect(render(createElement(CinematicRosterPage, { initial: { roster, failed: false } }))).not.toContain("roster-staff");
+  });
   it("Roster shows the unavailable message when the server read failed", () => {
     expect(render(createElement(CinematicRosterPage, { initial: { roster: null, failed: true } }))).toContain("The squad is temporarily unavailable. Please try again.");
   });

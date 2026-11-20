@@ -77,6 +77,10 @@ them), schedule (already populated). Robinson directions headings confirmed Aven
 - Low, admin help text still promised "coming soon" for a blank video: both Schedule editors now say the Schedule shows the
   logo without a link and the match summary says "coming soon" (`schedule-directions` case).
 
+**Re-review at `370a9d1` (1 Medium):** dropping `staff={active.staff}` in `CinematicRosterPage` passed every test. Added a
+server-render case in `cinematic-server-pages` (Roster page with staff in `initial` shows the group; without staff it doesn't);
+dropping the prop now fails it.
+
 **Rebase on #204 (RC-DESKTOP-FIT):** both packages appended to `cinematic.css` and `robinson-page.css`; both kept. #204's contract
 requires its desktop block to end each file, so the RC-SAM-FIXES rules sit just above it (no shared properties). After the rebase:
 tsc clean, `test:unit` and `test:contracts` + `test:architecture` green (see PR), eslint clean on changed files apart from
