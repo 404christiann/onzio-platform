@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,9 +19,10 @@ const club: ClubContext = { id: "11111111-1111-4111-8111-111111111111", slug: "s
 const roster = { seasonId: "s", seasonLabel: "2027", goalkeepers: [], defenders: [], midfielders: [], forwards: [] };
 
 function renderAndRunEffects(initial?: CinematicRosterInitial) {
-  const html = renderToStaticMarkup(createElement(ClubContextProvider, { club },
-    createElement(ClubBrandingProvider, { initialBranding: { logoPath: "/logo.webp", inverseLogoPath: "/logo.webp", footerTagline: "Sample City" } },
-      createElement(CinematicRosterPage, { initial }))));
+  // Children go in as createElement's third argument; the casts only drop `children` from the props object's type.
+  const brandingProps = { initialBranding: { logoPath: "/logo.webp", inverseLogoPath: "/logo.webp", footerTagline: "Sample City" } } as ComponentProps<typeof ClubBrandingProvider>;
+  const html = renderToStaticMarkup(createElement(ClubContextProvider, { club } as ComponentProps<typeof ClubContextProvider>,
+    createElement(ClubBrandingProvider, brandingProps, createElement(CinematicRosterPage, { initial }))));
   for (const effect of mocks.effects.splice(0)) effect();
   return html;
 }
