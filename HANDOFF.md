@@ -1,3 +1,12 @@
+## 2026-11-20 - RC-CONTENT: Rose City 2027 content entered on all 13 production pages (content only)
+
+- **Status:** `done` for entry. Production writes only through the signed-in owner admin (editors and their own `/api/admin/*` routes);
+  no code, migration, schema, RPC, env or operator SQL this session. Details, image provenance and the placeholder list: `STATUS.md` (RC-CONTENT).
+- **What:** session 2 added Robinson Stadium (year 2001 in both places), Stadium guidelines and Fan code, Foothill Transit, Chick-fil-A,
+  Shop (Niky's at 1726 E Colorado, Away Buy Now blank, live kit photos kept), Home kit block, News (5 articles), Injury Report, Partners, Contact.
+  Verified with read-only prod queries and `rc-sam` full-page checks.
+- **Exact next step:** Christian reviews on `rc-sam`, merges #199, and sends Sam the placeholder list.
+
 ## 2026-11-19 - RC-ADMIN-4b-stats: Rose City Stats on the editor kit (app code only)
 
 - **Status:** `in_progress`, PR open; verify-rc-admin PASS (6/6, both views). No migration, schema, validator, RPC or env change. Record in `STATUS.md`.
