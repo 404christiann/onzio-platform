@@ -4,6 +4,7 @@ import Link from "next/link";
 import NativeImage from "@/components/ResilientNativeImage";
 import { NEWS_CATEGORIES, newsArticleDate, newsCategory } from "@/lib/cinematic-news";
 import type { NewsPublicArticle } from "@/lib/cinematic-news-query";
+import type { DBSiteSponsorLogo } from "@/lib/db-types";
 import CinematicNewsPartners from "./CinematicNewsPartners";
 import "./news.css";
 
@@ -13,7 +14,7 @@ function Cover({ article, className, alt }: { article: NewsPublicArticle; classN
     : <span className={`${className ?? ""} news-cover-empty`} aria-hidden="true" />;
 }
 
-export function CinematicNewsList({ articles }: { articles: NewsPublicArticle[] }) {
+export function CinematicNewsList({ articles, sponsors }: { articles: NewsPublicArticle[]; sponsors?: DBSiteSponsorLogo[] }) {
   return <>
     <section className="cinematic-news">
       <header className="news-heading"><h1>RCFC News</h1><p>Stay up-to-date</p></header>
@@ -38,11 +39,11 @@ export function CinematicNewsList({ articles }: { articles: NewsPublicArticle[] 
           })}</ol>}
       </div>
     </section>
-    <CinematicNewsPartners />
+    <CinematicNewsPartners initialSponsors={sponsors} />
   </>;
 }
 
-export function CinematicNewsArticle({ article, timeZone }: { article: NewsPublicArticle; timeZone: string }) {
+export function CinematicNewsArticle({ article, timeZone, sponsors }: { article: NewsPublicArticle; timeZone: string; sponsors?: DBSiteSponsorLogo[] }) {
   const { content } = article;
   const kind = newsCategory(content.category);
   return <>
@@ -60,6 +61,6 @@ export function CinematicNewsArticle({ article, timeZone }: { article: NewsPubli
         {content.actionLabel && content.actionHref && <p className="article-action"><Link href={content.actionHref}>{content.actionLabel}</Link></p>}
       </div>
     </article>
-    <CinematicNewsPartners />
+    <CinematicNewsPartners initialSponsors={sponsors} />
   </>;
 }
