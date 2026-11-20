@@ -2349,6 +2349,83 @@ export type Database = {
           },
         ]
       }
+      page_events: {
+        Row: {
+          city: string | null
+          club_id: string
+          country: string | null
+          device: string
+          event_type: string
+          id: number
+          is_entry: boolean
+          is_staff: boolean
+          local_date: string
+          occurred_at: string
+          path: string
+          referrer_host: string | null
+          source_type: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          visit_id: string
+          visitor_hash: string
+        }
+        Insert: {
+          city?: string | null
+          club_id: string
+          country?: string | null
+          device: string
+          event_type: string
+          id?: never
+          is_entry: boolean
+          is_staff?: boolean
+          local_date: string
+          occurred_at?: string
+          path: string
+          referrer_host?: string | null
+          source_type: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visit_id: string
+          visitor_hash: string
+        }
+        Update: {
+          city?: string | null
+          club_id?: string
+          country?: string | null
+          device?: string
+          event_type?: string
+          id?: never
+          is_entry?: boolean
+          is_staff?: boolean
+          local_date?: string
+          occurred_at?: string
+          path?: string
+          referrer_host?: string | null
+          source_type?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visit_id?: string
+          visitor_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_events_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_match_stats: {
         Row: {
           assists: number
@@ -4161,6 +4238,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      club_has_addon: {
+        Args: { p_addon: string; p_club_id: string }
+        Returns: boolean
+      }
       consume_hero_video_replace: {
         Args: { p_cap?: number; p_club_id: string }
         Returns: {
@@ -4304,6 +4385,10 @@ export type Database = {
           p_export_id: string
         }
         Returns: Json
+      }
+      record_page_event: {
+        Args: { p_club_id: string; p_event: Json }
+        Returns: string
       }
       record_stripe_rejection: {
         Args: {

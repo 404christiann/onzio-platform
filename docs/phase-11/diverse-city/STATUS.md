@@ -1,5 +1,42 @@
 # Diverse City FC Status
 
+## 2026-11-20 - TELEMETRY-01 P1 finish: rebased onto main, migration retimestamped to 20261119130000
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch `agent/telemetry-01`,
+worktree `~/Downloads/onzio-telemetry-01`, on main `04fa6ae6`. **Status:** `in_progress`: local, unstaged and uncommitted;
+the PR, the remote branch and production are unchanged.
+
+**Completed:**
+- Reapplied PR commit `3e33720f` on current main as working-tree changes. The local branch ref moved to `origin/main`;
+  the old commit is still on `origin/agent/telemetry-01`.
+- Migration renamed `20261118020000_page_telemetry.sql` → `20261119130000_page_telemetry.sql` (after main's latest,
+  `20261119120000_media_orphan_sweep.sql`). Its `onzio_private.purge_archived_club` is main's current body from
+  `20261117020000_cinematic_purge_tables.sql`, verbatim, plus `'onzio.page_events'` at the head of `v_order`. The three
+  `onzio_private` telemetry tables cascade from `onzio.clubs` and are not listed.
+- PageBeacon mount kept in all three branches of `app/%5Fclubs/[slug]/layout.tsx`. `lib/database.generated.ts` was regenerated:
+  +85/-0 against main, telemetry only.
+- Old filename replaced in both operator SQL files, `page-telemetry-service-role-boundary`, `purge-archived-club`, and the
+  three migration-order contract tests.
+
+**Files changed:** the same 21 paths as the PR commit, plus this entry.
+
+**Verification (Mac, shared local stack, DB runs under `scripts/with-local-db-lock.sh`):**
+- `npx tsc --noEmit`: clean.
+- `npm run test:unit`: 371 files, 4401 tests passed.
+- Fresh `supabase db reset --local`: all 94 migrations applied in order (ledger max `20261119130000`). Full `test:db` in the
+  same lock hold: 80 files, 1395 tests passed. `npm run db:types:check` matched.
+- `next build` passed. PageBeacon compiles into the club layout chunk (about 0.7 KB minified) and imports only `react` and
+  `next/navigation`. That chunk has no cinematic or Rose City code, so the change adds none to Diverse City routes.
+  PageBeacon renders `null` (no DOM, no styles), so it adds 0 CLS.
+
+**Blockers / decisions:** none for the code. Every production step waits on Christian's word: the Vercel env var, the
+linked migration list, the migration push, the deploy, the operator SQL, the PR update and force-push, and the merge.
+Observed and left as is (outside P1): main's RC-PREVIEW middleware 404s `POST /api/t` on the Rose City preview host, so
+the preview records nothing. This fails closed.
+
+**Next step:** Christian reviews the diff, then says when to commit, force-push to PR #158, and run the production
+sequence.
+
 ## 2026-11-20 - RC-HERO-VIDEO-SWAP: Rose City admins replace the homepage hero video (migration, local only)
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet subagents building), `RC-HERO-VIDEO-SWAP`.

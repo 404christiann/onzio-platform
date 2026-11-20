@@ -1230,3 +1230,137 @@ upload checks. Full suite222 files/1999 tests, final build/lint/types pass. See
 docs/rose-city-stadium-food-2027-design.md and the two scoped implementation
 ledgers for final evidence. Physical-device/VoiceOver and existing release gates
 remain open; no hosted mutation or deployment.
+
+
+## First-party page telemetry (sponsor analytics) — TELEMETRY-01 design (2026-11-18)
+
+Rose City's owner wants sponsor-facing traffic numbers. Onzio records them
+itself: no third-party analytics vendor, no cookies, no raw IP addresses. The
+existing `/admin/analytics` is team performance and stays as it is; traffic
+gets its own admin page in P3.
+
+### Paid add-on gate
+
+Telemetry is a paid add-on, sold to Rose City only for now. It is OFF for
+every club by default, including right after the migration.
+
+- `onzio_private.club_addons (club_id, addon, granted_at)`: a row means the
+  add-on is on. `addon` allows only `'telemetry'`. The migration inserts
+  nothing.
+- `onzio_private.club_has_addon(club_id, addon)` is the single reader. It is a
+  security definer, exposed as the invoker wrapper `onzio.club_has_addon`. Any
+  add-on name other than `'telemetry'` raises `UNKNOWN_CLUB_ADDON` instead of
+  returning false, so it can never quietly become a content gate.
+- Add-ons are not tiers, and the names avoid PLAT-102's deleted
+  `club_has_feature` on purpose. The tier-free rule stands:
+  `can_read_feature` / `can_mutate_feature` still ignore features, and nothing
+  in RLS calls `club_has_addon`.
+- The real gate is `record_page_event`. For a club without the add-on it
+  returns `not_entitled` before writing any salt, rate window or event.
+- The beacon route and the club layout (which mounts `PageBeacon` only for
+  entitled clubs) skip early through a 60-second per-instance cache. That is
+  only an optimisation.
+- Operators turn the add-on on with
+  `scripts/operator-sql/rose-city-telemetry-enable.{rehearsal,commit}.sql`.
+  Each file is one transaction: guards, an idempotent insert, one audit event
+  (`manual.club_addon_grant`), and a read-back row with `all_ok`. Turning it
+  off later is a separate audited delete.
+
+### Data model
+
+- `onzio.page_events`: one row per accepted event. Columns: `club_id`,
+  `occurred_at`, `local_date` (the club's own day, from `clubs.time_zone`),
+  `event_type`, `visitor_hash`, `visit_id`, `is_entry`, `path`,
+  `referrer_host`, `source_type` (`direct | search | social | referral |
+  campaign | internal`), `utm_source/medium/campaign/content/term`, `device`
+  (`mobile | tablet | desktop`), `country` (ISO-2), `city`, `is_staff`. There
+  is no IP, user-agent, user id or full referrer URL column. RLS: a club's
+  active owners and admins may read their own club's rows. Nobody gets
+  insert/update/delete grants; the only writer is the definer function below.
+  The table is club-owned, so `purge_archived_club` lists it.
+- `onzio_private.page_visitor_salts (club_id, salt_day, salt)`: one random
+  32-byte salt per club per local day, created by the first event of the day.
+  Earlier days' salts are deleted then. After that, nobody (Onzio included)
+  can link a visitor across days.
+- `onzio_private.page_event_rate_windows`: per-minute counters for the
+  database rate limit, pruned as new windows open.
+- Later packages (P3) add daily rollup tables (`page_daily_rollups`, by club,
+  day, path, source, device and country) filled by a Vercel cron. Admin pages
+  read rollups only, never raw events.
+
+### Event shapes
+
+The beacon body is JSON sent with `navigator.sendBeacon` (no preflight), at
+most 2 KB: `{ "t": "view", "p": "/schedule", "r": "<document.referrer>",
+"q": "<location.search>" }`. The server extracts only the referrer host and
+the five `utm_*` values. It derives device from the user agent, geography from
+`x-vercel-ip-country` / `x-vercel-ip-city`, the tenant from middleware's
+verified `x-onzio-club-id`, and staff from middleware's verified
+`x-onzio-user-id`. P1 accepts `view`. P2 adds `logo_seen` (a sponsor logo at
+least 50% visible for at least 1s, once per logo per page view) and `click`
+(written by `/r/<sponsor>`). P4 adds `heartbeat` (every 15s while the tab is
+visible).
+
+### Privacy and filtering
+
+- Visitor id = `sha256(daily_salt || HMAC-SHA256(TELEMETRY_VISITOR_SECRET, ip
+  + "\n" + user_agent))`. The route computes only the HMAC, so the IP never
+  leaves the route. The database applies the per-club daily salt, so ids
+  differ by club and by day. If `TELEMETRY_VISITOR_SECRET` is unset, the
+  route drops every event (fail closed).
+- Dropped before the database: bot or empty user agents, prefetch requests,
+  `/admin` and `/api` paths, a missing tenant header, and bodies that fail
+  validation. Any request with a signed-in session is staff (only club staff
+  and operators have accounts). Staff events are stored with `is_staff` and
+  every rollup excludes them.
+- The beacon always answers `204` and never reveals why an event was dropped.
+
+### Abuse limits and authority
+
+`POST /api/t` uses the anon public client (no cookies, no service-role key).
+It writes through one exposed security-invoker wrapper
+`onzio.record_page_event(club_id, event jsonb)`, which calls the single writing
+security definer `onzio_private.record_page_event`. That function validates
+every field again, requires the club to be publicly accessible (`active` and
+`live/grace`) and to hold the telemetry add-on, enforces 60 events/minute per visitor and 1,200/minute per club, assigns the
+visit (same visitor within 30 minutes), and inserts. The route also keeps a
+best-effort per-instance limit. Beacon data is forgeable by nature: the
+per-club cap bounds what a forger can add, and the report calls its figures
+measured site traffic.
+
+### Retention
+
+Raw events are kept 90 days. The first event of each club day deletes that
+club's events older than 90 days, in bounded batches. The P3 cron sweeps the
+same rule for clubs without traffic. Rollups are kept indefinitely; they hold
+no visitor ids.
+
+### Packages (each its own PR, in order)
+
+- **P1 events + beacon + filters + add-on gate**: migration (`page_events`,
+  salts, rate windows, `club_addons`, both definers and wrappers, purge
+  list), `app/api/t/route.ts`, `lib/telemetry/*` (bots, device, source/UTM,
+  geo, visitor HMAC, rate limit, validation, add-on cache),
+  `components/telemetry/PageBeacon.tsx` mounted from
+  `app/%5Fclubs/[slug]/layout.tsx` for entitled clubs, the Rose City operator
+  SQL, regenerated `lib/database.generated.ts`, and unit, contract and
+  database tests. Operator steps, in order: set `TELEMETRY_VISITOR_SECRET` in
+  Vercel, apply the migration, deploy, then run the Rose City operator SQL
+  (rehearsal first).
+- **P2 logo views + redirect clicks**: `logo_seen` and `click` event types,
+  `app/r/[sponsor]/route.ts` (looks up the club's saved sponsor URL by id,
+  logs, then forwards with 302; unknown ids 404, so it is not an open
+  redirect), middleware's public-path list, and an IntersectionObserver hook.
+  Sponsor-logo markup lives in `components/cinematic/` and shared sponsor
+  components, so P2 waits for the admin/cinematic redesign to merge.
+- **P3 admin page + matchday overlay**: rollup tables, a rollup and retention
+  cron (`vercel.json`, the `CRON_SECRET` pattern), and the traffic admin page
+  under `app/admin/` and `components/admin/` after the redesign merges. It
+  shows daily traffic with `onzio.matches` dates marked, plus top pages,
+  sources, devices and countries/cities.
+- **P4 time on page + UTM builder**: `heartbeat` events, time-on-page rollups
+  (sum of visible intervals per view, capped per gap), and an admin UTM link
+  builder for social posts.
+- **P5 monthly sponsor PDF**: one-page report per sponsor and month (site
+  traffic, that sponsor's logo views and click-throughs, matchday highlights),
+  rendered on the server from rollups only.
