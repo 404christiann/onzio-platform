@@ -23,6 +23,21 @@ vi.mock("@/lib/queries", () => ({
 vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: mocks.fetchClubIdentity }));
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: mocks.getClubContextBySlug }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: mocks.createClient }));
+// The server renderer never runs effects, so the no-refetch check captures them and runs them by hand after the
+// render, the way the browser would after hydration. Server-side behaviour is unchanged (effects never run there).
+const effects = vi.hoisted(() => ({ captured: [] as Array<{ effect: () => unknown; deps?: readonly unknown[] }> }));
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  return { ...actual, useEffect: (effect: () => unknown, deps?: readonly unknown[]) => { effects.captured.push({ effect, deps }); } };
+});
+/** Runs CinematicHome's data effect (the one keyed on the club id); the others need a browser (matchMedia, timers). */
+function runHomeDataEffect() {
+  const data = effects.captured.splice(0).filter(({ deps }) => deps?.includes(CLUB_ID));
+  expect(data).toHaveLength(1);
+  const cleanup = data[0].effect();
+  if (typeof cleanup === "function") cleanup();
+}
+const clientFetchers = () => [mocks.fetchHomepageContent, mocks.fetchSchedule, mocks.fetchClubIdentity, mocks.fetchShopKitContent, mocks.fetchSiteSponsorLogos];
 const homePageClient = vi.hoisted(() => vi.fn(() => null));
 vi.mock("@/components/HomePageClient", () => ({ default: homePageClient }));
 
@@ -82,14 +97,21 @@ describe("cinematic@2 home first paint", () => {
   });
   it("renders the fixture on the first render, with no loading line and no client refetch", async () => {
     const data = await loadCinematicHomeData(CLUB_ID, serverClient as never);
+    for (const fetcher of clientFetchers()) fetcher.mockClear();
+    effects.captured.length = 0;
     const html = renderToStaticMarkup(createElement(CinematicHome, { initialHeroContent: null, initialData: data }));
     expect(html).toContain("Friday March 13");
     expect(html).toContain("Robinson Stadium");
     expect(html).not.toContain("Loading next home match");
+    runHomeDataEffect();
+    for (const fetcher of clientFetchers()) expect(fetcher).not.toHaveBeenCalled();
   });
-  it("keeps the loading line for client-rendered previews that pass no server data", () => {
+  it("keeps the loading line and the client fetch for previews that pass no server data", () => {
+    effects.captured.length = 0;
     const html = renderToStaticMarkup(createElement(CinematicHome, { initialHeroContent: null }));
     expect(html).toContain("Loading next home match");
+    runHomeDataEffect();
+    for (const fetcher of clientFetchers()) expect(fetcher).toHaveBeenCalledWith(...(fetcher === mocks.fetchShopKitContent ? ["home", "home", CLUB_ID] : fetcher === mocks.fetchSiteSponsorLogos ? ["carousel", CLUB_ID] : fetcher === mocks.fetchSchedule ? [undefined, CLUB_ID] : [CLUB_ID]));
   });
   it("CinematicPhotos reserves the slideshow box when there are no photos", () => {
     const html = renderToStaticMarkup(createElement(CinematicPhotos, { photos: [] }));
