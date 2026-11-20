@@ -1,5 +1,12 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { followNavIndicator } from "@/components/cinematic/nav-indicator";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const hooks = vi.hoisted(() => ({ effects: [] as Array<{ effect: () => unknown; deps?: readonly unknown[] }> }));
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  // useNavIndicator is called outside a renderer here: refs are plain boxes and effects are captured to run by hand.
+  return { ...actual, useRef: (initial: unknown) => ({ current: initial }), useEffect: (effect: () => unknown, deps?: readonly unknown[]) => { hooks.effects.push({ effect, deps }); } };
+});
+import { followNavIndicator, useNavIndicator } from "@/components/cinematic/nav-indicator";
 
 // A minimal element tree: only the DOM surface followNavIndicator touches, with compound class selectors and the
 // `:scope > .x` / `.a.b > .x` child forms it queries.
@@ -124,8 +131,9 @@ describe("RC-NAV sliding underline follows the cursor and focus", () => {
   it("is what the Rose City nav mounts on its desktop nav and indicator", async () => {
     const { readFile } = await import("node:fs/promises");
     const source = await readFile(new URL("../../components/cinematic/CinematicNav.tsx", import.meta.url), "utf8");
-    expect(source).toContain("followNavIndicator(desktopNav.current, indicator.current)");
-    expect(source).toContain("follower.dispose()");
+    expect(source).toContain("useNavIndicator([pathname, open, currentGroup, content])");
+    expect(source).toMatch(/<nav ref=\{desktopNav\} className="desktop-nav"/);
+    expect(source).toMatch(/<span ref=\{indicator\} className="nav-indicator"/);
   });
   it("detaches every listener and the ready flag on dispose", () => {
     const follower = follow();
@@ -135,5 +143,56 @@ describe("RC-NAV sliding underline follows the cursor and focus", () => {
     expect(nav.hasAttribute("data-indicator-ready")).toBe(false);
     pointer(home);
     expect(position()).toEqual(under(schedule));
+  });
+});
+
+describe("RC-NAV useNavIndicator re-places the underline when the page or drop-down changes", () => {
+  const mount = (repositionOn: readonly unknown[]) => {
+    hooks.effects.length = 0;
+    const refs = useNavIndicator(repositionOn);
+    refs.nav.current = nav as unknown as HTMLElement;
+    refs.bar.current = bar as unknown as HTMLSpanElement;
+    const [attach, reposition] = hooks.effects;
+    return { attach, reposition };
+  };
+  it("attaches once, and its reposition effect follows the caller's values", () => {
+    const route = ["/schedule"];
+    const { attach, reposition } = mount(route);
+    expect(attach.deps).toEqual([]);
+    expect(reposition.deps).toBe(route);
+    attach.effect();
+    expect(nav.listenerCount()).toBe(4);
+    expect(position()).toEqual(under(schedule));
+  });
+  it("moves the resting underline to the new current tab after client navigation", () => {
+    const { attach, reposition } = mount(["/schedule"]);
+    attach.effect();
+    schedule.classes.delete("active");
+    club.classes.add("active");
+    reposition.effect();
+    expect(position()).toEqual(under(club));
+  });
+  it("follows a drop-down opening and closing", () => {
+    const { attach, reposition } = mount([null]);
+    attach.effect();
+    clubGroup.classes.add("open");
+    reposition.effect();
+    expect(position()).toEqual(under(club));
+    clubGroup.classes.delete("open");
+    reposition.effect();
+    expect(position()).toEqual(under(schedule));
+  });
+  it("stops repositioning and detaches on unmount, and skips attaching before the refs exist", () => {
+    const { attach, reposition } = mount(["/schedule"]);
+    const cleanup = attach.effect() as () => void;
+    cleanup();
+    expect(nav.listenerCount()).toBe(0);
+    schedule.classes.delete("active");
+    club.classes.add("active");
+    reposition.effect();
+    expect(position()).toEqual(under(schedule));
+    hooks.effects.length = 0;
+    useNavIndicator([]);
+    expect(hooks.effects[0].effect()).toBeUndefined();
   });
 });

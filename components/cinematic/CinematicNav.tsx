@@ -9,7 +9,7 @@ import NativeImage from "@/components/ResilientNativeImage";
 import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { CINEMATIC_NAV_ITEMS } from "@/lib/cinematic-homepage-content";
 import { useCinematicContent } from "./CinematicContent";
-import { followNavIndicator } from "./nav-indicator";
+import { useNavIndicator } from "./nav-indicator";
 
 function NavIcon({ name }: { name: "menu" | "close" | "arrow-left" | "caret-right" }) {
   return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href={`/icons/cinematic-navigation/sprite.svg#${name}`} /></svg>;
@@ -67,9 +67,8 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
   const selectedGroup = items.find(item => item.id === mobileGroup);
   const isCurrent = (href?: string) => preview ? href === "/" : pathname === href;
   const currentGroup = preview ? null : currentNavGroup(items, pathname);
-  const desktopNav = useRef<HTMLElement>(null);
-  const indicator = useRef<HTMLSpanElement>(null);
-  const placeIndicator = useRef<() => void>(() => {});
+  // Re-place the underline whenever the current tab, the open drop-down or the labels change.
+  const { nav: desktopNav, bar: indicator } = useNavIndicator([pathname, open, currentGroup, content]);
 
   useEffect(() => {
     if (!open) return;
@@ -132,16 +131,6 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
       drawerAnimation.current?.cancel();
     };
   }, []);
-
-  // Before this runs, the server-rendered `.active` underline stands in, so nothing shifts on hydration.
-  useEffect(() => {
-    if (!desktopNav.current || !indicator.current) return;
-    const follower = followNavIndicator(desktopNav.current, indicator.current);
-    placeIndicator.current = follower.place;
-    return () => { placeIndicator.current = () => {}; follower.dispose(); };
-  }, []);
-
-  useEffect(() => { placeIndicator.current(); }, [pathname, open, currentGroup, content]);
 
   useEffect(() => {
     if (!mobileOpen) return;

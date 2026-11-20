@@ -33,11 +33,15 @@ only imports `CinematicNav` for `cinematic@2`, and Diverse City runs `TemplateNa
   moves it with no transition and it returns when focus leaves the nav. At 1024 the desktop nav and indicator are
   `display: none` and the phone menu is unchanged. Before/after crops are in the session-group notes folder
   (`rc-nav-screens/`).
-- tsc clean; `test:unit` 4288/4288; `test:contracts` 3327/3327 (including `site-public-pages-scope`, 4 RC-NAV cases in
-  `cinematic-navigation` and 9 in `cinematic-nav-indicator`). The indicator cases use fake nav nodes for mouse, pen,
+- tsc clean; `test:unit` 4292/4292; `test:contracts` 3331/3331 (including `site-public-pages-scope`, 4 RC-NAV cases in
+  `cinematic-navigation` and 13 in `cinematic-nav-indicator`). The indicator cases use fake nav nodes for mouse, pen,
   touch, leave, focus-visible, focusout, hover-over-focus, open drop-down, scaled preview and dispose. Each of the five
   mutations named in the review (target never moves, no touch guard, no-op leave, focus ignored, pointerover listener
-  left attached) now fails 1–3 of them.
+  left attached) now fails 1–3 of them. For onzio-bot's Low on the re-review, the mount and re-place wiring is the
+  `useNavIndicator` hook in `nav-indicator.ts`. Its 4 cases cover attaching once, moving to the new current tab after
+  client navigation, following a drop-down opening and closing, and unmount. Making the re-place a no-op, never wiring
+  it, dropping its deps, keeping it alive after unmount, skipping `dispose`, or leaving `open` out of the nav's
+  reposition values each fails 1–2 tests.
 
 **Blockers / decisions:** none. The underline spans label and caret on drop-down tabs.
 

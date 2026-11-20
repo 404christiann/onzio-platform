@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 /**
  * RC-NAV: one red indicator in the cinematic desktop nav. It follows the tab under a mouse or pen, or the tab with
  * keyboard focus (`:focus-visible`), holds on an open drop-down's tab, and otherwise rests on the current page's tab.
@@ -64,4 +66,24 @@ export function followNavIndicator(nav: HTMLElement, bar: HTMLElement): { place:
       nav.removeAttribute("data-indicator-ready");
     },
   };
+}
+
+/**
+ * Mounts `followNavIndicator` on the returned refs (the desktop `<nav>` and its indicator `<span>`) and re-places the
+ * indicator whenever a value in `repositionOn` changes. Until it mounts, the server-rendered `.active` underline
+ * stands in, so nothing shifts on hydration. `repositionOn` must keep the same length between renders.
+ */
+export function useNavIndicator(repositionOn: readonly unknown[]) {
+  const nav = useRef<HTMLElement>(null);
+  const bar = useRef<HTMLSpanElement>(null);
+  const place = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (!nav.current || !bar.current) return;
+    const follower = followNavIndicator(nav.current, bar.current);
+    place.current = follower.place;
+    return () => { place.current = () => {}; follower.dispose(); };
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { place.current(); }, repositionOn);
+  return { nav, bar };
 }
