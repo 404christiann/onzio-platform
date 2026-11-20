@@ -1,3 +1,12 @@
+## 2026-11-20 - RC-SAM-FIXES follow-up: `rc-sam` on #205; Sam's admin content in production
+
+- **Status:** `done`. `rc-sam` fast-forwarded to `e1021427`. Sam's link was re-pointed with `vercel alias set` because Vercel now
+  aliases new `rc-sam` builds under the `404christian` slug, where `RC_PREVIEW_HOST` doesn't match; repeat after each push.
+- **What:** production admin (owner): Shop pills Home / Away / Foothill Transit Edition ($115 each) plus the Foothill kit (Away
+  copy and photos); Tickets title "Match Tickets"; Club Logo page top image, The Stem, Sub-mark; new club crest. Merging #205
+  also deployed production (no migrations; Diverse City 200, Rose City still held). Details in `STATUS.md`.
+- **Exact next step:** Sam reviews on `rc-sam`; Foothill copy and The Stem text from Sam when he has them.
+
 ## 2026-11-20 - RC-SAM-FIXES: Sam's rc-sam review fixes for Rose City (app code only)
 
 - **Status:** `ready for review`, branch `claude/rc-sam-fixes` (on main `04fa6ae6`), PR open. No migration, schema, RPC, env, Stripe or
