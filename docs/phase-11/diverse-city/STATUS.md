@@ -3,7 +3,7 @@
 ## 2026-11-20 - RC-SAM-FIXES: Sam's rc-sam review fixes (Rose City cinematic@2, app code only)
 
 **Agent/package:** Claude Code (Opus 5.5), RC-SAM-FIXES, branch `claude/rc-sam-fixes` (worktree
-`~/Downloads/onzio-platform/.claude/worktrees/rc-sam-fixes`, rebased on main `75684008`, the commit `rc-sam` serves).
+`~/Downloads/onzio-platform/.claude/worktrees/rc-sam-fixes`, rebased on main `04fa6ae6` (#204) before the review push).
 **Status:** `ready for review`: Christian checked it locally ("Looks good, open PR"); pushed, PR open for onzio-bot review and
 Christian's merge. No migration, schema, RPC, env, Stripe, Vercel or production change. Diverse City untouched.
 
@@ -76,6 +76,11 @@ them), schedule (already populated). Robinson directions headings confirmed Aven
   stay listed ahead of it in date order (`cinematic-schedule` case written red first).
 - Low, admin help text still promised "coming soon" for a blank video: both Schedule editors now say the Schedule shows the
   logo without a link and the match summary says "coming soon" (`schedule-directions` case).
+
+**Rebase on #204 (RC-DESKTOP-FIT):** both packages appended to `cinematic.css` and `robinson-page.css`; both kept. #204's contract
+requires its desktop block to end each file, so the RC-SAM-FIXES rules sit just above it (no shared properties). After the rebase:
+tsc clean, `test:unit` and `test:contracts` + `test:architecture` green (see PR), eslint clean on changed files apart from
+`react/no-children-prop` on unchanged render helpers in `cinematic-server-pages` and `cinematic-roster-renderer` tests (main has them).
 
 **Not done yet:** admin edits after merge (#1 pill labels and Foothill kit, #5 Stem/Sub-mark/top image, #6 `/tickets` title,
 #13 crest); `rc-sam` fast-forward and preview recheck (Robinson headings, hero button, CLS).

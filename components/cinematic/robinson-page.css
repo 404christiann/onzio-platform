@@ -69,6 +69,9 @@
 }
 
 .cinematic-site .r-cards{align-items:start}
+/* RC-SAM-FIXES: Avenir only loads Medium (400-600), so weight 700 rendered regular. Sam wants these four
+   directions headings bold, which is Avenir Heavy (the face the match summary uses for his bold labels). */
+.cinematic-site .r-directions h3{font-family:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;font-weight:800}
 
 /* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
 @media (min-width:1025px){
@@ -88,6 +91,3 @@
   .cinematic-site .r-directions h3:last-of-type{margin-top:28px}
   .cinematic-site .r-directions ul{margin-top:10px}
 }
-/* RC-SAM-FIXES: Avenir only loads Medium (400-600), so weight 700 rendered regular. Sam wants these four
-   directions headings bold, which is Avenir Heavy (the face the match summary uses for his bold labels). */
-.cinematic-site .r-directions h3{font-family:'CinematicAvenirHeavy','CinematicFigtree',sans-serif;font-weight:800}

@@ -226,6 +226,17 @@
   .cinematic-site .nav-indicator{transition:opacity 150ms var(--ease-out)}
   .cinematic-site .nav-indicator[data-snap]{transition:none}
 }
+/* RC-SAM-FIXES: Sam asked for square drop-downs and a slightly see-through menu. Rose Parade Red at 94% over a
+   blur: white text stays at least 4.5:1 even with white behind it, and the hero still shows through. */
+.cinematic-site .dropdown,.cinematic-site .dropdown a{border-radius:0}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .cinematic-site .dropdown{background:rgb(232 11 37/.94);-webkit-backdrop-filter:blur(12px) saturate(140%);backdrop-filter:blur(12px) saturate(140%)}
+}
+@media(prefers-reduced-transparency:reduce){.cinematic-site .dropdown{background:var(--red);-webkit-backdrop-filter:none;backdrop-filter:none}}
+/* RC-SAM-FIXES: the hero's "outline" class also matches Tailwind's .outline utility (outline-style:solid), which drew a 3px
+   white ring around Sam's thin 1px MEET THE SQUAD border. Keep only the border; keyboard focus keeps the site's blue ring. */
+.cinematic-site .hero .outline{outline:0}
+.cinematic-site .hero .outline:focus-visible{outline:3px solid #4F8DC3;outline-offset:5px}
 
 /* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
 @media (min-width:1025px){
@@ -261,14 +272,3 @@
   .cinematic-site .replay-vs{font-size:calc(var(--fit-w) * .05223)}
   .cinematic-site .replay-watch{gap:calc(var(--fit-w) * .00922)}
 }
-/* RC-SAM-FIXES: Sam asked for square drop-downs and a slightly see-through menu. Rose Parade Red at 94% over a
-   blur: white text stays at least 4.5:1 even with white behind it, and the hero still shows through. */
-.cinematic-site .dropdown,.cinematic-site .dropdown a{border-radius:0}
-@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .cinematic-site .dropdown{background:rgb(232 11 37/.94);-webkit-backdrop-filter:blur(12px) saturate(140%);backdrop-filter:blur(12px) saturate(140%)}
-}
-@media(prefers-reduced-transparency:reduce){.cinematic-site .dropdown{background:var(--red);-webkit-backdrop-filter:none;backdrop-filter:none}}
-/* RC-SAM-FIXES: the hero's "outline" class also matches Tailwind's .outline utility (outline-style:solid), which drew a 3px
-   white ring around Sam's thin 1px MEET THE SQUAD border. Keep only the border; keyboard focus keeps the site's blue ring. */
-.cinematic-site .hero .outline{outline:0}
-.cinematic-site .hero .outline:focus-visible{outline:3px solid #4F8DC3;outline-offset:5px}

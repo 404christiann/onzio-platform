@@ -1,6 +1,6 @@
 ## 2026-11-20 - RC-SAM-FIXES: Sam's rc-sam review fixes for Rose City (app code only)
 
-- **Status:** `ready for review`, branch `claude/rc-sam-fixes` (on main `75684008`), PR open. No migration, schema, RPC, env, Stripe or
+- **Status:** `ready for review`, branch `claude/rc-sam-fixes` (on main `04fa6ae6`), PR open. No migration, schema, RPC, env, Stripe or
   deploy change; Diverse City unchanged. Record in `STATUS.md` (RC-SAM-FIXES).
 - **What:** Rose Parade Red `#E80B25` everywhere but Chick-fil-A; square, 94% see-through drop-downs; Tickets drop-down reordered with
   "Match tickets"; phone menu "Robinson Stadium"; shop photos loop without number buttons and the third kit borrows Away photos;
