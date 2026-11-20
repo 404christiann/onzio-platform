@@ -14,8 +14,9 @@ server first. No migration, schema, RPC, env, Stripe, Vercel or production chang
    (Christian approved doing them through admin after merge).
 2 and 10. Every Rose City red is Rose Parade Red `#E80B25` (darker hover `#C4091F`), including the Authentic jersey pill;
    Chick-fil-A keeps its own reds, and the YouTube/TikTok brand marks keep theirs.
-3. Hero buttons: Christian's reference screenshot matches what `rc-sam` already shows (filled SHOP, outlined MEET THE SQUAD,
-   same height, 0.8 width ratio at 1440 and 390). No change; asked Christian what differs.
+3. Hero buttons: Sam wants the thin MEET THE SQUAD border. The button's `outline` class also matches Tailwind's `.outline`
+   utility (`outline-style: solid`), which drew a 3px white ring outside the 1px border on `rc-sam`. Cancelled for the hero
+   button only; keyboard focus keeps the site's blue ring (`tests/contracts/cinematic-hero-buttons.test.ts`).
 4. Nav drop-downs are square, with a 94% Rose Parade Red panel over `backdrop-filter: blur(12px)`. Below 94% white text drops
    under 4.5:1 where white is behind it (solid red is 4.66:1); reduced transparency gets the solid panel.
 6 and 8. Tickets drop-down: Season ticket membership first; `/tickets` is "Match tickets". The `/tickets` page H1
@@ -47,10 +48,18 @@ with no number buttons, the Foothill option shows the Away photo and row, the dr
 the blur, Season ticket membership first, staff group renders, schedule reads Next (5) then 4, 3, 2 with the logo on every row,
 the phone menu reads "Robinson Stadium". Before/after screenshots: session notes folder `rc-sam-fixes-screens/`.
 
+**Local content (Christian asked for it before his check):** ran the repo's Rose City seed scripts against the shared stack
+through untracked local-port copies (`scripts/_local54/`, receipts redirected to the session scratchpad, tracked `assets/`
+receipts restored): About, crest (6 features incl. The Stem, 6 colours), contact, policies, Robinson, news (+ placeholders),
+injury report, national anthem, tickets, ticket pages, visitor pages, home update and the base homepage. Synthetic local players
+(the roster seed needs production JSON, so none was used). Skipped: Partners (needs a production Foothill logo and a Chick-fil-A
+logo only the schedule seed publishes, and the schedule seed would overwrite local fixtures), form links (an owner already set
+them), schedule (already populated). Robinson directions headings confirmed Avenir Heavy 800 in the browser.
+
 **Not done yet:** Diverse City bundle check and CLS runs (need a production build; the dev server is using `.next`); Robinson
 headings checked on the preview after merge (the local stack has no Robinson content); PR; admin edits; `rc-sam` update.
 
-**Blockers or unresolved decisions:** #3 (what Sam wants changed on the hero buttons); Christian's local check.
+**Blockers or unresolved decisions:** Christian's local check.
 
 **Exact next step:** after Christian's local check, revert `lib/public-site-hold.ts`, run the bundle check and CLS, push and
 open the PR; after merge, fast-forward `rc-sam`, make the admin edits (#1, #5, #6 title, #13), recheck on the preview.
