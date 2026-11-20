@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ADMIN_THEME_COOKIE_NAME,
@@ -122,5 +122,23 @@ describe("protected admin theme contract", () => {
     expect(token(dark, "warning")).toEqual([41, 96, 58]);
     expect(token(dark, "warning-foreground")).toEqual([222, 47, 11]);
     expect(token(dark, "warning-ink")).toEqual([41, 96, 58]);
+  });
+
+  it("ADMIN-WARN: admin warning text and glyphs draw in --warning-ink, never the yellow fill", () => {
+    // Light --warning is a yellow fill (1.45:1 on white); readable warning text depends on these call sites.
+    expect(source("tailwind.config.ts")).toMatch(/warning:\s*\{[^}]*\bink:\s*"hsl\(var\(--warning-ink\)\)"/);
+
+    const files = (dir: string): string[] =>
+      readdirSync(resolve(root, dir), { recursive: true, encoding: "utf8" })
+        .filter(file => /\.(tsx?|css)$/.test(file) && !/\.(test|spec)\.tsx?$/.test(file))
+        .map(file => join(dir, file));
+    const offenders = ["app/admin", "components/admin"].flatMap(files).flatMap(file =>
+      source(file).split("\n").flatMap((line, index) =>
+        /\btext-warning(?![-\w])/.test(line) || /(?<![-\w])color:\s*hsl\(var\(--warning[,)]/.test(line)
+          ? [`${file}:${index + 1}`]
+          : [],
+      ),
+    );
+    expect(offenders).toEqual([]);
   });
 });
