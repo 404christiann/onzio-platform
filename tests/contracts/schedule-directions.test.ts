@@ -72,6 +72,14 @@ describe("Schedule Directions and Watch on YouTube links", () => {
     expect(row).not.toContain("coming soon");
   });
 
+  it("tells the owner what a blank video link shows now (RC-SAM-FIXES review)", () => {
+    for (const file of ["components/admin/schedule/ScheduleMatchForm.tsx", "components/admin/schedule/rose-city/RoseCityMatchFields.tsx"]) {
+      const editor = readFileSync(resolve(process.cwd(), file), "utf8");
+      expect(editor, file).toContain("Left blank, the Schedule shows the Watch on YouTube logo without a link");
+      expect(editor, file).not.toContain("Leave it blank to show “coming soon”");
+    }
+  });
+
   it("lets the owner enter each match's directions address in the Schedule editor", () => {
     // The Schedule form's fields live in ScheduleMatchForm.tsx. cinematic@2 (Rose City) gets the
     // directions address; every other design keeps the plain "Street address" field.

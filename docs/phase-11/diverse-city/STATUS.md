@@ -65,6 +65,18 @@ them), schedule (already populated). Robinson directions headings confirmed Aven
   late-loading content above the fold: the staff group and schedule order are in the server-rendered first paint, the drop-down
   is hidden until opened, and the shop's kit photos keep the existing portrait box. To recheck on `rc-sam` after merge.
 
+**onzio-bot review of #205 at `61a4cd7` (1 Medium, 3 Low) — all addressed:**
+- Medium, Staff group untested: render cases in `cinematic-roster-renderer` (staff under the players, plain cards, no dialog,
+  crest fallback, no group without staff), `cinematic-roster-browser-fetch` (new; the browser read is now the exported
+  `fetchCinematicRoster`), and a `fetchStaff` request-client case in `cinematic-server-fetch-client`. Breaking the render, the
+  browser fetch, the server fetch or `fetchStaff`'s client each fails a test now.
+- Low, Foothill kit borrowing Away photos untested: `cinematic-shop-update-renderer` covers it (public page borrows, the editor
+  shows the empty slot, a kit with its own photos keeps them) and the absence of number/pause buttons.
+- Low, an upcoming match with no kickoff time was hidden when a later match had one: upcoming fixtures dated before Next now
+  stay listed ahead of it in date order (`cinematic-schedule` case written red first).
+- Low, admin help text still promised "coming soon" for a blank video: both Schedule editors now say the Schedule shows the
+  logo without a link and the match summary says "coming soon" (`schedule-directions` case).
+
 **Not done yet:** admin edits after merge (#1 pill labels and Foothill kit, #5 Stem/Sub-mark/top image, #6 `/tickets` title,
 #13 crest); `rc-sam` fast-forward and preview recheck (Robinson headings, hero button, CLS).
 

@@ -366,7 +366,7 @@ export function MatchForm({
               id="match-replay-video"
               label="Stream or replay video (YouTube link)"
               optional
-              help="Before kickoff, paste the livestream link; YouTube keeps the same link for the replay. It shows on the Schedule, the homepage and this match’s summary. Leave it blank to show “coming soon”."
+              help="Before kickoff, paste the livestream link; YouTube keeps the same link for the replay. It shows on the Schedule, the homepage and this match’s summary. Left blank, the Schedule shows the Watch on YouTube logo without a link and the match summary says “coming soon”."
               className="sm:col-span-2"
             >
               <input

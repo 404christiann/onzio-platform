@@ -64,9 +64,12 @@ export function scheduleDisplay(fixtures: readonly Fixture[], now: Date, timeZon
     const start = kickoff(fixture);
     return start !== null ? start <= wallClock : isRealDate(fixture.date) && fixture.date < today;
   }).reverse();
-  // A first upcoming fixture still waiting on its kickoff time leads the list without the Next badge.
-  const lead = season.find(item => item.fixture === next) ?? season.find(item => !isPlayed(item.fixture) && !past.includes(item));
-  return { next, list: lead ? [lead, ...past] : past };
+  // Upcoming fixtures still waiting on a kickoff time can't be Next, but the ones dated before Next stay listed
+  // (in date order, ahead of it) rather than hidden. With no timed Next, the first upcoming fixture leads.
+  const upcoming = season.filter(item => !isPlayed(item.fixture) && !past.includes(item));
+  const nextIndex = upcoming.findIndex(item => item.fixture === next);
+  const lead = nextIndex >= 0 ? upcoming.slice(0, nextIndex + 1) : upcoming.slice(0, 1);
+  return { next, list: [...lead, ...past] };
 }
 
 export function scheduleDate(date: string): string {

@@ -141,7 +141,7 @@ export function RoseCityMatchFields({ section, form, onChange, seasons, clubName
           </div>
         </Group>
         <Group title="Stream and replay">
-          <Field id="match-replay-video" label="Stream or replay video (YouTube link)" optional help="Before kickoff, paste the livestream link; YouTube keeps the same link for the replay. It shows on the Schedule, the homepage and this match’s summary. Leave it blank to show “coming soon”.">
+          <Field id="match-replay-video" label="Stream or replay video (YouTube link)" optional help="Before kickoff, paste the livestream link; YouTube keeps the same link for the replay. It shows on the Schedule, the homepage and this match’s summary. Left blank, the Schedule shows the Watch on YouTube logo without a link and the match summary says “coming soon”.">
             <input id="match-replay-video" type="url" inputMode="url" placeholder="e.g. https://youtu.be/…" value={form.replay_video_url ?? ""} onChange={e => set("replay_video_url", e.target.value)} aria-describedby="match-replay-video-help" className={input} />
           </Field>
         </Group>

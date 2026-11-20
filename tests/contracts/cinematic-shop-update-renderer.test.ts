@@ -180,3 +180,30 @@ describe("RC2027 Shop update public page", () => {
     expect(editing).toContain('data-shop-editor-target="sizeChart"');
   });
 });
+
+describe("RC-SAM-FIXES shop kit photos", () => {
+  const withPhotos = (count: number) => ({ ...props().kits.home, photos: Array.from({ length: count }, (_, i) => ({ id: `p${i}`, url: `/lead-${i}.png` })) }) as CinematicShopProps["kits"]["home"];
+  it("loops the kit photos with no numbered or pause buttons", () => {
+    const value = props();
+    const html = render({ ...value, kits: { ...value.kits, home: withPhotos(3) } });
+    expect(new Set(html.match(/\/lead-\d\.png/g))).toEqual(new Set(["/lead-0.png", "/lead-1.png", "/lead-2.png"]));
+    expect(html).not.toContain("shop-photo-controls");
+    expect(html).not.toContain("Show kit photo");
+    expect(html).not.toContain("Pause kit photos");
+  });
+  it("shows the Away photos and photo row for the Foothill kit until it has its own, on the public page only", () => {
+    const value = props();
+    const bare = { ...value, kits: { ...value.kits, third: { ...value.kits.third, photos: [] } }, photoRows: { ...value.photoRows, third: [] }, selectedVariant: "third" as const };
+    const html = render(bare);
+    expect(html).toContain("Going Good Places");
+    expect(html).toContain('src="/away.png"');
+    expect(html).toContain("/row-away.png");
+    expect(html).not.toContain("/row-third.png");
+    const editor = render({ ...bare, editing: true });
+    expect(editor).toContain("Add a kit photo");
+    expect(editor).not.toContain('src="/away.png"');
+    expect(editor).toContain("Add photos to the player row");
+    // A kit with its own photos keeps them.
+    expect(render({ ...value, selectedVariant: "third" })).toContain("/row-third.png");
+  });
+});
