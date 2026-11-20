@@ -1,3 +1,15 @@
+## 2026-11-20 - RC-HERO-VIDEO-SWAP: Rose City admins replace the homepage hero video (migration, local only)
+
+- **Status:** `in_progress`, built and verified locally. Committed on branch
+  `claude/rc-hero-video-swap` (rebased on main `266db9a6`), PR open. Migration `20261120230000_hero_video_swap.sql` is on the shared local DB
+  only. New server-only env `BUNNY_STREAM_API_KEY`. Record: `STATUS.md` (RC-HERO-VIDEO-SWAP).
+- **What:** a kernel route `/api/admin/homepage/hero-video`. The browser uploads straight to Bunny over tus with a signed token,
+  and the swap happens only once the 720p MP4 is ready. Service-role RPCs merge `presentation_config` (live plus one previous,
+  one-click revert), cap replaces at 5 per club per day, and delete only this club's out-of-history videos. The admin control
+  sits in the Top of the page dialog. The operator SQL now merges instead of overwriting.
+- **Exact next step:** onzio-bot review; then Christian's word for the production migration gate, the Vercel env var and the first real Bunny
+  upload, each separately.
+
 ## 2026-11-20 - RC-CLS-2: Rose City pages stop shifting on load with production content (app code only)
 
 - **Status:** `ready for review`, PR open from `claude/rc-cls-2` (rebased onto main `e1021427`, after #205). onzio-bot's Medium and Low on `7ca18eb` are

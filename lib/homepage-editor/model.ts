@@ -98,6 +98,8 @@ export type HomepageEditorAction =
   | { type: "field-changed"; field: string; value: string | boolean }
   | { type: "photos-changed"; photos: HomepagePhoto[] }
   | { type: "revamp-changed"; content: CinematicHomepageContent }
+  /** The server's revision moved without touching this draft (e.g. a hero video swap). Only the base revision changes. */
+  | { type: "base-revision-refreshed"; revision: string }
   | { type: "save-started"; operationId: string }
   | { type: "save-failed"; code: string; message: string }
   | { type: "save-reconciled-not-committed" }
@@ -378,6 +380,13 @@ export function reduceHomepageEditor(
       next.save = "idle";
       next.saveError = null;
     }
+    return next;
+  }
+
+  if (action.type === "base-revision-refreshed") {
+    if (state.baseRevision === action.revision) return state;
+    const next = cloneState(state);
+    next.baseRevision = action.revision;
     return next;
   }
 

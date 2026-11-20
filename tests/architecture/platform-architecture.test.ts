@@ -241,6 +241,8 @@ describe("tenant and privileged-boundary architecture contract", () => {
       /^lib\/media-quota\.ts$/,
       // RC-ADMIN-10d: the orphan-media sweep (dry-run by default).
       /^lib\/media-orphan-sweep\.ts$/,
+      // RC-HERO-VIDEO-SWAP: counter and swap RPCs for the hero video replace flow.
+      /^lib\/hero-video-swap\.ts$/,
       /^lib\/billing-lifecycle\.ts$/,
       /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,

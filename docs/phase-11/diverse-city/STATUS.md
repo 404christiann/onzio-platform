@@ -1,5 +1,69 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-HERO-VIDEO-SWAP: Rose City admins replace the homepage hero video (migration, local only)
+
+- **Agent / package:** Claude Code (Opus coordinating, Sonnet subagents building), `RC-HERO-VIDEO-SWAP`.
+- **Status:** `in_progress`, built and verified locally. Committed on branch `claude/rc-hero-video-swap`
+  (rebased on main `266db9a6`), pushed, PR open (Christian's word, 2026-11-20). Not merged.
+  Migration `20261120230000_hero_video_swap.sql` is applied to the shared local Supabase only.
+- **Completed:**
+  - New kernel route `POST/GET /api/admin/homepage/hero-video` (`start`, `finalize`, `revert`). It uses the homepage route's auth
+    (origin check, fresh session, `authorizeMutation` feature `homepage`). Rose City only, through the new
+    `heroVideoReplaceable` capability, so there is no new template selector; it fails closed with 404.
+  - Server-only `BUNNY_STREAM_API_KEY` (never `NEXT_PUBLIC`). A missing key returns 503 `VIDEO_NOT_CONFIGURED`.
+  - The browser uploads straight to Bunny with tus-js-client and a signed, expiring upload token. The key never leaves the server.
+  - Uploads go to library 723074, collection `club-<clubId>`. Limits: video mime only, 500 MB, 5 replaces per club per UTC day
+    on its own counter, consumed only after the request validates.
+  - `finalize` switches only when Bunny reports status 4, the MP4 fallback and a 720p rendition, and a HEAD on `play_720p.mp4`
+    succeeds. Lower than 720p or a failed transcode is deleted with a clear error.
+  - The swap is a service-role jsonb merge of `presentation_config`: the new video goes live and the old live video becomes
+    `previousHeroVideoGuid`. The video that drops out of that two-slot history is deleted from Bunny.
+  - Delete guard: a video is deleted only if it is in this club's collection, is not the live or previous video, and is not a
+    Diverse City video. Retries are idempotent (`already_live`). A stale tab gets `conflict`.
+  - Revert swaps live and previous, deletes nothing and doesn't count against the daily limit.
+  - Migration: counter table `onzio_private.hero_video_replace_counters` and four service-role-only RPCs
+    (`consume_hero_video_replace`, `hero_video_replaces_today`, `swap_hero_video`, `revert_hero_video`).
+    `presentation_config` stays ungranted to authenticated, and `save_homepage` is unchanged.
+  - The swap and revert RPCs return `revision_before`/`revision_after`. The editor refetches the homepage revision and moves only
+    its base revision, and only when base = before and fetched = after, so a real concurrent edit still surfaces as
+    `CONTENT_CHANGED`. Unsaved drafts are kept.
+  - Admin UI: a "Hero video" block in the Top of the page dialog with a preview, Replace video, Revert to previous (inline
+    confirm), real upload progress with cancel, a processing state, plain errors, and "N of 5 replaces left today". It says
+    replace and revert go live by themselves and aren't part of Save. There's no paste-a-GUID field. Other templates still show
+    "set by Onzio".
+  - `scripts/rose-city-2027-operator-sql.ts` now merges `presentation_config` (`||`, containment no-op check). It never writes
+    `previousHeroVideoGuid`, and it only writes the hero keys when `--hero-video-guid`/`--hero-video-library-id` are passed
+    (falling back to the default only when the row has none).
+  - `cinematic.css` and the Diverse City constants in `lib/bunny-video.ts` are untouched.
+- **Files:** new: `app/api/admin/homepage/hero-video/route.ts`, `lib/bunny-stream.ts`, `lib/hero-video-swap.ts`,
+  `lib/homepage-editor/hero-video-{client,tus,upload}.ts`, `components/admin/homepage/HeroVideoControl.{tsx,module.css}`,
+  `components/admin/homepage/useHeroVideoController.ts`, `supabase/migrations/20261120230000_hero_video_swap.sql`, tests
+  `tests/contracts/{bunny-stream,hero-video-route,hero-video-swap,hero-video-upload,hero-video-control-render}.test.ts`,
+  `tests/database/hero-video-swap.test.ts`. Changed: `HomepageOverviewEditor.tsx`, `HomepagePartFields.tsx`,
+  `lib/homepage-editor/{capabilities,model,useHomepageEditor}.ts`, `lib/database.generated.ts`, `package.json` +
+  `package-lock.json` (tus-js-client ^4.3.1, additions only), `scripts/rose-city-2027-operator-sql.ts`, and the
+  service-role allowlist plus three migration-order lists in tests.
+- **Verification:**
+  - `npm run test:unit` 373 files / 4445 tests pass. One earlier run had a 15 s timeout in
+    `template-selector-retirement`, which passed alone and on the rerun.
+  - db tests on a fresh local reset from this branch: `hero-video-swap`, `cinematic-homepage-atomic-save`,
+    `cinematic-footer-logo`, `media-upload-quota`, `homepage-atomic-save` 92/92. After the revision columns and reseeding
+    local `alpha`, 94/95; the 1 is the atomic-save fixture colliding with the local seed row (duplicate key), not this code.
+  - `db:types:check` matches; tsc and eslint are clean.
+  - No real Bunny call anywhere; every Bunny test stubs `fetch`.
+  - Browser, local `alpha` switched to cinematic@2 by a local-only seed: the control renders. A local revert swapped
+    live/previous, kept `sponsorTreatments` and moved the revision 1→2. The editor then saved the restored draft (revision 3,
+    POST 200, no `CONTENT_CHANGED`). Escape cancels only the inline confirm.
+- **Blockers / decisions:**
+  - An upload that is still processing when the admin closes the page is never finalized. It stays in the club collection
+    until the 24 h sweep, and its daily slot is used.
+  - The 500 MB cap is enforced on the declared size; Bunny's library-level max upload size would make it a hard cap.
+  - The telemetry branch also edits `lib/database.generated.ts`, `docs/onzio-platform-plan.md` and the two
+    admin-reimagined migration-order tests, so whichever merges second rebases and regenerates.
+- **Exact next step:** onzio-bot review and Christian's review. Then, each only on his exact word: production migration gate
+  (backup, `migration list --linked`, dry run listing only `20261120230000`, push); add `BUNNY_STREAM_API_KEY` to Vercel;
+  first real Bunny upload on Rose City.
+
 ## 2026-11-20 - RC-SAM-MOBILE-HEADINGS: Foothill Transit headings bold on phones; "Single match tickets"; square Jersey Details boxes
 
 **Agent/package:** Claude Code (Opus 5.5), RC-SAM-MOBILE-HEADINGS (Christian's three follow-ups from his phone), branch

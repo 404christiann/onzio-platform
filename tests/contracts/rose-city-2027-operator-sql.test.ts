@@ -5,6 +5,7 @@ import { templateRegistry } from "@/packages/presentation";
 import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
 import {
   DEFAULT_EPISODE_VIDEO_URL,
+  DEFAULT_HERO_VIDEO,
   EPISODE_VIDEO_SQL_PATTERN,
   OPERATOR_WRITES,
   ROSE_CITY_CLUB_ID,
@@ -145,6 +146,48 @@ describe("Rose City 2027 operator SQL", () => {
       expect(sql).toContain("SAVE_THE_HOMEPAGE_VIDEO_SECTION_FIRST");
       expect(sql).toContain("if v_video.video_url is distinct from v_video_url then");
       expect(sql).toMatch(/update onzio\.behind_the_rose_section set video_url = v_video_url where club_id = v_club_id;/);
+    });
+  });
+
+  describe("presentation_config merge (RC-HERO-VIDEO-SWAP)", () => {
+    const run = (inputs: Partial<PresentationInputs> = {}) => buildPresentationInputsSql({ inputs: { ...INPUTS, ...inputs }, commit: false });
+    const cfgLiteral = (sql: string) => JSON.parse(/\$cfg\$([\s\S]*?)\$cfg\$/.exec(sql)![1]);
+
+    it("merges with || and checks containment with @>, never overwriting", () => {
+      const scan = withoutJson(run());
+      expect(scan).toContain("presentation_config = presentation_config || v_merge");
+      expect(scan).toContain("v_row.presentation_config @> v_merge");
+      expect(scan).not.toMatch(/presentation_config\s*=\s*v_config/);
+      expect(scan).not.toMatch(/v_row\.presentation_config\s*=/);
+    });
+
+    it("leaves the hero video out of the payload unless the operator passes it", () => {
+      const config = cfgLiteral(run());
+      expect(config).not.toHaveProperty("heroVideoGuid");
+      expect(config).not.toHaveProperty("heroVideoLibraryId");
+      expect(config).toHaveProperty("sponsorTreatments");
+      expect(config).toHaveProperty("artworkAlt");
+    });
+
+    it("falls back to the default hero video only when the row has no such key", () => {
+      const scan = withoutJson(run());
+      expect(scan).toContain("not (v_merge ? 'heroVideoGuid') and not (v_row.presentation_config ? 'heroVideoGuid')");
+      expect(scan).toContain("not (v_merge ? 'heroVideoLibraryId') and not (v_row.presentation_config ? 'heroVideoLibraryId')");
+      expect(scan).toContain(DEFAULT_HERO_VIDEO.guid);
+    });
+
+    it("includes the hero video when the operator passes it, and still validates it", () => {
+      const guid = "aaaaaaaa-1111-4111-8111-111111111111";
+      expect(cfgLiteral(run({ heroVideoGuid: guid, heroVideoLibraryId: "42" }))).toMatchObject({ heroVideoGuid: guid, heroVideoLibraryId: "42" });
+      expect(() => run({ heroVideoGuid: "x'; drop table onzio.clubs; --" })).toThrow(/malformed/);
+      expect(() => run({ heroVideoLibraryId: "abc" })).toThrow(/malformed/);
+    });
+
+    it("never writes or removes previousHeroVideoGuid", () => {
+      for (const sql of [run(), run({ heroVideoGuid: "aaaaaaaa-1111-4111-8111-111111111111" })]) {
+        expect(sql).not.toContain("previousHeroVideoGuid");
+        expect(sql).not.toMatch(/presentation_config[ \t]*(#-|-[ \t]*')/);
+      }
     });
   });
 

@@ -59,6 +59,8 @@ export function resolveHomepageCapabilities(input: HomepageRenderer) {
     maxPhotos: cinematic ? HOMEPAGE_SLIDESHOW_PHOTO_LIMITS.cinematic : HOMEPAGE_SLIDESHOW_PHOTO_LIMITS.other,
     photoCaptionEditable: siteHomepage?.photoCaptionEditable ?? (input.slideshowVariant === "legacy"),
     videoSourceEditable: false as const,
+    /** The hero background video can be replaced through the hero video swap (the cinematic branch only). */
+    heroVideoReplaceable: editableSections.includes("revamp"),
     sharedTargets: {
       storyText: clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
       shop: { owner: "shop" as const, editorHref: "/admin/shop" as const, surface: siteHomepage?.shopTargetSurface ?? (clubhouse ? "shop" as const : "home" as const) },

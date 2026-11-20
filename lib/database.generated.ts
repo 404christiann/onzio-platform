@@ -4161,6 +4161,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      consume_hero_video_replace: {
+        Args: { p_cap?: number; p_club_id: string }
+        Returns: {
+          allowed: boolean
+          cap: number
+          used: number
+        }[]
+      }
       consume_media_upload_reservation: {
         Args: {
           p_actor_id: string
@@ -4202,6 +4210,10 @@ export type Database = {
         Returns: undefined
       }
       get_club_runtime_access: { Args: { p_club_id: string }; Returns: string }
+      hero_video_replaces_today: {
+        Args: { p_club_id: string }
+        Returns: number
+      }
       load_about_editor: {
         Args: { p_club_id: string; p_operation_id?: string; p_page: string }
         Returns: Json
@@ -4338,6 +4350,20 @@ export type Database = {
         Args: { p_actor_id: string; p_asset_id: string; p_club_id: string }
         Returns: Json
       }
+      revert_hero_video: {
+        Args: {
+          p_club_id: string
+          p_expected_live: string
+          p_target_guid: string
+        }
+        Returns: {
+          live_guid: string
+          outcome: string
+          previous_guid: string
+          revision_after: string
+          revision_before: string
+        }[]
+      }
       run_billing_lifecycle: {
         Args: {
           p_now: string
@@ -4425,6 +4451,22 @@ export type Database = {
       save_tryouts_page: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
+      }
+      swap_hero_video: {
+        Args: {
+          p_club_id: string
+          p_expected_live: string
+          p_library_id: string
+          p_new_guid: string
+        }
+        Returns: {
+          deletable_guid: string
+          live_guid: string
+          outcome: string
+          previous_guid: string
+          revision_after: string
+          revision_before: string
+        }[]
       }
     }
     Enums: {
