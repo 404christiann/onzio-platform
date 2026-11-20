@@ -44,7 +44,7 @@
   .cinematic-site .crest-diagram{margin-top:40px}
   .cinematic-site .identity-features{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;padding-bottom:40px}
   .cinematic-site .identity-feature{position:relative;grid-template-columns:128px minmax(0,1fr);gap:24px;min-height:0;padding:22px 5%}
-  .cinematic-site .identity-feature:last-child:nth-child(odd){grid-column:1/-1}
+  .cinematic-site .identity-feature:last-child:nth-child(odd),.cinematic-site .identity-features>.identity-empty{grid-column:1/-1}
   .cinematic-site .identity-feature:last-child:nth-child(odd) .feature-copy p{max-width:none}
   .cinematic-site .feature-patch{width:128px;height:128px}
   .cinematic-site .feature-heading{min-height:62px;gap:16px;margin-bottom:8px}

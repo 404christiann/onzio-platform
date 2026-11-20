@@ -65,6 +65,15 @@ ticket-pages,partners}.css` (appended blocks only).
   +1.8 KB (+3.4 KB on `/shop`): the new rules ride the shared CSS chunk the cinematic styles already ship in, all scoped
   to `.cinematic-site`, and those pages have 0 `.cinematic-site` elements, so nothing can match.
 - tsc clean; `test:unit` 4294/4294; `test:contracts` 3333/3333.
+- onzio-bot review at `4cf7087` (0 High, 0 Medium, 2 Low), both fixed:
+  - The About editor's "Add the first crest feature" placeholder now spans both columns (`crest.css`, inside the desktop
+    block).
+  - New `tests/contracts/cinematic-desktop-fit.test.ts` (14 cases) checks each of the 10 files ends with exactly one
+    desktop-only block whose rules are all `.cinematic-site`-scoped and crop nothing (no `object-fit:cover`). It also
+    checks the key layouts: two-column crest cards plus the spanning placeholder, five tiles across, tickets two-column
+    only with art and prices, and two-column directions. Putting all 10 files back to main fails 14/14; removing only
+    the placeholder rule fails 1.
+  - `test:contracts` is now 3387/3387 (on main `75684008`, after #203's tests); tsc clean.
 
 **Blockers/decisions:** CLS on production content is over 0.01 on main already (font swap); this branch raises `/tickets` and `/sponsors` somewhat (see above) and Christian decides whether to merge before RC-CLS-2. The local seed has no content for Shop, Stadium, KBYG or the ticket art, so the
 desktop before/after rests on `rc-sam` with the CSS injected (the loaded-CSS comparison shows the build adds exactly
