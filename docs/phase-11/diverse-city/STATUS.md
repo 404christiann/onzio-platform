@@ -2,7 +2,7 @@
 
 ## 2026-11-20 - RC-CLS-2: Rose City pages stop shifting on load with production content (app code only)
 
-**Agent/package:** Claude Code (Opus 5.5), RC-CLS-2, branch `claude/rc-cls-2` on main `04fa6ae6` (after #204). **Status:**
+**Agent/package:** Claude Code (Opus 5.5), RC-CLS-2, branch `claude/rc-cls-2`, rebased onto main `e1021427` (after #205; measured on `04fa6ae6`, after #204). **Status:**
 `ready for review` (PR into `main`; not merged, not deployed, `rc-sam` not updated). No migration, schema, env, Supabase,
 Stripe or admin change.
 
@@ -87,6 +87,17 @@ optional client), `public/fonts/museomoderno/README.md`, and tests (`cinematic-f
   to a server component in the cinematic layout branch, guarded by `cinematic-fonts`.)
 - `tsc` clean; tests: `test:unit` 4356/4356, `test:contracts` 3395/3395. ESLint on the changed files: clean (3 existing
   `react/no-children-prop` errors in the unchanged `cinematic-shell.test.ts`).
+
+- onzio-bot review of `7ca18eb` (1 Medium, 1 Low), both fixed with tests that fail when the line they guard is removed:
+  - Medium: `tests/contracts/cinematic-kbyg-no-refetch.test.ts` runs Know Before You Go's match effect by hand (as
+    `cinematic-news-partners-server` does) and asserts no browser fetch when the server served the match, and exactly one
+    when it did not. Deleting the `seeded.current === club.id` early return fails it.
+  - Low: `lib/__tests__/queries.test.ts` asserts `fetchSiteSocialLinks(clubId, client)` reads through the given client,
+    filtered to that club, and never the default one. Swapping `client` back to `supabase` fails it.
+- Rebased onto #205 (RC-SAM-FIXES). Conflicts were its colour-token edits on the same CSS lines and a sixth Avenir Heavy stack
+  (Robinson's directions headings), which now gets the stand-ins too; the fonts contract expects six. After the rebase: `tsc`
+  clean, `test:unit` 4380/4380, `test:contracts` 3418/3418. The CLS tables above were measured before #205; #205 changes
+  Shop, Schedule and Roster layout, so the post-merge `rc-sam` re-measure covers the combination.
 
 **Blockers or unresolved decisions:** Christian's merge, and a fast-forward of `rc-sam` on his word to re-measure there. Still
 open from RC-MATCH-AREA: whether the cinematic shell should read branding and social links on the server (the footer shift on

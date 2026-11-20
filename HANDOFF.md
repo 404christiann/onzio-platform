@@ -1,6 +1,7 @@
 ## 2026-11-20 - RC-CLS-2: Rose City pages stop shifting on load with production content (app code only)
 
-- **Status:** `ready for review`, PR open from `claude/rc-cls-2` (main `04fa6ae6`). No migration, schema, env, Supabase, Stripe or
+- **Status:** `ready for review`, PR open from `claude/rc-cls-2` (rebased onto main `e1021427`, after #205). onzio-bot's Medium and Low on `7ca18eb` are
+  fixed with mutation-checked tests. No migration, schema, env, Supabase, Stripe or
   admin change. Details and tables: `STATUS.md` (RC-CLS-2).
 - **What:** the eight Rose City pages over 0.01 on `rc-sam` (Stadium up to 0.44, Sponsors 0.10, Know Before You Go 0.08) now
   measure 0.000 worst of 3 at 1440, 1280 and 390 (font fixes injected on `rc-sam`; Know Before You Go's server read checked on a
