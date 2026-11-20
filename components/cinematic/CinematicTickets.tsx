@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { fetchSchedule } from "@/lib/queries";
-import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { isTicketPurchaseUrl, isTicketSectionShown, type TicketsPageContent, type TicketsArtwork } from "@/lib/tickets-content";
 import { useCinematicContent } from "./CinematicContent";
 import { cinematicMatchDate, cinematicMatchTime, nextHomeFixture } from "./next-home-fixture";
@@ -14,7 +14,7 @@ import "./tickets.css";
 export default function CinematicTickets({ content }: {
     content: TicketsPageContent;
 }) {
-    const club = useClubContext(), branding = useClubBranding();
+    const club = useClubContext(), branding = useClubBranding(), timeZone = useClubTimeZone();
     const { content: shared } = useCinematicContent();
     const [match, setMatch] = useState<{
         clubId: string;
@@ -24,12 +24,12 @@ export default function CinematicTickets({ content }: {
     useEffect(() => {
         let active = true;
         setMatch({ clubId: club.id, fixture: null, loading: true });
-        Promise.all([fetchSchedule(undefined, club.id), fetchClubIdentity(club.id)]).then(([fixtures, identity]) => { if (active)
-            setMatch({ clubId: club.id, fixture: nextHomeFixture(fixtures, new Date(), identity?.timeZone || "UTC"), loading: false }); })
+        fetchSchedule(undefined, club.id).then(fixtures => { if (active)
+            setMatch({ clubId: club.id, fixture: nextHomeFixture(fixtures, new Date(), timeZone), loading: false }); })
             .catch(() => { if (active)
             setMatch({ clubId: club.id, fixture: null, loading: false }); });
         return () => { active = false; };
-    }, [club.id]);
+    }, [club.id, timeZone]);
     const fixture = match.clubId === club.id ? match.fixture : null;
     const art = (image: TicketsArtwork, className?: string, lazy = false) => image.url ? <NativeImage className={className} src={image.url} alt={image.alt} width={image.width ?? undefined} height={image.height ?? undefined} loading={lazy ? "lazy" : "eager"}/> : null;
     const { banner, seat, card, raffle, bus, map, partner } = content.artwork;

@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   club: vi.fn(), schema: vi.fn(), trusted: { tag: "trusted" },
   roster: vi.fn(), season: vi.fn(), schedule: vi.fn(), kits: vi.fn(), photos: vi.fn(), sponsors: vi.fn(),
-  identity: vi.fn(), purchase: vi.fn(), content: vi.fn(),
+  identity: vi.fn(), zone: vi.fn(), purchase: vi.fn(), content: vi.fn(),
 }));
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: mocks.club }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: async () => ({ schema: mocks.schema }) }));
@@ -17,6 +17,7 @@ vi.mock("@/lib/queries", () => ({
   fetchShopKitVariants: mocks.kits, fetchShopCarouselPhotos: mocks.photos, fetchSiteSponsorLogos: mocks.sponsors,
 }));
 vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: mocks.identity }));
+vi.mock("@/lib/public-club-time-zone", () => ({ readPublicClubTimeZone: mocks.zone }));
 vi.mock("@/lib/cinematic-shop-query", () => ({ fetchCinematicShopPurchase: mocks.purchase, fetchCinematicShopContent: mocks.content }));
 const { stub } = vi.hoisted(() => ({ stub: async (name: string) => { const { createElement: h } = await import("react"); return { default: (props: { initial?: unknown }) => h("div", { "data-page": name, "data-initial": JSON.stringify(props.initial ?? null) }) }; } }));
 vi.mock("@/components/cinematic/CinematicRosterPage", () => stub("cinematic-roster"));
@@ -50,7 +51,8 @@ beforeEach(() => {
   mocks.roster.mockResolvedValue({ seasonId: "s", seasonLabel: "2027", goalkeepers: [], defenders: [], midfielders: [], forwards: [] });
   mocks.season.mockResolvedValue({ id: "season-1", label: "2027" });
   mocks.schedule.mockResolvedValue([{ id: "f1", date: "2027-05-01", time: "19:00", opponent: "Rivals", home: true, venue: "Park" }]);
-  mocks.identity.mockResolvedValue({ timeZone: "America/Los_Angeles" });
+  mocks.identity.mockResolvedValue(null);
+  mocks.zone.mockResolvedValue("America/Los_Angeles");
   mocks.kits.mockResolvedValue({ home: { section: null, photos: [] }, away: { section: null, photos: [] }, third: { section: null, photos: [] } });
   mocks.photos.mockResolvedValue([]);
   mocks.sponsors.mockResolvedValue([]);
@@ -78,21 +80,21 @@ describe("cinematic@2 Roster route", () => {
 });
 
 describe("cinematic@2 Schedule route", () => {
-  it("fetches season, identity and fixtures on the server and passes the server clock", async () => {
+  it("fetches season, the club time zone and fixtures on the server and passes the server clock", async () => {
     const markup = await html(ScheduleRoute);
     expect(markup).toContain('data-page="cinematic-schedule"');
     expect(mocks.season).toHaveBeenCalledWith("tenant-id", mocks.trusted);
-    expect(mocks.identity).toHaveBeenCalledWith("tenant-id", mocks.trusted);
+    expect(mocks.zone).toHaveBeenCalledWith("tenant-id");
     expect(mocks.schedule).toHaveBeenCalledWith("season-1", "tenant-id", mocks.trusted);
     const initial = parse(markup);
     expect(initial.failed).toBe(false);
     expect(initial.data).toMatchObject({ seasonLabel: "2027", timeZone: "America/Los_Angeles", fixtures: [{ opponent: "Rivals" }] });
     expect(Number.isNaN(Date.parse(initial.nowIso))).toBe(false);
   });
-  it("matches the client page defaults with no active season or time zone", async () => {
-    mocks.season.mockResolvedValue(null); mocks.identity.mockResolvedValue(null);
+  it("uses the club time zone default when there is no active season", async () => {
+    mocks.season.mockResolvedValue(null);
     const initial = parse(await html(ScheduleRoute));
-    expect(initial.data).toEqual({ fixtures: [], seasonLabel: "Current", timeZone: "UTC" });
+    expect(initial.data).toEqual({ fixtures: [], seasonLabel: "Current", timeZone: "America/Los_Angeles" });
     expect(mocks.schedule).not.toHaveBeenCalled();
   });
   it("passes a failed read as data", async () => {
