@@ -51,6 +51,18 @@ the editor kit's warm `40 90% 12%` so all solid yellow tiles read the same.
 
 **Next step:** Christian reviews the PR and screenshots; merge, then a normal app deploy (no migration involved).
 
+**Follow-up (same day, Christian: "make the yellow a bit brighter... make sure the payments tab is covered"):**
+- `--warning-ink` brightened from `45 100% 25%` (#806000) to `44 100% 28%` (#8f6b00): the brightest gold that keeps
+  AA 4.5:1 on white (4.95:1) and on the 15% badge tint (4.66:1). Anything brighter fails body-text contrast. The one
+  `text-warning-ink/90` label (Registrations recovery notice) is now full strength so it still passes. Fills stay
+  `48 100% 56%`. The contract test also checks the ink against the badge tint now.
+- Payments: `PaymentStatusCard` warn tone ("Ending", "Payment overdue") draws the pill tint, "Today" dot and grace bar in
+  the yellow and the pill text in the ink. Captured on local Alpha by setting `onzio.club_subscriptions` to
+  `cancel_at_period_end` and then `past_due` with a grace window (local shared stack only, reset afterwards by the
+  next run), light and dark: `bright-*-payments-{ending,overdue}.png` plus `bright-light-{registrations,analytics,roster}.png`
+  in the notes folder. Dark Payments keeps its existing amber.
+- Re-verified: `tsc --noEmit` clean, `test:unit` 4276 passed, `test:contracts` 3315 passed.
+
 ## 2026-11-20 - RC-CONTENT: Rose City production content pass (all 13 pages entered)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator), RC-CONTENT. **Status:** `done` for entry: all 13 pages have

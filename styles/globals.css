@@ -68,10 +68,11 @@
   --success-foreground: 0 0% 100%;
   /* ADMIN-WARN: one warning yellow (the editor kit's) for fills, dots and
      borders, with dark ink on solid yellow. Yellow text fails on white, so
-     warning text and glyphs use --warning-ink, a dark gold (5.9:1 on white). */
+     warning text and glyphs use --warning-ink: the brightest gold that still
+     keeps AA 4.5:1 on white and on the 15% yellow badge tint. */
   --warning: 48 100% 56%;
   --warning-foreground: 40 90% 12%;
-  --warning-ink: 45 100% 25%;
+  --warning-ink: 44 100% 28%;
   --border: 220 10% 88%;
   --input: 220 10% 88%;
   --ring: 211 100% 42%;

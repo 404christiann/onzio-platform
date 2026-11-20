@@ -393,7 +393,7 @@ export function LegacyRegistrationsEditor() {
                 <p className="text-sm font-semibold text-warning-ink">
                   This form is live, so fields and prices are locked
                 </p>
-                <p className="mt-1 text-sm text-warning-ink/90">
+                <p className="mt-1 text-sm text-warning-ink">
                   Stop registrations to edit the structure. Name and
                   description stay editable.
                 </p>

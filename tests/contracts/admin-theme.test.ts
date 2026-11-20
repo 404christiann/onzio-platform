@@ -112,6 +112,10 @@ describe("protected admin theme contract", () => {
     expect(warning[2]).toBeGreaterThanOrEqual(50);
     expect(contrast(token(light, "warning-foreground"), warning)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(token(light, "warning-ink"), white)).toBeGreaterThanOrEqual(4.5);
+    // Badges draw ink on a 15% yellow tint over white. For a fully saturated hue that tint is the same hue
+    // at 15% of its distance from white (48 100% 93% = #fff8dc; the browser blend is #fff8dd).
+    const tint: [number, number, number] = [warning[0], warning[1], Math.round(100 - (100 - warning[2]) * 0.15)];
+    expect(contrast(token(light, "warning-ink"), tint)).toBeGreaterThanOrEqual(4.5);
     expect(block('.admin-theme[data-admin-theme="light"] .admin-portal')).not.toContain("--warning");
 
     const dark = block('.admin-theme[data-admin-theme="dark"],\n.admin-theme[data-admin-theme="dark"] > .dark,\n.admin-theme .dark,\nmain.dark');
