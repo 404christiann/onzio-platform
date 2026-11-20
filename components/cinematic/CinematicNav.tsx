@@ -23,6 +23,17 @@ function drawerDuration(style: CSSStyleDeclaration) {
   return Number.isFinite(duration) ? duration : 240;
 }
 
+const pathOf = (href: string) => href.split("#")[0];
+const section = (path: string) => path.split("/")[1] ?? "";
+
+/** The drop-down whose page is open, so its top-level tab reads as current. A page listed in two drop-downs
+ * (Know Before You Go sits under Stadium and Tickets) belongs to the one whose own landing page shares its section. */
+function currentNavGroup(items: NavItem[], pathname: string): string | null {
+  const groups = items.filter(item => item.children?.some(child => pathOf(child.href) === pathname));
+  if (groups.length < 2) return groups[0]?.id ?? null;
+  return (groups.find(group => section(pathOf(group.children![0].href)) === section(pathname)) ?? groups[0]).id;
+}
+
 export default function CinematicNav({ editing = false }: { editing?: boolean }) {
   const club = useClubContext();
   const navigationPiece = useHomepagePiece("revamp.navigation");
@@ -54,6 +65,10 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
   const items: NavItem[] = CINEMATIC_NAV_ITEMS.filter(item => item.id !== "shop" || club.storeEnabled);
   const selectedGroup = items.find(item => item.id === mobileGroup);
   const isCurrent = (href?: string) => preview ? href === "/" : pathname === href;
+  const currentGroup = preview ? null : currentNavGroup(items, pathname);
+  const desktopNav = useRef<HTMLElement>(null);
+  const indicator = useRef<HTMLSpanElement>(null);
+  const placeIndicator = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!open) return;
@@ -116,6 +131,75 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
       drawerAnimation.current?.cancel();
     };
   }, []);
+
+  // One red indicator follows the hovered (or keyboard-focused) top-level tab and rests on the current page's tab.
+  // Before this runs, the server-rendered `.active` underline stands in, so nothing shifts on hydration.
+  useEffect(() => {
+    const nav = desktopNav.current;
+    const bar = indicator.current;
+    if (!nav || !bar) return;
+    let hovered: HTMLElement | null = null;
+    let focused: HTMLElement | null = null;
+    const topItem = (node: EventTarget | null) => {
+      const element = node as Element | null;
+      if (!element?.closest || !nav.contains(element)) return null;
+      return element.closest(".nav-group")?.querySelector<HTMLElement>(":scope > .nav-item") ?? element.closest<HTMLElement>(".nav-item");
+    };
+    const place = (snap = false) => {
+      const target = hovered ?? focused
+        ?? nav.querySelector<HTMLElement>(".nav-group.open > .nav-item")
+        ?? nav.querySelector<HTMLElement>(".nav-item.active");
+      if (!target) { bar.removeAttribute("data-visible"); return; }
+      // Measure in the nav's own units so a scaled editor preview still lines up.
+      const box = nav.getBoundingClientRect();
+      const scale = nav.offsetWidth ? box.width / nav.offsetWidth : 1;
+      const rect = target.getBoundingClientRect();
+      // Appearing from nothing should not slide in from wherever the indicator last rested.
+      if (snap || !bar.hasAttribute("data-visible")) bar.setAttribute("data-snap", "");
+      bar.style.transform = `translateX(${(rect.left - box.left) / scale}px) scaleX(${rect.width / scale})`;
+      bar.setAttribute("data-visible", "");
+      if (bar.hasAttribute("data-snap")) { void bar.offsetWidth; bar.removeAttribute("data-snap"); }
+    };
+    const over = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
+      const item = topItem(event.target);
+      if (item && item !== hovered) { hovered = item; place(); }
+    };
+    const leave = () => { if (hovered) { hovered = null; place(); } };
+    const focusIn = (event: FocusEvent) => {
+      let visible = false;
+      try { visible = (event.target as Element).matches(":focus-visible"); } catch { /* selector unsupported */ }
+      focused = visible ? topItem(event.target) : null;
+      place();
+    };
+    const focusOut = (event: FocusEvent) => {
+      if (nav.contains(event.relatedTarget as Node | null)) return;
+      focused = null;
+      place();
+    };
+    const view = nav.ownerDocument.defaultView;
+    const resize = view && "ResizeObserver" in view ? new view.ResizeObserver(() => place(true)) : null;
+    resize?.observe(nav);
+    nav.ownerDocument.fonts?.ready.then(() => place(true)).catch(() => {});
+    nav.addEventListener("pointerover", over);
+    nav.addEventListener("pointerleave", leave);
+    nav.addEventListener("focusin", focusIn);
+    nav.addEventListener("focusout", focusOut);
+    place(true);
+    nav.setAttribute("data-indicator-ready", "");
+    placeIndicator.current = () => place();
+    return () => {
+      placeIndicator.current = () => {};
+      resize?.disconnect();
+      nav.removeEventListener("pointerover", over);
+      nav.removeEventListener("pointerleave", leave);
+      nav.removeEventListener("focusin", focusIn);
+      nav.removeEventListener("focusout", focusOut);
+      nav.removeAttribute("data-indicator-ready");
+    };
+  }, []);
+
+  useEffect(() => { placeIndicator.current(); }, [pathname, open, currentGroup, content]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -192,9 +276,9 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
   return <>
     <header {...navigationPiece} className="club-header" ref={header} data-navigation-editing={editing || undefined} data-keyboard-input={keyboardInput || undefined}>
       <Link className="crest-link" href="/" aria-label={`${club.name} home`}>{clubLogoUrl && <NativeImage src={clubLogoUrl} alt={`${club.name} crest`} />}</Link>
-      <nav className="desktop-nav" aria-label="Main navigation">
+      <nav ref={desktopNav} className="desktop-nav" aria-label="Main navigation">
         {items.map(item => item.children?.length ? <div key={item.id} className={`nav-group${open === item.id ? " open" : ""}`} data-group={item.id}>
-          <button type="button" className="nav-item" data-nav-id={item.id} aria-expanded={open === item.id} aria-controls={`${prefix}-${item.id}`} onClick={event => {
+          <button type="button" className={`nav-item${currentGroup === item.id ? " active" : ""}`} data-nav-id={item.id} aria-expanded={open === item.id} aria-controls={`${prefix}-${item.id}`} onClick={event => {
             const button = event.currentTarget;
             const panel = button.parentElement?.querySelector<HTMLElement>(".dropdown");
             if (panel) panel.style.transformOrigin = `${button.offsetLeft + button.offsetWidth / 2 - panel.offsetLeft}px 0`;
@@ -203,9 +287,10 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
             {label(item.id, item.label)}<span className="nav-caret" aria-hidden="true" />
           </button>
           <div className="dropdown" id={`${prefix}-${item.id}`} aria-hidden={open !== item.id} inert={open !== item.id}>
-            {item.children.map(child => <Link key={child.id} href={child.href} onClick={() => setOpen(null)}>{childLabel(child.id, child.label)}</Link>)}
+            {item.children.map(child => <Link key={child.id} href={child.href} aria-current={currentGroup === item.id && child.href === pathname ? "page" : undefined} onClick={() => setOpen(null)}>{childLabel(child.id, child.label)}</Link>)}
           </div>
         </div> : <Link key={item.id} data-nav-id={item.id} className={`nav-item${isCurrent(item.href) ? " active" : ""}`} href={item.href ?? "/"} aria-current={isCurrent(item.href) ? "page" : undefined}>{label(item.id, item.label)}</Link>)}
+        <span ref={indicator} className="nav-indicator" aria-hidden="true" />
       </nav>
       {partner?.url && <div className="header-partner" data-transparent-mark={foothillPartner || undefined}><NativeImage src={foothillPartner ? "/images/cinematic/foothill-going-good-places.png" : partner.url} alt={partner.alt} /></div>}
       <button ref={menuButton} type="button" className="menu-toggle" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls={`${prefix}-drawer`} onClick={openPhone}><span className="menu-word">Menu</span><NavIcon name="menu" /></button>

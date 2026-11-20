@@ -1,5 +1,43 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-NAV: Rose City top nav underline follows the cursor; carets aligned (app code only)
+
+**Agent/package:** Claude Code (Opus 5.5), RC-NAV. **Status:** `ready for review` (PR into `main`; not merged, not
+deployed, `rc-sam` not updated; those wait for Christian). No migration, schema, env, Supabase or Stripe change.
+
+**Completed:**
+- One red indicator (`.nav-indicator`) in the desktop nav slides (transform only, 220 ms ease-out) to the tab under the
+  mouse or pen, and back to the current page's tab when the cursor leaves the nav. Keyboard focus (`:focus-visible`)
+  moves it too, without sliding (keyboard input already turns nav transitions off). An open drop-down holds it on its
+  tab. Touch input and the phone menu (≤1024 px) are unchanged. `prefers-reduced-motion` jumps instead of sliding.
+  Before hydration the existing server-rendered `.active` underline shows, so nothing shifts on load.
+- Christian's request mid-package: on a drop-down page the parent tab is current, so its underline rests there
+  (/roster → CLUB, /stadium → ROBINSON STADIUM, /tickets/season-membership → TICKETS). Know Before You Go is listed under
+  Stadium and Tickets; it belongs to TICKETS (the group whose landing page shares its `/tickets` section). The matching
+  drop-down link gets `aria-current="page"`; the parent button does not.
+- Carets: all the same proportional size (`max(4px, .36em)`, was a fixed 5 px that looked oversized at the 10 px labels
+  between 1025 and 1100 px), `flex: none`, an `.36em` gap after the label, and lifted so the visible chevron centres
+  on the capitals. Measured at 1440: chevron centre was 2.75 px below the cap centre, now 0.04 px; same at 1050.
+
+**Files changed:** `components/cinematic/CinematicNav.tsx`, `components/cinematic/cinematic.css` (new rules appended,
+all under `.cinematic-site`), `tests/contracts/cinematic-navigation.test.ts`. No shared nav file: `components/Nav.tsx`
+only imports `CinematicNav` for `cinematic@2`, and Diverse City runs `TemplateNav`.
+
+**Verification:**
+- Local browser on the shared stack (Rose City re-seeded with `scripts/seed-rose-city-2027-local.ts` under
+  `with-local-db-lock.sh` after another session's reset; the public-site hold was bypassed by an uncommitted local
+  edit for the check and reverted before commit). At 1440 and 1050: hovering each of the 8 tabs puts the indicator
+  within 0.23 px of the tab; leaving returns it to the current tab; touch pointerover does not move it; Tab key focus
+  moves it with no transition and it returns when focus leaves the nav. At 1024 the desktop nav and indicator are
+  `display: none` and the phone menu is unchanged. Before/after crops are in the session-group notes folder
+  (`rc-nav-screens/`).
+- tsc clean; `test:unit` 4279/4279; `test:contracts` 3318/3318 (including `site-public-pages-scope` and the 4 new
+  RC-NAV cases in `cinematic-navigation`).
+
+**Blockers / decisions:** none. The underline spans label and caret on drop-down tabs.
+
+**Next step:** Christian reviews the PR; after merge, update `rc-sam` so Sam sees it.
+
 ## 2026-11-20 - RC-CONTENT: Rose City production content pass (all 13 pages entered)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator), RC-CONTENT. **Status:** `done` for entry: all 13 pages have

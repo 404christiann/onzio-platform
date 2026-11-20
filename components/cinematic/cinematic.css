@@ -208,3 +208,21 @@
  .cinematic-site .replay h2{font-size:29px}
 }
 .cinematic-site .result-events>span{white-space:nowrap}
+
+/* RC-NAV: one sliding red underline for the desktop tabs (CinematicNav places it), and carets sized with the label and
+   lifted so the visible chevron centres on the capitals rather than resting on the baseline. */
+.cinematic-site .desktop-nav{position:relative}
+.cinematic-site .nav-indicator{display:none}
+.cinematic-site .nav-caret{flex:none;width:max(4px,.36em);height:max(4px,.36em);transform:translateY(-.2em) rotate(45deg)}
+.cinematic-site .nav-item[aria-expanded=true] .nav-caret{transform:translateY(.06em) rotate(225deg)}
+@media(min-width:1025px){
+  .cinematic-site .nav-item{gap:.36em}
+  .cinematic-site .nav-indicator{display:block;position:absolute;left:0;bottom:9px;width:1px;height:2px;background:var(--red);transform-origin:0 0;opacity:0;pointer-events:none;transition:transform 220ms var(--ease-out),opacity 150ms var(--ease-out)}
+  .cinematic-site .nav-indicator[data-visible]{opacity:1}
+  .cinematic-site .desktop-nav[data-indicator-ready] .nav-item.active:after{content:none}
+}
+.cinematic-site .nav-indicator[data-snap],.cinematic-site .club-header[data-keyboard-input] .nav-indicator{transition:none}
+@media(prefers-reduced-motion:reduce){
+  .cinematic-site .nav-indicator{transition:opacity 150ms var(--ease-out)}
+  .cinematic-site .nav-indicator[data-snap]{transition:none}
+}

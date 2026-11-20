@@ -10,7 +10,7 @@ vi.mock("@/components/ClubBrandingProvider", () => ({ useClubBranding: () => ({ 
 vi.mock("@/components/cinematic/CinematicContent", () => ({ useCinematicContent: () => ({ content: fixture.content }) }));
 import CinematicNav from "@/components/cinematic/CinematicNav";
 
-beforeEach(() => { fixture.slug = "test-club"; fixture.storeEnabled = true; fixture.content = defaultCinematicHomepageContent(); });
+beforeEach(() => { fixture.slug = "test-club"; fixture.storeEnabled = true; fixture.pathname = "/_clubs/test/schedule"; fixture.content = defaultCinematicHomepageContent(); });
 const render = (editing = false) => renderToStaticMarkup(createElement(CinematicNav, { editing }));
 
 describe("cinematic navigation preserves club content", () => {
@@ -66,5 +66,44 @@ describe("cinematic navigation preserves club content", () => {
     expect(render()).toContain('href="/stadium">Robinson Stadium</a>');
     fixture.content!.navigation.labels.stadium = "Our home ground";
     expect(render()).toContain('href="/stadium">Our home ground</a>');
+  });
+});
+
+describe("RC-NAV cinematic desktop tabs", () => {
+  const groupButton = (html: string, id: string) => html.match(new RegExp(`<button[^>]*data-nav-id="${id}"[^>]*>`))?.[0] ?? "";
+  const activeTabs = (html: string) => [...html.matchAll(/<(?:a|button)\b[^>]*class="nav-item active"[^>]*data-nav-id="([^"]+)"|<(?:a|button)\b[^>]*data-nav-id="([^"]+)"[^>]*class="nav-item active"/g)].map(match => match[1] ?? match[2]);
+  it("renders one hidden indicator inside the desktop nav for the underline to slide on", () => {
+    const html = render();
+    expect((html.match(/class="nav-indicator"/g) ?? []).length).toBe(1);
+    expect(html).toMatch(/<nav class="desktop-nav"[\s\S]*<span class="nav-indicator" aria-hidden="true"><\/span><\/nav>/);
+  });
+  it("marks the parent tab current on a drop-down page, so the underline rests there", () => {
+    fixture.pathname = "/_clubs/test/tickets/season-membership";
+    let html = render();
+    expect(activeTabs(html)).toEqual(["tickets"]);
+    expect(groupButton(html, "tickets")).not.toContain("aria-current");
+    expect(html).toMatch(/<a\b(?=[^>]*href="\/tickets\/season-membership")(?=[^>]*aria-current="page")[^>]*>/);
+    fixture.pathname = "/_clubs/test/roster";
+    expect(activeTabs(render())).toEqual(["club"]);
+    fixture.pathname = "/_clubs/test/stadium";
+    expect(activeTabs(render())).toEqual(["stadium-group"]);
+    fixture.pathname = "/_clubs/test/schedule";
+    expect(activeTabs(render())).toEqual(["schedule"]);
+    fixture.pathname = "/_clubs/test/policies";
+    html = render();
+    expect(activeTabs(html)).toEqual([]);
+  });
+  it("gives Know Before You Go, listed under Stadium and Tickets, to Tickets only", () => {
+    fixture.pathname = "/_clubs/test/tickets/know-before-you-go";
+    const html = render();
+    expect(activeTabs(html)).toEqual(["tickets"]);
+    expect((html.match(/<a\b(?=[^>]*href="\/tickets\/know-before-you-go")(?=[^>]*aria-current="page")[^>]*>/g) ?? []).length).toBe(1);
+  });
+  it("keeps the slide off for reduced motion and keyboard input, and sizes carets with the label", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const css = await readFile(new URL("../../components/cinematic/cinematic.css", import.meta.url), "utf8");
+    expect(css).toMatch(/@media\(prefers-reduced-motion:reduce\)\{[^@]*\.cinematic-site \.nav-indicator\{transition:opacity [^}]*\}/);
+    expect(css).toContain(".cinematic-site .club-header[data-keyboard-input] .nav-indicator{transition:none}");
+    expect(css).toMatch(/\.cinematic-site \.nav-caret\{flex:none;width:max\(4px,\.36em\);height:max\(4px,\.36em\)/);
   });
 });
