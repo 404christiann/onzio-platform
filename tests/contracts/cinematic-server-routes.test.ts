@@ -2,7 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// RC-CLS-B: the cinematic@2 Roster, Schedule and Shop routes fetch on the server and hand the data to the
+// RC-CLS-B: Rose City's site package (chosen by slug, lib/site-public-pages.ts) server-renders Roster, Schedule and Shop:
+// the routes fetch on the server and hand the data to the
 // presentational page, so the first paint is the real page (no "Loading…" line that later pushes the footer down).
 const mocks = vi.hoisted(() => ({
   club: vi.fn(), schema: vi.fn(), trusted: { tag: "trusted" },
@@ -29,8 +30,16 @@ import ScheduleRoute from "@/app/%5Fclubs/[slug]/schedule/page";
 import ShopRoute from "@/app/%5Fclubs/[slug]/shop/page";
 
 const params = { params: Promise.resolve({ slug: "tenant" }) };
-const cinematic = { id: "tenant-id", presentationTemplateKey: "cinematic@2", storeEnabled: true };
-const html = async (route: (p: typeof params) => Promise<React.ReactElement>) => renderToStaticMarkup(await route(params));
+const cinematic = { id: "tenant-id", slug: "rose-city", presentationTemplateKey: "cinematic@2", storeEnabled: true };
+// The route returns the site package's async server page; resolve async components the way the server does.
+async function resolveAsync(node: React.ReactElement): Promise<React.ReactElement> {
+  const type = node.type as unknown;
+  if (typeof type === "function" && type.constructor.name === "AsyncFunction") {
+    return resolveAsync(await (type as (props: unknown) => Promise<React.ReactElement>)(node.props));
+  }
+  return node;
+}
+const html = async (route: (p: typeof params) => Promise<React.ReactElement>) => renderToStaticMarkup(await resolveAsync(await route(params)));
 const parse = (markup: string) => JSON.parse(/data-initial="([^"]*)"/.exec(markup)![1].replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&#x27;/g, "'")) as Record<string, any>;
 
 beforeEach(() => {
@@ -61,8 +70,8 @@ describe("cinematic@2 Roster route", () => {
     mocks.roster.mockRejectedValue(new Error("boom"));
     expect(parse(await html(RosterRoute))).toEqual({ failed: true, roster: null });
   });
-  it.each(["clubhouse@1", "heritage@1", "cinematic@1"])("renders the existing client page for %s and fetches nothing", async (template) => {
-    mocks.club.mockResolvedValue({ ...cinematic, presentationTemplateKey: template });
+  it.each(["diverse-city", "alpha", "bravo"])("renders the existing client page for %s and fetches nothing", async (slug) => {
+    mocks.club.mockResolvedValue({ ...cinematic, slug, presentationTemplateKey: "academy@1" });
     expect(await html(RosterRoute)).toContain('data-page="public-roster"');
     expect(mocks.roster).not.toHaveBeenCalled();
   });
@@ -91,7 +100,7 @@ describe("cinematic@2 Schedule route", () => {
     expect(parse(await html(ScheduleRoute))).toMatchObject({ failed: true, data: null });
   });
   it("leaves other templates on the existing client page", async () => {
-    mocks.club.mockResolvedValue({ ...cinematic, presentationTemplateKey: "clubhouse@1" });
+    mocks.club.mockResolvedValue({ ...cinematic, slug: "diverse-city", presentationTemplateKey: "academy@1" });
     expect(await html(ScheduleRoute)).toContain('data-page="public-schedule"');
     expect(mocks.season).not.toHaveBeenCalled();
   });
@@ -118,7 +127,7 @@ describe("cinematic@2 Shop route", () => {
     expect(parse(await html(ShopRoute))).toEqual({ failed: true, content: null });
   });
   it("leaves other templates on the existing client page", async () => {
-    mocks.club.mockResolvedValue({ ...cinematic, presentationTemplateKey: "heritage@1" });
+    mocks.club.mockResolvedValue({ ...cinematic, slug: "diverse-city", presentationTemplateKey: "academy@1" });
     expect(await html(ShopRoute)).toContain('data-page="public-shop"');
     expect(mocks.kits).not.toHaveBeenCalled();
   });
