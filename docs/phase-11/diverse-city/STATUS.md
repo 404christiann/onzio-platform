@@ -37,15 +37,34 @@ remaining `getClubContext({ hostname })` callers are admin and API routes, which
 `components/sites/rose-city/RoseCityMatchPage.tsx`, `lib/site-public-pages/match.ts`,
 `components/cinematic/CinematicMatchSummaryPage.tsx`, `lib/queries.ts`,
 `tests/architecture/cinematic-2-selector-debt.json`; tests: new `rose-city-match-route.test.ts`,
-`rose-city-match-route-render.test.ts`, `cinematic-match-summary-first-paint.test.ts`; extended
+`rose-city-match-route-render.test.ts`, `cinematic-match-summary-first-paint.test.ts`, `cinematic-match-summary-retry.test.ts`,
+`fetch-fixture-by-id.test.ts`; extended `tests/database/diverse-city-query-boundaries.test.ts`,
 `site-public-pages-scope.test.ts`, `cinematic-server-fetch-client.test.ts`, `cinematic-server-pages.test.ts`,
 `match-summary-pages.test.ts` (its old "route picks cinematic by Host" assertion now checks the slug route), `cinematic-club-time-zone.test.ts`.
 
 **Verification:**
 - Red first: the new route and render tests failed on main's code (the route rendered `clubhouse-match-area` for Rose City with a
-  Host that is not a club domain). tsc clean; `test:unit` 4321/4321 (365 files, includes the template-selector ratchet);
-  `test:contracts` 3360/3360 (283 files); `rose-city-public-lock`, `rose-city-preview-unhold`, `cinematic-routing-middleware`
-  97/97. Mutation: deleting the seeded no-refetch line fails 2 of the 4 first-paint cases. The slow `pilot` project was not run.
+  Host that is not a club domain). tsc clean; `test:unit` 4334/4334 (367 files, includes the template-selector ratchet);
+  `test:contracts` 3373/3373 (285 files); `rose-city-public-lock`, `rose-city-preview-unhold`, `cinematic-routing-middleware`
+  97/97 (as of the first commit; the fix did not change since). Mutation: deleting the seeded no-refetch line fails 2 of the 4
+  first-paint cases. The slow `pilot` project was not run.
+- Review follow-up (onzio-bot on #203: 2 Medium, 1 Low, all missing tests; the fix itself needed no change): +13 unit tests and
+  one database test, each proven by mutation (restored after).
+  - Try again (Medium): `cinematic-match-summary-retry.test.ts` (6). With `{ data: null, failed: true }` it shows the alert and fetches
+    nothing; clicking "Try again" calls `fetchFixtureById(id, club)` and `fetchClubIdentity(club)` in the browser, shows "Loading
+    match…", then the match (or "We couldn't find this match."); a second failure shows the alert again and the button works again.
+    The suite has no DOM, so it runs the real page on a small stand-in for `useState`/`useRef`/`useEffect` (slots kept across
+    renders, React's dependency comparison, re-render after a state change). Mutations: removing `retry` from the effect's
+    dependencies, making the button's handler a no-op, and letting the seeded guard ignore a retry each fail 3 of the 6.
+  - `club_id` filter (Medium): `fetch-fixture-by-id.test.ts` (7) runs `fetchFixtureById` on an in-memory client that applies every
+    `.eq` it is given to rows of two clubs: it asserts `club_id` and `id` are both filtered, that another club's match id returns
+    null though the row exists, and that an unowned id returns null. Plus a real-database case in
+    `tests/database/diverse-city-query-boundaries.test.ts` ("returns a match only for the club that owns it": a match inserted for
+    alpha is returned for alpha and null for bravo and charlie), run under `with-local-db-lock.sh` with `.env.test` loaded: 4/4
+    pass. Mutation: deleting `.eq("club_id", tenantId)` fails 3 of the 7 unit tests and the database test ("expected {...} to be null").
+  - Logo client (Low): the same unit file mocks `resolveMediaReferences` and asserts it receives the very client given to
+    `fetchFixtureById` (not the default), for this club and the three logo columns, and the default client when none is given. It
+    was already passed through, so no code change. Mutation: dropping the `client` argument fails 2 of the 7.
 - Browser, one `scripts/with-local-db-lock.sh` hold per build (shared stack seeded in the hold: Diverse City import,
   `seed-rose-city-2027-local.ts`, plus 5 synthetic Rose City matches: 4 played, one with a full summary, and 1 upcoming), a
   production `next build` served with `RC_PREVIEW_UNHOLD=1 VERCEL_ENV=preview RC_PREVIEW_HOST=<label>.vercel.app` on port 80 and

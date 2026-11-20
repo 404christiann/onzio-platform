@@ -12,6 +12,7 @@ type QueryModule = typeof import("@/lib/queries");
 const PROGRAM_ID = "44444444-4444-4444-8444-444444444401";
 const HIDDEN_PROGRAM_ID = "44444444-4444-4444-8444-444444444402";
 const TRYOUT_ID = "44444444-4444-4444-8444-444444444403";
+const MATCH_ID = "44444444-4444-4444-8444-444444444404";
 const originalPublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const originalPublicAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const originalWebSocket = globalThis.WebSocket;
@@ -50,6 +51,11 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await clients.service
+    .from("matches")
+    .delete()
+    .eq("club_id", CLUB_IDS.alpha)
+    .eq("id", MATCH_ID);
   await clients.service
     .from("tryouts")
     .delete()
@@ -121,6 +127,29 @@ describe("DCFC-204 local public query boundary", () => {
       queries.fetchProgramBySlug(CLUB_IDS.alpha, "dcfc-204-hidden"),
     ).resolves.toBeNull();
     await expect(queries.fetchPrograms(CLUB_IDS.bravo)).resolves.toEqual([]);
+  });
+
+  // RC-MATCH-AREA: public read access to `matches` is not limited to one club, so the club_id filter in
+  // fetchFixtureById is what keeps one club's domain from rendering another club's match page.
+  it("returns a match only for the club that owns it", async () => {
+    const season = await clients.service.from("seasons").select("id").eq("club_id", CLUB_IDS.alpha).limit(1).maybeSingle();
+    expect(season.error?.message).toBeUndefined();
+    const inserted = await clients.service.from("matches").insert({
+      id: MATCH_ID,
+      club_id: CLUB_IDS.alpha,
+      season_id: season.data!.id,
+      date: "2027-05-02",
+      time: "19:45",
+      opponent: "Boundary Opponent",
+    });
+    expect(inserted.error?.message).toBeUndefined();
+
+    await expect(queries.fetchFixtureById(MATCH_ID, CLUB_IDS.alpha)).resolves.toMatchObject({
+      id: MATCH_ID,
+      opponent: "Boundary Opponent",
+    });
+    await expect(queries.fetchFixtureById(MATCH_ID, CLUB_IDS.bravo)).resolves.toBeNull();
+    await expect(queries.fetchFixtureById(MATCH_ID, CLUB_IDS.charlie)).resolves.toBeNull();
   });
 
   it("keeps a closed Tryout on the validated tenant Contact fallback", async () => {
