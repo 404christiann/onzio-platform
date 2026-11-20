@@ -850,9 +850,12 @@ export async function fetchSeasons(clubId?: string): Promise<DBSeason[]> {
 }
 
 /** Returns the single active season, or null when none is configured. */
-export async function fetchActiveSeason(clubId?: string): Promise<DBSeason | null> {
+export async function fetchActiveSeason(
+  clubId?: string,
+  client: typeof supabase = supabase,
+): Promise<DBSeason | null> {
   const tenantId = requireClubId(clubId);
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("seasons")
     .select("*")
     .eq("club_id", tenantId)
@@ -964,17 +967,18 @@ export async function fetchShopKitContent(
   surface: ShopKitSurface = "home",
   variant: ShopKitVariant = "home",
   clubId?: string,
+  client: typeof supabase = supabase,
 ): Promise<ShopKitContent> {
   const tenantId = requireClubId(clubId);
   const [sectionResult, photosResult] = await Promise.all([
-    supabase
+    client
       .from("shop_kit_section")
       .select("*")
       .eq("club_id", tenantId)
       .eq("surface", surface)
       .eq("kit_variant", variant)
       .limit(1),
-    supabase
+    client
       .from("shop_kit_photos")
       .select("*")
       .eq("club_id", tenantId)
@@ -999,6 +1003,7 @@ export async function fetchShopKitContent(
       (photosResult.data ?? []) as Record<string, unknown>[],
       tenantId,
       [{ assetId: "media_asset_id", url: "url" }],
+      client,
     )) as unknown as DBShopKitPhoto[],
   };
 }
@@ -1007,11 +1012,12 @@ export async function fetchShopKitContent(
 export async function fetchShopKitVariants(
   surface: ShopKitSurface = "home",
   clubId?: string,
+  client: typeof supabase = supabase,
 ): Promise<Record<ShopKitVariant, ShopKitContent>> {
   const [home, third, away] = await Promise.all([
-    fetchShopKitContent(surface, "home", clubId),
-    fetchShopKitContent(surface, "third", clubId),
-    fetchShopKitContent(surface, "away", clubId),
+    fetchShopKitContent(surface, "home", clubId, client),
+    fetchShopKitContent(surface, "third", clubId, client),
+    fetchShopKitContent(surface, "away", clubId, client),
   ]);
   return { home, third, away };
 }
@@ -1034,9 +1040,10 @@ export async function fetchShopPurchaseDetails(clubId?: string): Promise<DBShopP
 export async function fetchShopCarouselPhotos(
   variant: ShopKitVariant = "home",
   clubId?: string,
+  client: typeof supabase = supabase,
 ): Promise<DBShopCarouselPhoto[]> {
   const tenantId = requireClubId(clubId);
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("shop_carousel_photos")
     .select("*")
     .eq("club_id", tenantId)
@@ -1047,6 +1054,7 @@ export async function fetchShopCarouselPhotos(
     (data ?? []) as Record<string, unknown>[],
     tenantId,
     [{ assetId: "media_asset_id", url: "url" }],
+    client,
   )) as unknown as DBShopCarouselPhoto[];
 }
 
@@ -1082,22 +1090,25 @@ export async function fetchHomepageHeroContent(
 }
 
 /** Fetches admin-managed homepage hero, slideshow, and Behind the Rose content. */
-export async function fetchHomepageContent(clubId?: string): Promise<HomepageContent> {
+export async function fetchHomepageContent(
+  clubId?: string,
+  client: typeof supabase = supabase,
+): Promise<HomepageContent> {
   const tenantId = requireClubId(clubId);
   const tenantScoped = Boolean(clubId);
   const [hero, slideshowResult, settingsResult, behindTheRoseResult] = await Promise.all([
-    fetchHomepageHeroContent(clubId),
-    supabase
+    fetchHomepageHeroContent(clubId, client),
+    client
       .from("homepage_slideshow_photos")
       .select("*")
       .eq("club_id", tenantId)
       .order("sort_order", { ascending: true }),
-    supabase
+    client
       .from("homepage_slideshow_settings")
       .select("*")
       .eq("club_id", tenantId)
       .limit(1),
-    supabase
+    client
       .from("behind_the_rose_section")
       .select("*")
       .eq("club_id", tenantId)
@@ -1111,6 +1122,7 @@ export async function fetchHomepageContent(clubId?: string): Promise<HomepageCon
           slideshowResult.data as Record<string, unknown>[],
           tenantId,
           [{ assetId: "media_asset_id", url: "url" }],
+          client,
         )) as unknown as DBHomepageSlideshowPhoto[]);
   const slideshowSettings =
     settingsResult.error || !settingsResult.data
@@ -1207,9 +1219,10 @@ export async function fetchAboutClubContent(
 export async function fetchSiteSponsorLogos(
   placement: SponsorLogoPlacement,
   clubId?: string,
+  client: typeof supabase = supabase,
 ): Promise<DBSiteSponsorLogo[]> {
   const tenantId = requireClubId(clubId);
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("site_sponsor_logos")
     .select("*")
     .eq("club_id", tenantId)
@@ -1224,6 +1237,7 @@ export async function fetchSiteSponsorLogos(
     (data ?? []) as Record<string, unknown>[],
     tenantId,
     [{ assetId: "media_asset_id", url: "logo_url" }],
+    client,
   )) as unknown as DBSiteSponsorLogo[];
   return rows.length > 0 || clubId ? rows : defaultSponsorLogosForPlacement(placement);
 }
@@ -1353,14 +1367,14 @@ export type FetchRosterOptions = {
   includeActivePlayersWithoutSeasonStats?: boolean;
 };
 
-async function fetchActivePlayersAndPhotos(tenantId: string) {
-  const playersResult = await supabase
+async function fetchActivePlayersAndPhotos(tenantId: string, client: typeof supabase = supabase) {
+  const playersResult = await client
     .from("players")
     .select("*")
     .eq("club_id", tenantId)
     .eq("active", true);
   const playerIds = ((playersResult.data ?? []) as { id: string }[]).map((row) => row.id);
-  const photosResult = await supabase
+  const photosResult = await client
     .from("player_photos")
     .select("player_id, url, sort_order")
     .eq("club_id", tenantId)
@@ -1381,6 +1395,7 @@ export async function fetchRoster(
   seasonId?: string,
   clubId?: string,
   options: FetchRosterOptions = {},
+  client: typeof supabase = supabase,
 ): Promise<{
   goalkeepers: Player[];
   defenders:   Player[];
@@ -1395,14 +1410,14 @@ export async function fetchRoster(
   let isActiveSeason   = false;
 
   if (seasonId) {
-    const { data, error } = await supabase.from("seasons").select("*").eq("club_id", tenantId);
+    const { data, error } = await client.from("seasons").select("*").eq("club_id", tenantId);
     if (error) throw new Error(`fetchRoster seasons: ${error.message}`);
     const season = ((data ?? []) as DBSeason[]).find((s) => s.id === seasonId) ?? null;
     resolvedSeasonId = seasonId;
     seasonLabel      = season?.label ?? "Season";
     isActiveSeason   = season?.active === true;
   } else {
-    const { data, error } = await supabase.from("seasons").select("*").eq("club_id", tenantId).eq("active", true);
+    const { data, error } = await client.from("seasons").select("*").eq("club_id", tenantId).eq("active", true);
     if (error) throw new Error(`fetchRoster active season: ${error.message}`);
     const season = ((data ?? []) as DBSeason[])[0] ?? null;
     resolvedSeasonId = season?.id ?? "";
@@ -1420,8 +1435,8 @@ export async function fetchRoster(
   if (resolvedSeasonId) {
     const [fieldResult, goalkeeperResult] = await Promise.all([
       // ADMIN-RE-11c: totals are the season's player numbers added up, plus the hand-entered adjustment.
-      supabase.from("player_season_totals").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
-      supabase.from("goalkeeper_season_totals").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
+      client.from("player_season_totals").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
+      client.from("goalkeeper_season_totals").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
     ]);
     const seasonStatsError = fieldResult.error ?? goalkeeperResult.error;
     if (seasonStatsError) throw new Error(`fetchRoster season stats: ${seasonStatsError.message}`);
@@ -1437,10 +1452,10 @@ export async function fetchRoster(
 
   const [playersResult, photosResult] =
     options.includeActivePlayersWithoutSeasonStats && isActiveSeason
-      ? await fetchActivePlayersAndPhotos(tenantId)
+      ? await fetchActivePlayersAndPhotos(tenantId, client)
       : await Promise.all([
-          supabase.from("players").select("*").eq("club_id", tenantId).in("id", allPlayerIds),
-          supabase.from("player_photos")
+          client.from("players").select("*").eq("club_id", tenantId).in("id", allPlayerIds),
+          client.from("player_photos")
             .select("player_id, url, sort_order")
             .eq("club_id", tenantId)
             .in("player_id", allPlayerIds)
@@ -1453,11 +1468,13 @@ export async function fetchRoster(
     (playersResult.data ?? []) as Record<string, unknown>[],
     tenantId,
     [{ assetId: "photo_asset_id", url: "photo_url" }],
+    client,
   );
   const hydratedPhotos = await resolveMediaReferences(
     (photosResult.data ?? []) as Record<string, unknown>[],
     tenantId,
     [{ assetId: "media_asset_id", url: "url" }],
+    client,
   );
   const players = (hydratedPlayers as unknown as DBPlayer[]).filter(
     (player) => !isActiveSeason || player.active,
@@ -1640,9 +1657,13 @@ export async function fetchPlayerMatchTrend(
 }
 
 /** Fetches all matches ordered by date ascending. */
-export async function fetchSchedule(seasonId?: string, clubId?: string): Promise<Fixture[]> {
+export async function fetchSchedule(
+  seasonId?: string,
+  clubId?: string,
+  client: typeof supabase = supabase,
+): Promise<Fixture[]> {
   const tenantId = requireClubId(clubId);
-  let query = supabase.from("matches").select("*").eq("club_id", tenantId);
+  let query = client.from("matches").select("*").eq("club_id", tenantId);
   if (seasonId) query = query.eq("season_id", seasonId);
   const { data, error } = await query;
   if (error) throw new Error(`fetchSchedule: ${error.message}`);
@@ -1654,6 +1675,7 @@ export async function fetchSchedule(seasonId?: string, clubId?: string): Promise
       { assetId: "sponsor_logo_asset_id", url: "sponsor_logo_url" },
       { assetId: "league_logo_asset_id", url: "league_logo_url" },
     ],
+    client,
   );
   return (rows as unknown as DBMatch[]).map(mapFixture).sort((a, b) => {
     const ka = `${a.date}T${a.time ?? "00:00"}`;
