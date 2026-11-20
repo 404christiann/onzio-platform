@@ -8,6 +8,7 @@ import { CinematicNewsArticle } from "@/components/cinematic/CinematicNews";
 import CinematicInjuryReport from "@/components/cinematic/CinematicInjuryReport";
 import CinematicNewsPartners from "@/components/cinematic/CinematicNewsPartners";
 import { fetchInjuryReport } from "@/lib/cinematic-injury-report-query";
+import { newsPartnerSponsors } from "@/lib/cinematic-news-partners";
 
 export default async function NewsArticlePage({ params }: { params: Promise<{ slug: string; articleSlug: string }> }) {
   const { slug, articleSlug } = await params;
@@ -15,9 +16,12 @@ export default async function NewsArticlePage({ params }: { params: Promise<{ sl
   if (club.presentationTemplateKey !== "cinematic@2") notFound();
   const db = (await createClient()).schema("onzio");
   // "injury-report" is reserved from News addresses for Sam's Injury Report page (RC2027-INJURY-REPORT).
-  if (articleSlug === "injury-report") return <><CinematicInjuryReport report={await fetchInjuryReport(club.id, db)} /><CinematicNewsPartners /></>;
+  if (articleSlug === "injury-report") {
+    const [report, sponsors] = await Promise.all([fetchInjuryReport(club.id, db), newsPartnerSponsors(club.id, db)]);
+    return <><CinematicInjuryReport report={report} /><CinematicNewsPartners initialSponsors={sponsors} /></>;
+  }
   if (!isNewsSlug(articleSlug)) notFound();
-  const [article, identity] = await Promise.all([fetchNewsArticle(club.id, articleSlug, db), fetchClubIdentity(club.id, db)]);
+  const [article, identity, sponsors] = await Promise.all([fetchNewsArticle(club.id, articleSlug, db), fetchClubIdentity(club.id, db), newsPartnerSponsors(club.id, db)]);
   if (!article) notFound();
-  return <CinematicNewsArticle article={article} timeZone={identity?.timeZone || "UTC"} />;
+  return <CinematicNewsArticle article={article} timeZone={identity?.timeZone || "UTC"} sponsors={sponsors} />;
 }

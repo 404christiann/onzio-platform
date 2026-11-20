@@ -1,5 +1,40 @@
 # Diverse City FC Status
 
+## 2026-11-19 - RC-CLS follow-up: News partner strip loads on the server; no-refetch test exercises the skip path
+
+**Agent/package:** Claude Code (Opus 5.5), RC-CLS follow-up, branch `claude/rc-cls-norefetch-test` (from main `3b925983`).
+**Status:** `in_progress`, PR open; merges on Christian's word. App code + tests; no migration, schema, RPC, validator, env or
+dependency change.
+
+**Completed work:**
+- `tests/contracts/cinematic-home-first-paint.test.ts`: the server renderer never runs effects, so the old no-refetch
+  assertion could not see a refetch. The test now captures `useEffect` (this file only), renders `CinematicHome` with
+  server data, runs its data effect (the one keyed on the club id) and asserts none of the five fetchers is called. A
+  control case without server data asserts they are. Proof: deleting `if (served) return;` in `CinematicHome` fails the
+  test ("expected not to be called, but called 1 times"); restored, 10/10 pass. tsc clean.
+- #197 merged as `3b925983`; production deploy Ready. `rc-sam` pushed to `3b925983` (lease on `e628a29b`, branch kept,
+  six branch env vars unchanged), preview Ready. Rose City production domains still 302 to the project domain, where
+  `/` is 404 (hold) and `/admin/login` 200.
+- Re-walk on production data through Sam's Shareable Link, 3 fresh runs each, CLS 1440 / 390: Home 0.000 / 0.002,
+  Roster 0.003 / 0.001, Schedule 0.002 / 0.000, Shop 0.001 / 0.000, Club logo 0.001 / 0.000, News 0.067 / 0.125 (390:
+  1 of 3 runs). News: `.club-footer` moves when the partners strip (`CinematicNewsPartners`, client-side sponsor fetch)
+  renders. No broken images, no overflow, no console errors; noindex header on every page.
+
+- News fix (Christian's go): the News list, article and Injury Report routes read the carousel sponsors with the request
+  client (`lib/cinematic-news-partners.ts`) and pass them to `CinematicNewsPartners`, which renders them on first paint
+  and skips its browser fetch; a failed read or an admin preview keeps the browser fetch. News is already cinematic-only
+  (no new template read; ratchet green). `tests/contracts/cinematic-news-partners-server.test.ts` (5): red first;
+  deleting the strip's skip line fails it. Local build, 5 runs, 1440 / 390: News 0.003 / 0.000, Injury Report 0.003 /
+  0.000, the other five pages unchanged (< 0.01). The local stack never reproduced the production News shift, so the
+  real check is production after merge. Diverse City bundles identical to main (/ 1035 KB, /roster 1056, /schedule 996,
+  /shop 846; no new Rose City code). `test:unit` 4272/4272, `test:contracts` 3311/3311, hold and routing pass, tsc clean.
+
+**Blockers or unresolved decisions:** Christian's merge.
+
+**Exact next step:** after merge and a green production deploy, push main onto `rc-sam` (keep its env vars) and re-check
+News CLS on production data. Then step 3a content entry in production admin (download any live slideshow photo's
+original before removing it) and set the club time zone in admin.
+
 ## 2026-11-19 - RC-CLS: Rose City cinematic pages stop shifting on load (app code only)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator; Sonnet workers RC-CLS-0, A, B, A2), RC-CLS, branch
