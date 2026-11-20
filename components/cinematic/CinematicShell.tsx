@@ -7,6 +7,7 @@ import CinematicFooter from "./CinematicFooter";
 import CinematicAvenirFonts from "./CinematicAvenirFonts";
 import { CinematicContentProvider } from "./CinematicContent";
 import "./cinematic.css";
+import "./route-loading.css";
 
 export default function CinematicShell({ children, editing = false, initialContent = null, contentOnly = false }: { children: ReactNode; editing?: boolean; initialContent?: CinematicHomepageContent | null; contentOnly?: boolean }) {
   return <CinematicContentProvider initialContent={initialContent}><div className="cinematic-site" data-site-template="cinematic" data-template-version="2">

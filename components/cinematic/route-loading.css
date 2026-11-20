@@ -1,0 +1,4 @@
+/* RC-CLS: the shared route fallback (components/TenantPageLoading.tsx) is 60svh, shorter than every cinematic page,
+   so the footer showed under it and jumped when the page streamed in. Inside the cinematic shell it fills the
+   viewport, keeping the footer below the fold before and after. Other templates are unaffected. */
+.cinematic-site .tenant-page-loading{min-height:100svh}
