@@ -1,19 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { fetchRoster } from "@/lib/queries";
 import CinematicRoster, { type CinematicRosterData } from "./CinematicRoster";
 
-export default function CinematicRosterPage() {
+/** Server-fetched result for the first paint; without it the page fetches in the browser as before. */
+export type CinematicRosterInitial = { roster: CinematicRosterData | null; failed: boolean };
+
+export default function CinematicRosterPage({ initial }: { initial?: CinematicRosterInitial }) {
   const { id: clubId } = useClubContext();
+  const seeded = useRef(initial ? clubId : null);
   const [state, setState] = useState<{
     clubId: string;
     roster: CinematicRosterData | null;
     failed: boolean;
-  }>({ clubId, roster: null, failed: false });
+  }>({ clubId, roster: initial?.roster ?? null, failed: initial?.failed ?? false });
 
   useEffect(() => {
+    if (seeded.current === clubId) return;
     let current = true;
     setState({ clubId, roster: null, failed: false });
     void fetchRoster(undefined, clubId).then(

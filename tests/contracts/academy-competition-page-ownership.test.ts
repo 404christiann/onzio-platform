@@ -28,12 +28,14 @@ describe("Academy competition page ownership", () => {
   });
 
   it("keeps the existing tenant adapters and player and match detail pages in place", () => {
-    expect(source("app/%5Fclubs/[slug]/roster/page.tsx").trim()).toBe(
-      'export { default } from "@/app/(public)/roster/page";',
-    );
-    expect(source("app/%5Fclubs/[slug]/schedule/page.tsx").trim()).toBe(
-      'export { default } from "@/app/(public)/schedule/page";',
-    );
+    // RC-CLS-B: the tenant routes fetch Rose City's cinematic@2 data on the server; every other template
+    // still renders the shared public page from "@/app/(public)/...".
+    for (const page of ["roster", "schedule"] as const) {
+      const route = source(`app/%5Fclubs/[slug]/${page}/page.tsx`);
+      const component = `Public${page === "roster" ? "Roster" : "Schedule"}Page`;
+      expect(route).toContain(`import ${component} from "@/app/(public)/${page}/page";`);
+      expect(route).toContain(`if (club.presentationTemplateKey !== "cinematic@2") return <${component} />;`);
+    }
     expect(source("app/(public)/roster/[playerId]/page.tsx")).toContain(
       "<ClubhousePlayerProfilePage playerId={playerId} />",
     );
