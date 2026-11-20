@@ -1,5 +1,26 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-SCHEDULE-DATE-FIT: long Schedule dates no longer run under the opponent crest (CSS only)
+
+**Agent/package:** Claude Code (Opus 5.5), RC-SCHEDULE-DATE-FIT (Christian's follow-up bug from `rc-sam`), branch
+`claude/rc-schedule-date-fit` from main `19dde5b3`. **Status:** `ready for review`, PR open. CSS and one test; no data, schema,
+env or deploy change; Diverse City untouched.
+
+**Bug:** on `rc-sam` the "November 20, 2026" and "November 14, 2026" cards drew the date under the opponent crest. The date was
+`white-space:nowrap` in a fixed column: 180px of text in 132px at 1201px and wider (36px under the crest), 135px in 108px at
+901-1200px (18px). Phones put the date on its own row, and the Next card's column is `max-content`, so neither overlapped.
+
+**Fix (`components/cinematic/schedule.css`):** the date may wrap (`white-space:normal`), so a long one breaks after its comma
+("November 20," / "2026"); the 1201px+ date column goes 132 -> 136px so the widest first line, "September 30," at 20px (134px),
+fits (101px at 15px already fits the 108px column). Edited in place; RC-DESKTOP-FIT's block stays last.
+
+**Verification:** `cinematic-schedule` case written red first. `test:unit` 4381/4381, `test:architecture` green. On `rc-sam`'s
+real schedule (its `/schedule` in frames at 1710, 1440, 1280, 1201, 1200, 1100, 1024, 901, 900, 390 with the change applied as a
+stylesheet): long dates wrap to two lines and sit 12px (1201+) / 19px (901-1200) clear of the crest; short dates stay on one
+line; 900 and 390 unchanged; no sideways scroll at any width. Screenshots: `rc-sam-fixes-screens/schedule-date-fit-*`.
+
+**Exact next step:** Christian merges; then fast-forward `rc-sam` and re-point Sam's alias (`vercel alias set`) as recorded above.
+
 ## 2026-11-20 - RC-CLS-2: Rose City pages stop shifting on load with production content (app code only)
 
 **Agent/package:** Claude Code (Opus 5.5), RC-CLS-2, branch `claude/rc-cls-2`, rebased onto main `e1021427` (after #205; measured on `04fa6ae6`, after #204). **Status:**
