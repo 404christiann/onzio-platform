@@ -1,5 +1,86 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-MATCH-AREA: Rose City match pages stop saying "Match area unavailable" on a preview host (app code only)
+
+**Agent/package:** Claude Code (Sonnet 5.5 worker A), RC-MATCH-AREA, branch `worktree-agent-abe06445fb6ef593f` (cut from
+main `323bed2f`). **Status:** `ready for review` (not pushed, no PR yet; merge and `rc-sam` update wait for Christian). App code
+only: no migration, schema, RPC, validator, env, Supabase, Stripe, admin, Vercel or CSS change.
+
+**Cause (confirmed, not only guessed):** on `rc-sam` (a `*.vercel.app` preview host) the middleware picks the tenant by slug
+(`middleware.ts`: `directSlug = ROSE_CITY_PREVIEW_SLUG` when the Host is `roseCityPreviewHost()`; no `club_domains` lookup) and
+rewrites to `/_clubs/rose-city/...`. The shared match page (`app/(public)/schedule/[fixtureId]/page.tsx`, line 13 on main) then
+looked the club up again **by Host** with `getClubContext({ hostname })`, which reads `club_domains` by hostname
+(`lib/club-context.ts` `resolveDatabaseContext`), finds no row for the preview host, throws `UNKNOWN_TENANT`, and its
+`.catch(() => null)` swallowed it. With no club it fell through to `ClubhouseMatchAreaPage`, which returns "Match area
+unavailable." for any template but `clubhouse@1` (`components/ClubhouseMatchAreaPage.tsx:77` on main). It was not a failed fetch.
+Seen live on `rc-sam` (all four `/schedule/<id>` links), and reproduced locally on a production build of main through the same
+Host shape (below). The Rose City **production domains are not affected**: for a host with a verified `club_domains` row the
+middleware and `getClubContext` read the same table, so both succeed; only the preview host takes the direct-slug path. (Read
+from the code; not checked against production data from this Mac.) No other public page looks the club up by Host; the
+remaining `getClubContext({ hostname })` callers are admin and API routes, which the preview host keeps closed.
+
+**Completed:**
+- The tenant match route now resolves the club by slug (`getClubContextBySlug`) like Roster, Schedule and Shop, and does one
+  lookup through the site package (`lib/site-public-pages/match.ts`, keyed by slug, `siteMatchPageFor(club)`). Rose City's
+  `components/sites/rose-city/RoseCityMatchPage.tsx` fetches the match and the club label (`identity.initials`, else the club
+  name) on the server with the request client, for this club only, and passes them to the existing `CinematicMatchSummaryPage`
+  as `initial`. `fetchFixtureById` gained the optional trailing `client` (default unchanged).
+- `CinematicMatchSummaryPage` renders `initial` on first paint and does not refetch; a failed server read keeps the alert and
+  "Try again"; with no `initial` (browser-only use) it loads as before. The kickoff time zone is now read from
+  `useClubTimeZone()` at render (PR #199 behaviour, unchanged) instead of being stored with the fetched match, so a zone change
+  never refetches. An unknown or other-club id still shows "We couldn't find this match."
+- Every other club renders what it did: the shared page is now just `<ClubhouseMatchAreaPage fixtureId={fixtureId} />` (no
+  Host lookup, no cinematic import). Its `cinematic@2` selector (1 literal, 1 read) is deleted from
+  `tests/architecture/cinematic-2-selector-debt.json`; no new template read anywhere.
+
+**Files changed:** `app/%5Fclubs/[slug]/schedule/[fixtureId]/page.tsx`, `app/(public)/schedule/[fixtureId]/page.tsx`,
+`components/sites/rose-city/RoseCityMatchPage.tsx`, `lib/site-public-pages/match.ts`,
+`components/cinematic/CinematicMatchSummaryPage.tsx`, `lib/queries.ts`,
+`tests/architecture/cinematic-2-selector-debt.json`; tests: new `rose-city-match-route.test.ts`,
+`rose-city-match-route-render.test.ts`, `cinematic-match-summary-first-paint.test.ts`; extended
+`site-public-pages-scope.test.ts`, `cinematic-server-fetch-client.test.ts`, `cinematic-server-pages.test.ts`,
+`match-summary-pages.test.ts` (its old "route picks cinematic by Host" assertion now checks the slug route), `cinematic-club-time-zone.test.ts`.
+
+**Verification:**
+- Red first: the new route and render tests failed on main's code (the route rendered `clubhouse-match-area` for Rose City with a
+  Host that is not a club domain). tsc clean; `test:unit` 4321/4321 (365 files, includes the template-selector ratchet);
+  `test:contracts` 3360/3360 (283 files); `rose-city-public-lock`, `rose-city-preview-unhold`, `cinematic-routing-middleware`
+  97/97. Mutation: deleting the seeded no-refetch line fails 2 of the 4 first-paint cases. The slow `pilot` project was not run.
+- Browser, one `scripts/with-local-db-lock.sh` hold per build (shared stack seeded in the hold: Diverse City import,
+  `seed-rose-city-2027-local.ts`, plus 5 synthetic Rose City matches: 4 played, one with a full summary, and 1 upcoming), a
+  production `next build` served with `RC_PREVIEW_UNHOLD=1 VERCEL_ENV=preview RC_PREVIEW_HOST=<label>.vercel.app` on port 80 and
+  the request Host exactly that preview name (the same route shape as rc-sam). Local plumbing only: `next start` builds its own
+  origin from localhost, so the middleware rewrite to the preview name is proxied rather than internal; a Node preload maps that
+  one name to 127.0.0.1 so the proxied request stays local. The page sees the same Host either way.
+
+  | Page (preview Host) | main `323bed2f` | this branch |
+  |---|---|---|
+  | `/schedule/<id>` x4 played | "Match area unavailable." | cinematic Match Summary, score and kickoff (7:45PM PT etc.) |
+  | upcoming match | "Match area unavailable." | cinematic page, "summary will appear after the match" |
+  | well-formed id no club owns | "Match area unavailable." | "We couldn't find this match." |
+  | Diverse City `/schedule/<id>` | "MATCH AREA UNAVAILABLE." | identical text and hash of `main` text |
+
+  Screenshots (1440 full page for every fixture, 390 for the full summary, main and branch) are in the worker scratchpad
+  `worker-a/` (`rc-main-*`, `rc-branch-*`, `dc-*`).
+- CLS, with 300 ms added to browser Supabase requests, 3 fresh runs, worst shown (1440 / 390): full-summary match
+  0.0035 / 0.0084; played, no summary 0.0035 / 0.0042; upcoming 0.0090 / 0.0145. The upcoming page at 390 is over 0.01. Its
+  shifts are not the match box: they are the shared footer (the tagline, social links and crest the layout fetches in the
+  browser) and the H1 font swap, which count only when the footer is in the viewport. `/contact` has the same shifts
+  (0.0070 with the delay, 0.0096 without, at 390). That is the cinematic shell, not this route; see next step.
+- Diverse City bundles (client JS and CSS from `/_next/static` in the browser, decoded KB, main -> branch): `/` 1037.2 -> 1037.2,
+  `/roster` 1058.9 -> 1058.9, `/schedule` 997.9 -> 997.9, `/shop` 848.2 -> 848.2, `/schedule/<id>` 873.1 -> 873.1 JS and
+  270.5 -> 270.5 CSS. By route manifest (`page_client-reference-manifest`, JS KB): `/schedule/[fixtureId]` 666.6 -> 650.2, the
+  other five routes within 0.1 KB of main. Rose City's match code was already reachable from that route on main and still is,
+  as with Roster, Schedule and Shop; `site-public-pages-scope` now also checks the shared match page carries no cinematic code
+  and that only `RoseCityMatchPage` imports the Match Summary page.
+
+**Blockers or unresolved decisions:** Christian's push, PR and merge. Not seen on `rc-sam` itself (it runs main until this
+lands). Decision for Christian: whether to make the cinematic shell fetch branding and social links on the server (the layout
+passes no `initialBranding`), which would also quiet the footer shift on every short Rose City page.
+
+**Exact next step:** on Christian's go, push the branch and open the PR; after merge and a green deploy, push main onto `rc-sam`
+(keep its env vars) and open the four match links from `/schedule`.
+
 ## 2026-11-20 - RC-NAV: Rose City top nav underline follows the cursor; carets aligned (app code only)
 
 **Agent/package:** Claude Code (Opus 5.5), RC-NAV. **Status:** `ready for review` (PR into `main`; not merged, not

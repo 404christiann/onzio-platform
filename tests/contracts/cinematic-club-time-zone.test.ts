@@ -57,6 +57,7 @@ describe("cinematic pages use the club time zone, not the identity's", () => {
     const files = [
       "components/cinematic/CinematicSchedulePage.tsx",
       "components/cinematic/CinematicMatchSummaryPage.tsx",
+      "components/sites/rose-city/RoseCityMatchPage.tsx",
       "components/cinematic/CinematicStadium.tsx",
       "components/cinematic/CinematicKnowBeforeYouGo.tsx",
       "components/cinematic/CinematicTickets.tsx",

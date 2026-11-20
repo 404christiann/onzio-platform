@@ -84,9 +84,15 @@ describe("Match Summary page", () => {
     expect(html).not.toContain("result-strip");
   });
 
-  it("is the cinematic@2 layout on the existing match route", () => {
-    const route = readFileSync(resolve(process.cwd(), "app/(public)/schedule/[fixtureId]/page.tsx"), "utf8");
-    expect(route).toContain('club?.presentationTemplateKey === "cinematic@2"');
-    expect(route).toContain("<CinematicMatchSummaryPage fixtureId={fixtureId} />");
+  it("is Rose City's page on the existing tenant match route, chosen by slug and not by Host", () => {
+    const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
+    const route = read("app/%5Fclubs/[slug]/schedule/[fixtureId]/page.tsx");
+    expect(route).toContain("getClubContextBySlug(slug)");
+    expect(route).not.toContain("getClubContext(");
+    expect(route).not.toContain("next/headers");
+    expect(route).toContain("siteMatchPageFor(club)");
+    expect(read("lib/site-public-pages/match.ts")).toContain('bySlug({ "rose-city": RoseCityMatchPage })');
+    expect(read("components/sites/rose-city/RoseCityMatchPage.tsx")).toContain("<CinematicMatchSummaryPage fixtureId={fixtureId} initial={initial} />");
+    expect(read("app/(public)/schedule/[fixtureId]/page.tsx")).not.toContain("cinematic");
   });
 });

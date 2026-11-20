@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +10,7 @@ const PAGES = [
   ["roster", "Roster", "app/%5Fclubs/[slug]/roster/page.tsx"],
   ["schedule", "Schedule", "app/%5Fclubs/[slug]/schedule/page.tsx"],
   ["shop", "Shop", "app/%5Fclubs/[slug]/shop/page.tsx"],
+  ["match", "Match", "app/%5Fclubs/[slug]/schedule/[fixtureId]/page.tsx"],
 ] as const;
 
 describe("site public pages stay scoped to their route and club", () => {
@@ -25,6 +26,27 @@ describe("site public pages stay scoped to their route and club", () => {
     expect(code).not.toMatch(/from "@\/lib\/site-public-pages(\/index)?";/);
     for (const [other] of PAGES) if (other !== page) expect(code).not.toContain(`@/lib/site-public-pages/${other}"`);
     expect(code).not.toMatch(/from "@\/components\/(sites\/rose-city|cinematic)\//);
+  });
+
+  // RC-MATCH-AREA: the shared match page used to import the cinematic page and pick it by Host, which is not a club
+  // domain on a preview. It is now the plain shared page, and Rose City's page is chosen by slug.
+  it("the shared match page carries no cinematic code and never reads the Host or the template", () => {
+    const code = source("app/(public)/schedule/[fixtureId]/page.tsx");
+    expect(code).toContain("<ClubhouseMatchAreaPage fixtureId={fixtureId} />");
+    expect(code).not.toMatch(/cinematic|rose-city|club-context|next\/headers|presentationTemplateKey/i);
+  });
+
+  it("only Rose City's match site page imports the cinematic Match Summary page", () => {
+    const importers: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(resolve(process.cwd(), dir), { withFileTypes: true })) {
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(path);
+        else if (/\.(ts|tsx)$/.test(entry.name) && /from "[^"]*CinematicMatchSummaryPage"/.test(source(path))) importers.push(path);
+      }
+    };
+    for (const dir of ["app", "components", "lib"]) walk(dir);
+    expect(importers).toEqual(["components/sites/rose-city/RoseCityMatchPage.tsx"]);
   });
 
   it("Rose City's home reaches CinematicHome only through its own chunk", () => {

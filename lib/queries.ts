@@ -1688,9 +1688,10 @@ export async function fetchSchedule(
 export async function fetchFixtureById(
   fixtureId: string,
   clubId?: string,
+  client: typeof supabase = supabase,
 ): Promise<Fixture | null> {
   const tenantId = requireClubId(clubId);
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("matches")
     .select("*")
     .eq("club_id", tenantId)
@@ -1705,6 +1706,7 @@ export async function fetchFixtureById(
       { assetId: "sponsor_logo_asset_id", url: "sponsor_logo_url" },
       { assetId: "league_logo_asset_id", url: "league_logo_url" },
     ],
+    client,
   );
   return rows[0] ? mapFixture(rows[0] as unknown as DBMatch) : null;
 }
