@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import NativeImage from "@/components/ResilientNativeImage";
 import type { Fixture } from "@/lib/data";
@@ -68,6 +69,7 @@ export function KnowBeforeYouGoView({ content, match, placeholders = false }: { 
 
 export default function CinematicKnowBeforeYouGo({ content, placeholders = false }: { content: TicketPageView<"know-before-you-go">; placeholders?: boolean }) {
   const club = useClubContext();
+  const timeZone = useClubTimeZone();
   const [match, setMatch] = useState<KnowBeforeYouGoMatch & { clubId: string }>({ clubId: club.id, loading: true, fixture: null, clubShortName: "" });
   useEffect(() => {
     let active = true;
@@ -77,11 +79,11 @@ export default function CinematicKnowBeforeYouGo({ content, placeholders = false
     Promise.all([fetchSchedule(undefined, club.id), fetchClubIdentity(club.id), socials])
       .then(([fixtures, identity, links]) => {
         const youtubeChannel = cinematicDisplaySocialLinks(links).find(link => cinematicSocialPlatform(link) === "youtube" && link.href.startsWith("https://"))?.href ?? "";
-        if (active) setMatch({ clubId: club.id, loading: false, fixture: nextHomeFixture(fixtures, new Date(), identity?.timeZone || "UTC"), clubShortName: identity?.shortName ?? "", youtubeChannel });
+        if (active) setMatch({ clubId: club.id, loading: false, fixture: nextHomeFixture(fixtures, new Date(), timeZone), clubShortName: identity?.shortName ?? "", youtubeChannel });
       })
       .catch(() => { if (active) setMatch({ clubId: club.id, loading: false, fixture: null, clubShortName: "" }); });
     return () => { active = false; };
-  }, [club.id]);
+  }, [club.id, timeZone]);
   const current = match.clubId === club.id ? match : { loading: true, fixture: null, clubShortName: "" };
   return <KnowBeforeYouGoView content={content} match={current} placeholders={placeholders} />;
 }

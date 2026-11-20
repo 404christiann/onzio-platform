@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { createClient } from "@/lib/supabase-server";
-import { fetchClubIdentity } from "@/lib/cinematic-identity";
+import { readPublicClubTimeZone } from "@/lib/public-club-time-zone";
 import { isNewsSlug } from "@/lib/cinematic-news";
 import { fetchNewsArticle } from "@/lib/cinematic-news-query";
 import { CinematicNewsArticle } from "@/components/cinematic/CinematicNews";
@@ -21,7 +21,7 @@ export default async function NewsArticlePage({ params }: { params: Promise<{ sl
     return <><CinematicInjuryReport report={report} /><CinematicNewsPartners initialSponsors={sponsors} /></>;
   }
   if (!isNewsSlug(articleSlug)) notFound();
-  const [article, identity, sponsors] = await Promise.all([fetchNewsArticle(club.id, articleSlug, db), fetchClubIdentity(club.id, db), newsPartnerSponsors(club.id, db)]);
+  const [article, timeZone, sponsors] = await Promise.all([fetchNewsArticle(club.id, articleSlug, db), readPublicClubTimeZone(club.id), newsPartnerSponsors(club.id, db)]);
   if (!article) notFound();
-  return <CinematicNewsArticle article={article} timeZone={identity?.timeZone || "UTC"} sponsors={sponsors} />;
+  return <CinematicNewsArticle article={article} timeZone={timeZone} sponsors={sponsors} />;
 }
