@@ -9,6 +9,7 @@ import NativeImage from "@/components/ResilientNativeImage";
 import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { CINEMATIC_NAV_ITEMS } from "@/lib/cinematic-homepage-content";
 import { useCinematicContent } from "./CinematicContent";
+import { followNavIndicator } from "./nav-indicator";
 
 function NavIcon({ name }: { name: "menu" | "close" | "arrow-left" | "caret-right" }) {
   return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href={`/icons/cinematic-navigation/sprite.svg#${name}`} /></svg>;
@@ -132,71 +133,12 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
     };
   }, []);
 
-  // One red indicator follows the hovered (or keyboard-focused) top-level tab and rests on the current page's tab.
   // Before this runs, the server-rendered `.active` underline stands in, so nothing shifts on hydration.
   useEffect(() => {
-    const nav = desktopNav.current;
-    const bar = indicator.current;
-    if (!nav || !bar) return;
-    let hovered: HTMLElement | null = null;
-    let focused: HTMLElement | null = null;
-    const topItem = (node: EventTarget | null) => {
-      const element = node as Element | null;
-      if (!element?.closest || !nav.contains(element)) return null;
-      return element.closest(".nav-group")?.querySelector<HTMLElement>(":scope > .nav-item") ?? element.closest<HTMLElement>(".nav-item");
-    };
-    const place = (snap = false) => {
-      const target = hovered ?? focused
-        ?? nav.querySelector<HTMLElement>(".nav-group.open > .nav-item")
-        ?? nav.querySelector<HTMLElement>(".nav-item.active");
-      if (!target) { bar.removeAttribute("data-visible"); return; }
-      // Measure in the nav's own units so a scaled editor preview still lines up.
-      const box = nav.getBoundingClientRect();
-      const scale = nav.offsetWidth ? box.width / nav.offsetWidth : 1;
-      const rect = target.getBoundingClientRect();
-      // Appearing from nothing should not slide in from wherever the indicator last rested.
-      if (snap || !bar.hasAttribute("data-visible")) bar.setAttribute("data-snap", "");
-      bar.style.transform = `translateX(${(rect.left - box.left) / scale}px) scaleX(${rect.width / scale})`;
-      bar.setAttribute("data-visible", "");
-      if (bar.hasAttribute("data-snap")) { void bar.offsetWidth; bar.removeAttribute("data-snap"); }
-    };
-    const over = (event: PointerEvent) => {
-      if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
-      const item = topItem(event.target);
-      if (item && item !== hovered) { hovered = item; place(); }
-    };
-    const leave = () => { if (hovered) { hovered = null; place(); } };
-    const focusIn = (event: FocusEvent) => {
-      let visible = false;
-      try { visible = (event.target as Element).matches(":focus-visible"); } catch { /* selector unsupported */ }
-      focused = visible ? topItem(event.target) : null;
-      place();
-    };
-    const focusOut = (event: FocusEvent) => {
-      if (nav.contains(event.relatedTarget as Node | null)) return;
-      focused = null;
-      place();
-    };
-    const view = nav.ownerDocument.defaultView;
-    const resize = view && "ResizeObserver" in view ? new view.ResizeObserver(() => place(true)) : null;
-    resize?.observe(nav);
-    nav.ownerDocument.fonts?.ready.then(() => place(true)).catch(() => {});
-    nav.addEventListener("pointerover", over);
-    nav.addEventListener("pointerleave", leave);
-    nav.addEventListener("focusin", focusIn);
-    nav.addEventListener("focusout", focusOut);
-    place(true);
-    nav.setAttribute("data-indicator-ready", "");
-    placeIndicator.current = () => place();
-    return () => {
-      placeIndicator.current = () => {};
-      resize?.disconnect();
-      nav.removeEventListener("pointerover", over);
-      nav.removeEventListener("pointerleave", leave);
-      nav.removeEventListener("focusin", focusIn);
-      nav.removeEventListener("focusout", focusOut);
-      nav.removeAttribute("data-indicator-ready");
-    };
+    if (!desktopNav.current || !indicator.current) return;
+    const follower = followNavIndicator(desktopNav.current, indicator.current);
+    placeIndicator.current = follower.place;
+    return () => { placeIndicator.current = () => {}; follower.dispose(); };
   }, []);
 
   useEffect(() => { placeIndicator.current(); }, [pathname, open, currentGroup, content]);

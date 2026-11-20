@@ -19,8 +19,10 @@ deployed, `rc-sam` not updated; those wait for Christian). No migration, schema,
   between 1025 and 1100 px), `flex: none`, an `.36em` gap after the label, and lifted so the visible chevron centres
   on the capitals. Measured at 1440: chevron centre was 2.75 px below the cap centre, now 0.04 px; same at 1050.
 
-**Files changed:** `components/cinematic/CinematicNav.tsx`, `components/cinematic/cinematic.css` (new rules appended,
-all under `.cinematic-site`), `tests/contracts/cinematic-navigation.test.ts`. No shared nav file: `components/Nav.tsx`
+**Files changed:** `components/cinematic/CinematicNav.tsx`, `components/cinematic/nav-indicator.ts` (the underline's
+behaviour, split out for testing after onzio-bot's Medium on #201), `components/cinematic/cinematic.css` (new rules
+appended, all under `.cinematic-site`), `tests/contracts/cinematic-navigation.test.ts`,
+`tests/contracts/cinematic-nav-indicator.test.ts`. No shared nav file: `components/Nav.tsx`
 only imports `CinematicNav` for `cinematic@2`, and Diverse City runs `TemplateNav`.
 
 **Verification:**
@@ -31,8 +33,11 @@ only imports `CinematicNav` for `cinematic@2`, and Diverse City runs `TemplateNa
   moves it with no transition and it returns when focus leaves the nav. At 1024 the desktop nav and indicator are
   `display: none` and the phone menu is unchanged. Before/after crops are in the session-group notes folder
   (`rc-nav-screens/`).
-- tsc clean; `test:unit` 4279/4279; `test:contracts` 3318/3318 (including `site-public-pages-scope` and the 4 new
-  RC-NAV cases in `cinematic-navigation`).
+- tsc clean; `test:unit` 4288/4288; `test:contracts` 3327/3327 (including `site-public-pages-scope`, 4 RC-NAV cases in
+  `cinematic-navigation` and 9 in `cinematic-nav-indicator`). The indicator cases use fake nav nodes for mouse, pen,
+  touch, leave, focus-visible, focusout, hover-over-focus, open drop-down, scaled preview and dispose. Each of the five
+  mutations named in the review (target never moves, no touch guard, no-op leave, focus ignored, pointerover listener
+  left attached) now fails 1–3 of them.
 
 **Blockers / decisions:** none. The underline spans label and caret on drop-down tabs.
 
