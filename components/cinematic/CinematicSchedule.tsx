@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Fixture } from "@/lib/data";
 import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
-import { scheduleDate, scheduleDisplay, scheduleKickoff, SCHEDULE_PAGE_SIZE } from "@/lib/cinematic-schedule";
+import { scheduleDate, scheduleDisplay, scheduleKickoff, scheduleLeagueLogo, SCHEDULE_PAGE_SIZE } from "@/lib/cinematic-schedule";
 import { outcomeForFixture } from "@/lib/cinematic-fixtures";
 import { youtubeWatchUrl } from "@/lib/youtube-embed";
 import { googleMapsDirectionsUrl } from "@/lib/google-maps-directions";
@@ -48,6 +48,7 @@ export default function CinematicSchedule({ schedule, initialNow }: { schedule: 
           // One optional YouTube link per match: the stream before kickoff, the replay afterwards.
           const video = youtubeWatchUrl(fixture.replayVideoUrl);
           const directions = googleMapsDirectionsUrl(fixture.address);
+          const leagueLogo = scheduleLeagueLogo(fixture);
           const venueLine = [fixture.venue, [fixture.city, fixture.state].filter(Boolean).join(", ")].filter(Boolean).join(" - ");
           return <li key={fixture.id ?? `${fixture.date}-${fixture.time}-${name}`} className="fixture-item" data-fixture-id={fixture.id}>
             <span className="fixture-number" aria-hidden="true">{matchNumber}</span>
@@ -58,9 +59,9 @@ export default function CinematicSchedule({ schedule, initialNow }: { schedule: 
                 <div><div className="opponent-title"><h2>{name}</h2><span className="home-away">{fixture.home ? "Home" : "Away"}</span></div><p className="fixture-venue"><span className="fixture-venue-name" title={venueLine}>{venueLine}</span>{directions && <a className="fixture-directions" href={directions} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${fixture.venue} (opens Google Maps in a new tab)`}><NativeImage className="directions-pin" src="/rose-city/icons/green-location-pin.png" alt="" width={14} height={16} hideOnError />Directions</a>}</p></div>
               </div>
               <div className="fixture-kickoff"><span className="mobile-label">Kickoff</span>{scheduleKickoff(fixture.time, schedule.timeZone)}</div>
-              <div className="fixture-league">{fixture.leagueLogoUrl
-                ? <NativeImage src={fixture.leagueLogoUrl} alt={fixture.competition ? `${fixture.competition} league logo` : "League logo"} width={38} height={47} />
-                : fixture.competition ? <span className="league-name">{fixture.competition}</span> : <span aria-label="League to be announced">—</span>}</div>
+              <div className="fixture-league">{leagueLogo
+                ? <NativeImage src={leagueLogo.src} alt={leagueLogo.alt} width={38} height={47} />
+                : fixture.competition ? <span title={fixture.competition} className="league-name">{fixture.competition}</span> : <span aria-label="League to be announced">—</span>}</div>
               <div className="fixture-result">{outcome ? <><span className="result-outcome" data-outcome={outcome}>{outcome}</span><strong aria-label={`${fixture.roseCityScore} to ${fixture.opponentScore}`}>{fixture.roseCityScore}<span className="score-separator" aria-hidden="true">-</span>{fixture.opponentScore}</strong><span className="sr-only">{outcome === "W" ? "Win" : outcome === "L" ? "Loss" : "Draw"}</span></> : <span className="sr-only">Not played</span>}</div>
               <div className="fixture-summary">{played && fixture.id && <Link href={`/schedule/${fixture.id}`}>Match Summary<span className="sr-only"> for {name}, {scheduleDate(fixture.date)}</span></Link>}</div>
               {/* Sam: the Watch on YouTube logo shows on every match; it links once the match has a video. */}

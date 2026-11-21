@@ -109,4 +109,34 @@ describe("cinematic Schedule", () => {
     expect(css).toContain(".cinematic-site .cinematic-schedule .fixture-date time{white-space:normal}");
     expect(css).toMatch(/\.fixture-card\{grid-template-columns:136px minmax\(0,1fr\) 118px 58px 112px 118px 168px;gap:12px\}/);
   });
+  describe("RC-SAM-FIXES-2: the League column shows a league logo", () => {
+    const render = (overrides: Partial<Fixture>) => renderToStaticMarkup(createElement(CinematicSchedule, {
+      schedule: { fixtures: [{ ...fixture, ...overrides }], seasonLabel: "2027", timeZone: "America/Los_Angeles" }, initialNow: now,
+    }));
+    it("shows the UPSL shield when a UPSL match has no saved league logo, instead of stacking the competition name", () => {
+      // Production Rose City: competition "UPSL 2026 Premier SoCal North" and no league logo on the Next match.
+      const html = render({ competition: "UPSL 2026 Premier SoCal North", leagueLogoUrl: null });
+      expect(html).toContain('src="/rose-city/icons/upsl-shield.png"');
+      expect(html).toContain('alt="UPSL 2026 Premier SoCal North league logo"');
+      expect(html).not.toContain('class="league-name"');
+      expect(render({ competition: "upsl premier", leagueLogoUrl: null })).toContain("/rose-city/icons/upsl-shield.png");
+    });
+    it("keeps a saved league logo ahead of the UPSL shield, and never guesses a league from other text", () => {
+      const saved = render({ competition: "UPSL 2026 Premier SoCal North", leagueLogoUrl: "/league.webp" });
+      expect(saved).toContain('src="/league.webp"');
+      expect(saved).not.toContain("upsl-shield.png");
+      for (const competition of ["US Open Cup", "Friendly", "Upslope Cup"]) {
+        const html = render({ competition, leagueLogoUrl: null });
+        expect(html).not.toContain("upsl-shield.png");
+        expect(html).toContain(`title="${competition}" class="league-name">${competition}`);
+      }
+      const blank = render({ competition: null, leagueLogoUrl: null });
+      expect(blank).not.toContain("upsl-shield.png");
+      expect(blank).toContain('aria-label="League to be announced"');
+    });
+    it("fits a league name without a logo in the narrow desktop column: small type, at most three lines", () => {
+      const css = readFileSync(resolve(process.cwd(), "components/cinematic/schedule.css"), "utf8");
+      expect(css).toContain("@media(min-width:901px){\n .cinematic-site .cinematic-schedule .league-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;font-size:10.5px;line-height:1.2;overflow-wrap:normal;hyphens:auto}");
+    });
+  });
 });
