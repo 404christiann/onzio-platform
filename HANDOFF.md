@@ -1,3 +1,9 @@
+## 2026-11-21 - TELEMETRY-03: sponsor logo views, click-through links, time on page
+
+- **Status:** `ready for review`, branch `claude/telemetry-03-site` (rebased onto main `9129ee13`), PR open, not merged. **Merge after TELEMETRY-02** (`/r/<id>` route and the new `/api/t` bodies). No migration, env, API or middleware change. Record: `STATUS.md` (TELEMETRY-03).
+- **What:** shared `sendTelemetry`; `SiteTelemetry` context mounted only for add-on clubs; time-on-page heartbeats in `PageBeacon`; sponsor-logo `logo_seen` tracking and `/r/<id>` sponsored links in `CinematicSponsors` (not in the admin preview, uuid sponsors only).
+- **Exact next step:** TELEMETRY-02 merges, then Christian reviews this PR.
+
 ## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI
 
 - The Rose City hero video control is now an Untitled-style uploader titled "Video". It has a drop zone with drag and drop, and a file row with name, size, bar, % and Trash2 cancel that takes the zone's place while a video uploads or processes. Live shows "Completed" and a check; failure shows a red row with Try again. UI only, no migration. Branch `claude/rc-hero-video-uploader-ui`, PR open, not merged. Record: `STATUS.md` (RC-HERO-VIDEO-UPLOADER-UI).

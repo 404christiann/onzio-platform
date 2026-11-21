@@ -1,5 +1,9 @@
 import { randomUUID, createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { build } from "esbuild";
 import { expect, test, type Page } from "@playwright/test";
+import type { DBSiteSponsorLogo } from "@/lib/db-types";
 import { cinematicHomepageSaveContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import type { HomepageEditorSnapshot } from "@/lib/homepage-editor/adapter";
 import { createLocalClients } from "../helpers/supabase";
@@ -153,3 +157,354 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "
     }
   });
 }
+
+// ---------------------------------------------------------------------------
+// TELEMETRY-03: sponsor telemetry in a real browser, with no server and no database.
+// Rose City's public site is held and no local club has the telemetry add-on, so
+// the real app cannot render the sponsor strip with telemetry on. This harness
+// bundles the real SiteTelemetry + CinematicSponsors with esbuild and serves them
+// through context.route on the config's host: the page document, the bundle and
+// POST /api/t are fulfilled in memory, every other request on any host is aborted,
+// and navigator.sendBeacon is left alone (page.route sees its "ping" requests).
+// ---------------------------------------------------------------------------
+const HARNESS_PATH = "/__telemetry-harness";
+const WIRE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const logoSvg = (fill: string) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="60"><rect width="240" height="60" fill="${fill}"/></svg>`)}`;
+const sponsorRow = (id: string, name: string, fill: string, website: string | null, order: number): DBSiteSponsorLogo => ({ id, placement: null, name, logo_url: logoSvg(fill), sort_order: order, show_on_homepage: true, show_in_footer: false, website_url: website, created_at: "2026-01-01T00:00:00.000Z" });
+/** Three linked database sponsors, one database sponsor without a website, and one built-in fallback that has a website but must never be linked or counted. */
+const HARNESS_SPONSORS: DBSiteSponsorLogo[] = [
+  sponsorRow("0f1c2d3e-0001-4a00-8a00-00000000000a", "Alpha Plumbing", "#E80B25", "https://alpha.example/", 0),
+  sponsorRow("0f1c2d3e-0001-4a00-8a00-00000000000b", "Bravo Bakery", "#4F8DC3", "https://bravo.example/", 1),
+  sponsorRow("0f1c2d3e-0001-4a00-8a00-00000000000c", "Charlie Cafe", "#94C946", null, 2),
+  sponsorRow("0f1c2d3e-0001-4a00-8a00-00000000000d", "Delta Dental", "#141414", "https://delta.example/", 3),
+  sponsorRow("default-carousel-chronic", "Chronic Tacos", "#F5A623", "https://chronic.example/", 4),
+];
+const COUNTED = HARNESS_SPONSORS.filter(sponsor => WIRE_UUID.test(sponsor.id));
+const LINKED = COUNTED.filter(sponsor => sponsor.website_url);
+const UNLINKED = HARNESS_SPONSORS.filter(sponsor => !LINKED.includes(sponsor));
+const COUNTED_IDS = COUNTED.map(sponsor => sponsor.id).sort();
+const FALLBACK_ID = "default-carousel-chronic";
+
+type Beacon = Record<string, unknown>;
+type HarnessWindow = Window & {
+  __NativeIntersectionObserver: typeof IntersectionObserver;
+  /** IntersectionObservers the page under test constructed (the test's own probe uses the native class and is not counted). */
+  __observerCount: number;
+  /** Greatest intersection ratio each sponsor's original and aria-hidden clone reached while the strip was on screen. */
+  __probeRatios: Record<string, { original: number; clone: number }>;
+};
+
+const harnessEntry = `
+import { createRoot } from "react-dom/client";
+import { PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
+import { SiteTelemetry } from "@/components/telemetry/TelemetryContext";
+import CinematicSponsors from "@/components/cinematic/CinematicSponsors";
+const sponsors = ${JSON.stringify(HARNESS_SPONSORS)};
+const strip = (
+  <div className="cinematic-site">
+    <div style={{ height: 1800 }} />
+    <CinematicSponsors sponsors={sponsors} treatments={{}} heading="Partners" />
+    <button id="after-strip" type="button">After the strip</button>
+  </div>
+);
+const telemetry = new URLSearchParams(location.search).get("telemetry") !== "off";
+createRoot(document.getElementById("root")!).render(
+  <PathnameContext.Provider value="${HARNESS_PATH}">{telemetry ? <SiteTelemetry>{strip}</SiteTelemetry> : strip}</PathnameContext.Provider>,
+);
+`;
+
+let harnessBundle = "";
+let harnessHtml = "";
+async function buildHarness() {
+  const root = path.resolve(__dirname, "..", "..");
+  const result = await build({
+    stdin: { contents: harnessEntry, resolveDir: root, loader: "tsx", sourcefile: "telemetry-harness-entry.tsx" },
+    bundle: true, write: false, format: "iife", jsx: "automatic",
+    define: { "process.env.NODE_ENV": '"production"' },
+    tsconfig: path.join(root, "tsconfig.json"),
+  });
+  harnessBundle = result.outputFiles[0].text;
+  const css = readFileSync(path.join(root, "components/cinematic/cinematic.css"), "utf8");
+  // The second style block holds the marquee still so strip geometry, and therefore what counts as seen, is deterministic.
+  harnessHtml = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TELEMETRY-03 harness</title><style>${css}</style><style>body{margin:0}.cinematic-site .sponsor-track{animation-play-state:paused!important}</style></head><body><div id="root"></div><script src="${HARNESS_PATH}.js"></script></body></html>`;
+}
+
+const beaconsOf = (posts: Beacon[], t: string) => posts.filter(body => body.t === t);
+const sortedIds = (batches: Beacon[]) => batches.flatMap(batch => batch.s as string[]).sort();
+
+/** Every body that left the page must match the frozen wire contract exactly: no other keys, no other shapes. */
+function expectWireContract(posts: Beacon[]) {
+  for (const body of posts) {
+    if (body.t === "view") {
+      expect(Object.keys(body).sort()).toEqual(["p", "q", "r", "t"]);
+      expect([typeof body.p, typeof body.r, typeof body.q]).toEqual(["string", "string", "string"]);
+    } else if (body.t === "logo_seen") {
+      expect(Object.keys(body).sort()).toEqual(["p", "s", "t"]);
+      const ids = body.s as string[];
+      expect(typeof body.p).toBe("string");
+      expect(Array.isArray(ids) && ids.length >= 1 && ids.length <= 10).toBe(true);
+      expect(new Set(ids).size).toBe(ids.length);
+      for (const id of ids) expect(id).toMatch(WIRE_UUID);
+    } else if (body.t === "heartbeat") {
+      expect(Object.keys(body).sort()).toEqual(["e", "p", "t"]);
+      expect(typeof body.p).toBe("string");
+      expect(Number.isInteger(body.e) && (body.e as number) >= 1_000 && (body.e as number) <= 60_000).toBe(true);
+    } else {
+      throw new Error(`Unexpected beacon body ${JSON.stringify(body)}`);
+    }
+  }
+}
+
+async function openHarness(page: Page, baseURL: string, options: { telemetry?: boolean; reducedMotion?: boolean } = {}) {
+  const { telemetry = true, reducedMotion = false } = options;
+  const origin = new URL(baseURL).origin;
+  const posts: Beacon[] = [];
+  const linkHits: string[] = [];
+  await page.addInitScript(() => {
+    const w = window as unknown as HarnessWindow;
+    const Native = window.IntersectionObserver;
+    w.__NativeIntersectionObserver = Native;
+    w.__observerCount = 0;
+    window.IntersectionObserver = class extends Native {
+      constructor(...args: ConstructorParameters<typeof IntersectionObserver>) { super(...args); w.__observerCount += 1; }
+    };
+  });
+  // Context level, so a link that opens a new tab stays inside the harness too.
+  await page.context().route("**/*", async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.origin !== origin) return route.abort();
+    if (request.method() === "GET" && url.pathname === HARNESS_PATH) return route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: harnessHtml });
+    if (request.method() === "GET" && url.pathname === `${HARNESS_PATH}.js`) return route.fulfill({ status: 200, contentType: "text/javascript; charset=utf-8", body: harnessBundle });
+    if (request.method() === "POST" && url.pathname === "/api/t") {
+      posts.push(JSON.parse(request.postData() ?? "null") as Beacon);
+      return route.fulfill({ status: 204 });
+    }
+    if (url.pathname.startsWith("/r/")) linkHits.push(url.pathname);
+    return route.abort();
+  });
+  if (reducedMotion) await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(telemetry ? HARNESS_PATH : `${HARNESS_PATH}?telemetry=off`);
+  await expect(page.locator(".sponsor-track")).toBeAttached();
+  // The first view beacon proves this commit's effects ran. Without the add-on there is no beacon, so wait for the marquee to start instead.
+  if (telemetry) await expect.poll(() => beaconsOf(posts, "view").length, { timeout: 15_000 }).toBe(1);
+  else if (!reducedMotion) await expect(page.locator(".sponsor-track")).toHaveCSS("animation-name", "cinematic-sponsor-travel");
+  return { posts, linkHits };
+}
+
+/**
+ * Scrolls the strip into view and resolves once a native IntersectionObserver
+ * (created here, after the page's own, so it is notified in the same frame)
+ * reports a logo at least half visible. `settleMs` then waits in the page, so
+ * the time after the dwell timer started is measured without Playwright latency.
+ */
+async function revealStrip(page: Page, settleMs = 0) {
+  await page.evaluate(async ms => {
+    const w = window as unknown as HarnessWindow;
+    const ratios: HarnessWindow["__probeRatios"] = {};
+    let half!: () => void;
+    const reachedHalf = new Promise<void>(resolve => { half = resolve; });
+    const observer = new w.__NativeIntersectionObserver(entries => {
+      for (const entry of entries) {
+        const element = entry.target as HTMLElement;
+        const slot = (ratios[element.dataset.sponsorId as string] ??= { original: 0, clone: 0 });
+        const copy = element.closest('[aria-hidden="true"]') ? "clone" : "original";
+        slot[copy] = Math.max(slot[copy], entry.intersectionRatio);
+        if (entry.intersectionRatio >= 0.5) half();
+      }
+    }, { threshold: [0, 0.5, 1] });
+    document.querySelectorAll("[data-sponsor-id]").forEach(element => observer.observe(element));
+    w.__probeRatios = ratios;
+    document.querySelector(".partner-row")!.scrollIntoView({ block: "center" });
+    await reachedHalf;
+    if (ms) await new Promise(resolve => setTimeout(resolve, ms));
+  }, settleMs);
+}
+
+/** Waits for the first logo_seen batch, then one more full 2 s batch window so a late duplicate would show. */
+async function settledLogoSeen(page: Page, posts: Beacon[]) {
+  await expect.poll(() => beaconsOf(posts, "logo_seen").length, { timeout: 10_000 }).toBeGreaterThan(0);
+  await page.waitForTimeout(2_400);
+  return beaconsOf(posts, "logo_seen");
+}
+
+/** The page really reports hidden: document.hidden and visibilityState change, then visibilitychange fires. */
+async function setTabVisibility(page: Page, state: "hidden" | "visible") {
+  await page.evaluate(next => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => next === "hidden" });
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => next });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, state);
+}
+
+async function expectSponsorLinks(page: Page) {
+  for (const sponsor of LINKED) {
+    const href = `/r/${sponsor.id}`;
+    const original = page.locator(`.sponsor-set:not([aria-hidden]) a[href="${href}"]`);
+    const clone = page.locator(`.sponsor-set[aria-hidden="true"] a[href="${href}"]`);
+    await expect(page.locator(`a[href="${href}"]`)).toHaveCount(2);
+    await expect(original).toHaveCount(1);
+    await expect(clone).toHaveCount(1);
+    for (const link of [original, clone]) {
+      await expect(link).toHaveAttribute("target", "_blank");
+      await expect(link).toHaveAttribute("rel", "sponsored noopener");
+    }
+    expect(await original.evaluate(element => element.hasAttribute("tabindex"))).toBe(false);
+    await expect(clone).toHaveAttribute("tabindex", "-1");
+    // The sponsor's own address stays server-side behind /r/<id>.
+    await expect(page.locator(`a[href*="${new URL(sponsor.website_url!).host}"]`)).toHaveCount(0);
+    // Hidden from the accessibility tree, the clone leaves exactly one link per sponsor.
+    await expect(page.getByRole("link", { name: sponsor.name })).toHaveCount(1);
+  }
+  await expect(page.locator("a")).toHaveCount(LINKED.length * 2);
+  for (const sponsor of UNLINKED) {
+    await expect(page.locator(`a[href="/r/${sponsor.id}"]`)).toHaveCount(0);
+    const image = page.locator(`.sponsor-set:not([aria-hidden]) img[alt="${sponsor.name}"]`);
+    await expect(image).toHaveCount(1);
+    expect(await image.evaluate(element => element.closest("a"))).toBeNull();
+  }
+}
+
+test.describe("TELEMETRY-03 sponsor telemetry harness", () => {
+  // At 2400 px one five-logo set (1400 px) leaves room for the clone's first four logos, so every counted sponsor is on screen twice at once.
+  test.use({ viewport: { width: 2400, height: 900 } });
+  test.beforeAll(buildHarness);
+
+  test("logo_seen: nothing before the strip is on screen, then only database sponsors after the dwell and batch window", async ({ page, baseURL }) => {
+    const harness = await openHarness(page, baseURL!);
+    expect(beaconsOf(harness.posts, "view")).toEqual([{ t: "view", p: HARNESS_PATH, r: "", q: "" }]);
+    await page.waitForTimeout(3_500); // longer than the 1 s dwell plus the 2 s batch window
+    expect(beaconsOf(harness.posts, "logo_seen")).toEqual([]);
+
+    await revealStrip(page);
+    const batches = await settledLogoSeen(page, harness.posts);
+    for (const batch of batches) expect(batch.p).toBe(HARNESS_PATH);
+    expect(sortedIds(batches)).toEqual(COUNTED_IDS);
+    expect(JSON.stringify(harness.posts)).not.toContain(FALLBACK_ID);
+    expectWireContract(harness.posts);
+  });
+
+  test("logo_seen: the aria-hidden clone never adds a second count for the same sponsor", async ({ page, baseURL }) => {
+    const harness = await openHarness(page, baseURL!);
+    await revealStrip(page);
+    const batches = await settledLogoSeen(page, harness.posts);
+    const ids = sortedIds(batches);
+    expect(ids).toEqual(COUNTED_IDS);
+    expect(new Set(ids).size).toBe(ids.length);
+    // Both copies of every counted logo really were at least half visible during the wait, so the dedupe is what held the count to one.
+    const ratios = await page.evaluate(() => (window as unknown as HarnessWindow).__probeRatios);
+    expect(Object.keys(ratios).sort()).toEqual(COUNTED_IDS);
+    for (const id of COUNTED_IDS) {
+      expect(ratios[id].original).toBeGreaterThanOrEqual(0.5);
+      expect(ratios[id].clone).toBeGreaterThanOrEqual(0.5);
+    }
+    expectWireContract(harness.posts);
+  });
+
+  test("heartbeat: hiding the tab reports the visible time once, with an in-range e", async ({ page, baseURL }) => {
+    const harness = await openHarness(page, baseURL!);
+    expect(beaconsOf(harness.posts, "heartbeat")).toEqual([]);
+    await page.waitForTimeout(1_600); // visible for longer than the 1 s floor
+    await setTabVisibility(page, "hidden");
+    await expect.poll(() => beaconsOf(harness.posts, "heartbeat").length, { timeout: 5_000 }).toBe(1);
+    const [beat] = beaconsOf(harness.posts, "heartbeat");
+    expect(beat.p).toBe(HARNESS_PATH);
+    expect(Number.isInteger(beat.e)).toBe(true);
+    expect(beat.e as number).toBeGreaterThanOrEqual(1_500);
+    expect(beat.e as number).toBeLessThanOrEqual(60_000);
+    expectWireContract(harness.posts);
+  });
+
+  test("hiding the tab sends queued logo ids immediately, before the 2 s batch window ends", async ({ page, baseURL }) => {
+    const harness = await openHarness(page, baseURL!);
+    // The 1 s dwell has passed (every id is queued) but the batch timer, which started with the first id, has 1.5 s left.
+    await revealStrip(page, 1_500);
+    expect(beaconsOf(harness.posts, "logo_seen")).toEqual([]);
+    await setTabVisibility(page, "hidden");
+    // A timer-driven batch would only arrive after this one-second poll gives up.
+    await expect.poll(() => beaconsOf(harness.posts, "logo_seen").length, { timeout: 1_000 }).toBe(1);
+    expect(sortedIds(beaconsOf(harness.posts, "logo_seen"))).toEqual(COUNTED_IDS);
+    expect(beaconsOf(harness.posts, "heartbeat")).toHaveLength(1);
+    expectWireContract(harness.posts);
+  });
+
+  test("links: linked database sponsors get /r/<id> links, the clone's are out of the tab order, the rest stay plain images", async ({ page, baseURL }) => {
+    await openHarness(page, baseURL!);
+    await expectSponsorLinks(page);
+  });
+
+  test("keyboard: Tab goes region, original links in order, then out of the strip; the clone is never focused; ring only, no layout change", async ({ page, baseURL }) => {
+    await openHarness(page, baseURL!);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    const active = () => page.evaluate(() => {
+      const element = document.activeElement as HTMLElement;
+      const image = element.querySelector("img");
+      const box = element.getBoundingClientRect();
+      const imageBox = image?.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        id: element.id, href: element.getAttribute("href"), region: element.matches('.partner-row[role="region"]'),
+        insideHidden: element.closest('[aria-hidden="true"]') !== null,
+        focusVisible: element.matches(":focus-visible"), outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth, textDecorationLine: style.textDecorationLine,
+        box: { width: box.width, height: box.height }, imageBox: imageBox ? { width: imageBox.width, height: imageBox.height } : null,
+      };
+    });
+    const hrefs = LINKED.map(sponsor => `/r/${sponsor.id}`);
+
+    await page.keyboard.press("Tab");
+    expect(await active()).toMatchObject({ region: true, insideHidden: false });
+    for (const href of hrefs) {
+      await page.keyboard.press("Tab");
+      const stop = await active();
+      expect(stop).toMatchObject({ href, insideHidden: false, focusVisible: true, textDecorationLine: "none" });
+      expect(stop.outlineStyle).not.toBe("none");
+      expect(stop.outlineWidth).not.toBe("0px");
+      expect(stop.imageBox).not.toBeNull();
+      expect(Math.abs(stop.box.height - stop.imageBox!.height)).toBeLessThan(0.5);
+      expect(Math.abs(stop.box.width - stop.imageBox!.width)).toBeLessThan(0.5);
+    }
+    await page.keyboard.press("Tab");
+    expect(await active()).toMatchObject({ id: "after-strip", insideHidden: false });
+
+    // Backwards: the same three links, then the region, never the clone.
+    for (const href of [...hrefs].reverse()) {
+      await page.keyboard.press("Shift+Tab");
+      expect(await active()).toMatchObject({ href, insideHidden: false });
+    }
+    await page.keyboard.press("Shift+Tab");
+    expect(await active()).toMatchObject({ region: true, insideHidden: false });
+  });
+
+  test("reduced motion: the clone is display:none, the original links still work and each sponsor is counted once", async ({ page, baseURL }) => {
+    const harness = await openHarness(page, baseURL!, { reducedMotion: true });
+    await expect(page.locator('.sponsor-set[aria-hidden="true"]')).toHaveCSS("display", "none");
+    await expect(page.locator(".sponsor-set:not([aria-hidden])")).toBeVisible();
+    const originals = page.locator(".sponsor-set:not([aria-hidden]) a");
+    await expect(originals).toHaveCount(LINKED.length);
+    for (let index = 0; index < LINKED.length; index += 1) await expect(originals.nth(index)).toBeVisible();
+
+    await revealStrip(page);
+    const batches = await settledLogoSeen(page, harness.posts);
+    expect(sortedIds(batches)).toEqual(COUNTED_IDS);
+    const ratios = await page.evaluate(() => (window as unknown as HarnessWindow).__probeRatios);
+    for (const id of COUNTED_IDS) {
+      expect(ratios[id].original).toBeGreaterThanOrEqual(0.5);
+      expect(ratios[id].clone).toBe(0);
+    }
+
+    await originals.first().click();
+    await expect.poll(() => harness.linkHits, { timeout: 5_000 }).toEqual([`/r/${LINKED[0].id}`]);
+    expectWireContract(harness.posts);
+  });
+
+  test("without SiteTelemetry: no beacons, no observers, and the links are unchanged", async ({ page, baseURL }) => {
+    const harness = await openHarness(page, baseURL!, { telemetry: false });
+    await revealStrip(page, 3_500); // dwell plus batch window, with the strip fully on screen
+    expect(harness.posts).toEqual([]);
+    expect(await page.evaluate(() => (window as unknown as HarnessWindow).__observerCount)).toBe(0);
+    await setTabVisibility(page, "hidden"); // would flush a queue or a heartbeat if anything were running
+    await page.waitForTimeout(500);
+    expect(harness.posts).toEqual([]);
+    await expectSponsorLinks(page);
+  });
+});

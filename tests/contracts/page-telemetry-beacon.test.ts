@@ -566,13 +566,16 @@ describe("club layout beacon mount", () => {
   const layout = readFileSync(resolve(process.cwd(), "app/%5Fclubs/[slug]/layout.tsx"), "utf8");
 
   it("mounts the beacon only behind the add-on check, once, for every shell", () => {
-    expect(layout).toContain('import PageBeacon from "@/components/telemetry/PageBeacon";');
+    // TELEMETRY-03: the beacon now lives inside SiteTelemetry, which also tells
+    // the sponsor strip it may report; the layout never writes <PageBeacon /> itself.
+    expect(layout).toContain('import { SiteTelemetry } from "@/components/telemetry/TelemetryContext";');
     expect(layout).toContain('import { clubHasTelemetry } from "@/lib/telemetry/entitlement";');
-    // The only place <PageBeacon /> is written is the add-on-gated ternary.
-    expect(layout.match(/<PageBeacon\b/g)).toHaveLength(1);
-    expect(layout).toMatch(/const beacon = \(await clubHasTelemetry\(club\.id\)\) \? <PageBeacon \/> : null;/);
-    // Every shell renders that gated element, never an ungated beacon.
-    expect(layout.match(/\{beacon\}/g)).toHaveLength(3);
+    expect(layout).not.toContain("PageBeacon");
+    expect(layout).toContain("const telemetry = await clubHasTelemetry(club.id);");
+    expect(layout).toMatch(/const withTelemetry = \(content: React\.ReactNode\) => \(telemetry \? <SiteTelemetry>\{content\}<\/SiteTelemetry> : content\);/);
+    expect(layout.match(/<SiteTelemetry\b/g)).toHaveLength(1);
+    // Every shell (three) goes through the gated helper.
+    expect(layout.match(/withTelemetry\(/g)).toHaveLength(3);
     expect(layout.match(/clubHasTelemetry\(/g)).toHaveLength(1);
   });
 });

@@ -20,7 +20,7 @@ import AcademyShell from "@/components/sites/diverse-city/Shell";
 import type { ClubContext } from "@/lib/club-context";
 import type { Metadata, Viewport } from "next";
 import { codeSiteFor } from "@/lib/code-site";
-import PageBeacon from "@/components/telemetry/PageBeacon";
+import { SiteTelemetry } from "@/components/telemetry/TelemetryContext";
 import { clubHasTelemetry } from "@/lib/telemetry/entitlement";
 
 export async function generateViewport({ params }: { params: Promise<{ slug: string }> }): Promise<Viewport> {
@@ -95,14 +95,16 @@ export default async function TenantLayout({
 
   // ADMIN-RE-03: fail-safe and time-boxed; Los Angeles if the read fails.
   const timeZone = await readPublicClubTimeZone(club.id);
-  // TELEMETRY-01: the beacon mounts only for clubs with the paid add-on (an
-  // optimisation, cached per instance; the database drops events for every
-  // other club anyway). Fails closed: no beacon if the check errors.
-  const beacon = (await clubHasTelemetry(club.id)) ? <PageBeacon /> : null;
+  // TELEMETRY-01/03: the page beacon, time-on-page heartbeat and sponsor-logo
+  // tracking mount only for clubs with the paid add-on (an optimisation, cached
+  // per instance; the database drops events for every other club anyway). Fails
+  // closed: other clubs render no provider and no telemetry code runs for them.
+  const telemetry = await clubHasTelemetry(club.id);
+  const withTelemetry = (content: React.ReactNode) => (telemetry ? <SiteTelemetry>{content}</SiteTelemetry> : content);
 
   if (club.presentationTemplateKey === "cinematic@2") {
     const initialContent = await fetchCinematicHomepageContent(club.id, (await createClient()).schema("onzio")).catch(() => null);
-    return <ClubContextProvider club={club}>{beacon}<CinematicDisplayFont /><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></ClubContextProvider>;
+    return <ClubContextProvider club={club}>{withTelemetry(<><CinematicDisplayFont /><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></>)}</ClubContextProvider>;
   }
 
   // The header remains usable while branding or page content is pending.
@@ -110,28 +112,30 @@ export default async function TenantLayout({
   if (codeSiteFor(club) === "diverse-city") {
     return (
       <ClubContextProvider club={club}>
-        {beacon}
-        <ClubTimeZoneProvider timeZone={timeZone}>
-          <Suspense fallback={<AcademyRouteLoadingSkeleton />}>
-            <AcademyBrandedShell club={club}>{children}</AcademyBrandedShell>
-          </Suspense>
-        </ClubTimeZoneProvider>
+        {withTelemetry(
+          <ClubTimeZoneProvider timeZone={timeZone}>
+            <Suspense fallback={<AcademyRouteLoadingSkeleton />}>
+              <AcademyBrandedShell club={club}>{children}</AcademyBrandedShell>
+            </Suspense>
+          </ClubTimeZoneProvider>,
+        )}
       </ClubContextProvider>
     );
   }
 
   return (
     <ClubContextProvider club={club}>
-      {beacon}
-      <ClubTimeZoneProvider timeZone={timeZone}>
-        <ClubBrandingProvider>
-          <TemplateFontScope templateKey={club.presentationTemplateKey}>
-            <Nav />
-            <main>{children}</main>
-            <Footer />
-          </TemplateFontScope>
-        </ClubBrandingProvider>
-      </ClubTimeZoneProvider>
+      {withTelemetry(
+        <ClubTimeZoneProvider timeZone={timeZone}>
+          <ClubBrandingProvider>
+            <TemplateFontScope templateKey={club.presentationTemplateKey}>
+              <Nav />
+              <main>{children}</main>
+              <Footer />
+            </TemplateFontScope>
+          </ClubBrandingProvider>
+        </ClubTimeZoneProvider>,
+      )}
     </ClubContextProvider>
   );
 }
