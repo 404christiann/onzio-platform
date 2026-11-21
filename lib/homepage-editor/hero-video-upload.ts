@@ -1,10 +1,13 @@
 import {
+  HERO_VIDEO_FAILED_COPY,
+  HERO_VIDEO_KEEP_OPEN_COPY,
+  HERO_VIDEO_LEAVE_COPY,
   HERO_VIDEO_LIVE_COPY,
   HERO_VIDEO_OTHER_UPLOAD_NOTE,
   HERO_VIDEO_POLL_MS,
-  HERO_VIDEO_PREPARING_COPY,
+  HERO_VIDEO_PROCESSING_COPY,
+  HERO_VIDEO_REPLACES_PER_DAY,
   HERO_VIDEO_SUPERSEDED_COPY,
-  HERO_VIDEO_UPLOAD_DONE_MS,
   HERO_VIDEO_UPLOADING_COPY,
 } from "@/lib/hero-video-lifecycle";
 import {
@@ -15,17 +18,19 @@ import { readVideoDuration } from "./hero-video-duration";
 import { startTusUpload, type TusUploadHandle, type TusUploadHandlers } from "./hero-video-tus";
 
 export {
-  HERO_VIDEO_LIVE_COPY, HERO_VIDEO_OTHER_UPLOAD_NOTE, HERO_VIDEO_POLL_MS,
-  HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_SUPERSEDED_COPY, HERO_VIDEO_UPLOAD_DONE_MS, HERO_VIDEO_UPLOADING_COPY,
+  HERO_VIDEO_FAILED_COPY, HERO_VIDEO_KEEP_OPEN_COPY, HERO_VIDEO_LEAVE_COPY, HERO_VIDEO_LIVE_COPY, HERO_VIDEO_OTHER_UPLOAD_NOTE, HERO_VIDEO_POLL_MS,
+  HERO_VIDEO_PROCESSING_COPY, HERO_VIDEO_SUPERSEDED_COPY, HERO_VIDEO_UPLOADING_COPY,
 };
 
-export type HeroVideoPhase = "loading" | "idle" | "uploading" | "uploaded" | "preparing" | "reverting" | "live" | "error";
+export type HeroVideoPhase = "loading" | "idle" | "uploading" | "preparing" | "reverting" | "live" | "error";
 export type HeroVideoError = { code: string; message: string; retry: "status" | "load" | null };
 export type HeroVideoState = {
   phase: HeroVideoPhase;
   status: HeroVideoStatus | null;
   progress: { sent: number; total: number } | null;
   encodeProgress: number | null;
+  /** One bar for the whole replace: bytes fill 0-40, processing fills 40-100, live is 100. It never moves back. Null shows no bar. */
+  barPercent: number | null;
   fileName: string | null;
   error: HeroVideoError | null;
   message: string;
@@ -58,16 +63,11 @@ export function heroVideoErrorMessage(code: string, context: { maxBytes?: number
   switch (code) {
     case "FILE_TOO_LARGE": return `That video is too large${context.maxBytes ? `. The limit is ${megabytes(context.maxBytes)}` : ""}. Choose a smaller file.`;
     case "VIDEO_TOO_LONG": return "This video is longer than 10 minutes. Use a shorter clip.";
-    case "STORED_SIZE_TOO_LARGE": return "This video was too long or too large once processed, so it was removed. Use a shorter clip (up to 10 minutes).";
     case "UNSUPPORTED_TYPE": return "That file is not a video we can use. Choose an MP4 or MOV video.";
-    case "DAILY_LIMIT": return `You have used all ${context.replacesPerDay ?? 5} video replacements for today. Try again tomorrow.`;
+    case "DAILY_LIMIT": return `You have used all ${context.replacesPerDay ?? HERO_VIDEO_REPLACES_PER_DAY} video replacements for today. Try again tomorrow.`;
     case "VIDEO_NOT_CONFIGURED": return "Video uploads are not set up for this site yet. Contact Onzio.";
     case "HERO_VIDEO_NOT_AVAILABLE": return "The hero video can't be changed for this site.";
     case "VIDEO_PREPARING": return "A video is still being prepared. You can choose a new one when that finishes.";
-    case "PREPARE_TIMEOUT": return "Preparing this video took too long. Choose the file to try again.";
-    case "VIDEO_FAILED": return "That video could not be processed. Try exporting it again as an MP4 and upload it again.";
-    case "RESOLUTION_TOO_LOW": return "That video is too small. Use a video that is at least 720p (1280 by 720).";
-    case "NOT_CLUB_VIDEO": return "That video does not belong to this club. Upload it again.";
     case "HERO_VIDEO_CHANGED": return "The hero video was changed somewhere else while you were working. We loaded the latest one. Try again if you still want to change it.";
     case "HOMEPAGE_NOT_READY": return "Your homepage isn't set up yet, so the video can't go live. Save the homepage once, then try again.";
     case "NO_PREVIOUS_VIDEO": return "There is no previous hero video to go back to.";
@@ -88,14 +88,26 @@ export async function applySwapRevision(
 }
 
 const idle = (status: HeroVideoStatus | null, message = ""): HeroVideoState => ({
-  phase: "idle", status, progress: null, encodeProgress: null, fileName: null, error: null, message, revisionWarning: false, revisionConflict: false,
+  phase: "idle", status, progress: null, encodeProgress: null, barPercent: null, fileName: null, error: null, message, revisionWarning: false, revisionConflict: false,
 });
-const BLOCKS_REPLACE = new Set<HeroVideoPhase>(["loading", "uploading", "uploaded", "preparing", "reverting"]);
+const BLOCKS_REPLACE = new Set<HeroVideoPhase>(["loading", "uploading", "preparing", "reverting"]);
+/** The phases where the bar is moving. The bytes take the first UPLOAD_SHARE percent of it and processing takes the rest. */
+const BAR_PHASES = new Set<HeroVideoPhase>(["uploading", "preparing"]);
+const UPLOAD_SHARE = 40;
+
+function barValue({ phase, progress, encodeProgress }: HeroVideoState) {
+  if (phase === "uploading") return progress && progress.total > 0 ? Math.min(1, progress.sent / progress.total) * UPLOAD_SHARE : 0;
+  const encoded = Math.min(100, Math.max(0, encodeProgress ?? 0));
+  return UPLOAD_SHARE + encoded * (100 - UPLOAD_SHARE) / 100;
+}
+
+/** The line under the bar: keep the page open while bytes move, and say it is safe to leave once they have landed. */
+export function heroVideoHint(phase: HeroVideoPhase) {
+  return phase === "uploading" ? HERO_VIDEO_KEEP_OPEN_COPY : phase === "preparing" ? HERO_VIDEO_LEAVE_COPY : "";
+}
 
 export type HeroVideoView = "idle" | "other_upload" | "timeout" | "preparing" | "live" | "failed" | "superseded";
-const IDLE_NOTES: Partial<Record<HeroVideoView, string>> = {
-  other_upload: HERO_VIDEO_OTHER_UPLOAD_NOTE, timeout: heroVideoErrorMessage("PREPARE_TIMEOUT"), superseded: HERO_VIDEO_SUPERSEDED_COPY,
-};
+const IDLE_NOTES: Partial<Record<HeroVideoView, string>> = { other_upload: HERO_VIDEO_OTHER_UPLOAD_NOTE, superseded: HERO_VIDEO_SUPERSEDED_COPY };
 
 /**
  * What one status read means, from the server's pending.effective alone. ownGuid is the upload this tab is
@@ -107,8 +119,7 @@ export function viewFor(status: HeroVideoStatus, ownGuid: string | null): HeroVi
   const effective = pending?.effective;
   if (ownGuid ? liveGuid === ownGuid : (effective === "live" && liveGuid === pending?.videoGuid)) return "live";
   if (effective === "failed") return "failed";
-  if (effective === "preparing_overdue") return "timeout";
-  if (effective === "uploading_overdue") return "other_upload";
+  if (effective === "preparing_overdue" || effective === "uploading_overdue") return "timeout";
   if (effective === "preparing") return "preparing";
   if (effective === "uploading") return ownGuid ? "preparing" : "other_upload";
   return "idle";
@@ -124,7 +135,13 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
   let uploadGuid: string | null = null;
   let disposed = false;
 
-  const set = (patch: Partial<HeroVideoState>) => { state = { ...state, ...patch }; listeners.forEach(listener => listener()); };
+  const set = (patch: Partial<HeroVideoState>) => {
+    const next = { ...state, ...patch };
+    if (BAR_PHASES.has(next.phase)) next.barPercent = Math.max(BAR_PHASES.has(state.phase) ? state.barPercent ?? 0 : 0, Math.round(barValue(next)));
+    else if (!("barPercent" in patch)) next.barPercent = null;
+    state = next;
+    listeners.forEach(listener => listener());
+  };
   const ctx = () => ({ maxBytes: state.status?.maxBytes, replacesPerDay: state.status?.replacesPerDay });
   const alive = (token: number) => !disposed && token === run;
   const fail = (error: unknown, retry: HeroVideoError["retry"] = null) => {
@@ -149,7 +166,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     set({ status: before ? { ...before, liveGuid: live.liveGuid, previousGuid: live.previousGuid, replacesUsedToday: before.replacesUsedToday + (kind === "replace" ? 1 : 0) } : before });
     await reloadStatus();
     set({
-      phase: "live", progress: null, encodeProgress: null, error: null, fileName: null, revisionWarning, revisionConflict,
+      phase: "live", progress: null, encodeProgress: null, barPercent: kind === "replace" ? 100 : null, error: null, fileName: null, revisionWarning, revisionConflict,
       message: kind === "replace" ? HERO_VIDEO_LIVE_COPY : "The previous hero video is live again on your site. It went live by itself and did not need Save.",
     });
   }
@@ -170,23 +187,24 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     const view = viewFor(status, guid);
     if (view === "preparing") {
       const encode = status.pending?.encodeProgress;
-      set({ phase: "preparing", status, progress: null, encodeProgress: typeof encode === "number" ? encode : null, error: null, message: HERO_VIDEO_PREPARING_COPY });
+      set({ phase: "preparing", status, progress: null, encodeProgress: typeof encode === "number" ? encode : null, error: null, message: HERO_VIDEO_PROCESSING_COPY });
       return true;
     }
     if (view === "live" && guid) {
       set({ status });
       await complete(liveFromStatus(status, guid), "replace");
-    } else if (view === "live") set({ ...idle(status), phase: "live", message: HERO_VIDEO_LIVE_COPY });
-    else if (view === "failed") {
+    } else if (view === "live") set({ ...idle(status), phase: "live", barPercent: 100, message: HERO_VIDEO_LIVE_COPY });
+    else if (view === "failed" || view === "timeout") {
+      // Every readiness failure, and any upload that is not live by its deadline, reads the same: nothing here is the person's to diagnose.
       set({ ...idle(status) });
-      fail(new HeroVideoApiError(status.failure?.code ?? "VIDEO_FAILED", "", 422));
+      failWith(status.failure?.code ?? (view === "timeout" ? "PREPARE_TIMEOUT" : "VIDEO_FAILED"), HERO_VIDEO_FAILED_COPY);
     } else set({ ...idle(status, IDLE_NOTES[view]) });
     return false;
   }
 
   /** Display-only poll. It never finalizes. */
   async function watch(guid: string, token: number) {
-    set({ phase: "preparing", progress: null, encodeProgress: null, error: null, message: HERO_VIDEO_PREPARING_COPY });
+    set({ phase: "preparing", progress: null, encodeProgress: null, error: null, message: HERO_VIDEO_PROCESSING_COPY });
     while (alive(token)) {
       let status: HeroVideoStatus | null = null;
       try { status = await deps.getStatus(); } catch { /* try again on the next poll */ }
@@ -269,11 +287,9 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
           if (!alive(token)) return;
           handle = null;
           uploadGuid = null;
-          set({ phase: "uploaded", progress: null, error: null, message: "" });
+          set({ phase: "preparing", progress: null, encodeProgress: null, error: null, message: HERO_VIDEO_PROCESSING_COPY });
           void (async () => {
             try { await deps.markUploaded(ticket.videoGuid); } catch { /* webhook and cron still finish bytes that arrived */ }
-            if (!alive(token)) return;
-            await deps.sleep(HERO_VIDEO_UPLOAD_DONE_MS);
             if (!alive(token)) return;
             await watch(ticket.videoGuid, token);
           })();

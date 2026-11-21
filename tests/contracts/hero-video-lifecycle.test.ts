@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import * as lifecycle from "@/lib/hero-video-lifecycle";
 import {
   HERO_VIDEO_LIVE_NOTICE_MS,
+  HERO_VIDEO_REPLACES_PER_DAY,
   effectiveHeroUploadState,
   uploadDeadlineMs,
   type HeroEffective,
@@ -59,5 +61,20 @@ describe("effective hero upload state", () => {
     expect(sql).toContain("deadline_at <= pg_catalog.now()");
     expect(sql).toContain("where club_id = p_club_id and video_guid = p_video_guid and phase = any(p_expected)");
     expect(sql).not.toContain("consume_hero_video_replace");
+  });
+});
+
+describe("hero video limits and copy", () => {
+  it("ten replacements a day, inside the database's accepted range for the cap", () => {
+    expect(HERO_VIDEO_REPLACES_PER_DAY).toBe(10);
+    expect(sql).toContain("p_cap is null or p_cap < 1 or p_cap > 50");
+  });
+
+  it("the upload-done moment is gone, and the progress and failure copy is the agreed plain text", () => {
+    expect(lifecycle).not.toHaveProperty("HERO_VIDEO_UPLOAD_DONE_MS");
+    expect(lifecycle).not.toHaveProperty("HERO_VIDEO_PREPARING_COPY");
+    expect([lifecycle.HERO_VIDEO_UPLOADING_COPY, lifecycle.HERO_VIDEO_PROCESSING_COPY, lifecycle.HERO_VIDEO_LIVE_COPY, lifecycle.HERO_VIDEO_LEAVE_COPY, lifecycle.HERO_VIDEO_FAILED_COPY]).toEqual([
+      "Uploading…", "Processing…", "Your new video is live.", "You can leave this page; we'll finish in the background.", "We couldn't finish this video. Try again or use a different file.",
+    ]);
   });
 });

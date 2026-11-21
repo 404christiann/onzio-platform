@@ -9,17 +9,19 @@ export const UPLOAD_GRACE_MS = 15 * 60 * 1000;
 export const PREPARE_DEADLINE_MS = 2 * 60 * 60 * 1000;
 export const ORPHAN_SWEEP_MS = 24 * 60 * 60 * 1000;
 export const HERO_VIDEO_POLL_MS = 5_000;
-export const HERO_VIDEO_UPLOAD_DONE_MS = 1_200;
 export const HERO_VIDEO_LIVE_NOTICE_MS = 10 * 60 * 1000;
 
 export const HERO_VIDEO_MAX_BYTES = 500 * 1024 * 1024;
 export const HERO_VIDEO_MAX_SECONDS = 600;
 export const HERO_VIDEO_MAX_STORED_BYTES = 4 * HERO_VIDEO_MAX_BYTES;
-export const HERO_VIDEO_REPLACES_PER_DAY = 5;
+export const HERO_VIDEO_REPLACES_PER_DAY = 10;
 
-export const HERO_VIDEO_UPLOADING_COPY = "Uploading your video. Keep this page open until the upload finishes.";
-export const HERO_VIDEO_PREPARING_COPY = "Preparing your video. This usually takes a few minutes. You can keep editing.";
+export const HERO_VIDEO_UPLOADING_COPY = "Uploading…";
+export const HERO_VIDEO_KEEP_OPEN_COPY = "Keep this page open until the upload finishes.";
+export const HERO_VIDEO_PROCESSING_COPY = "Processing…";
+export const HERO_VIDEO_LEAVE_COPY = "You can leave this page; we'll finish in the background.";
 export const HERO_VIDEO_LIVE_COPY = "Your new video is live.";
+export const HERO_VIDEO_FAILED_COPY = "We couldn't finish this video. Try again or use a different file.";
 export const HERO_VIDEO_OTHER_UPLOAD_NOTE = "An upload is in progress in another window, or it was interrupted. Choosing a new video replaces it.";
 export const HERO_VIDEO_SUPERSEDED_COPY = "A newer upload replaced this one.";
 

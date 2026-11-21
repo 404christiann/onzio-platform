@@ -76,7 +76,7 @@ export type HeroVideoLive = { status: "live"; liveGuid: string; previousGuid: st
 export type Readiness =
   | { status: "processing" }
   | { status: "ready" }
-  | { status: "rejected"; code: "VIDEO_FAILED" | "VIDEO_TOO_LONG" | "RESOLUTION_TOO_LOW" | "STORED_SIZE_TOO_LARGE" | "NOT_CLUB_VIDEO" };
+  | { status: "rejected"; code: "VIDEO_FAILED" | "MP4_MISSING" | "VIDEO_TOO_LONG" | "RESOLUTION_TOO_LOW" | "STORED_SIZE_TOO_LARGE" | "NOT_CLUB_VIDEO" };
 
 export type HeroVideoEventResult = {
   outcome: string;
@@ -241,6 +241,9 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
   };
 }
 
+const dailyLimitError = () =>
+  new HeroVideoError(429, "DAILY_LIMIT", `You have reached today's limit of ${HERO_VIDEO_REPLACES_PER_DAY} video replacements. Try again tomorrow.`);
+
 export async function startHeroVideoUpload(
   clubId: string,
   input: { fileName: string; fileSize: number; mimeType: string; durationSeconds?: number },
@@ -257,7 +260,7 @@ export async function startHeroVideoUpload(
   const used = await onzio().rpc("hero_video_replaces_today", { p_club_id: clubId });
   if (used.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not read today's video replacement count.");
   if (Number(used.data ?? 0) >= HERO_VIDEO_REPLACES_PER_DAY) {
-    throw new HeroVideoError(429, "DAILY_LIMIT", "You have reached today's limit of 5 video replacements. Try again tomorrow.");
+    throw dailyLimitError();
   }
 
   const collectionId = await findOrCreateCollection(clubId);
@@ -272,7 +275,7 @@ export async function startHeroVideoUpload(
     deadlineMs: uploadDeadlineMs(),
   });
   if (event.outcome === "at_cap") {
-    throw new HeroVideoError(429, "DAILY_LIMIT", "You have reached today's limit of 5 video replacements. Try again tomorrow.");
+    throw dailyLimitError();
   }
   if (event.outcome === "preparing") {
     throw new HeroVideoError(409, "VIDEO_PREPARING", "A video is still being prepared. You can choose a new one when that finishes.");
@@ -310,18 +313,26 @@ export async function revertHeroVideo(clubId: string, input: { expectedLiveGuid:
   };
 }
 
-/** Pure. It does not delete, swap, or write the pending row. */
+/** The failure code stored on the row for each way a video can never become ready. RESOLUTION_TOO_LOW keeps the code the editor already words for the admin. */
+const READINESS_FAILURE_CODE = { failed: "VIDEO_FAILED", mp4_missing: "MP4_MISSING", resolution_missing: "RESOLUTION_TOO_LOW" } as const;
+
+/**
+ * Pure. It does not delete, swap, or write the pending row.
+ * The webhook and the cron both decide through here, from one Stream API read and nothing else:
+ * processing means the video is still encoding (the webhook answers 503 so Bunny retries),
+ * rejected means it can never be ready (the caller sends a reject event and answers normally).
+ * A Stream API error throws.
+ */
 export async function checkReadiness(clubId: string, videoGuid: string): Promise<Readiness> {
   const collectionId = await findOrCreateCollection(clubId);
   const video = await getVideo(videoGuid);
   if (!video || video.collectionId !== collectionId) return { status: "rejected", code: "NOT_CLUB_VIDEO" };
   if (video.length > HERO_VIDEO_MAX_SECONDS) return { status: "rejected", code: "VIDEO_TOO_LONG" };
   if (video.storageSize > HERO_VIDEO_MAX_STORED_BYTES) return { status: "rejected", code: "STORED_SIZE_TOO_LARGE" };
-  const readiness = await videoReadiness(video);
-  if (readiness === "failed") return { status: "rejected", code: "VIDEO_FAILED" };
-  if (readiness === "resolution_too_low") return { status: "rejected", code: "RESOLUTION_TOO_LOW" };
-  if (readiness === "processing") return { status: "processing" };
-  return { status: "ready" };
+  const readiness = videoReadiness(video);
+  if (readiness.status === "ready") return { status: "ready" };
+  if (readiness.status === "not_ready") return { status: "processing" };
+  return { status: "rejected", code: READINESS_FAILURE_CODE[readiness.reason] };
 }
 
 const OPEN_PHASES: HeroStoredPhase[] = ["uploading", "preparing"];
