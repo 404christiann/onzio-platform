@@ -1,10 +1,10 @@
 # Diverse City FC Status
 
-## 2026-11-21 - TELEMETRY-01 P1: migration 20261121060000 applied in production
+## 2026-11-21 - TELEMETRY-01 P1: in production, Rose City add-on on
 
-**Agent/package:** Claude Code (Opus 5.5), TELEMETRY-01 P1, PR #158 at head `c33c6251`. **Status:** `in_progress`.
-The migration is in production; the code is not merged or deployed. This entry is local and uncommitted, so the PR head
-stays `c33c6251` for the pinned merge.
+**Agent/package:** Claude Code (Opus 5.5), TELEMETRY-01 P1, PR #158 (merged as `d6adb080` from head `c33c6251`).
+**Status:** live in production; the first real Rose City event waits on the public-site hold lifting. **Files
+changed:** this file only (branch `agent/telemetry-01-prod-status`, from main `df3e9a3d`).
 
 **Completed (each step on Christian's word, run from his Mac with `npx supabase@2.122.0` and the link files copied into
 this worktree's `supabase/.temp/`):**
