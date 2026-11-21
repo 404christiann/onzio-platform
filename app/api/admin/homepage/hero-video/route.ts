@@ -6,9 +6,10 @@ import { isBunnyStreamConfigured } from "@/lib/bunny-stream";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
 import {
-  finalizeHeroVideo,
+  abandonHeroVideoUpload,
   getHeroVideoState,
   HeroVideoError,
+  markHeroVideoUploaded,
   revertHeroVideo,
   startHeroVideoUpload,
 } from "@/lib/hero-video-swap";
@@ -24,7 +25,8 @@ const bodySchema = z.discriminatedUnion("action", [
     action: z.literal("start"), fileName: z.string().min(1).max(200), fileSize: z.number().int(), mimeType: z.string().min(1).max(100),
     durationSeconds: z.number().positive().finite().optional(),
   }).strict(),
-  z.object({ action: z.literal("finalize"), videoGuid: guid }).strict(),
+  z.object({ action: z.literal("uploaded"), videoGuid: guid }).strict(),
+  z.object({ action: z.literal("abandon"), videoGuid: guid }).strict(),
   z.object({ action: z.literal("revert"), expectedLiveGuid: z.union([guid, z.literal("")]), targetGuid: guid }).strict(),
 ]);
 
@@ -90,6 +92,10 @@ async function handle(request: Request, mutation: boolean) {
     if (payload.action === "revert") {
       return json(await revertHeroVideo(club.id, { expectedLiveGuid: payload.expectedLiveGuid, targetGuid: payload.targetGuid }));
     }
+    if (payload.action === "abandon") {
+      const result = await abandonHeroVideoUpload(club.id, payload.videoGuid);
+      return json({ status: result.outcome === "abandoned" ? "idle" : result.outcome, outcome: result.outcome });
+    }
     if (!isBunnyStreamConfigured()) return failure("VIDEO_NOT_CONFIGURED", 503);
     if (payload.action === "start") {
       return json(await startHeroVideoUpload(club.id, {
@@ -97,12 +103,12 @@ async function handle(request: Request, mutation: boolean) {
         ...(payload.durationSeconds === undefined ? {} : { durationSeconds: payload.durationSeconds }),
       }));
     }
-    const result = await finalizeHeroVideo(club.id, payload.videoGuid);
-    return json(result.body, result.httpStatus);
+    const uploaded = await markHeroVideoUploaded(club.id, payload.videoGuid);
+    return json({ status: uploaded.outcome === "ok" ? "preparing" : uploaded.outcome, outcome: uploaded.outcome });
   } catch (error) {
     if (error instanceof HeroVideoError) return failure(error.code, error.status, error.message);
     console.error("hero video request failed", { clubId: club.id, error: error instanceof Error ? error.name : "unknown" });
-    return failure("HERO_VIDEO_UNAVAILABLE", 502, "We could not reach the video service. Try again.");
+    return failure("HERO_VIDEO_UNAVAILABLE", 502, "We could not finish that just now. Try again.");
   }
 }
 

@@ -5,6 +5,7 @@ import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 import { localPostgresConfig } from "../helpers/local-postgres";
 import { cinematicHomepageStorageRecord, defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { effectiveHeroUploadState, uploadDeadlineMs } from "@/lib/hero-video-lifecycle";
 
 // RC-HERO-VIDEO-SWAP: service-role-only RPCs that replace the hero video in
 // homepage_revamp_content.presentation_config, with a per-club daily cap and a
@@ -89,6 +90,7 @@ beforeEach(async () => {
   await seedRow(OTHER_ROW, baseConfig());
   await db.query("reset role");
   await db.query("delete from onzio_private.hero_video_replace_counters where club_id = any($1)", [[WITH_ROW, OTHER_ROW, NO_ROW]]);
+  await db.query("delete from onzio_private.hero_video_pending where club_id = any($1)", [[WITH_ROW, OTHER_ROW, NO_ROW]]);
   await db.query("reset role");
   await asRole("service_role");
   await db.query("delete from onzio.homepage_revamp_content where club_id=$1", [NO_ROW]);
@@ -107,6 +109,10 @@ describe("hero video swap grants", () => {
     ["hero_video_replaces_today", "select onzio.hero_video_replaces_today($1)", [WITH_ROW]],
     ["swap_hero_video", "select * from onzio.swap_hero_video($1,$2,$3,$4)", [WITH_ROW, B, LIBRARY, A]],
     ["revert_hero_video", "select * from onzio.revert_hero_video($1,$2,$3)", [WITH_ROW, A, B]],
+    ["hero_video_event", "select * from onzio.hero_video_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)", [WITH_ROW, B, "abandon", ["uploading"], "col", null, null, null, 5, 7_200_000]],
+    ["read_hero_video_pending", "select * from onzio.read_hero_video_pending($1)", [WITH_ROW]],
+    ["lookup_hero_video_pending", "select * from onzio.lookup_hero_video_pending($1)", [B]],
+    ["list_hero_video_pending", "select * from onzio.list_hero_video_pending()", []],
   ];
 
   for (const role of ["authenticated", "anon"] as const) {
@@ -119,6 +125,10 @@ describe("hero video swap grants", () => {
     it(`${role} cannot read the counter table`, async () => {
       await asRole(role);
       await rejects(() => db.query("select * from onzio_private.hero_video_replace_counters"), /permission denied/);
+    });
+    it(`${role} cannot read the pending table`, async () => {
+      await asRole(role);
+      await rejects(() => db.query("select * from onzio_private.hero_video_pending"), /permission denied/);
     });
   }
 
@@ -310,5 +320,362 @@ describe("revision numbers returned by a write", () => {
     expect(await revert(D, A)).toMatchObject({ outcome: "conflict", ...nulls });
     expect(await revert(A, B, NO_ROW)).toMatchObject({ outcome: "missing_row", ...nulls });
     expect(await revision()).toBe(before);
+  });
+});
+
+describe("pending hero video", () => {
+  const GUID = "abababab-abab-4aba-8aba-abababababab";
+  const WINDOW = (2 * 60 + 15) * 60 * 1000;
+  const PREPARE = 2 * 60 * 60 * 1000;
+  const event = async (club: string, guid: string, name: string, expected: string[], extra: { collection?: string; failure?: string | null; deadline?: number; cap?: number } = {}) => {
+    await asRole("service_role");
+    return (await db.query(
+      "select * from onzio.hero_video_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+      [club, guid, name, expected, extra.collection ?? "col-a", extra.failure ?? null, "723074", null, extra.cap ?? 5, extra.deadline ?? WINDOW],
+    )).rows[0];
+  };
+  const read = async () => (await db.query("select * from onzio.read_hero_video_pending($1)", [WITH_ROW])).rows[0];
+  const used = async () => (await db.query("select onzio.hero_video_replaces_today($1) as n", [WITH_ROW])).rows[0].n;
+
+  it("walks start, land, ready and a stale retry without counting until bytes land", async () => {
+    expect((await event(WITH_ROW, GUID, "start", ["uploading", "preparing", "live", "failed", "abandoned"])).outcome).toBe("ok");
+    // The superseded upload's guid and the collection it lives in come back together, so the app deletes it from the right place.
+    expect(await event(WITH_ROW, B, "start", ["uploading", "preparing", "live", "failed", "abandoned"], { collection: "col-b" })).toMatchObject({ delete_guid: GUID, collection_id: "col-a" });
+    expect(await read()).toMatchObject({ video_guid: B, collection_id: "col-b", phase: "uploading", replace_counted: false });
+    expect(await used()).toBe(0);
+    expect(await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).toMatchObject({ outcome: "ok", collection_id: "col-b" });
+    expect(await read()).toMatchObject({ phase: "preparing", replace_counted: true });
+    expect(await used()).toBe(1);
+    expect((await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).outcome).toBe("stale");
+    expect(await used()).toBe(1);
+    const ready = await event(WITH_ROW, B, "ready", ["uploading", "preparing"]);
+    expect(ready).toMatchObject({ outcome: "swapped", phase: "live", collection_id: "col-b" });
+    expect(await used()).toBe(1);
+    expect((await event(WITH_ROW, B, "ready", ["uploading", "preparing"])).outcome).toBe("stale");
+    expect(await used()).toBe(1);
+    expect((await db.query("select count(*)::int as n from onzio.list_hero_video_pending() where club_id=$1", [WITH_ROW])).rows[0].n).toBe(0);
+  });
+
+  it("start over a failed or abandoned row deletes nothing, because that video was deleted when the row closed", async () => {
+    const all = ["uploading", "preparing", "live", "failed", "abandoned"];
+    expect((await event(WITH_ROW, GUID, "start", all)).delete_guid).toBeNull();
+    expect(await event(WITH_ROW, GUID, "abandon", ["uploading"])).toMatchObject({ outcome: "abandoned", delete_guid: GUID, collection_id: "col-a" });
+    expect(await event(WITH_ROW, B, "start", all)).toMatchObject({ outcome: "ok", delete_guid: null });
+    expect(await event(WITH_ROW, B, "reject", ["uploading", "preparing"], { failure: "VIDEO_FAILED" })).toMatchObject({ outcome: "failed", delete_guid: B, collection_id: "col-a" });
+    expect(await event(WITH_ROW, C, "start", all)).toMatchObject({ outcome: "ok", delete_guid: null });
+    expect(await event(WITH_ROW, D, "start", all)).toMatchObject({ outcome: "ok", delete_guid: C });
+  });
+
+  it("refuses start while preparing is inside its deadline and does not count an abandon", async () => {
+    expect((await event(WITH_ROW, B, "start", ["uploading"])).outcome).toBe("ok");
+    expect((await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).outcome).toBe("ok");
+    const blocked = await event(WITH_ROW, GUID, "start", ["uploading", "preparing", "live", "failed", "abandoned"], { collection: "col-b" });
+    expect(blocked.outcome).toBe("preparing");
+    expect(await read()).toMatchObject({ video_guid: B, phase: "preparing" });
+    // The pending table is not granted to service_role. Rewind it as the table owner.
+    await db.query("reset role");
+    await db.query("update onzio_private.hero_video_pending set phase='uploading', failure_code=null, landed_at=null, replace_counted=false, deadline_at=now() - interval '1 minute' where club_id=$1", [WITH_ROW]);
+    await db.query("delete from onzio_private.hero_video_replace_counters where club_id=$1", [WITH_ROW]);
+    expect((await event(WITH_ROW, B, "expire", ["uploading"])).outcome).toBe("abandoned");
+    expect(await used()).toBe(0);
+    expect((await event(WITH_ROW, B, "abandon", ["uploading"])).outcome).toBe("stale");
+  });
+});
+
+// Hero upload lifecycle matrix. Every row below runs the real compare-and-swap, deadline and counter in
+// hero_video_event_core. The clocks are moved by writing started_at, deadline_at and updated_at as the table
+// owner, never by sleeping. Inside this transaction now() is fixed, so a row set to now() - X is exactly X old.
+//
+// Row                                         Proven by
+//   reload mid-upload; reload then a new file "reload and supersede" (reads move nothing; start supersedes)
+//   reload during preparing                   "reload during preparing"
+//   second tab; second tab supersedes         "reload and supersede"
+//   cancel; cancel racing with land           sequences: cancel, land wins, cancel wins
+//   slow upload 01:00, cron 02:15             "a slow upload started at 01:00" and the age table
+//   dead upload past its deadline             the age table (135 and 136 minutes) and "a dead upload"
+//   webhook 3 before the client lands         sequences: webhook 3 before the client lands
+//   duplicate webhook; superseded guid        sequences: duplicate webhook 3; "reload and supersede"
+//   encode failure; webhook 8                 sequences: encode failure, webhook 5, webhook 8 (both orders)
+//   cron after the webhook; late Finished     sequences: cron after the webhook; "late Finished after a revert"
+//   preparing overdue                         "preparing overdue"
+//   start while preparing; at the cap         "start while preparing" and "start at the daily cap"
+//   stale live notice                         "a live row an hour old"
+describe("hero upload lifecycle matrix (real SQL)", () => {
+  const U1 = "e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e1e1";
+  const U2 = "e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e2e2";
+  const OPEN = ["uploading", "preparing"];
+  const ALL = [...OPEN, "live", "failed", "abandoned"];
+  const MINUTE = 60_000;
+  const PREPARE_MS = 2 * 60 * MINUTE;
+  const UPLOAD_MS = uploadDeadlineMs();
+
+  async function fire(name: string, guid: string, expected: string[], extra: { club?: string; failure?: string; collection?: string } = {}) {
+    await asRole("service_role");
+    const deadline = name === "land" ? PREPARE_MS : UPLOAD_MS;
+    return (await db.query(
+      "select * from onzio.hero_video_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+      [extra.club ?? WITH_ROW, guid, name, expected, extra.collection ?? "col-a", extra.failure ?? null, LIBRARY, null, 5, deadline],
+    )).rows[0];
+  }
+  const start = (guid: string, extra: { collection?: string } = {}) => fire("start", guid, ALL, extra);
+  const land = (guid: string) => fire("land", guid, ["uploading"]);
+  const ready = (guid: string) => fire("ready", guid, OPEN);
+  const reject = (guid: string) => fire("reject", guid, OPEN, { failure: "VIDEO_FAILED" });
+  const abandon = (guid: string) => fire("abandon", guid, ["uploading"]);
+  const expire = (guid: string, phase: "uploading" | "preparing") => fire("expire", guid, [phase]);
+
+  async function pending() {
+    await asRole("service_role");
+    return (await db.query("select * from onzio.read_hero_video_pending($1)", [WITH_ROW])).rows[0];
+  }
+  async function usedToday() {
+    await asRole("service_role");
+    return Number((await db.query("select onzio.hero_video_replaces_today($1) as n", [WITH_ROW])).rows[0].n);
+  }
+  async function listed(): Promise<string[]> {
+    await asRole("service_role");
+    return (await db.query("select video_guid from onzio.list_hero_video_pending() where club_id=$1", [WITH_ROW])).rows.map((r) => r.video_guid);
+  }
+  /** The pending table is not granted to service_role, so the clocks are moved as the table owner. A null leaves that clock alone. */
+  async function setClock(guid: string, clock: { startedMinutesAgo?: number; deadlineInMinutes?: number; updatedMinutesAgo?: number }) {
+    await db.query("reset role");
+    const seconds = (minutes: number | undefined) => (minutes === undefined ? null : minutes * 60);
+    await db.query(
+      `update onzio_private.hero_video_pending set
+         started_at = coalesce(now() - make_interval(secs => $2::float8), started_at),
+         deadline_at = case when deadline_at is null then null else coalesce(now() + make_interval(secs => $3::float8), deadline_at) end,
+         updated_at = coalesce(now() - make_interval(secs => $4::float8), updated_at)
+       where video_guid = $1`,
+      [guid, seconds(clock.startedMinutesAgo), seconds(clock.deadlineInMinutes), seconds(clock.updatedMinutesAgo)],
+    );
+  }
+  const effective = (row: { phase: string; deadline_at: Date | null; updated_at: Date }) =>
+    effectiveHeroUploadState(
+      { phase: row.phase as "uploading", deadlineAt: row.deadline_at?.toISOString() ?? null, updatedAt: row.updated_at.toISOString() },
+      Date.now(),
+    );
+
+  it("stores the upload deadline as the 2 hour window plus the 15 minute grace, and the prepare deadline from the moment bytes land", async () => {
+    expect(UPLOAD_MS).toBe((2 * 60 + 15) * MINUTE);
+    await start(U1);
+    await db.query("reset role");
+    const gap = async (from: string) => Number((await db.query(
+      `select (extract(epoch from deadline_at - ${from}) * 1000)::bigint as ms from onzio_private.hero_video_pending where club_id=$1`, [WITH_ROW],
+    )).rows[0].ms);
+    expect(await gap("started_at")).toBe(UPLOAD_MS);
+    await setClock(U1, { startedMinutesAgo: 100, deadlineInMinutes: 35 });
+    await land(U1);
+    await db.query("reset role");
+    expect(await gap("landed_at")).toBe(PREPARE_MS);
+  });
+
+  // Each row: how old the upload is when the cron's expire event arrives, and what the database answers.
+  const ages: Array<[string, "stale" | "abandoned", number]> = [
+    ["just started", "stale", 0],
+    ["started at 01:00, cron at 02:15 (75 minutes)", "stale", 75],
+    ["started at 01:00, bytes at 02:40 (100 minutes)", "stale", 100],
+    ["a minute inside the 2h15m deadline", "stale", 134],
+    ["exactly at the 2h15m deadline", "abandoned", 135],
+    ["a minute past the 2h15m deadline", "abandoned", 136],
+  ];
+  it.each(ages)("an upload %s: expire answers %s", async (_label, outcome, age) => {
+    await start(U1);
+    await setClock(U1, { startedMinutesAgo: age, deadlineInMinutes: 135 - age });
+    const before = await pending();
+    const result = await expire(U1, "uploading");
+    expect(result.outcome).toBe(outcome);
+    expect(await usedToday()).toBe(0);
+    const after = await pending();
+    if (outcome === "stale") {
+      expect(result.delete_guid).toBeNull();
+      expect(after).toEqual(before);
+      expect(await listed()).toEqual([U1]);
+    } else {
+      expect(result).toMatchObject({ delete_guid: U1, phase: "abandoned", collection_id: "col-a" });
+      expect(after).toMatchObject({ video_guid: U1, phase: "abandoned", failure_code: null, deadline_at: null, replace_counted: false });
+      expect(await listed()).toEqual([]);
+    }
+  });
+
+  it("a slow upload started at 01:00 survives the 02:15 cron untouched, and its bytes still land at 02:40", async () => {
+    await start(U1);
+    await setClock(U1, { startedMinutesAgo: 75, deadlineInMinutes: 60 });
+    expect(await expire(U1, "uploading")).toMatchObject({ outcome: "stale", delete_guid: null });
+    expect(await pending()).toMatchObject({ video_guid: U1, phase: "uploading", replace_counted: false });
+    expect(await usedToday()).toBe(0);
+    await setClock(U1, { startedMinutesAgo: 100, deadlineInMinutes: 35 });
+    expect(await land(U1)).toMatchObject({ outcome: "ok", phase: "preparing", replace_counted: true });
+    expect(await usedToday()).toBe(1);
+    expect((await ready(U1)).outcome).toBe("swapped");
+    expect(await usedToday()).toBe(1);
+  });
+
+  it("a dead upload past its deadline is abandoned with its video offered for deletion, counter 0, and a second expire is stale", async () => {
+    await start(U1);
+    await setClock(U1, { startedMinutesAgo: 3 * 60, deadlineInMinutes: -45 });
+    expect(await expire(U1, "uploading")).toMatchObject({ outcome: "abandoned", delete_guid: U1, replace_counted: false });
+    expect(await usedToday()).toBe(0);
+    expect((await expire(U1, "uploading")).outcome).toBe("stale");
+    expect((await land(U1)).outcome).toBe("stale");
+    expect(await usedToday()).toBe(0);
+    expect((await config()).heroVideoGuid).toBe(A);
+  });
+
+  type Send = "land" | "ready" | "reject" | "abandon" | "expire(uploading)" | "expire(preparing)";
+  const send = (name: Send, guid: string) => {
+    switch (name) {
+      case "land": return land(guid);
+      case "ready": return ready(guid);
+      case "reject": return reject(guid);
+      case "abandon": return abandon(guid);
+      case "expire(uploading)": return expire(guid, "uploading");
+      case "expire(preparing)": return expire(guid, "preparing");
+    }
+  };
+  // Events delivered to one upload in this order, the database's answer to each, where the row ends, and today's count.
+  const sequences: Array<[string, Array<[Send, string]>, string, number]> = [
+    ["cancel", [["abandon", "abandoned"]], "abandoned", 0],
+    ["cancel racing with land: land wins, cancel is stale", [["land", "ok"], ["abandon", "stale"]], "preparing", 1],
+    ["cancel racing with land: cancel wins, land is stale", [["abandon", "abandoned"], ["land", "stale"]], "abandoned", 0],
+    ["cancel after the webhook already finished it", [["ready", "swapped"], ["abandon", "stale"]], "live", 1],
+    ["client lands twice", [["land", "ok"], ["land", "stale"]], "preparing", 1],
+    ["webhook 3 (Finished) before the client lands, then the client lands", [["ready", "swapped"], ["land", "stale"]], "live", 1],
+    ["duplicate webhook 3", [["land", "ok"], ["ready", "swapped"], ["ready", "stale"]], "live", 1],
+    ["encode failure after landing is counted once", [["land", "ok"], ["reject", "failed"], ["ready", "stale"]], "failed", 1],
+    ["webhook 5 before the client lands, then the client lands", [["reject", "failed"], ["land", "stale"]], "failed", 1],
+    ["webhook 8 (PresignedUploadFailed) while uploading, then a late Finished", [["abandon", "abandoned"], ["ready", "stale"]], "abandoned", 0],
+    ["webhook 8 after the bytes landed changes nothing", [["land", "ok"], ["abandon", "stale"]], "preparing", 1],
+    ["cron after the webhook went live", [["land", "ok"], ["ready", "swapped"], ["expire(preparing)", "stale"]], "live", 1],
+    ["cron after the webhook failed it", [["land", "ok"], ["reject", "failed"], ["expire(preparing)", "stale"]], "failed", 1],
+    ["cron after a cancel", [["abandon", "abandoned"], ["expire(uploading)", "stale"]], "abandoned", 0],
+  ];
+  it.each(sequences)("%s", async (_label, steps, finalPhase, count) => {
+    expect((await start(U1)).outcome).toBe("ok");
+    for (const [name, outcome] of steps) {
+      const before = await usedToday();
+      const result = await send(name, U1);
+      expect(result.outcome, `${name} should answer ${outcome}`).toBe(outcome);
+      if (outcome === "stale") {
+        expect(result.delete_guid).toBeNull();
+        expect(await usedToday()).toBe(before);
+      }
+    }
+    expect(await pending()).toMatchObject({ video_guid: U1, phase: finalPhase });
+    expect(await usedToday()).toBe(count);
+    expect(await listed()).toEqual(OPEN.includes(finalPhase) ? [U1] : []);
+    // Published content moves only when the row went live. Abandoned and failed rows never touch it.
+    const published = await config();
+    if (finalPhase === "live") expect(published).toMatchObject({ heroVideoGuid: U1, previousHeroVideoGuid: A });
+    else expect(published).toEqual(baseConfig());
+  });
+
+  it("reload and supersede: reads move nothing, a new file supersedes the open upload, and every late event for the old guid is stale", async () => {
+    expect(await start(U1)).toMatchObject({ outcome: "ok", delete_guid: null });
+    const before = await pending();
+    for (let i = 0; i < 3; i++) expect(await pending()).toEqual(before);
+    await asRole("service_role");
+    expect((await db.query("select * from onzio.lookup_hero_video_pending($1)", [U1])).rowCount).toBe(1);
+    expect(await start(U2, { collection: "col-b" })).toMatchObject({ outcome: "ok", delete_guid: U1, collection_id: "col-a" });
+    expect(await pending()).toMatchObject({ video_guid: U2, collection_id: "col-b", phase: "uploading", replace_counted: false });
+    for (const late of [() => land(U1), () => abandon(U1), () => ready(U1), () => reject(U1), () => expire(U1, "uploading")]) {
+      expect(await late()).toMatchObject({ outcome: "stale", delete_guid: null });
+    }
+    expect(await pending()).toMatchObject({ video_guid: U2, phase: "uploading" });
+    expect(await usedToday()).toBe(0);
+    expect((await config()).heroVideoGuid).toBe(A);
+    // The superseded guid is no longer a pending upload, which is why its webhooks find nothing and are ignored.
+    await asRole("service_role");
+    expect((await db.query("select * from onzio.lookup_hero_video_pending($1)", [U1])).rowCount).toBe(0);
+    expect((await db.query("select * from onzio.lookup_hero_video_pending($1)", [U2])).rowCount).toBe(1);
+  });
+
+  it("reload during preparing: reads move nothing, and start answers preparing without superseding or counting", async () => {
+    await start(U1);
+    await land(U1);
+    const before = await pending();
+    for (let i = 0; i < 3; i++) expect(await pending()).toEqual(before);
+    expect(await start(U2, { collection: "col-b" })).toMatchObject({ outcome: "preparing", delete_guid: U2, phase: "preparing" });
+    expect(await pending()).toEqual(before);
+    expect(await usedToday()).toBe(1);
+  });
+
+  it.each([
+    ["a prepare inside its deadline", "stale", 30],
+    ["a prepare one minute past its deadline", "failed", -1],
+  ])("preparing overdue: %s answers %s to expire", async (_label, outcome, deadlineInMinutes) => {
+    await start(U1);
+    await land(U1);
+    await setClock(U1, { deadlineInMinutes });
+    const result = await expire(U1, "preparing");
+    expect(result.outcome).toBe(outcome);
+    expect(await usedToday()).toBe(1);
+    if (outcome === "stale") {
+      expect(result.delete_guid).toBeNull();
+      expect(await pending()).toMatchObject({ phase: "preparing", failure_code: null });
+    } else {
+      expect(result).toMatchObject({ delete_guid: U1, phase: "failed" });
+      expect(await pending()).toMatchObject({ phase: "failed", failure_code: "PREPARE_TIMEOUT", deadline_at: null, replace_counted: true });
+      expect(await listed()).toEqual([]);
+    }
+  });
+
+  it("preparing overdue no longer blocks start: the new file supersedes it and the old video is offered for deletion", async () => {
+    await start(U1);
+    await land(U1);
+    await setClock(U1, { deadlineInMinutes: -1 });
+    expect(await start(U2, { collection: "col-b" })).toMatchObject({ outcome: "ok", delete_guid: U1 });
+    expect(await pending()).toMatchObject({ video_guid: U2, phase: "uploading", replace_counted: false });
+    expect(await usedToday()).toBe(1);
+  });
+
+  // Replaces already counted today, and the answer to start.
+  it.each([[0, "ok"], [4, "ok"], [5, "at_cap"]])("start at the daily cap: with %s counted, start answers %s", async (counted, outcome) => {
+    expect((await start(U1)).outcome).toBe("ok");
+    for (let i = 0; i < counted; i++) {
+      await asRole("service_role");
+      await db.query("select * from onzio.consume_hero_video_replace($1)", [WITH_ROW]);
+    }
+    const result = await start(U2, { collection: "col-b" });
+    expect(result.outcome).toBe(outcome);
+    expect(await usedToday()).toBe(counted);
+    if (outcome === "ok") {
+      expect(result.delete_guid).toBe(U1);
+      expect(await pending()).toMatchObject({ video_guid: U2, phase: "uploading" });
+    } else {
+      // Refused: the open upload is not superseded and the unused guid comes back to delete.
+      expect(result).toMatchObject({ delete_guid: U2, used: 5 });
+      expect(await pending()).toMatchObject({ video_guid: U1, phase: "uploading" });
+    }
+  });
+
+  it("late Finished after a revert does not put the reverted video live again", async () => {
+    await start(U1);
+    await land(U1);
+    expect((await ready(U1)).outcome).toBe("swapped");
+    expect(await revert(U1, A)).toMatchObject({ outcome: "reverted", live_guid: A, previous_guid: U1 });
+    const reverted = await config();
+    expect(reverted).toMatchObject({ heroVideoGuid: A, previousHeroVideoGuid: U1 });
+    const revisionBefore = await revision();
+    expect(await ready(U1)).toMatchObject({ outcome: "stale", delete_guid: null });
+    expect(await config()).toEqual(reverted);
+    expect(await revision()).toBe(revisionBefore);
+    expect(await usedToday()).toBe(1);
+    expect(await pending()).toMatchObject({ video_guid: U1, phase: "live" });
+  });
+
+  it("a live row an hour old reads idle and one a minute old reads live, and reading changes neither the row nor today's count", async () => {
+    await start(U1);
+    await land(U1);
+    expect((await ready(U1)).outcome).toBe("swapped");
+    await setClock(U1, { updatedMinutesAgo: 1 });
+    const fresh = await pending();
+    expect(effective(fresh)).toBe("live");
+    await setClock(U1, { updatedMinutesAgo: 60 });
+    const old = await pending();
+    expect(effective(old)).toBe("idle");
+    expect(await pending()).toEqual(old);
+    expect(old).toMatchObject({ video_guid: U1, phase: "live", replace_counted: true });
+    expect(await usedToday()).toBe(1);
+    expect((await config()).heroVideoGuid).toBe(U1);
   });
 });

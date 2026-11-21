@@ -35,6 +35,8 @@ export type BunnyVideo = {
   /** Duration in seconds as Bunny measured it; 0 until Bunny has read the file. */
   length: number;
   dateUploaded: string;
+  /** 0–100 while Bunny reports it. Null when the field is missing. */
+  encodeProgress: number | null;
 };
 
 export type BunnyCollectionVideo = { guid: string; status: number; storageSize: number; dateUploaded: string };
@@ -108,6 +110,7 @@ export async function getVideo(guid: string): Promise<BunnyVideo | null> {
     storageSize: Number(raw.storageSize ?? 0) || 0,
     length: Number(raw.length ?? 0) || 0,
     dateUploaded: typeof raw.dateUploaded === "string" ? raw.dateUploaded : "",
+    encodeProgress: typeof raw.encodeProgress === "number" && Number.isFinite(raw.encodeProgress) ? Math.max(0, Math.min(100, Math.round(raw.encodeProgress))) : null,
   };
 }
 

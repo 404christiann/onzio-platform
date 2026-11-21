@@ -48,6 +48,88 @@
   .bar { transition: none; }
 }
 
+.working {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 16px;
+  margin-top: 4px;
+}
+
+.working span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  opacity: 0.85;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check {
+  flex: none;
+  color: #34C759;
+}
+
+.check path {
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+:global(.admin-theme[data-admin-theme="dark"]) .check {
+  color: #30D158;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .working span {
+    opacity: 0.35;
+    animation: heroWork 1.4s var(--admin-motion-ease-out, ease-out) infinite;
+  }
+
+  .working span:nth-child(2) { animation-delay: 160ms; }
+  .working span:nth-child(3) { animation-delay: 320ms; }
+
+  .status:has(.check) {
+    animation: heroPop var(--admin-motion-save-pop, 320ms) var(--admin-motion-ease-out, ease-out);
+  }
+
+  .check path {
+    animation: heroDraw var(--admin-motion-save-check-draw, 280ms) var(--admin-motion-ease-out, ease-out) var(--admin-motion-save-check-delay, 80ms) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working span,
+  .status:has(.check),
+  .check path {
+    animation: none;
+  }
+}
+
+@keyframes heroWork {
+  0%, 100% { transform: translateY(0); opacity: 0.35; }
+  40% { transform: translateY(-3px); opacity: 1; }
+}
+
+@keyframes heroPop {
+  0% { transform: scale(.97); }
+  60% { transform: scale(1.02); }
+  100% { transform: none; }
+}
+
+@keyframes heroDraw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
 /* An empty live region stays in the DOM for screen readers but takes no space. */
 .status:empty {
   position: absolute;

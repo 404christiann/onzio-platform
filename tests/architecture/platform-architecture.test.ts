@@ -246,6 +246,10 @@ describe("tenant and privileged-boundary architecture contract", () => {
       // TELEMETRY-01: the daily telemetry retention sweep. Never part of the public beacon's import graph
       // (tests/contracts/page-telemetry-service-role-boundary.test.ts).
       /^lib\/telemetry\/retention\.ts$/,
+      // RC-HERO-VIDEO-COMPLETION: Bunny encode webhook and the daily backstop.
+      // Both call lib/hero-video-swap.ts, which is the service-role boundary.
+      /^app\/api\/webhooks\/bunny-stream\//,
+      /^app\/api\/cron\/hero-video\//,
       /^lib\/billing-lifecycle\.ts$/,
       /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
