@@ -12,6 +12,16 @@
 - **Exact next step:** onzio-bot review; then Christian's word for the production migration gate, the Vercel env var and the first real Bunny
   upload, each separately.
 
+## 2026-11-20 - RC-SAM-FIXES-2: Schedule UPSL shield and Shop lead photo (app code only)
+
+- **Status:** `ready for review`, branch `claude/rc-sam-fixes-2` (from main `c0eeafbe`), PR open. No migration, schema, env, admin
+  or deploy change; Diverse City untouched. Record in `STATUS.md` (RC-SAM-FIXES-2).
+- **What:** Schedule rows with no saved league logo whose competition names the UPSL show the bundled UPSL shield (others keep
+  their text, now clamped to three small lines on desktop, or "—"). The Shop lead photo box stretches to the copy column and keeps
+  its 0.92 shape, so it ends at Buy Now at every desktop width (it hung up to 129px below) and no longer covers the copy at 701-1024px.
+- **Open:** 7 of 8 production Rose City matches have no competition, so they still show "—" until Christian approves filling it in admin.
+- **Exact next step:** onzio-bot review, Christian merges, then fast-forward `rc-sam` and re-point Sam's alias.
+
 ## 2026-11-20 - RC-CLS-2: Rose City pages stop shifting on load with production content (app code only)
 
 - **Status:** `ready for review`, PR open from `claude/rc-cls-2` (rebased onto main `e1021427`, after #205). onzio-bot's Medium and Low on `7ca18eb` are

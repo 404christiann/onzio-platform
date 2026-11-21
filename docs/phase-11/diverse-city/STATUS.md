@@ -78,6 +78,47 @@
   (backup, `migration list --linked`, dry run listing only `20261120230000`, push); add `BUNNY_STREAM_API_KEY` to Vercel;
   first real Bunny upload on Rose City.
 
+## 2026-11-20 - RC-SAM-FIXES-2: Schedule League column shows the UPSL shield; Shop lead photo ends at Buy Now
+
+**Agent/package:** Claude Code (Opus 5.5), RC-SAM-FIXES-2 (two of Sam's `rc-sam` comments), branch `claude/rc-sam-fixes-2` from
+main `c0eeafbe`. **Status:** `ready for review`, PR open. UI and tests only: `components/cinematic/**`, `lib/cinematic-schedule.ts`,
+one new 14 KB icon (`public/rose-city/icons/upsl-shield.png`, a 101x96 copy of the repo's `upsl-color.png`). No data, schema,
+migration, env, admin or deploy change. Diverse City untouched.
+
+1. **Schedule League column.** Cause: on `rc-sam` (production data) all 8 Rose City matches have `leagueLogoUrl: null`. Only
+   the Next match (AMSG FC) has a competition, "UPSL 2026 Premier SoCal North", which the renderer stacked one word per line in
+   the 58px column. The other 7 have no competition and show "—". (The read came from the page's server payload: a direct
+   production SQL read was refused by the session's permission check.) Fix: `scheduleLeagueLogo()` returns the saved logo, else
+   the bundled UPSL shield when the competition names the UPSL (`\bUPSL\b`, any case), else nothing, so other competitions keep
+   their text and a match with no competition keeps "—". A name with no logo is now 10.5px, at most three lines, words whole,
+   full name on hover, at 901px and up (phone cards keep 12px on their own line).
+2. **Shop lead photo** ("less negative space under the buy it now bar"). Cause: beside the copy, the photo box took its 0.92 shape
+   from the column width, so from about 1600px wide it ended below Buy Now (1680x1050 +31px, 1728x1117 +50, 1920x1080 +123,
+   2560x1440 +129). At 701-1024px the same rule made it wider than its column: 715px in a 456px column at 1024, covering the copy.
+   Fix (`shop.css`, a new `@media(min-width:701px)` rule above RC-DESKTOP-FIT, which stays last): the box stretches to the copy
+   column's height (title to Buy Now), takes its 0.92 shape from that height, is never wider than its column and stays centred;
+   the photo sizes against .9 (not .92) of the box height, so at the default 80% scale it ends 2px above the bottom of Buy Now
+   instead of being clipped 12px below. Phones (700px and narrower) are unchanged.
+
+**Measured on `rc-sam` with the change injected** (box bottom minus Buy Now bottom, before -> after; centre moved at most 1px):
+1440x900 0 -> 0 (photo 911 -> 897, Buy 899), 1512x982 0 -> 0, 1680x1050 +31 -> 0, 1728x1117 +50 -> 0, 1920x1080 +123 -> 0,
+2560x1440 +129 -> 0. All three kits end at Buy Now at 1920. At 1024 the box ends at x=449, left of the copy at 493 (was 775).
+390x844 identical. CLS worst of 3, style injected at head time: Shop 1440/1920/1024/390 and Schedule 1440/390 all 0.000.
+
+**Verification:** five contracts written red first (`cinematic-schedule` x3: UPSL shield fallback, saved logo wins and no guessing
+from "US Open Cup" / "Friendly" / "Upslope Cup" / blank, desktop name clamp; `cinematic-shop-update-renderer` x2: the new lead
+rule, and its place above RC-DESKTOP-FIT with the shared `.92cqh` rule kept). The existing `shows a truthful empty season and
+league text when its image is removed` contract still passes unchanged. `eslint` (changed files) clean, `tsc --noEmit` clean,
+`test:unit` 4388/4388, `test:architecture` 432 passed (1 skipped). Screenshots (1440x900, 1920x1080, 390x844, before/after) are in the
+session notes folder `rc-sam-fixes-2-screens/`.
+
+**Open (Christian's call, not done):** to show the shield on the other 7 matches, their competition must be filled in admin
+(for example "UPSL 2026 Premier SoCal North" in Schedule -> Edit match), or a league logo uploaded per match. That is a
+production content write, so it waits for Christian's yes.
+
+**Exact next step:** onzio-bot review, Christian merges; then fast-forward `rc-sam` (no migrations in this PR), re-point Sam's
+alias once the build is Ready, and recheck both fixes on Sam's link.
+
 ## 2026-11-20 - RC-SAM-MOBILE-HEADINGS: Foothill Transit headings bold on phones; "Single match tickets"; square Jersey Details boxes
 
 **Agent/package:** Claude Code (Opus 5.5), RC-SAM-MOBILE-HEADINGS (Christian's three follow-ups from his phone), branch

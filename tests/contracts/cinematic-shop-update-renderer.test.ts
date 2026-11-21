@@ -223,3 +223,19 @@ describe("RC-SAM-FIXES shop lead alignment and Includes spacing", () => {
     expect(css.match(/\.shop-update \.shop-bullets\{[^}]*gap:([^;}]+)/g)?.map(rule => rule.replace(/.*gap:/, ""))).toEqual([".71em", ".71em"]);
   });
 });
+
+describe("RC-SAM-FIXES-2: the lead photo ends at the Buy Now bar", () => {
+  const css = readFileSync(resolve(process.cwd(), "components/cinematic/shop.css"), "utf8");
+  const fix = "@media(min-width:701px){\n  .cinematic-site .shop-update .shop-feature>.shop-portrait{width:auto;max-width:100%;height:auto;min-height:0;aspect-ratio:.92;align-self:stretch}\n  .cinematic-site .shop-update .shop-portrait img{--lead-width:min(100%,calc(var(--lead-scale-n,80) * .9cqh))}\n}";
+  it("stretches the photo box to the copy column's height, keeping its 0.92 shape inside the column, and shrinks the photo to fit", () => {
+    // At 1920x1080 the box took its 0.92 shape from the column width and ended 123px below Buy Now; at 1024 it was
+    // 715px wide in a 456px column and covered the copy.
+    expect(css).toContain(fix);
+  });
+  it("sits above the RC-DESKTOP-FIT block, which stays last, and leaves the shared rules as they were", () => {
+    const at = css.indexOf(fix);
+    expect(at).toBeGreaterThan(css.indexOf(".cinematic-site .shop-update .shop-portrait{min-height:100%;container-type:size}"));
+    expect(at).toBeLessThan(css.indexOf("/* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */"));
+    expect(css).toContain("calc(var(--lead-scale-n,80) * .92cqh)");
+  });
+});

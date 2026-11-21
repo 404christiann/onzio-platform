@@ -151,3 +151,9 @@
 }
 /* Sam's green location pin (Dropbox "RCFC Green Location Pin website icon 2027"), replacing the drawn pin. */
 .cinematic-site .cinematic-schedule .fixture-directions .directions-pin{width:auto;height:1.1em;flex-shrink:0;display:block}
+/* RC-SAM-FIXES-2: a league name with no logo stays inside the narrow desktop League column (it stacked one word per line,
+   five lines tall, on the Next row): small type, words kept whole, at most three lines, full name on hover. Phone cards
+   give it a whole line, so they keep the 12px name. */
+@media(min-width:901px){
+ .cinematic-site .cinematic-schedule .league-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;font-size:10.5px;line-height:1.2;overflow-wrap:normal;hyphens:auto}
+}
