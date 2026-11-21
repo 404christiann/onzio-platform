@@ -1,5 +1,53 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-01 P1: rebased onto #209, migration retimestamped to 20261121060000
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01`, rebased onto main `84de7060` (#209 RC-HERO-VIDEO-SWAP). **Status:** `in_progress`, waiting on
+the prod gate. Not merged; production untouched.
+
+**Completed:**
+- Rebased the branch onto main. Both sides were kept in every conflict:
+  - this file
+  - `lib/database.generated.ts`
+  - the three migration-order contract tests
+  - the architecture service-role allowlist (`lib/hero-video-swap.ts` and `lib/telemetry/retention.ts`)
+  - the purge test fixtures (auto-merged)
+- The migration is renamed to **`20261121060000_page_telemetry.sql`**. #209's `20261120230000_hero_video_swap.sql`,
+  which goes into production before #209 merges, would otherwise sort after it, and `db push` refuses out-of-order
+  migrations.
+  - The operator SQL guard messages and the tests point at the new name.
+  - The entries below that say `20261119130000` are history.
+- `purge_archived_club` check: no migration after `20261117020000` redefines it. Ours is that body plus
+  `'onzio.page_events'`.
+- The 2026-11-21 PR description and the fourth onzio-bot review reply (trade-off accepted, the plan doc line) are done.
+
+**Verification (Mac local Supabase, under the DB lock):**
+
+| Check | Result |
+|---|---|
+| Fresh reset | 95 migrations, ledger max `20261121060000` |
+| `db:types` / `db:types:check` | regenerated output identical; check passes |
+| Full `test:db` (warm DB) | 1,477 passed, twice |
+| `test:unit` | 4,689 passed |
+| `tsc`, ESLint | clean (after `npm ci` for #209's `tus-js-client`) |
+
+**Known flake:** on the first run right after a fresh `db reset`, without `ANALYZE`, the retention-sweep test "catches
+up on a backlog…" can exceed the 15 s test timeout (it took 16-19.5 s). It passes in about 240 ms on a warm DB, and
+reset plus `ANALYZE` gives 99/99. The cause is not proven.
+
+**Next step:** the prod gate, each step on Christian's word.
+1. Backup.
+2. `migration list --linked`: only `20261121060000` missing, with `20261120230000` already on Remote.
+3. Dry run.
+4. "push".
+5. Read-only check.
+6. `TELEMETRY_INGEST_SECRET`.
+7. Merge and deploy.
+8. Rose City SQL.
+9. Confirm a real event lands.
+10. Watch the retention logs.
+
 ## 2026-11-20 - TELEMETRY-01 P1: third onzio-bot review Low (shared networks undercounted on busy days)
 
 **Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
