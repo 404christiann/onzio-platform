@@ -4,16 +4,25 @@
 -- * onzio.page_events                     one row per accepted beacon event; no IP, user agent,
 --                                          user id or full referrer is ever stored
 -- * onzio_private.page_visitor_salts       one random salt per club per club-local day
--- * onzio_private.page_event_rate_windows  per-minute rate-limit counters
+-- * onzio_private.page_event_rate_windows  per-minute rate-limit counters (club, network, visitor)
+-- * onzio_private.telemetry_ingest_keys    the single HMAC key that signs every beacon write;
+--                                          generated here, so it is never in the repository
 -- * onzio_private.club_addons            per-club paid add-ons; empty, so telemetry starts OFF everywhere
 -- * onzio_private.club_has_addon         the single reader of club_addons (security definer)
 -- * onzio.club_has_addon                 exposed security-invoker wrapper (early-skip optimisation only)
--- * onzio_private.record_page_event        the ONLY writer of page events (security definer); drops
---                                          events for clubs without the telemetry add-on
+-- * onzio_private.forget_telemetry_when_addon_removed
+--                                          trigger: removing a club's telemetry add-on deletes its salts
+-- * onzio_private.record_page_event        the ONLY writer of page events (security definer); takes the
+--                                          exact payload text the route signed, rejects anything unsigned
+--                                          or stale, and drops events for clubs without the add-on
 -- * onzio.record_page_event                exposed security-invoker wrapper for the anon beacon
 -- * onzio_private.purge_archived_club      redefined with onzio.page_events in its delete order
 --
 -- Additive only: no drops, renames, or data changes to existing tables.
+
+-- Supabase installs pgcrypto in the extensions schema; this is a no-op there and a
+-- loud failure elsewhere (the key below and the signature check both need it).
+create extension if not exists pgcrypto with schema extensions;
 
 create table onzio.page_events (
   id bigint generated always as identity primary key,
@@ -54,6 +63,9 @@ create index page_events_club_occurred_idx
   on onzio.page_events (club_id, occurred_at);
 create index page_events_club_visitor_idx
   on onzio.page_events (club_id, visitor_hash, occurred_at desc);
+-- The global retention sweep deletes the oldest expired rows of any club.
+create index page_events_occurred_idx
+  on onzio.page_events (occurred_at);
 
 comment on table onzio.page_events is
   'TELEMETRY-01 raw page events, kept 90 days. Written only by onzio_private.record_page_event. '
@@ -83,8 +95,10 @@ create table onzio_private.page_visitor_salts (
 
 create table onzio_private.page_event_rate_windows (
   club_id uuid not null references onzio.clubs(id) on delete cascade,
+  -- '*' is the club-wide counter; a bare 64-hex bucket is a salted visitor hash;
+  -- 'n:' + 64 hex is a salted network hash. The prefix keeps the two apart.
   bucket text not null
-    constraint page_event_rate_windows_bucket check (bucket = '*' or bucket ~ '^[0-9a-f]{64}$'),
+    constraint page_event_rate_windows_bucket check (bucket = '*' or bucket ~ '^(n:)?[0-9a-f]{64}$'),
   window_start timestamptz not null,
   hits integer not null constraint page_event_rate_windows_hits check (hits > 0),
   primary key (club_id, bucket, window_start)
@@ -92,6 +106,27 @@ create table onzio_private.page_event_rate_windows (
 
 revoke all on table onzio_private.page_visitor_salts from public, anon, authenticated, service_role;
 revoke all on table onzio_private.page_event_rate_windows from public, anon, authenticated, service_role;
+
+-- The key that signs every beacon write. One row, random, created here and read
+-- once by an operator (select encode(key, 'hex') ...) to set TELEMETRY_INGEST_SECRET
+-- in Vercel. Without a valid signature record_page_event writes nothing, so the
+-- anon key alone (which is public) cannot forge events. Rotate by updating this
+-- row and the env var together, then redeploying.
+create table onzio_private.telemetry_ingest_keys (
+  id smallint primary key default 1
+    constraint telemetry_ingest_keys_single_row check (id = 1),
+  key bytea not null
+    constraint telemetry_ingest_keys_length check (octet_length(key) = 32),
+  created_at timestamptz not null default now()
+);
+
+alter table onzio_private.telemetry_ingest_keys enable row level security;
+revoke all on table onzio_private.telemetry_ingest_keys from public, anon, authenticated, service_role;
+
+insert into onzio_private.telemetry_ingest_keys (key) values (extensions.gen_random_bytes(32));
+
+comment on table onzio_private.telemetry_ingest_keys is
+  'TELEMETRY-01 HMAC key for signed beacon writes. One row, never granted to any API role, never in the repository.';
 
 -- Paid add-ons granted per club by an operator. A row means the add-on is on;
 -- no row means off. The migration grants nothing, so every club starts off.
@@ -109,6 +144,31 @@ revoke all on table onzio_private.club_addons from public, anon, authenticated, 
 comment on table onzio_private.club_addons is
   'TELEMETRY-01 per-club paid add-ons. Read only through onzio_private.club_has_addon; '
   'written only by audited operator SQL.';
+
+-- Removing a club's telemetry add-on forgets its daily salts and rate counters at once, so a
+-- club that stops paying (or is suspended and then revoked) keeps nothing that can link
+-- visitors. Its raw events are still deleted by the 90-day retention sweep.
+create function onzio_private.forget_telemetry_when_addon_removed()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.addon = 'telemetry' then
+    delete from onzio_private.page_visitor_salts s where s.club_id = old.club_id;
+    delete from onzio_private.page_event_rate_windows w where w.club_id = old.club_id;
+  end if;
+  return old;
+end;
+$$;
+
+revoke all on function onzio_private.forget_telemetry_when_addon_removed()
+  from public, anon, authenticated, service_role;
+
+create trigger club_addons_forget_telemetry
+after delete on onzio_private.club_addons
+for each row execute function onzio_private.forget_telemetry_when_addon_removed();
 
 -- The single reader of club_addons. Unknown add-on names raise instead of
 -- returning false, so this can never become a silent content gate.
@@ -185,30 +245,45 @@ $$;
 revoke all on function onzio_private.page_event_text(jsonb, text, text, boolean)
   from public, anon, authenticated, service_role;
 
+-- The writer. It receives the event as the exact text the route signed, in this order:
+-- signature, JSON, freshness, field validation, public club, add-on, then salt and the
+-- three rate caps (network, visitor, club). Nothing before the add-on gate writes anything,
+-- and an event rejected by the network or visitor cap never spends club-wide budget.
 create function onzio_private.record_page_event(
   p_club_id uuid,
-  p_event jsonb
+  p_payload text,
+  p_signature text
 ) returns text
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
+  c_network_limit constant integer := 120;
   c_visitor_limit constant integer := 60;
   c_club_limit constant integer := 1200;
+  c_max_payload_bytes constant integer := 8192;
+  c_max_skew_ms constant numeric := 300000;
   c_visit_gap constant interval := interval '30 minutes';
   c_retention constant interval := interval '90 days';
   c_retention_batch constant integer := 10000;
+  c_sweep_batch constant integer := 5000;
   c_keys constant text[] := array[
-    'type', 'visitorMaterial', 'path', 'referrerHost', 'sourceType',
+    'type', 'visitorMaterial', 'networkMaterial', 'ts', 'path', 'referrerHost', 'sourceType',
     'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm',
     'device', 'country', 'city', 'isStaff'
   ];
   c_utm constant text := '^[^[:cntrl:]]{1,100}$';
   v_now timestamptz := now();
   v_window timestamptz := date_trunc('minute', now());
+  v_key bytea;
+  v_expected text;
+  v_valid boolean := false;
+  v_event jsonb;
+  v_ts numeric;
   v_type text;
   v_material text;
+  v_network text;
   v_path text;
   v_referrer_host text;
   v_source_type text;
@@ -220,36 +295,71 @@ declare
   v_day date;
   v_salt bytea;
   v_hash text;
+  v_network_bucket text;
   v_hits integer;
   v_visit uuid;
 begin
-  if p_club_id is null or p_event is null or jsonb_typeof(p_event) <> 'object' then
+  -- Signature first: an unsigned or mis-signed call is parsed, read and written as nothing.
+  if p_club_id is not null and p_payload is not null and p_signature is not null
+     and octet_length(p_payload) <= c_max_payload_bytes then
+    select k.key into v_key from onzio_private.telemetry_ingest_keys k where k.id = 1;
+    if v_key is not null then
+      v_expected := encode(
+        extensions.hmac(convert_to(p_club_id::text || E'\n' || p_payload, 'UTF8'), v_key, 'sha256'),
+        'hex'
+      );
+      -- Both sides are hashed before comparing, so timing says nothing about the signature.
+      v_valid := sha256(convert_to(p_signature, 'UTF8')) = sha256(convert_to(v_expected, 'UTF8'));
+    end if;
+  end if;
+  if not coalesce(v_valid, false) then
+    return 'bad_signature';
+  end if;
+
+  begin
+    v_event := p_payload::jsonb;
+  exception
+    when invalid_text_representation or untranslatable_character or character_not_in_repertoire then
+      raise exception 'INVALID_PAGE_EVENT' using errcode = '22023', detail = 'payload';
+  end;
+  if jsonb_typeof(v_event) <> 'object' then
     raise exception 'INVALID_PAGE_EVENT' using errcode = '22023';
   end if;
   if exists (
-    select 1 from jsonb_object_keys(p_event) as k(key) where k.key <> all (c_keys)
+    select 1 from jsonb_object_keys(v_event) as k(key) where k.key <> all (c_keys)
   ) then
     raise exception 'INVALID_PAGE_EVENT' using errcode = '22023', detail = 'unknown key';
   end if;
 
-  v_type := onzio_private.page_event_text(p_event, 'type', '^view$', true);
-  v_material := onzio_private.page_event_text(p_event, 'visitorMaterial', '^[0-9a-f]{64}$', true);
+  -- Freshness: the route stamps ts (epoch milliseconds) and never shows the signature to a
+  -- browser, so a captured call stops working five minutes later.
+  if jsonb_typeof(v_event -> 'ts') is distinct from 'number' then
+    raise exception 'INVALID_PAGE_EVENT' using errcode = '22023', detail = 'ts';
+  end if;
+  v_ts := (v_event ->> 'ts')::numeric;
+  if abs(extract(epoch from v_now) * 1000 - v_ts) > c_max_skew_ms then
+    return 'stale';
+  end if;
+
+  v_type := onzio_private.page_event_text(v_event, 'type', '^view$', true);
+  v_material := onzio_private.page_event_text(v_event, 'visitorMaterial', '^[0-9a-f]{64}$', true);
+  v_network := onzio_private.page_event_text(v_event, 'networkMaterial', '^[0-9a-f]{64}$', true);
   -- PostgreSQL regex repetition counts stop at 255, so length is checked apart.
-  v_path := onzio_private.page_event_text(p_event, 'path', '^/[^[:space:][:cntrl:]]*$', true);
+  v_path := onzio_private.page_event_text(v_event, 'path', '^/[^[:space:][:cntrl:]]*$', true);
   if char_length(v_path) > 512 or v_path ~ '^/(admin|api)(/|$)' then
     raise exception 'INVALID_PAGE_EVENT' using errcode = '22023', detail = 'path';
   end if;
-  v_referrer_host := onzio_private.page_event_text(p_event, 'referrerHost', '^[a-z0-9.-]{1,253}$', false);
+  v_referrer_host := onzio_private.page_event_text(v_event, 'referrerHost', '^[a-z0-9.-]{1,253}$', false);
   v_source_type := onzio_private.page_event_text(
-    p_event, 'sourceType', '^(direct|search|social|referral|campaign|internal)$', true
+    v_event, 'sourceType', '^(direct|search|social|referral|campaign|internal)$', true
   );
-  v_device := onzio_private.page_event_text(p_event, 'device', '^(mobile|tablet|desktop)$', true);
-  v_country := onzio_private.page_event_text(p_event, 'country', '^[A-Z]{2}$', false);
-  v_city := onzio_private.page_event_text(p_event, 'city', '^[^[:cntrl:]]{1,80}$', false);
-  if jsonb_typeof(p_event -> 'isStaff') is distinct from 'boolean' then
+  v_device := onzio_private.page_event_text(v_event, 'device', '^(mobile|tablet|desktop)$', true);
+  v_country := onzio_private.page_event_text(v_event, 'country', '^[A-Z]{2}$', false);
+  v_city := onzio_private.page_event_text(v_event, 'city', '^[^[:cntrl:]]{1,80}$', false);
+  if jsonb_typeof(v_event -> 'isStaff') is distinct from 'boolean' then
     raise exception 'INVALID_PAGE_EVENT' using errcode = '22023', detail = 'isStaff';
   end if;
-  v_is_staff := (p_event ->> 'isStaff')::boolean;
+  v_is_staff := (v_event ->> 'isStaff')::boolean;
 
   select club.time_zone
   into v_tz
@@ -302,25 +412,60 @@ begin
   end if;
 
   v_hash := encode(sha256(v_salt || convert_to(v_material, 'UTF8')), 'hex');
+  -- The network key is salted like the visitor hash and stored only in rate windows,
+  -- under its own prefix, never in page_events.
+  v_network_bucket := 'n:' || encode(sha256(v_salt || convert_to(v_network, 'UTF8')), 'hex');
 
+  -- Cap 1, per network: one machine rotating user agents is still one network. A counter
+  -- already at its limit is not written again, so a flood costs reads, not row versions.
+  v_hits := null;
   insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
-  values (p_club_id, '*', v_window, 1)
+  values (p_club_id, v_network_bucket, v_window, 1)
   on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+    where w.hits < c_network_limit
   returning w.hits into v_hits;
-  if v_hits = 1 then
-    delete from onzio_private.page_event_rate_windows old
-    where old.club_id = p_club_id and old.window_start < v_window - interval '5 minutes';
-  end if;
-  if v_hits > c_club_limit then
+  if v_hits is null then
     return 'rate_limited';
   end if;
 
+  -- Cap 2, per visitor.
+  v_hits := null;
   insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
   values (p_club_id, v_hash, v_window, 1)
   on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+    where w.hits < c_visitor_limit
   returning w.hits into v_hits;
-  if v_hits > c_visitor_limit then
+  if v_hits is null then
     return 'rate_limited';
+  end if;
+
+  -- Cap 3, club-wide. Only an event that passed both caps above spends this budget.
+  v_hits := null;
+  insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
+  values (p_club_id, '*', v_window, 1)
+  on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+    where w.hits < c_club_limit
+  returning w.hits into v_hits;
+  if v_hits is null then
+    return 'rate_limited';
+  end if;
+  if v_hits = 1 then
+    -- A new minute for this club, on accepted traffic: prune its old counters, then run the
+    -- bounded global sweep, so clubs that lost the add-on or went quiet are cleaned too.
+    delete from onzio_private.page_event_rate_windows old
+    where old.club_id = p_club_id and old.window_start < v_window - interval '5 minutes';
+    -- Salts older than two UTC days cannot be any club's current day (offsets reach 14 hours).
+    delete from onzio_private.page_visitor_salts s
+    where s.salt_day < (v_now at time zone 'UTC')::date - 2;
+    delete from onzio.page_events e
+    where e.id in (
+      select old.id
+      from onzio.page_events old
+      where old.occurred_at < v_now - c_retention
+      order by old.occurred_at
+      limit c_sweep_batch
+      for update skip locked
+    );
   end if;
 
   select e.visit_id into v_visit
@@ -339,11 +484,11 @@ begin
   ) values (
     p_club_id, v_now, v_day, v_type, v_hash, coalesce(v_visit, gen_random_uuid()), v_visit is null,
     v_path, v_referrer_host, v_source_type,
-    onzio_private.page_event_text(p_event, 'utmSource', c_utm, false),
-    onzio_private.page_event_text(p_event, 'utmMedium', c_utm, false),
-    onzio_private.page_event_text(p_event, 'utmCampaign', c_utm, false),
-    onzio_private.page_event_text(p_event, 'utmContent', c_utm, false),
-    onzio_private.page_event_text(p_event, 'utmTerm', c_utm, false),
+    onzio_private.page_event_text(v_event, 'utmSource', c_utm, false),
+    onzio_private.page_event_text(v_event, 'utmMedium', c_utm, false),
+    onzio_private.page_event_text(v_event, 'utmCampaign', c_utm, false),
+    onzio_private.page_event_text(v_event, 'utmContent', c_utm, false),
+    onzio_private.page_event_text(v_event, 'utmTerm', c_utm, false),
     v_device, v_country, v_city, v_is_staff
   );
 
@@ -351,23 +496,26 @@ begin
 end;
 $$;
 
-revoke all on function onzio_private.record_page_event(uuid, jsonb) from public;
-grant execute on function onzio_private.record_page_event(uuid, jsonb)
+revoke all on function onzio_private.record_page_event(uuid, text, text) from public;
+grant execute on function onzio_private.record_page_event(uuid, text, text)
   to anon, authenticated;
 
+-- Callable by the public anon key, which is harmless: the definer rejects any call whose
+-- signature does not match, so only the beacon route (which holds the key) can write.
 create function onzio.record_page_event(
   p_club_id uuid,
-  p_event jsonb
+  p_payload text,
+  p_signature text
 ) returns text
 language sql
 security invoker
 set search_path = ''
 as $$
-  select onzio_private.record_page_event(p_club_id, p_event);
+  select onzio_private.record_page_event(p_club_id, p_payload, p_signature);
 $$;
 
-revoke all on function onzio.record_page_event(uuid, jsonb) from public;
-grant execute on function onzio.record_page_event(uuid, jsonb) to anon, authenticated;
+revoke all on function onzio.record_page_event(uuid, text, text) from public;
+grant execute on function onzio.record_page_event(uuid, text, text) to anon, authenticated;
 
 -- Archived-club hard purge: copied from 20261117020000_cinematic_purge_tables.sql unchanged except that
 -- onzio.page_events is first in v_order (nothing references it). Same signature, security definer,

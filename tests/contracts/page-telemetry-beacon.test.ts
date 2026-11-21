@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildPageEvent, type PageEventPayload } from "@/lib/telemetry/beacon";
 import {
@@ -9,8 +11,9 @@ import {
   normalizeBeaconPath,
   referrerHostFrom,
 } from "@/lib/telemetry/classify";
+import { ingestSecret, signPayload } from "@/lib/telemetry/ingest";
 import { createFixedWindowLimiter } from "@/lib/telemetry/rate-limit";
-import { clientIp, visitorMaterial, visitorSecret } from "@/lib/telemetry/visitor";
+import { clientIp, networkMaterial, networkPrefix, visitorMaterial, visitorSecret } from "@/lib/telemetry/visitor";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), schema: vi.fn(), createPublicClient: vi.fn(), createClient: vi.fn() }));
 vi.mock("@/lib/supabase-server", () => ({
@@ -21,6 +24,8 @@ vi.mock("@/lib/supabase-server", () => ({
 const CLUB = "11111111-1111-4111-8111-111111111111";
 const USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 const SECRET = "s".repeat(48);
+const INGEST_SECRET = "ab".repeat(32);
+const NOW = 1_800_000_000_000;
 const IPHONE =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 const DESKTOP =
@@ -59,6 +64,7 @@ function recorded(input: Parameters<typeof buildPageEvent>[0]): { clubId: string
 }
 
 const env = { TELEMETRY_VISITOR_SECRET: SECRET };
+const NETWORK_OF_203_0_113_7 = "1a40d132408d4c784bd445f730be506101c31d245188b304e7ea4f7632870193";
 
 describe("page telemetry classification", () => {
   it.each([
@@ -71,6 +77,7 @@ describe("page telemetry classification", () => {
     ["curl", "curl/8.7.1"],
     ["python requests", "python-requests/2.32.3"],
     ["GPTBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"],
+    ["a crawler that only says crawl", "SomeCrawler/1.0 (+https://example.org/about)"],
     ["empty", ""],
   ])("treats %s as a bot", (_label, userAgent) => {
     expect(isBotUserAgent(userAgent)).toBe(true);
@@ -157,17 +164,89 @@ describe("page telemetry visitor id input", () => {
   });
 });
 
+describe("page telemetry network key", () => {
+  it.each([
+    ["an IPv4 address as is", "203.0.113.7", "203.0.113.7"],
+    ["an IPv4 address with spaces around it", " 203.0.113.7 ", "203.0.113.7"],
+    ["the first 64 bits of an IPv6 address", "2001:db8:1:2:aaaa:bbbb:cccc:dddd", "2001:db8:1:2::/64"],
+    ["the same /64 for a compressed address", "2001:0DB8:1:2::1", "2001:db8:1:2::/64"],
+    ["the same /64 for an address with a different host part", "2001:db8:1:2:ffff:ffff:ffff:ffff", "2001:db8:1:2::/64"],
+    ["a short prefix with leading zeros dropped", "2001:db8::1", "2001:db8:0:0::/64"],
+    ["a bracketed IPv6 address", "[2001:db8:1:2::1]", "2001:db8:1:2::/64"],
+    ["an IPv6 address with a zone", "fe80::1%eth0", "fe80:0:0:0::/64"],
+    ["the loopback address", "::1", "0:0:0:0::/64"],
+    ["an IPv4-mapped address as IPv4", "::ffff:203.0.113.7", "203.0.113.7"],
+    ["an IPv4-mapped address in hex notation as IPv4", "::ffff:cb00:7107", "203.0.113.7"],
+    ["a fully written IPv4-mapped address as IPv4", "0:0:0:0:0:ffff:203.0.113.7", "203.0.113.7"],
+  ])("maps %s", (_label, ip, expected) => {
+    expect(networkPrefix(ip)).toBe(expected);
+  });
+
+  it.each(["", "   ", "not-an-ip", "203.0.113", "203.0.113.256", "1.2.3.4.5", "2001:db8::1::2", "2001:db8:1:2:3:4:5:6:7", "gggg::1", "203.0.113.7:8080", "<script>"])(
+    "gives no network for %j",
+    (garbage) => {
+      expect(networkPrefix(garbage)).toBeNull();
+      expect(networkMaterial(SECRET, garbage)).toBeNull();
+    },
+  );
+
+  it("is a keyed hash of the network, independent of the user agent", () => {
+    expect(networkMaterial(SECRET, "203.0.113.7")).toBe(NETWORK_OF_203_0_113_7);
+    expect(networkMaterial(SECRET, "2001:db8:1:2::1")).toBe("7d6ecb9f3148392ef08c4df81a1ac00ac18078e258253b6d6939459d12fb5ad3");
+    expect(networkMaterial(SECRET, "2001:db8:1:2:9:9:9:9")).toBe(networkMaterial(SECRET, "2001:db8:1:2::1"));
+    expect(networkMaterial(SECRET, "2001:db8:1:3::1")).not.toBe(networkMaterial(SECRET, "2001:db8:1:2::1"));
+    expect(networkMaterial(SECRET, "::ffff:1.2.3.4")).toBe("6179f2c637a05f0bbf35ff698d5fba7120e5eb175b7978314895d476836404f0");
+    expect(networkMaterial("t".repeat(48), "203.0.113.7")).not.toBe(NETWORK_OF_203_0_113_7);
+    expect(networkMaterial(SECRET, "203.0.113.7")).not.toBe(visitorMaterial(SECRET, "203.0.113.7", IPHONE));
+    expect(networkMaterial(SECRET, "203.0.113.7")).not.toContain("203.0.113.7");
+  });
+});
+
+describe("page telemetry signed calls", () => {
+  const KEY_HEX = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+  const PAYLOAD = '{"type":"view","path":"/schedule","city":"São Paulo"}';
+
+  it("signs club id, a newline and the exact payload text with HMAC-SHA256 (known vector, UTF-8)", () => {
+    // Computed independently with Python's hmac and openssl, not with this code.
+    expect(signPayload(CLUB, PAYLOAD, KEY_HEX)).toBe("72287e477aa48fb22c7cc7672c9b3f481fb2a68c536d4b0be34ccc3ce2f1cc47");
+  });
+
+  it("changes when the club, the payload or the key changes", () => {
+    const signature = signPayload(CLUB, PAYLOAD, KEY_HEX);
+    expect(signPayload("22222222-2222-4222-8222-222222222222", PAYLOAD, KEY_HEX)).not.toBe(signature);
+    expect(signPayload(CLUB, `${PAYLOAD} `, KEY_HEX)).not.toBe(signature);
+    expect(signPayload(CLUB, PAYLOAD, "ff".repeat(32))).not.toBe(signature);
+  });
+
+  it("refuses to sign with a key that is not 64 lowercase hex characters", () => {
+    for (const bad of ["", "ab".repeat(31), "AB".repeat(32), "zz".repeat(32), `${"ab".repeat(32)}\n`]) {
+      expect(() => signPayload(CLUB, PAYLOAD, bad), JSON.stringify(bad)).toThrow();
+    }
+  });
+
+  it("reads the ingest secret only when it is exactly 64 lowercase hex characters", () => {
+    expect(ingestSecret({ TELEMETRY_INGEST_SECRET: INGEST_SECRET })).toBe(INGEST_SECRET);
+    for (const bad of [undefined, "", "ab".repeat(31), "ab".repeat(33), "AB".repeat(32), "zz".repeat(32), ` ${INGEST_SECRET}`, `${INGEST_SECRET}\n`]) {
+      expect(ingestSecret({ TELEMETRY_INGEST_SECRET: bad }), JSON.stringify(bad)).toBeNull();
+    }
+    expect(ingestSecret({})).toBeNull();
+  });
+});
+
 describe("page telemetry beacon decisions", () => {
   it("builds the database payload with no raw IP, user agent or referrer URL", () => {
     const decision = recorded({
       headers: headers(),
       bodyText: body({ t: "view", p: "/schedule?x=1", r: "https://www.instagram.com/p/abc?igsh=secret", q: "?utm_source=ig&utm_campaign=matchday" }),
       env,
+      now: NOW,
     });
     expect(decision.clubId).toBe(CLUB);
     expect(decision.event).toEqual({
       type: "view",
       visitorMaterial: visitorMaterial(SECRET, "203.0.113.7", IPHONE),
+      networkMaterial: NETWORK_OF_203_0_113_7,
+      ts: NOW,
       path: "/schedule",
       referrerHost: "instagram.com",
       sourceType: "campaign",
@@ -191,6 +270,18 @@ describe("page telemetry beacon decisions", () => {
     expect(recorded({ headers: headers({ "x-onzio-user-id": USER }), bodyText: body(), env }).event.isStaff).toBe(true);
   });
 
+  it("stamps the event with the current time and keys the network on the address, not the user agent", () => {
+    const before = Date.now();
+    const first = recorded({ headers: headers(), bodyText: body(), env });
+    expect(first.event.ts).toBeGreaterThanOrEqual(before);
+    expect(first.event.ts).toBeLessThanOrEqual(Date.now());
+    const otherAgent = recorded({ headers: headers({ "user-agent": DESKTOP }), bodyText: body(), env });
+    expect(otherAgent.event.visitorMaterial).not.toBe(first.event.visitorMaterial);
+    expect(otherAgent.event.networkMaterial).toBe(first.event.networkMaterial);
+    const mapped = recorded({ headers: headers({ "x-real-ip": "::ffff:203.0.113.7" }), bodyText: body(), env });
+    expect(mapped.event.networkMaterial).toBe(first.event.networkMaterial);
+  });
+
   it.each([
     ["not_configured", { env: {} }],
     ["no_tenant", { headers: headers({ "x-onzio-club-id": null }) }],
@@ -199,6 +290,7 @@ describe("page telemetry beacon decisions", () => {
     ["bot", { headers: headers({ "user-agent": null }) }],
     ["prefetch", { headers: headers({ "sec-purpose": "prefetch;prerender" }) }],
     ["no_ip", { headers: headers({ "x-real-ip": null }) }],
+    ["no_ip", { headers: headers({ "x-real-ip": "not-an-ip" }) }],
     ["too_large", { bodyText: body({ t: "view", p: "/", q: "x".repeat(3000) }) }],
     ["invalid_body", { bodyText: "not json" }],
     ["invalid_body", { bodyText: body({ t: "click", p: "/" }) }],
@@ -225,6 +317,7 @@ describe("POST /api/t", () => {
 
   beforeEach(async () => {
     vi.stubEnv("TELEMETRY_VISITOR_SECRET", SECRET);
+    vi.stubEnv("TELEMETRY_INGEST_SECRET", INGEST_SECRET);
     entitled = true;
     mocks.rpc.mockImplementation(async (name: string) =>
       name === "club_has_addon" ? { data: entitled, error: null } : { data: "recorded", error: null },
@@ -252,10 +345,38 @@ describe("POST /api/t", () => {
     expect(calls("club_has_addon")).toEqual([["club_has_addon", { p_club_id: CLUB, p_addon: "telemetry" }]]);
     expect(calls("record_page_event")).toHaveLength(1);
     const [, args] = calls("record_page_event")[0];
+    expect(Object.keys(args).sort()).toEqual(["p_club_id", "p_payload", "p_signature"]);
     expect(args.p_club_id).toBe(CLUB);
-    expect(args.p_event).toMatchObject({ type: "view", path: "/", sourceType: "direct", isStaff: false });
+    expect(typeof args.p_payload).toBe("string");
+    expect(JSON.parse(args.p_payload)).toMatchObject({
+      type: "view",
+      path: "/",
+      sourceType: "direct",
+      isStaff: false,
+      networkMaterial: networkMaterial(SECRET, "203.0.113.50"),
+    });
+    expect(Number.isInteger(JSON.parse(args.p_payload).ts)).toBe(true);
+    expect(Math.abs(Date.now() - JSON.parse(args.p_payload).ts)).toBeLessThan(10_000);
+    // The signature covers exactly the text that was sent.
+    expect(args.p_signature).toBe(signPayload(CLUB, args.p_payload, INGEST_SECRET));
+    expect(args.p_signature).not.toBe(signPayload(CLUB, `${args.p_payload} `, INGEST_SECRET));
     expect(JSON.stringify(args)).not.toContain("203.0.113.50");
+    expect(JSON.stringify(args)).not.toContain(INGEST_SECRET);
     expect(mocks.rpc.mock.calls.map(([name]) => name).sort()).toEqual(["club_has_addon", "record_page_event"]);
+  });
+
+  it.each([
+    ["unset", ""],
+    ["too short", "ab".repeat(31)],
+    ["uppercase", "AB".repeat(32)],
+    ["not hex", "zz".repeat(32)],
+    ["padded", `${INGEST_SECRET}\n`],
+  ])("drops every event, still answering 204, when the ingest secret is %s", async (_label, value) => {
+    vi.stubEnv("TELEMETRY_INGEST_SECRET", value);
+    const response = await post(headers({ "x-real-ip": "203.0.113.70" }), body());
+    expect(response.status).toBe(204);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
   it("skips clubs without the telemetry add-on before recording", async () => {
@@ -294,5 +415,37 @@ describe("POST /api/t", () => {
     const flood = headers({ "x-real-ip": "203.0.113.99" });
     for (let i = 0; i < 125; i += 1) await post(flood, body());
     expect(calls("record_page_event")).toHaveLength(120);
+  });
+
+  it("counts one machine rotating user agents as one network, and leaves other networks alone", async () => {
+    for (let i = 0; i < 130; i += 1) {
+      const agent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.${i}.0 Safari/537.36`;
+      await post(headers({ "x-real-ip": "203.0.113.98", "user-agent": agent }), body());
+    }
+    expect(calls("record_page_event")).toHaveLength(120);
+    expect((await post(headers({ "x-real-ip": "203.0.113.97" }), body())).status).toBe(204);
+    expect(calls("record_page_event")).toHaveLength(121);
+  });
+
+  it("counts a whole IPv6 /64 as one network", async () => {
+    for (let i = 0; i < 125; i += 1) {
+      await post(headers({ "x-real-ip": `2001:db8:77:1:${(i + 1).toString(16)}::1` }), body());
+    }
+    expect(calls("record_page_event")).toHaveLength(120);
+  });
+});
+
+describe("club layout beacon mount", () => {
+  const layout = readFileSync(resolve(process.cwd(), "app/%5Fclubs/[slug]/layout.tsx"), "utf8");
+
+  it("mounts the beacon only behind the add-on check, once, for every shell", () => {
+    expect(layout).toContain('import PageBeacon from "@/components/telemetry/PageBeacon";');
+    expect(layout).toContain('import { clubHasTelemetry } from "@/lib/telemetry/entitlement";');
+    // The only place <PageBeacon /> is written is the add-on-gated ternary.
+    expect(layout.match(/<PageBeacon\b/g)).toHaveLength(1);
+    expect(layout).toMatch(/const beacon = \(await clubHasTelemetry\(club\.id\)\) \? <PageBeacon \/> : null;/);
+    // Every shell renders that gated element, never an ungated beacon.
+    expect(layout.match(/\{beacon\}/g)).toHaveLength(3);
+    expect(layout.match(/clubHasTelemetry\(/g)).toHaveLength(1);
   });
 });

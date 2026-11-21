@@ -11,11 +11,12 @@ import {
   type Device,
   type SourceType,
 } from "@/lib/telemetry/classify";
-import { clientIp, visitorMaterial, visitorSecret } from "@/lib/telemetry/visitor";
+import { clientIp, networkMaterial, visitorMaterial, visitorSecret } from "@/lib/telemetry/visitor";
 
 // TELEMETRY-01: turns one beacon request into the payload for
 // onzio.record_page_event, or a reason to drop it. Pure apart from reading the
-// visitor secret; the route owns rate limiting and the database call.
+// visitor secret and the clock; the route owns rate limiting, signing and the
+// database call.
 
 export const MAX_BEACON_BYTES = 2048;
 
@@ -33,6 +34,10 @@ const beaconBodySchema = z
 export type PageEventPayload = {
   type: "view";
   visitorMaterial: string;
+  /** Keyed hash of the IPv4 address or IPv6 /64 prefix; the database's per-network cap keys on it. */
+  networkMaterial: string;
+  /** Epoch milliseconds when the route built the event; the database rejects stale calls. */
+  ts: number;
   path: string;
   referrerHost: string | null;
   sourceType: SourceType;
@@ -65,6 +70,8 @@ export function buildPageEvent(input: {
   headers: Headers;
   bodyText: string;
   env?: Record<string, string | undefined>;
+  /** Epoch milliseconds; defaults to the current time. */
+  now?: number;
 }): BeaconDecision {
   const { headers } = input;
   const secret = visitorSecret(input.env);
@@ -81,6 +88,9 @@ export function buildPageEvent(input: {
 
   const ip = clientIp(headers);
   if (!ip) return { kind: "drop", reason: "no_ip" };
+  // Not an IP address (a malformed header): no network to count it against.
+  const network = networkMaterial(secret, ip);
+  if (!network) return { kind: "drop", reason: "no_ip" };
 
   if (new TextEncoder().encode(input.bodyText).length > MAX_BEACON_BYTES) {
     return { kind: "drop", reason: "too_large" };
@@ -109,6 +119,8 @@ export function buildPageEvent(input: {
     event: {
       type: "view",
       visitorMaterial: visitorMaterial(secret, ip, userAgent),
+      networkMaterial: network,
+      ts: input.now ?? Date.now(),
       path,
       referrerHost,
       sourceType: classifySource({

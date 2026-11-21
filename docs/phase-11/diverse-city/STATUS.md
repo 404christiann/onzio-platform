@@ -1,5 +1,53 @@
 # Diverse City FC Status
 
+## 2026-11-20 - TELEMETRY-01 P1: onzio-bot review fixes (signed writes, network cap, retention sweep)
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01` at `43c0cb54` (on main `9995de69`). **Status:** `in_progress`. The fixes are local, unstaged
+and uncommitted, waiting for Christian's word to commit and push. Not merged; production untouched.
+
+**Completed (migration `20261119130000_page_telemetry.sql` edited in place; it is not applied in production):**
+- **High (forgery through PostgREST):** the anon key could call `onzio.record_page_event` with any club and any fields.
+  - Writes are now signed. The migration creates `onzio_private.telemetry_ingest_keys`, one row holding a random
+    32-byte key, with no API grants.
+  - `/api/t` signs `club_id + "\n" + payload` with `TELEMETRY_INGEST_SECRET` (64 lowercase hex) and drops every event
+    when that variable is unset.
+  - The RPC is now `(uuid, text, text)`. It checks the HMAC before parsing anything and returns `bad_signature` or
+    `stale` (more than 5 minutes off) without writing. The unsigned `(uuid, jsonb)` versions are dropped.
+- **Medium (club-cap DoS):** a per-network cap runs first: 120 per minute per club, keyed on HMAC of the IPv4 address
+  or the IPv6 /64, salted daily and stored only in rate windows. Then the per-visitor cap (60), then the club cap
+  (1,200), which only events that passed the first two can spend. A counter already at its cap isn't rewritten. The
+  route limiter now keys on the network.
+- **Low (retention):**
+  - When a club's new minute opens on accepted traffic, a bounded sweep runs across all clubs. It deletes salts more
+    than 2 UTC days old and up to 5,000 events older than 90 days, using the new `page_events (occurred_at)` index.
+  - A trigger on `club_addons` delete removes that club's salts and counters.
+- **Test gaps:** contract tests for the layout mounting the beacon only behind `clubHasTelemetry`, and for `crawl` in the
+  bot list.
+- The plan section and both operator SQL files are updated. The SQL files now also guard that the key row exists.
+
+**Files changed:** the migration, `app/api/t/route.ts`, `lib/telemetry/{beacon,visitor,ingest}.ts` (`ingest.ts` is new),
+`lib/database.generated.ts`, both operator SQL files, `docs/onzio-platform-plan.md`, the three telemetry test files, and
+this entry.
+
+**Verification (Mac, shared local stack; DB work done in one lock hold after the RC-HERO-VIDEO-SWAP session released it):**
+- Fresh `supabase db reset --local` applied all 94 migrations (ledger max `20261119130000`).
+- `db:types` output is identical to the hand edit, and `db:types:check` matches.
+- `page-telemetry` + `purge-archived-club`: 72/72 passed.
+- Full `test:db`: 80 files, 1418 tests passed.
+- `tsc` clean. `test:unit`: 374 files, 4464 tests passed. eslint on the changed files is clean.
+
+**Blockers / decisions:**
+- Production gets one more step. After the migration, run `select encode(key, 'hex') from
+  onzio_private.telemetry_ingest_keys;` once and set `TELEMETRY_INGEST_SECRET` in Vercel Production.
+- The migration now runs `create extension if not exists pgcrypto with schema extensions`, and no earlier migration
+  uses pgcrypto. The production dry run must show it applies cleanly.
+- RC-HERO-VIDEO-SWAP also edits the three migration-order tests and `lib/database.generated.ts`, so whichever PR merges
+  second needs a small rebase.
+
+**Next step:** Christian's word to commit and force-push to PR #158 for onzio-bot re-review. Then follow the production
+gate: backup, `migration list`, dry run, his "push", a read-only check, merge.
+
 ## 2026-11-20 - TELEMETRY-01 P1 finish: rebased onto main, migration retimestamped to 20261119130000
 
 **Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch `agent/telemetry-01`,

@@ -1,7 +1,8 @@
 -- Rose City: turn on the paid telemetry add-on (TELEMETRY-01).
 -- Grants onzio_private.club_addons (rose-city, telemetry) and records one audit event.
 -- Club 32ceba0b-4e25-52c2-bb6b-d82fb87637a7 (rose-city). Ends in ROLLBACK (rehearsal). The commit file ends in COMMIT.
--- Run in the Supabase SQL editor (as postgres) only after migration 20261119130000_page_telemetry is applied.
+-- Run in the Supabase SQL editor (as postgres) only after migration 20261119130000_page_telemetry is applied
+-- and TELEMETRY_INGEST_SECRET is set in Vercel Production (the beacon drops every event without it).
 -- Rerunning is safe: if the add-on is already on, nothing is written and the read-back says no-op.
 
 begin;
@@ -14,8 +15,13 @@ declare
   v_club onzio.clubs;
   v_count integer;
 begin
-  if to_regclass('onzio_private.club_addons') is null then
+  if to_regclass('onzio_private.club_addons') is null
+     or to_regclass('onzio_private.telemetry_ingest_keys') is null then
     raise exception 'MIGRATION_MISSING: apply 20261119130000_page_telemetry first';
+  end if;
+  -- Signed beacon writes need the ingest key row; without it every event would be rejected.
+  if not exists (select 1 from onzio_private.telemetry_ingest_keys) then
+    raise exception 'MIGRATION_MISSING: onzio_private.telemetry_ingest_keys has no key row';
   end if;
 
   select * into v_club from onzio.clubs where id = v_club_id for update;

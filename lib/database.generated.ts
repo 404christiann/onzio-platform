@@ -4387,7 +4387,7 @@ export type Database = {
         Returns: Json
       }
       record_page_event: {
-        Args: { p_club_id: string; p_event: Json }
+        Args: { p_club_id: string; p_payload: string; p_signature: string }
         Returns: string
       }
       record_stripe_rejection: {
