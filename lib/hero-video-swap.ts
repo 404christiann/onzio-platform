@@ -9,6 +9,7 @@ import {
   videoReadiness,
   type BunnyUploadAuthorization,
 } from "@/lib/bunny-stream";
+import { classifyBunnyStreamStatus, parseBunnyStreamWebhook, verifyBunnyStreamSignature } from "@/lib/bunny-stream-webhook";
 import { DIVERSE_CITY_HERO_VIDEO, DIVERSE_CITY_STORY_VIDEO } from "@/lib/bunny-video";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 
@@ -46,6 +47,10 @@ export class HeroVideoError extends Error {
   }
 }
 
+export type HeroVideoPending = { videoGuid: string; encodeProgress: number | null };
+export type HeroVideoFailure = { code: string };
+export type HeroVideoCompletion = { videoGuid: string; revisionBefore: string | null; revisionAfter: string | null };
+
 export type HeroVideoState = {
   liveGuid: string;
   previousGuid: string;
@@ -53,6 +58,10 @@ export type HeroVideoState = {
   replacesPerDay: number;
   maxBytes: number;
   maxSeconds: number;
+  /** Set only while Bunny is preparing a finished upload. Hidden during the byte upload itself. */
+  pending: HeroVideoPending | null;
+  failure: HeroVideoFailure | null;
+  completion: HeroVideoCompletion | null;
 };
 
 export type HeroVideoLive = { status: "live"; liveGuid: string; previousGuid: string; revisionBefore: string | null; revisionAfter: string | null };
@@ -82,11 +91,60 @@ async function readLive(clubId: string): Promise<{ liveGuid: string; previousGui
   return { liveGuid: config?.heroVideoGuid || "", previousGuid: config?.previousHeroVideoGuid || "" };
 }
 
+type PendingRow = {
+  video_guid: string;
+  collection_id: string;
+  phase: string;
+  failure_code: string | null;
+  revision_before: string | null;
+  revision_after: string | null;
+};
+
+function rowOf<T>(data: unknown): T | null {
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ? row as T : null;
+}
+
+async function scalarRpc(name: string, args: Record<string, unknown>): Promise<string> {
+  const result = await onzio().rpc(name, args);
+  if (result.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", `${name} failed.`);
+  return typeof result.data === "string" ? result.data : "";
+}
+
+async function readPending(clubId: string): Promise<PendingRow | null> {
+  const result = await onzio().rpc("read_hero_video_pending", { p_club_id: clubId });
+  if (result.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not read the video that is still preparing.");
+  return rowOf<PendingRow>(result.data);
+}
+
 export async function getHeroVideoState(clubId: string): Promise<HeroVideoState> {
   const live = await readLive(clubId);
   const used = await onzio().rpc("hero_video_replaces_today", { p_club_id: clubId });
   if (used.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not read today's video replacement count.");
-  return { ...live, replacesUsedToday: Number(used.data ?? 0), replacesPerDay: HERO_VIDEO_REPLACES_PER_DAY, maxBytes: HERO_VIDEO_MAX_BYTES, maxSeconds: HERO_VIDEO_MAX_SECONDS };
+  const pendingRow = await readPending(clubId);
+  let encodeProgress: number | null = null;
+  if (pendingRow?.phase === "preparing") {
+    try {
+      const video = await getVideo(pendingRow.video_guid);
+      encodeProgress = video?.encodeProgress ?? null;
+    } catch {
+      encodeProgress = null;
+    }
+  }
+  return {
+    ...live,
+    replacesUsedToday: Number(used.data ?? 0),
+    replacesPerDay: HERO_VIDEO_REPLACES_PER_DAY,
+    maxBytes: HERO_VIDEO_MAX_BYTES,
+    maxSeconds: HERO_VIDEO_MAX_SECONDS,
+    pending: pendingRow?.phase === "preparing" ? { videoGuid: pendingRow.video_guid, encodeProgress } : null,
+    failure: pendingRow?.phase === "failed" && pendingRow.failure_code ? { code: pendingRow.failure_code } : null,
+    completion: pendingRow?.phase === "live" ? {
+      videoGuid: pendingRow.video_guid,
+      revisionBefore: pendingRow.revision_before,
+      revisionAfter: pendingRow.revision_after,
+    } : null,
+  };
 }
 
 export async function startHeroVideoUpload(
@@ -113,8 +171,24 @@ export async function startHeroVideoUpload(
   const collectionId = await findOrCreateCollection(clubId);
   await sweepStale(clubId, collectionId);
   const videoGuid = await createVideo({ title: `Hero video ${new Date().toISOString()}`, collectionId });
+  try {
+    await scalarRpc("record_hero_video_pending", {
+      p_club_id: clubId, p_video_guid: videoGuid, p_collection_id: collectionId, p_phase: "uploading",
+    });
+  } catch (error) {
+    await safeDeleteHeroVideo(clubId, collectionId, videoGuid);
+    throw error;
+  }
   const expire = Math.floor(Date.now() / 1000) + UPLOAD_WINDOW_SECONDS;
   return { videoGuid, upload: tusUploadAuthorization(videoGuid, expire), maxBytes: HERO_VIDEO_MAX_BYTES };
+}
+
+/** The bytes are on the host. GET can now say preparing even if this tab closes. */
+export async function markHeroVideoUploaded(clubId: string, videoGuid: string): Promise<void> {
+  const outcome = await scalarRpc("record_hero_video_pending", {
+    p_club_id: clubId, p_video_guid: videoGuid, p_collection_id: "", p_phase: "preparing",
+  });
+  if (outcome === "missing") throw new HeroVideoError(404, "NOT_CLUB_VIDEO", "We could not find that upload. Start the upload again.");
 }
 
 /**
@@ -180,7 +254,7 @@ export async function finalizeHeroVideo(clubId: string, videoGuid: string): Prom
   if (video.storageSize > HERO_VIDEO_MAX_STORED_BYTES) {
     await safeDeleteHeroVideo(clubId, collectionId, videoGuid);
     await sweepStale(clubId, collectionId, videoGuid);
-    throw new HeroVideoError(413, "STORED_SIZE_TOO_LARGE", `Once processed, this video takes more than 2,000 MB on the video service, so it was removed. Use a shorter clip (up to ${HERO_VIDEO_MAX_SECONDS / 60} minutes).`);
+    throw new HeroVideoError(413, "STORED_SIZE_TOO_LARGE", `Once processed, this video takes more than 2,000 MB, so it was removed. Use a shorter clip (up to ${HERO_VIDEO_MAX_SECONDS / 60} minutes).`);
   }
   const readiness = await videoReadiness(video);
   if (readiness === "failed") {
@@ -222,4 +296,151 @@ export async function revertHeroVideo(clubId: string, input: { expectedLiveGuid:
   if (row.outcome === "conflict") throw new HeroVideoError(409, "HERO_VIDEO_CHANGED", "The homepage video changed. Reload and try again.");
   if (row.outcome !== "reverted" && row.outcome !== "already_live") throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not go back to the earlier video.");
   return { status: "live", liveGuid: row.live_guid, previousGuid: row.previous_guid ?? "", ...revisions(row, "reverted") };
+}
+
+const TERMINAL_VIDEO = new Set(["VIDEO_FAILED", "VIDEO_TOO_LONG", "RESOLUTION_TOO_LOW", "STORED_SIZE_TOO_LARGE", "NOT_CLUB_VIDEO"]);
+
+type PendingJob = { club_id: string; video_guid: string; collection_id: string; phase: string };
+
+async function settlePending(
+  clubId: string,
+  videoGuid: string,
+  phase: "live" | "failed" | "clear",
+  failureCode: string | null,
+  revisionBefore: string | null,
+  revisionAfter: string | null,
+) {
+  await scalarRpc("settle_hero_video_pending", {
+    p_club_id: clubId,
+    p_video_guid: videoGuid,
+    p_phase: phase,
+    p_failure_code: failureCode,
+    p_revision_before: revisionBefore,
+    p_revision_after: revisionAfter,
+  });
+}
+
+async function lookupPending(videoGuid: string): Promise<PendingJob | null> {
+  const result = await onzio().rpc("lookup_hero_video_pending", { p_video_guid: videoGuid });
+  if (result.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not look up that video.");
+  return rowOf<PendingJob>(result.data);
+}
+
+/**
+ * Bunny Stream encode callback. Signature is checked first. An unknown library
+ * is rejected. A guid is handled only when it is the club's pending upload and
+ * Bunny still reports it in that club's collection. Finished calls
+ * finalizeHeroVideo (already_live on a retry). Failed uses safeDeleteHeroVideo.
+ */
+export async function applyBunnyStreamWebhook(input: {
+  rawBody: string;
+  signature: string | null;
+  version: string | null;
+  algorithm: string | null;
+}): Promise<{ httpStatus: number; body: Record<string, unknown> }> {
+  const secret = process.env.BUNNY_STREAM_WEBHOOK_SECRET;
+  if (!verifyBunnyStreamSignature({ ...input, secret })) {
+    return { httpStatus: 401, body: { error: "INVALID_SIGNATURE" } };
+  }
+  const event = parseBunnyStreamWebhook(input.rawBody);
+  if (!event) return { httpStatus: 400, body: { error: "INVALID_EVENT" } };
+  if (String(event.videoLibraryId) !== BUNNY_STREAM_LIBRARY_ID) {
+    return { httpStatus: 404, body: { error: "UNKNOWN_LIBRARY" } };
+  }
+  if (event.isLiveStream) return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
+
+  const job = await lookupPending(event.videoGuid);
+  if (!job) return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
+
+  const action = classifyBunnyStreamStatus(event.status);
+  if (action === "ignore") return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
+
+  const video = await getVideo(event.videoGuid);
+  if (!video) {
+    await settlePending(job.club_id, event.videoGuid, "clear", null, null, null);
+    return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
+  }
+  if (video.collectionId !== job.collection_id) {
+    return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
+  }
+
+  if (action === "preparing") {
+    if (job.phase === "uploading") {
+      await scalarRpc("record_hero_video_pending", {
+        p_club_id: job.club_id, p_video_guid: event.videoGuid, p_collection_id: job.collection_id, p_phase: "preparing",
+      });
+    }
+    return { httpStatus: 200, body: { received: true, outcome: "preparing" } };
+  }
+
+  if (action === "fail") {
+    await safeDeleteHeroVideo(job.club_id, job.collection_id, event.videoGuid);
+    await settlePending(job.club_id, event.videoGuid, "failed", "VIDEO_FAILED", null, null);
+    return { httpStatus: 200, body: { received: true, outcome: "failed" } };
+  }
+
+  try {
+    const result = await finalizeHeroVideo(job.club_id, event.videoGuid);
+    if (result.httpStatus === 202) {
+      if (job.phase === "uploading") {
+        await scalarRpc("record_hero_video_pending", {
+          p_club_id: job.club_id, p_video_guid: event.videoGuid, p_collection_id: job.collection_id, p_phase: "preparing",
+        });
+      }
+      return { httpStatus: 200, body: { received: true, outcome: "processing" } };
+    }
+    const already = result.body.revisionBefore == null && result.body.revisionAfter == null;
+    await settlePending(job.club_id, event.videoGuid, "live", null, result.body.revisionBefore ?? null, result.body.revisionAfter ?? null);
+    return { httpStatus: 200, body: { received: true, outcome: already ? "already_live" : "live" } };
+  } catch (error) {
+    if (error instanceof HeroVideoError && TERMINAL_VIDEO.has(error.code)) {
+      await settlePending(job.club_id, event.videoGuid, "failed", error.code, null, null);
+      return { httpStatus: 200, body: { received: true, outcome: "failed" } };
+    }
+    throw error;
+  }
+}
+
+export type HeroVideoBackstopResult = {
+  configured: boolean;
+  inspected: number;
+  finalized: number;
+  swept: number;
+  failed: number;
+};
+
+/**
+ * Daily backstop. Finalizes pending uploads Bunny has already finished, and
+ * sweeps the rest with the same safeDeleteHeroVideo guards as a manual finalize.
+ * A missing API key skips the run so the cron can ship before the key does.
+ */
+export async function runHeroVideoBackstop(): Promise<HeroVideoBackstopResult> {
+  const result: HeroVideoBackstopResult = { configured: true, inspected: 0, finalized: 0, swept: 0, failed: 0 };
+  if (!process.env.BUNNY_STREAM_API_KEY) return { ...result, configured: false };
+  const listed = await onzio().rpc("list_hero_video_pending");
+  if (listed.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not list videos that are still preparing.");
+  const jobs = (Array.isArray(listed.data) ? listed.data : []) as PendingJob[];
+  for (const job of jobs) {
+    result.inspected += 1;
+    try {
+      const finished = await finalizeHeroVideo(job.club_id, job.video_guid);
+      if (finished.httpStatus === 200) {
+        await settlePending(job.club_id, job.video_guid, "live", null, finished.body.revisionBefore ?? null, finished.body.revisionAfter ?? null);
+        result.finalized += 1;
+      } else {
+        await sweepStale(job.club_id, job.collection_id, job.video_guid);
+        result.swept += 1;
+      }
+    } catch (error) {
+      if (error instanceof HeroVideoError && TERMINAL_VIDEO.has(error.code)) {
+        if (error.code === "NOT_CLUB_VIDEO") await settlePending(job.club_id, job.video_guid, "clear", null, null, null);
+        else await settlePending(job.club_id, job.video_guid, "failed", error.code, null, null);
+        result.swept += 1;
+      } else {
+        console.error("hero video backstop failed", { clubId: job.club_id, error: error instanceof Error ? error.name : "unknown" });
+        result.failed += 1;
+      }
+    }
+  }
+  return result;
 }

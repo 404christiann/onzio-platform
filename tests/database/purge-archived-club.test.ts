@@ -174,6 +174,8 @@ begin
   insert into onzio_private.tryouts_page_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
   insert into onzio_private.club_media_limits (club_id, max_assets) values (c, 2000) on conflict do nothing;
   insert into onzio_private.hero_video_replace_counters (club_id, day, used) values (c, current_date, 1) on conflict do nothing;
+  insert into onzio_private.hero_video_pending (club_id, video_guid, collection_id, phase)
+    values (c, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'collection', 'uploading');
   insert into onzio_private.media_upload_reservations (id, club_id, actor_id, surface, kind, staging_path, claimed_size, expires_at)
     select r, c, owner, 'homepage', 'photo', c::text || '/homepage/' || r::text || '.jpg', 1000, now() + interval '5 minutes' from gen_random_uuid() r;
   insert into onzio_private.media_pins (club_id, object_path, reason)

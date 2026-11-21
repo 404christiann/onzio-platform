@@ -1,21 +1,30 @@
 import {
-  HeroVideoApiError, fetchHomepageRevision, finalizeHeroVideo, getHeroVideoStatus, revertHeroVideo, startHeroVideoUpload,
-  type HeroVideoFinalize, type HeroVideoLive, type HeroVideoStart, type HeroVideoStatus, type HeroVideoUploadTicket,
+  HeroVideoApiError, fetchHomepageRevision, getHeroVideoStatus, markHeroVideoUploaded, revertHeroVideo, startHeroVideoUpload,
+  type HeroVideoLive, type HeroVideoStart, type HeroVideoStatus, type HeroVideoUploadTicket,
 } from "./hero-video-client";
 import { readVideoDuration } from "./hero-video-duration";
 import { startTusUpload, type TusUploadHandle, type TusUploadHandlers } from "./hero-video-tus";
 
 export const HERO_VIDEO_POLL_MS = 5_000;
-/** About 30 minutes of polling. */
+/** How long the upload-finished check stays up before preparing. */
+export const HERO_VIDEO_UPLOAD_DONE_MS = 1_200;
+/** About 30 minutes of display polling. Go-live does not depend on it. */
 export const HERO_VIDEO_MAX_POLLS = 360;
 const MAX_NETWORK_FAILURES = 3;
+const AWAITING_KEY = "onzio.heroVideo.pending";
 
-export type HeroVideoPhase = "loading" | "idle" | "uploading" | "processing" | "reverting" | "live" | "error";
-export type HeroVideoError = { code: string; message: string; retry: "finalize" | "load" | null };
+export const HERO_VIDEO_UPLOADING_COPY = "Uploading your video. Keep this page open until the upload finishes.";
+export const HERO_VIDEO_PREPARING_COPY = "Preparing your video. This usually takes a few minutes. You can keep editing.";
+export const HERO_VIDEO_LIVE_COPY = "Your new video is live.";
+
+export type HeroVideoPhase = "loading" | "idle" | "uploading" | "uploaded" | "preparing" | "reverting" | "live" | "error";
+export type HeroVideoError = { code: string; message: string; retry: "status" | "load" | null };
 export type HeroVideoState = {
   phase: HeroVideoPhase;
   status: HeroVideoStatus | null;
   progress: { sent: number; total: number } | null;
+  /** Set only when GET reported a processing percent. */
+  encodeProgress: number | null;
   fileName: string | null;
   error: HeroVideoError | null;
   /** Plain-English line for the aria-live region and the visible status. */
@@ -31,7 +40,8 @@ export type HeroVideoDeps = {
   start: (file: { name: string; size: number; type: string; durationSeconds?: number }) => Promise<HeroVideoStart>;
   /** The file's duration in seconds when the browser can read it, otherwise `undefined` (the server checks again later). */
   readDuration: (file: File) => Promise<number | undefined>;
-  finalize: (videoGuid: string) => Promise<HeroVideoFinalize>;
+  /** Records that the bytes arrived. Display polling never finalizes the swap. */
+  markUploaded: (videoGuid: string) => Promise<void>;
   revert: (expectedLiveGuid: string, targetGuid: string) => Promise<HeroVideoLive>;
   startUpload: (file: File, ticket: HeroVideoUploadTicket, handlers: TusUploadHandlers) => TusUploadHandle;
   /**
@@ -44,7 +54,7 @@ export type HeroVideoDeps = {
 
 export function defaultHeroVideoDeps(refreshRevision: HeroVideoDeps["refreshRevision"]): HeroVideoDeps {
   return {
-    getStatus: getHeroVideoStatus, start: startHeroVideoUpload, readDuration: readVideoDuration, finalize: finalizeHeroVideo, revert: revertHeroVideo,
+    getStatus: getHeroVideoStatus, start: startHeroVideoUpload, readDuration: readVideoDuration, markUploaded: markHeroVideoUploaded, revert: revertHeroVideo,
     startUpload: startTusUpload, refreshRevision, sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
   };
 }
@@ -62,7 +72,7 @@ export function heroVideoErrorMessage(code: string, context: { maxBytes?: number
     case "DAILY_LIMIT": return `You have used all ${context.replacesPerDay ?? 5} video replacements for today. Try again tomorrow.`;
     case "VIDEO_NOT_CONFIGURED": return "Video uploads are not set up for this site yet. Contact Onzio.";
     case "HERO_VIDEO_NOT_AVAILABLE": return "The hero video can't be changed for this site.";
-    case "VIDEO_FAILED": return "Bunny could not process that video. Try exporting it again as an MP4 and upload it again.";
+    case "VIDEO_FAILED": return "That video could not be processed. Try exporting it again as an MP4 and upload it again.";
     case "RESOLUTION_TOO_LOW": return "That video is too small. Use a video that is at least 720p (1280 by 720).";
     case "NOT_CLUB_VIDEO": return "That video does not belong to this club. Upload it again.";
     case "HERO_VIDEO_CHANGED": return "The hero video was changed somewhere else while you were working. We loaded the latest one. Try again if you still want to change it.";
@@ -89,8 +99,18 @@ export async function applySwapRevision(
   return "applied";
 }
 
-const idle = (status: HeroVideoStatus | null): HeroVideoState => ({ phase: "idle", status, progress: null, fileName: null, error: null, message: "", revisionWarning: false, revisionConflict: false });
-const BUSY = new Set<HeroVideoPhase>(["loading", "uploading", "processing", "reverting"]);
+const idle = (status: HeroVideoStatus | null): HeroVideoState => ({ phase: "idle", status, progress: null, encodeProgress: null, fileName: null, error: null, message: "", revisionWarning: false, revisionConflict: false });
+const BUSY = new Set<HeroVideoPhase>(["loading", "uploading", "uploaded", "preparing", "reverting"]);
+
+function readAwaiting(): string | null {
+  try { return globalThis.sessionStorage?.getItem(AWAITING_KEY) ?? null; } catch { return null; }
+}
+function writeAwaiting(guid: string) {
+  try { globalThis.sessionStorage?.setItem(AWAITING_KEY, guid); } catch { /* private mode */ }
+}
+function clearAwaiting() {
+  try { globalThis.sessionStorage?.removeItem(AWAITING_KEY); } catch { /* private mode */ }
+}
 const isBusy = (phase: HeroVideoPhase) => BUSY.has(phase);
 
 export type HeroVideoController = ReturnType<typeof createHeroVideoController>;
@@ -109,10 +129,10 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
   const fail = (error: unknown, retry: HeroVideoError["retry"] = null) => {
     const code = error instanceof HeroVideoApiError ? error.code : "NETWORK";
     const message = code === "NETWORK" ? "We couldn't reach the server. Check your connection and try again." : heroVideoErrorMessage(code, ctx());
-    set({ phase: "error", progress: null, error: { code, message, retry }, message });
+    set({ phase: "error", progress: null, encodeProgress: null, error: { code, message, retry }, message });
   };
 
-  const failWith = (code: string, message: string) => set({ phase: "error", progress: null, error: { code, message, retry: null }, message });
+  const failWith = (code: string, message: string) => set({ phase: "error", progress: null, encodeProgress: null, error: { code, message, retry: null }, message });
 
   async function reloadStatus() {
     try { set({ status: await deps.getStatus() }); } catch { /* keep what is shown */ }
@@ -129,40 +149,61 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     const before = state.status;
     set({ status: before ? { ...before, liveGuid: live.liveGuid, previousGuid: live.previousGuid, replacesUsedToday: before.replacesUsedToday + (kind === "replace" ? 1 : 0) } : before });
     await reloadStatus();
+    clearAwaiting();
     set({
-      phase: "live", progress: null, error: null, fileName: null, revisionWarning, revisionConflict,
-      message: kind === "replace"
-        ? "Your new hero video is live on your site. It went live by itself and did not need Save."
-        : "The previous hero video is live again on your site. It went live by itself and did not need Save.",
+      phase: "live", progress: null, encodeProgress: null, error: null, fileName: null, revisionWarning, revisionConflict,
+      message: kind === "replace" ? HERO_VIDEO_LIVE_COPY : "The previous hero video is live again on your site. It went live by itself and did not need Save.",
     });
   }
 
-  async function poll(guid: string, token: number) {
+  function liveFromStatus(status: HeroVideoStatus, guid: string): HeroVideoLive {
+    const completion = status.completion?.videoGuid === guid ? status.completion : null;
+    return {
+      status: "live",
+      liveGuid: status.liveGuid,
+      previousGuid: status.previousGuid,
+      revisionBefore: completion?.revisionBefore ?? null,
+      revisionAfter: completion?.revisionAfter ?? null,
+    };
+  }
+
+  /**
+   * Display-only. GET reports a processing percent and notices when the webhook
+   * or the cron has already made the video live. It never calls finalize.
+   */
+  async function watch(guid: string, token: number) {
     pendingGuid = guid;
-    set({ phase: "processing", progress: null, error: null, message: "Bunny is preparing your video. This usually takes a few minutes. You can keep editing." });
+    writeAwaiting(guid);
+    set({ phase: "preparing", progress: null, encodeProgress: null, error: null, message: HERO_VIDEO_PREPARING_COPY });
     let failures = 0;
     for (let attempt = 0; attempt < HERO_VIDEO_MAX_POLLS; attempt++) {
-      let result: HeroVideoFinalize;
-      try { result = await deps.finalize(guid); failures = 0; }
-      catch (error) {
+      let status: HeroVideoStatus;
+      try { status = await deps.getStatus(); failures = 0; }
+      catch {
         if (!alive(token)) return;
-        if (error instanceof HeroVideoApiError) {
-          if (error.code === "HERO_VIDEO_CHANGED") await reloadStatus();
-          pendingGuid = null;
-          return fail(error, null);
-        }
-        if (++failures >= MAX_NETWORK_FAILURES) return fail(error, "finalize");
+        if (++failures >= MAX_NETWORK_FAILURES) return;
         await deps.sleep(HERO_VIDEO_POLL_MS);
         if (!alive(token)) return;
         continue;
       }
       if (!alive(token)) return;
-      if (result.status === "live") { pendingGuid = null; return complete(result, "replace"); }
+      if (status.failure) {
+        pendingGuid = null;
+        clearAwaiting();
+        set({ status });
+        return fail(new HeroVideoApiError(status.failure.code, "", 422));
+      }
+      const stillPending = status.pending?.videoGuid === guid;
+      if (status.liveGuid === guid && !stillPending) {
+        pendingGuid = null;
+        set({ status });
+        return complete(liveFromStatus(status, guid), "replace");
+      }
+      const encodeProgress = stillPending && typeof status.pending?.encodeProgress === "number" ? status.pending.encodeProgress : null;
+      set({ phase: "preparing", status, progress: null, encodeProgress, error: null, message: HERO_VIDEO_PREPARING_COPY });
       await deps.sleep(HERO_VIDEO_POLL_MS);
       if (!alive(token)) return;
     }
-    const message = "Your video is still processing. This is taking longer than usual. You can keep editing and come back to this page later.";
-    set({ phase: "error", error: { code: "PROCESSING_TIMEOUT", message, retry: "finalize" }, message });
   }
 
   return {
@@ -172,8 +213,27 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     async load() {
       const token = ++run;
       set({ ...idle(null), phase: "loading" });
-      try { const status = await deps.getStatus(); if (alive(token)) set({ ...idle(status) }); }
-      catch (error) { if (alive(token)) { fail(error, "load"); } }
+      try {
+        const status = await deps.getStatus();
+        if (!alive(token)) return;
+        if (status.pending?.videoGuid) {
+          set({ ...idle(status), phase: "preparing", message: HERO_VIDEO_PREPARING_COPY, encodeProgress: typeof status.pending.encodeProgress === "number" ? status.pending.encodeProgress : null });
+          void watch(status.pending.videoGuid, token);
+          return;
+        }
+        if (status.failure?.code) {
+          set({ ...idle(status) });
+          fail(new HeroVideoApiError(status.failure.code, "", 422));
+          return;
+        }
+        const awaiting = readAwaiting();
+        if (awaiting && status.liveGuid === awaiting) {
+          set({ ...idle(status) });
+          await complete(liveFromStatus(status, awaiting), "replace");
+          return;
+        }
+        set({ ...idle(status) });
+      } catch (error) { if (alive(token)) fail(error, "load"); }
     },
 
     async replace(file: File) {
@@ -183,7 +243,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       if (file.size > maxBytes) return set({ phase: "error", error: { code: "FILE_TOO_LARGE", message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()), retry: null }, message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()) });
       const { maxSeconds } = state.status;
       const token = ++run;
-      set({ phase: "uploading", fileName: file.name, progress: { sent: 0, total: file.size }, error: null, revisionWarning: false, revisionConflict: false, message: `Uploading ${file.name}…` });
+      set({ phase: "uploading", fileName: file.name, progress: { sent: 0, total: file.size }, encodeProgress: null, error: null, revisionWarning: false, revisionConflict: false, message: HERO_VIDEO_UPLOADING_COPY });
       // Read the duration before start so a clip that is too long never uses one of the day's replaces. An unreadable
       // duration (undefined) skips this early check; the server checks Bunny's real length at finalize.
       let durationSeconds: number | undefined;
@@ -200,7 +260,18 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
           handle = null;
           set({ phase: "error", progress: null, error: { code: "UPLOAD_FAILED", message: "The upload was interrupted and could not continue. Your current hero video is unchanged. Choose the file to try again.", retry: null }, message: "The upload failed. Your current hero video is unchanged." });
         },
-        onSuccess: () => { if (!alive(token)) return; handle = null; void poll(ticket.videoGuid, token); },
+        onSuccess: () => {
+          if (!alive(token)) return;
+          handle = null;
+          void (async () => {
+            try { await deps.markUploaded(ticket.videoGuid); } catch { /* the webhook and the cron still finish a video whose bytes arrived */ }
+            if (!alive(token)) return;
+            set({ phase: "uploaded", progress: null, error: null, message: "" });
+            await deps.sleep(HERO_VIDEO_UPLOAD_DONE_MS);
+            if (!alive(token)) return;
+            await watch(ticket.videoGuid, token);
+          })();
+        },
       });
     },
 
@@ -211,9 +282,9 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       set({ ...idle(state.status), message: "Upload canceled. Your current hero video is unchanged." });
     },
 
-    async retryFinalize() {
-      if (state.phase !== "error" || !pendingGuid || state.error?.retry !== "finalize") return;
-      await poll(pendingGuid, ++run);
+    async retryStatus() {
+      if (state.phase !== "preparing" || !pendingGuid) return;
+      await watch(pendingGuid, ++run);
     },
 
     async revert() {
