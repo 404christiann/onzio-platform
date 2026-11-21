@@ -14,10 +14,12 @@ import { createFixedWindowLimiter } from "@/lib/telemetry/rate-limit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// The database gives each network a fair share of 120 events a minute and lets it go on while the
-// club as a whole has room, up to about half of the club's 1,200 a minute (a stadium's shared Wi-Fi).
-// This best-effort per-instance limit therefore sits at that ceiling: it sheds only what the
-// database would drop anyway, and never an event a busy shared network is entitled to.
+// The database gives each network a floor of 120 events a minute and lets it go on while its own count
+// plus the club's stays under 1,320, so a network takes at most half of the club's remaining headroom:
+// 660 alone on a quiet club (a stadium's shared Wi-Fi), less as the club fills, never under 120.
+// This best-effort per-instance limit sits just under that 660 ceiling. It still sits far above the 120
+// floor, so it never cuts a busy shared network short; it only sheds a flood before the database, and
+// the database stays the real limit.
 const NETWORK_MAX_PER_MINUTE = 600;
 const limiter = createFixedWindowLimiter({ limit: NETWORK_MAX_PER_MINUTE, windowMs: 60_000, maxKeys: 10_000 });
 

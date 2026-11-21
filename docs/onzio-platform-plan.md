@@ -1373,18 +1373,24 @@ directly. The database therefore accepts only **signed** calls.
   budget: the club counter increments only for events that passed every other
   cap. A counter that says no is not written again, so a flood costs reads,
   not row versions. One machine rotating user agents is one network.
-- Networks get a **fair share**, not a hard cap. Each network (and each /48) is
-  entitled to 120 events a minute. Over that, an event is still accepted while
-  the club's own counter for the minute is below a **shared floor of 600**
-  (half the club cap), and a network's counter stops at 1,200 so it is never
-  rewritten without bound. So a stadium's shared Wi-Fi alone can record
-  hundreds of views a minute without being undercounted, while once the club
-  counter reaches 600 every network over its share is limited. One attacker
-  (one IPv4 address, or one IPv6 /48 rotating /64s) can take about 600 of the
-  1,200 when it goes first, or 120 when other traffic already filled the floor,
-  and never all of it. An event must pass both the /64 and the /48 check. The
-  club counter is read once per call, so concurrent calls can overshoot the
-  floor by the number in flight; the 1,200 cap is atomic and never overshot.
+- Networks get a **headroom share**, not a hard cap. Each network (and each
+  /48) is entitled to 120 events a minute. Over that, an event is still
+  accepted only while the network's own count plus the club's own counter for
+  the minute is under **1,320** (the 1,200 club cap plus 120), so a network
+  can take at most half of the club's remaining headroom; its counter stops
+  there, so it is never rewritten without bound. Alone on a quiet club a
+  network (a stadium's shared Wi-Fi) records **660** a minute, which leaves 540
+  for everyone else. With y events already used by the rest of the club it is
+  held to about (1,320 - y) / 2: 360 at y = 600, 210 at y = 900, and its 120
+  floor from y = 1,080 up, so the share shrinks smoothly as the club fills
+  instead of dropping off a cliff at a fixed club count. Other networks can
+  still use about 1,080 of the 1,200 whatever one attacker does, because by
+  then it is down to its 120 floor. One attacker (one IPv4 address, or one
+  IPv6 /48 rotating /64s) can therefore take 660 of the 1,200 when it goes
+  first, fewer as other traffic arrives, and never all of it. An event must
+  pass both the /64 and the /48 check. The club counter is read once per call,
+  so concurrent calls can overshoot the headroom share by the number in
+  flight; the 1,200 cap is atomic and never overshot.
 - **Drops are counted.** Every `rate_limited` answer upserts +1 into
   `page_event_drop_counts` for the club's local day and the limit that said no
   (`network`, `visitor`, or `club`). The write happens once, after the caps and
@@ -1392,9 +1398,9 @@ directly. The database therefore accepts only **signed** calls.
   Each drop rewrites one row per club, day and reason; the table keeps spare
   room on each page (`fillfactor = 50`) so those updates stay in place.
 - The route keeps a best-effort per-instance limit keyed on the network key (on
-  the /48 for IPv6, on the address for IPv4) at 600 a minute, the most one
-  network can record in a minute, so floods are shed before the database
-  without ever cutting a busy shared network short. Events it sheds are not
+  the /48 for IPv6, on the address for IPv4) at 600 a minute, just under the 660
+  one network can record alone on a quiet club, so floods are shed before the
+  database without cutting a busy shared network short. Events it sheds are not
   counted as drops.
 - Beacon data is forgeable by anyone who can run a real browser. The per-network
   and per-club caps bound what a forger can add, and the report calls its

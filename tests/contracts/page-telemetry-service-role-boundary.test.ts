@@ -185,14 +185,18 @@ describe("page telemetry beacon service-role boundary", () => {
     expect(writer).toContain("'w:' || encode(sha256(v_salt || convert_to(v_wide, 'UTF8')), 'hex')");
   });
 
-  it("gives networks a fair share and counts every limited event, in the writer", async () => {
+  it("gives networks a headroom share and counts every limited event, in the writer", async () => {
     const sql = await readFile(resolve(ROOT, "supabase/migrations/20261119130000_page_telemetry.sql"), "utf8");
     const writer = sql.slice(sql.indexOf("create function onzio_private.record_page_event"), sql.indexOf("-- Archived-club hard purge:"));
-    // Over its 120 share a network is accepted while the club is below the shared floor (half of 1,200),
-    // and its counter stops at the club cap: both network buckets use the same rule.
-    expect(writer).toContain("c_shared_floor constant integer := 600;");
-    const rule = /where w\.hits < c_network_limit\s+or \(w\.hits < c_club_limit and v_club_hits < c_shared_floor\)/g;
+    // Over its 120 floor a network is accepted only while its own count plus the club's count is under the club cap
+    // plus 120 (1,320), so it takes at most half of the club's remaining headroom, and its counter stops there. Both
+    // network buckets use the same rule, which stays in the conflict WHERE so a counter that says no is not rewritten.
+    // There is no fixed shared floor (a cliff at a club count of 600) any more.
+    expect(writer).not.toContain("c_shared_floor");
+    const rule = /on conflict \(club_id, bucket, window_start\) do update set hits = w\.hits \+ 1\s+where w\.hits < c_network_limit\s+or w\.hits \+ v_club_hits < c_club_limit \+ c_network_limit\s+returning/g;
     expect(writer.match(rule)).toHaveLength(2);
+    expect(writer).toContain("c_network_limit constant integer := 120;");
+    expect(writer).toContain("c_club_limit constant integer := 1200;");
     // The visitor and club caps keep their plain limits.
     expect(writer).toMatch(/values \(p_club_id, v_hash, v_window, 1\)[\s\S]*?where w\.hits < c_visitor_limit/);
     expect(writer).toMatch(/values \(p_club_id, '\*', v_window, 1\)[\s\S]*?where w\.hits < c_club_limit\s+returning/);

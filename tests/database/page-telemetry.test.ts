@@ -644,36 +644,37 @@ describe("onzio.record_page_event signed calls", () => {
     }
   });
 
-  it("rate-limits a flood from one network rotating visitor material at half the club budget, keeping the rest for others", async () => {
-    // One machine, 1,300 requests in a minute, a new "visitor" (user agent) every time. Over its 120 share a
-    // network is still accepted while the club has used less than half (600) of its 1,200 a minute, then limited.
+  it("rate-limits a flood from one network rotating visitor material at half the club's headroom, keeping the rest for others", async () => {
+    // One machine, 1,300 requests in a minute, a new "visitor" (user agent) every time. Over its 120 floor a network is
+    // accepted while its own count plus the club's count is under 1,320. Alone on a quiet club both counts are equal, so
+    // event k (k - 1 already recorded) passes while 2 * (k - 1) < 1,320: exactly 660 are recorded.
     const statuses = await recordMany(
       CLUB_IDS.alpha,
       Array.from({ length: 1300 }, (_, i) => event({ visitorMaterial: material(`rotating-${i}`), path: `/news/n${i % 7}` })),
     );
-    expect(statuses.filter((status) => status === "recorded")).toHaveLength(600);
-    expect(statuses.filter((status) => status === "rate_limited")).toHaveLength(700);
-    expect(statuses.slice(0, 600).every((status) => status === "recorded")).toBe(true);
-    expect(await rows(CLUB_IDS.alpha)).toHaveLength(600);
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(660);
+    expect(statuses.filter((status) => status === "rate_limited")).toHaveLength(640);
+    expect(statuses.slice(0, 660).every((status) => status === "recorded")).toBe(true);
+    expect(await rows(CLUB_IDS.alpha)).toHaveLength(660);
 
-    // Only accepted events spent club-wide budget: 600 of 1,200, not 1,300, and the network's counter
+    // Only accepted events spent club-wide budget: 660 of 1,200, not 1,300, and the network's counter
     // stopped where it said no instead of being rewritten for every flood request.
     const afterFlood = await windows(CLUB_IDS.alpha);
-    expect(afterFlood.find((window) => window.bucket === "*")?.hits).toBe(600);
+    expect(afterFlood.find((window) => window.bucket === "*")?.hits).toBe(660);
     const networkBuckets = afterFlood.filter((window) => window.bucket.startsWith("n:"));
     expect(networkBuckets).toHaveLength(1);
-    expect(networkBuckets[0].hits).toBe(600);
-    // The 700 limited events are counted, not silent.
-    expect(await dropCounts(CLUB_IDS.alpha)).toEqual([{ local_date: await clubDay(CLUB_IDS.alpha), reason: "network", dropped: 700 }]);
+    expect(networkBuckets[0].hits).toBe(660);
+    // The 640 limited events are counted, not silent.
+    expect(await dropCounts(CLUB_IDS.alpha)).toEqual([{ local_date: await clubDay(CLUB_IDS.alpha), reason: "network", dropped: 640 }]);
 
     // A real visitor on a different network in the same minute is still recorded...
     expect(await record(CLUB_IDS.alpha, event({ visitorMaterial: material("real-visitor"), networkMaterial: material("network-b"), path: "/real" }))).toBe("recorded");
-    expect((await windows(CLUB_IDS.alpha)).find((window) => window.bucket === "*")?.hits).toBe(601);
-    expect(await rows(CLUB_IDS.alpha)).toHaveLength(601);
-    // ...and the other half of the club budget is still there for other networks: 599 more fill it to 1,200.
+    expect((await windows(CLUB_IDS.alpha)).find((window) => window.bucket === "*")?.hits).toBe(661);
+    expect(await rows(CLUB_IDS.alpha)).toHaveLength(661);
+    // ...and the rest of the club budget is still there for other networks: 539 more fill it to 1,200.
     const others = await recordMany(
       CLUB_IDS.alpha,
-      Array.from({ length: 599 }, (_, i) => event({ visitorMaterial: material(`other-${i}`), networkMaterial: material(`other-network-${i}`) })),
+      Array.from({ length: 539 }, (_, i) => event({ visitorMaterial: material(`other-${i}`), networkMaterial: material(`other-network-${i}`) })),
     );
     expect(others.every((status) => status === "recorded")).toBe(true);
     expect((await windows(CLUB_IDS.alpha)).find((window) => window.bucket === "*")?.hits).toBe(1200);
@@ -689,7 +690,7 @@ describe("onzio.record_page_event signed calls", () => {
   });
 });
 
-describe("telemetry fair-share network limits", () => {
+describe("telemetry headroom-share network limits", () => {
   const alpha = CLUB_IDS.alpha;
   const network = (name: string) => material(`network-${name}`);
 
@@ -704,100 +705,197 @@ describe("telemetry fair-share network limits", () => {
     expect(await dropCounts(alpha)).toEqual([]);
   });
 
-  it("limits a network to its 120 share once the club counter is at the shared floor, while a new network still records", async () => {
+  it("records exactly 660 for one network flooding a quiet club, and a fresh network still records afterwards", async () => {
+    // Own count and club count both start at 0 and rise together, so event k passes while 2 * (k - 1) < 1,320:
+    // k - 1 = 659 is the last that passes, event 661 (k - 1 = 660, 660 + 660 = 1,320) is the first refused.
+    const statuses = await recordMany(alpha, manyVisitors("flood", 1300, { networkMaterial: network("flood") }));
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(660);
+    expect(statuses.slice(0, 660).every((status) => status === "recorded")).toBe(true);
+    expect(statuses.slice(660).every((status) => status === "rate_limited")).toBe(true);
+    expect(await rows(alpha)).toHaveLength(660);
+    const counters = await windows(alpha);
+    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(660);
+    // The network's counter stopped at 660 instead of being rewritten for the 640 limited events.
+    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([660]);
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 640 }]);
+
+    // 540 of the club's 1,200 are left for everyone else.
+    expect(await record(alpha, event({ visitorMaterial: material("newcomer"), networkMaterial: network("newcomer") }))).toBe("recorded");
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(661);
+  });
+
+  it("gives a shared network about half of the headroom on a busy club, 360 instead of 120 at a club count of 600", async () => {
+    // Other networks have already used 600 of the club's minute. Event k has k - 1 recorded for this network and a club
+    // count of 600 + (k - 1), so it passes while (k - 1) + 600 + (k - 1) < 1,320, that is while k - 1 < 360: 360 are
+    // recorded (a cliff at a club count of 600 would have left 120). The counter is read once per call and the calls run
+    // one by one, so the club count it sees includes this network's own accepted events.
     await setClubCounter(alpha, 600);
+    const statuses = await recordMany(alpha, manyVisitors("match-day", 1000, { networkMaterial: network("busy") }));
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(360);
+    expect(statuses.slice(0, 360).every((status) => status === "recorded")).toBe(true);
+    expect(statuses.slice(360).every((status) => status === "rate_limited")).toBe(true);
+    expect(await rows(alpha)).toHaveLength(360);
+    // Accepted events spent club budget (600 + 360); the network's counter stopped at 360.
+    const counters = await windows(alpha);
+    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(960);
+    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([360]);
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 640 }]);
+
+    // A network that has not used its share is still recorded, and 240 of the club's 1,200 remain for others.
+    expect(await record(alpha, event({ visitorMaterial: material("newcomer"), networkMaterial: network("other") }))).toBe("recorded");
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(961);
+  });
+
+  it("shrinks a network's share smoothly from 660 to its 120 floor as the rest of the club fills", async () => {
+    // With y events already used by other networks, a network records n events where (n - 1) + y + (n - 1) is the last
+    // value under 1,320: n = (1,320 - y) / 2 (rounded up), never fewer than the 120 floor and never past the club cap.
+    const cases: Array<{ otherTraffic: number; recorded: number; note: string }> = [
+      { otherTraffic: 0, recorded: 660, note: "(1,320 - 0) / 2" },
+      { otherTraffic: 600, recorded: 360, note: "(1,320 - 600) / 2" },
+      { otherTraffic: 900, recorded: 210, note: "(1,320 - 900) / 2" },
+      { otherTraffic: 1079, recorded: 121, note: "just under 1,080: 121 events still fit, the 122nd would reach 1,321" },
+      { otherTraffic: 1080, recorded: 120, note: "1,080 and above: held at the 120 floor" },
+      { otherTraffic: 1100, recorded: 100, note: "above 1,080 the 1,200 club cap is what limits it: 1,200 - 1,100" },
+    ];
+    for (const { otherTraffic, recorded, note } of cases) {
+      await nextMinute(alpha);
+      if (otherTraffic > 0) await setClubCounter(alpha, otherTraffic);
+      const statuses = await recordMany(
+        alpha,
+        manyVisitors(`curve-${otherTraffic}`, recorded + 20, { networkMaterial: network(`curve-${otherTraffic}`) }),
+      );
+      expect(statuses.filter((status) => status === "recorded"), `${otherTraffic} other: ${note}`).toHaveLength(recorded);
+      expect(statuses.slice(0, recorded).every((status) => status === "recorded"), `${otherTraffic} other`).toBe(true);
+      expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits, `${otherTraffic} other: club counter`).toBe(otherTraffic + recorded);
+    }
+  });
+
+  it("holds a network to its 120 floor once the rest of the club has used 1,080 or more", async () => {
+    // 120 recorded takes the club to 1,200; event 121 has 120 + 1,200 = 1,320, which is not under 1,320.
+    await setClubCounter(alpha, 1080);
     const statuses = await recordMany(alpha, manyVisitors("over", 130, { networkMaterial: network("busy") }));
     expect(statuses.slice(0, 120).every((status) => status === "recorded")).toBe(true);
     expect(statuses.slice(120).every((status) => status === "rate_limited")).toBe(true);
     expect(await rows(alpha)).toHaveLength(120);
-    // Accepted events spent club budget (600 + 120); the network's counter stopped at its share.
+    // Accepted events spent club budget (1,080 + 120); the network's counter stopped at its 120 floor.
     const counters = await windows(alpha);
-    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(720);
+    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(1200);
     expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([120]);
+    // These are network drops: the network check runs before the club cap, which is full but not what said no.
     expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 10 }]);
 
-    // A network that has not used its share is still recorded, even past the floor.
-    expect(await record(alpha, event({ visitorMaterial: material("newcomer"), networkMaterial: network("other") }))).toBe("recorded");
-    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(721);
+    // The club cap still bounds everyone: a brand-new network is turned away by the full club.
+    expect(await record(alpha, event({ visitorMaterial: material("newcomer"), networkMaterial: network("other") }))).toBe("rate_limited");
+    expect(await dropCounts(alpha)).toEqual([
+      { local_date: await clubDay(alpha), reason: "club", dropped: 1 },
+      { local_date: await clubDay(alpha), reason: "network", dropped: 10 },
+    ]);
   });
 
-  it("limits a network that is past its share once other traffic takes the club past the shared floor", async () => {
+  it("limits a network that is past its floor once other traffic takes its own count plus the club's to 1,320", async () => {
     const early = await recordMany(alpha, manyVisitors("early", 400, { networkMaterial: network("early") }));
     expect(early.every((status) => status === "recorded")).toBe(true);
-    // 250 other networks, one event each: the club counter passes 600 (to 650).
+    // 519 other networks, one event each: the club counter reaches 919.
     const others = await recordMany(
       alpha,
-      Array.from({ length: 250 }, (_, i) => event({ visitorMaterial: material(`other-${i}`), networkMaterial: network(`other-${i}`) })),
+      Array.from({ length: 519 }, (_, i) => event({ visitorMaterial: material(`other-${i}`), networkMaterial: network(`other-${i}`) })),
     );
     expect(others.every((status) => status === "recorded")).toBe(true);
-    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(650);
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(919);
 
-    // The early network used 400 (over its 120 share) and is now limited; one that used 1 is not.
-    expect(await record(alpha, event({ visitorMaterial: material("early-again"), networkMaterial: network("early") }))).toBe("rate_limited");
+    // The early network has 400 (over its 120 floor): 400 + 919 = 1,319 is still under 1,320, so one more is recorded...
+    expect(await record(alpha, event({ visitorMaterial: material("early-again"), networkMaterial: network("early") }))).toBe("recorded");
+    // ...and now 401 + 920 = 1,321 is not: it is limited, while a network that used 1 event is not.
+    expect(await record(alpha, event({ visitorMaterial: material("early-third"), networkMaterial: network("early") }))).toBe("rate_limited");
     expect(await record(alpha, event({ visitorMaterial: material("other-0-again"), networkMaterial: network("other-0") }))).toBe("recorded");
     expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 1 }]);
   });
 
-  it("stops counting a network at the club cap, so its counter is not rewritten without bound", async () => {
-    // One visitor sends 1,300 events: 60 are recorded and the rest are visitor drops, but each one still reaches
-    // the network counter while the club is below the floor, which stops at 1,200.
+  it("stops counting a network once it has used its headroom share, so its counter is not rewritten without bound", async () => {
+    // One visitor sends 1,300 events: 60 are recorded and the rest are visitor drops, but each one still reaches the
+    // network counter while its own count plus the club's 60 is under 1,320, so the counter stops at 1,260.
     const statuses = await recordMany(alpha, Array.from({ length: 1300 }, (_, i) => event({ path: `/news/n${i % 5}` })));
     expect(statuses.filter((status) => status === "recorded")).toHaveLength(60);
-    expect((await windows(alpha)).filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([1200]);
+    expect((await windows(alpha)).filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([1260]);
     expect(await dropCounts(alpha)).toEqual([
-      { local_date: await clubDay(alpha), reason: "network", dropped: 100 },
-      { local_date: await clubDay(alpha), reason: "visitor", dropped: 1140 },
+      { local_date: await clubDay(alpha), reason: "network", dropped: 40 },
+      { local_date: await clubDay(alpha), reason: "visitor", dropped: 1200 },
     ]);
   });
 
-  it("keeps ten /64s inside one /48 to about half of the club budget, and still records a different /48", async () => {
+  it("keeps ten /64s inside one /48 to half of the club's headroom (660), and still records other networks", async () => {
     const wide = material("wide-attacker");
-    // One block rotating ten /64 addresses, a new visitor every time, 1,300 requests in a minute.
+    // One block rotating ten /64 addresses, a new visitor every time, 1,300 requests in a minute. The /48 counter and the
+    // club counter rise together, so it passes while 2 * (k - 1) < 1,320: 660 recorded, started first.
     const statuses = await recordMany(
       alpha,
       Array.from({ length: 1300 }, (_, i) =>
         event({ visitorMaterial: material(`rotating-${i}`), networkMaterial: network(`rot64-${i % 10}`), wideNetworkMaterial: wide }),
       ),
     );
-    const accepted = statuses.filter((status) => status === "recorded").length;
-    // At most the shared floor (600) plus one share (120) of the club's 1,200; started first, it takes exactly 600.
-    expect(accepted).toBeLessThanOrEqual(600 + 120);
-    expect(accepted).toBe(600);
-    expect(statuses.slice(0, 600).every((status) => status === "recorded")).toBe(true);
-    expect(await rows(alpha)).toHaveLength(600);
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(660);
+    expect(statuses.slice(0, 660).every((status) => status === "recorded")).toBe(true);
+    expect(statuses.slice(660).every((status) => status === "rate_limited")).toBe(true);
+    expect(await rows(alpha)).toHaveLength(660);
 
     const counters = await windows(alpha);
-    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(600);
-    expect(counters.filter((window) => window.bucket.startsWith("w:")).map((window) => window.hits)).toEqual([600]);
-    // Each /64 counter stopped at its share; none was rewritten for every limited request.
-    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual(Array(10).fill(120));
-    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 700 }]);
+    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(660);
+    // The /48 counter stopped where it said no.
+    expect(counters.filter((window) => window.bucket.startsWith("w:")).map((window) => window.hits)).toEqual([660]);
+    // Each /64 saw 130 requests and passed its own check every time (its count plus the club's 660 stays under 1,320);
+    // it was the /48 check that turned the last 640 away, so the /64 counters kept counting to 130.
+    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual(Array(10).fill(130));
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 640 }]);
 
-    // A different /48, and an IPv4 caller (no wide key), still record from the other half of the budget.
-    expect(
-      await record(alpha, event({ visitorMaterial: material("bystander-v6"), networkMaterial: network("bystander-64"), wideNetworkMaterial: material("wide-bystander") })),
-    ).toBe("recorded");
-    expect(await record(alpha, event({ visitorMaterial: material("bystander-v4"), networkMaterial: network("bystander-v4") }))).toBe("recorded");
-    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(602);
+    // Five real visitors on other networks (a different /48 each, and IPv4 callers with no wide key) still record.
+    const bystanders = await recordMany(alpha, [
+      ...Array.from({ length: 3 }, (_, i) =>
+        event({ visitorMaterial: material(`bystander-v6-${i}`), networkMaterial: network(`bystander-64-${i}`), wideNetworkMaterial: material(`wide-bystander-${i}`) }),
+      ),
+      ...Array.from({ length: 2 }, (_, i) => event({ visitorMaterial: material(`bystander-v4-${i}`), networkMaterial: network(`bystander-v4-${i}`) })),
+    ]);
+    expect(bystanders).toEqual(Array(5).fill("recorded"));
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(665);
   });
 
-  it("holds a /48 to its 120 share once the club counter is at the shared floor", async () => {
+  it("shares a /48's headroom the same way on a busy club: 360 recorded at a club count of 600", async () => {
     await setClubCounter(alpha, 600);
     const wide = material("wide-late");
     const statuses = await recordMany(
       alpha,
-      Array.from({ length: 130 }, (_, i) =>
+      Array.from({ length: 1000 }, (_, i) =>
         event({ visitorMaterial: material(`late-${i}`), networkMaterial: network(`late64-${i % 10}`), wideNetworkMaterial: wide }),
+      ),
+    );
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(360);
+    expect(statuses.slice(0, 360).every((status) => status === "recorded")).toBe(true);
+    expect(statuses.slice(360).every((status) => status === "rate_limited")).toBe(true);
+    const counters = await windows(alpha);
+    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(960);
+    expect(counters.filter((window) => window.bucket.startsWith("w:")).map((window) => window.hits)).toEqual([360]);
+    // Each /64 saw 100 requests, under its 120 floor, so every /64 check passed and the /48 check said no.
+    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual(Array(10).fill(100));
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 640 }]);
+  });
+
+  it("holds a /48 to its 120 floor once the rest of the club has used 1,080 or more", async () => {
+    await setClubCounter(alpha, 1080);
+    const wide = material("wide-full");
+    const statuses = await recordMany(
+      alpha,
+      Array.from({ length: 130 }, (_, i) =>
+        event({ visitorMaterial: material(`full-${i}`), networkMaterial: network(`full64-${i % 10}`), wideNetworkMaterial: wide }),
       ),
     );
     expect(statuses.filter((status) => status === "recorded")).toHaveLength(120);
     expect(statuses.slice(120).every((status) => status === "rate_limited")).toBe(true);
-    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(720);
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(1200);
     expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 10 }]);
   });
 
   it("does not spend a /48's counter on events its own /64 already limited", async () => {
-    await setClubCounter(alpha, 600);
+    // At a club count of 1,080 a network is held to its 120 floor, so its own /64 check says no from event 121 on.
+    await setClubCounter(alpha, 1080);
     const statuses = await recordMany(
       alpha,
       manyVisitors("single64", 125, { networkMaterial: network("single64"), wideNetworkMaterial: material("wide-single64") }),
@@ -815,8 +913,8 @@ describe("telemetry fair-share network limits", () => {
     expect(visitor.filter((status) => status === "rate_limited")).toHaveLength(3);
     expect(await dropCounts(alpha)).toEqual([{ local_date: day, reason: "visitor", dropped: 3 }]);
 
-    // network: the club is at the shared floor and one network sends 122 events, 2 over its share.
-    await setClubCounter(alpha, 600);
+    // network: the rest of the club has used 1,080, so one network is held to its 120 floor and sends 122 events, 2 over it.
+    await setClubCounter(alpha, 1080);
     const busy = await recordMany(alpha, manyVisitors("busy", 122, { networkMaterial: network("busy") }));
     expect(busy.filter((status) => status === "rate_limited")).toHaveLength(2);
 

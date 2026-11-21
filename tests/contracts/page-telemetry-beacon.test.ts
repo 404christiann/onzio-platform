@@ -481,9 +481,9 @@ describe("POST /api/t", () => {
     expect((await post(headers({ "x-real-ip": "203.0.113.51" }), body())).status).toBe(204);
   });
 
-  // The database lets a network past its 120-a-minute share while the club has room, up to about half of
-  // the club's 1,200 a minute, so the route's best-effort limit is that ceiling (600), not 120.
-  it("sheds a flood from one visitor before the database, at the most one network can record", async () => {
+  // The database lets a network past its 120-a-minute floor while its own count plus the club's is under
+  // 1,320 (up to 660 alone on a quiet club), so the route's best-effort limit sits just under that (600), not at 120.
+  it("sheds a flood from one visitor before the database, at the route's 600 a minute", async () => {
     const flood = headers({ "x-real-ip": "203.0.113.99" });
     for (let i = 0; i < 605; i += 1) await post(flood, body());
     expect(calls("record_page_event")).toHaveLength(600);

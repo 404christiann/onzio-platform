@@ -1,5 +1,47 @@
 # Diverse City FC Status
 
+## 2026-11-20 - TELEMETRY-01 P1: third onzio-bot review Low (shared networks undercounted on busy days)
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01` at `fb09c216` (on main `c0eeafbe`). **Status:** `in_progress`. The fix is local, unstaged and
+uncommitted, waiting for Christian's word to commit and push. Not merged; production untouched.
+
+**Completed (migration `20261119130000_page_telemetry.sql` edited in place):**
+- The 600 "shared floor" cliff is replaced by a **headroom share** for both the network (`n:`) and IPv6 /48 (`w:`)
+  buckets: past its 120/min floor, a network is accepted while its own count plus the club's count is under 1,320.
+  That is at most half of the club's remaining headroom. `c_shared_floor` is removed.
+- Result: a shared network (stadium Wi-Fi, a carrier's CGNAT address or /48) records about (1,320 − other traffic) / 2.
+  - 660 alone on a quiet club (was 600).
+  - 360 with the club at 600 (was 120).
+  - 210 at 900.
+  - Held at its 120 floor once other traffic reaches 1,080.
+- Same protection as before: other networks can reach about 1,080 before the club cap blanks anyone.
+- The route limiter stays at 600/min per network per instance; its comment now says the database ceiling is 660.
+- The plan doc's paragraph is rewritten. The entry below is superseded on the 600 fair-share numbers.
+
+**Files changed:** the migration, `app/api/t/route.ts` (comment only), `docs/onzio-platform-plan.md`,
+`tests/database/page-telemetry.test.ts`, `tests/contracts/page-telemetry-beacon.test.ts`,
+`tests/contracts/page-telemetry-service-role-boundary.test.ts`, this file.
+
+**Verification (Mac local Supabase, under `scripts/with-local-db-lock.sh`):**
+
+| Check | Result |
+|---|---|
+| Fresh reset | 94 migrations, ledger max `20261119130000` |
+| `db:types` / `db:types:check` | regenerated file identical; check passes |
+| telemetry + purge DB tests | 99/99 |
+| Full `test:db` | 1,445 passed |
+| `test:unit` | 4,526 passed |
+| `tsc`, ESLint | clean |
+| Mutation: old condition restored | 10 telemetry tests fail, including busy club (expected 360, got 120); restored afterwards |
+
+**Known trade-offs:** under a rotating /48, the per-/64 counters keep counting to 130 each while the /48 refuses. They
+are still bounded. The concurrent overshoot of the once-read club count is documented, not tested.
+
+**Next step:** Christian's word to commit, push and update the PR #158 description. Then the prod gate (backup →
+`migration list --linked` → dry run → "push" → read-only check → `TELEMETRY_INGEST_SECRET` → merge and deploy →
+Rose City SQL → confirm a real event lands → watch for `telemetry.retention_failed` / `telemetry.retention_backlog`).
+
 ## 2026-11-20 - TELEMETRY-01 P1: second onzio-bot review, two Lows plus the IPv6 rotation risk
 
 **Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch

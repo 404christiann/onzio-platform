@@ -278,12 +278,15 @@ revoke all on function onzio_private.page_event_text(jsonb, text, text, boolean)
 -- rate caps (network, wide network, visitor, club). Nothing before the add-on gate writes
 -- anything, and an event rejected by a network or visitor cap never spends club-wide budget.
 --
--- Fair share: a network (an IPv4 address or IPv6 /64, and for IPv6 also its /48) is entitled to
--- 120 events a minute. Over that, an event is still accepted while the club as a whole has used
--- less than half of its 1,200 a minute, so a stadium's shared Wi-Fi is not undercounted when the
--- site is otherwise quiet. Once the club is past that shared floor, networks over their share are
--- limited, so one network (or one /48 rotating /64s) can take about half of the club budget and
--- never all of it. Every limited event is counted per club, local day and reason.
+-- Headroom share: a network (an IPv4 address or IPv6 /64, and for IPv6 also its /48) is entitled to
+-- 120 events a minute. Over that, an event is still accepted only while the network's own count
+-- plus the club's count stays under c_club_limit + c_network_limit (1,320), so a network can take
+-- at most half of the club's remaining headroom. Alone on a quiet club, a stadium's shared Wi-Fi
+-- records 660 a minute. When the rest of the club has already used y events, it is held to about
+-- (1,320 - y) / 2, a share that shrinks smoothly to the 120 floor as y reaches 1,080, while other
+-- networks keep the room that is left up to the club cap. So a busy shared network is not cut
+-- back to 120 in the middle of a match day, and one network (or one /48 rotating /64s) can never
+-- take all of the club budget. Every limited event is counted per club, local day and reason.
 create function onzio_private.record_page_event(
   p_club_id uuid,
   p_payload text,
@@ -297,8 +300,6 @@ declare
   c_network_limit constant integer := 120;
   c_visitor_limit constant integer := 60;
   c_club_limit constant integer := 1200;
-  -- Below this club-wide count (half of c_club_limit) a network over c_network_limit is still accepted.
-  c_shared_floor constant integer := 600;
   c_max_payload_bytes constant integer := 8192;
   c_max_skew_ms constant numeric := 300000;
   c_visit_gap constant interval := interval '30 minutes';
@@ -463,8 +464,9 @@ begin
   end if;
 
   -- What the club has already used of this minute's budget. It decides whether a network over its
-  -- share is still accepted. It is read once, so concurrent calls can overshoot the floor by the
-  -- number of calls in flight; the club cap below is atomic and is never overshot.
+  -- 120 floor is still accepted (its own count plus this must stay under 1,320). It is read once,
+  -- so concurrent calls can overshoot that headroom share by the number of calls in flight; the
+  -- club cap below is atomic and is never overshot.
   v_club_hits := coalesce((
     select w.hits
     from onzio_private.page_event_rate_windows w
@@ -476,22 +478,23 @@ begin
   <<limits>>
   begin
     -- Cap 1, per network (IPv4 address or IPv6 /64): one machine rotating user agents is still one
-    -- network. Fair share: over c_network_limit it is accepted only while the club is below the
-    -- shared floor, and its counter stops at c_club_limit. A counter that says no is not written
+    -- network. Headroom share: over c_network_limit it is accepted only while its own count plus the
+    -- club's count is under c_club_limit + c_network_limit, so it takes at most half of the club's
+    -- remaining headroom, and its counter stops there. A counter that says no is not written
     -- again, so a flood costs reads, not row versions.
     v_hits := null;
     insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
     values (p_club_id, v_network_bucket, v_window, 1)
     on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
       where w.hits < c_network_limit
-         or (w.hits < c_club_limit and v_club_hits < c_shared_floor)
+         or w.hits + v_club_hits < c_club_limit + c_network_limit
     returning w.hits into v_hits;
     if v_hits is null then
       v_drop := 'network';
       exit limits;
     end if;
 
-    -- Cap 1b, per IPv6 /48 (IPv6 callers only), same fair share: one block rotating its /64s
+    -- Cap 1b, per IPv6 /48 (IPv6 callers only), same headroom share: one block rotating its /64s
     -- still shares one budget. An event must pass both this and cap 1.
     if v_wide_bucket is not null then
       v_hits := null;
@@ -499,7 +502,7 @@ begin
       values (p_club_id, v_wide_bucket, v_window, 1)
       on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
         where w.hits < c_network_limit
-           or (w.hits < c_club_limit and v_club_hits < c_shared_floor)
+           or w.hits + v_club_hits < c_club_limit + c_network_limit
       returning w.hits into v_hits;
       if v_hits is null then
         v_drop := 'network';
