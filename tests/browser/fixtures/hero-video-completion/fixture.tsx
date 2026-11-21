@@ -18,7 +18,7 @@ function Page() {
           <a href="/admin/roster">Roster</a>
         </nav>
         <p data-refreshed={refreshed} hidden>{refreshed}</p>
-        {controller ? <HeroVideoControl controller={controller} disabled={false} /> : <p>Loading the editor…</p>}
+        {controller ? <HeroVideoControl controller={controller} disabled={new URLSearchParams(window.location.search).has("disabled")} /> : <p>Loading the editor…</p>}
       </div>
     </div>
   );

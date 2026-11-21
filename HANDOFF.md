@@ -1,3 +1,7 @@
+## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI
+
+- The Rose City hero video control is now an Untitled-style uploader titled "Video". It has a drop zone with drag and drop, and a file row with name, size, bar, % and Trash2 cancel that takes the zone's place while a video uploads or processes. Live shows "Completed" and a check; failure shows a red row with Try again. UI only, no migration. Branch `claude/rc-hero-video-uploader-ui`, PR open, not merged. Record: `STATUS.md` (RC-HERO-VIDEO-UPLOADER-UI).
+
 ## 2026-11-21 - RC-HERO-VIDEO-READINESS
 
 - Readiness from Bunny's Stream API instead of an anonymous CDN HEAD (prod 403 root cause), one progress bar from upload to live, daily cap 10, no migration. Branch `claude/rc-hero-video-readiness`, PR open, not merged. Record: `STATUS.md` (RC-HERO-VIDEO-READINESS).

@@ -16,15 +16,179 @@
   object-fit: cover;
 }
 
-.progress {
+.uploader {
   display: grid;
+  gap: 2px;
+  min-width: 0;
+  max-width: 28rem;
+}
+
+/* The drop zone is one native button. aria-disabled (not disabled) keeps drag events flowing so a stray drop never opens the file in the browser. */
+.zone {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 16px;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s ease-out, background-color .15s ease-out;
+}
+
+.zone > * {
+  pointer-events: none;
+}
+
+.zone:hover,
+.zone[data-dragging] {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / .06);
+}
+
+.zone:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.zone[aria-disabled="true"] {
+  cursor: default;
+  opacity: .55;
+}
+
+.zone[aria-disabled="true"]:hover {
+  border-color: hsl(var(--border));
+  background: hsl(var(--background));
+}
+
+.zoneIcon,
+.rowIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--muted-foreground));
+}
+
+.zoneTitle {
+  font-size: 13px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+
+.zoneLink {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.zoneHint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  max-width: 28rem;
+  padding: 14px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--background));
+}
+
+.row[data-hero-row="failed"] {
+  border-color: hsl(var(--destructive) / .6);
+  background: hsl(var(--destructive) / .05);
+}
+
+.rowIcon {
+  border-radius: 10px;
+}
+
+.rowIcon[data-tone="error"] {
+  background: hsl(var(--destructive) / .12);
+  color: hsl(var(--destructive));
+}
+
+.rowBody {
+  display: grid;
+  flex: 1;
   gap: 6px;
   min-width: 0;
 }
 
+.rowHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rowMeta {
+  min-width: 0;
+}
+
+.fileName {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileSize {
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+
+.trash {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px 0 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+
+.trash:hover {
+  background: hsl(var(--accent));
+  color: color-mix(in srgb, hsl(var(--destructive)) 75%, hsl(var(--foreground)));
+}
+
+.trash:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.barLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .track {
+  flex: 1;
+  min-width: 0;
   height: 8px;
-  max-width: 28rem;
   overflow: hidden;
   border-radius: 999px;
   background: hsl(var(--secondary));
@@ -38,14 +202,30 @@
   transition: width .2s ease-out;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bar { transition: none; }
+.percent {
+  flex: none;
+  min-width: 3ch;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: hsl(var(--foreground));
 }
 
-.status {
+.phaseLabel {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+
+.alert {
+  color: hsl(var(--destructive));
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .check {
@@ -53,17 +233,28 @@
   color: #34C759;
 }
 
-.check path {
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-}
-
 :global(.admin-theme[data-admin-theme="dark"]) .check {
   color: #30D158;
+}
+
+.status {
+  display: block;
+}
+
+.srOnly,
+.status:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar { transition: none; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -72,17 +263,13 @@
     animation: heroBarPulse 1.6s ease-in-out infinite;
   }
 
-  .status:has(.check) {
+  .check {
     animation: heroPop var(--admin-motion-save-pop, 320ms) var(--admin-motion-ease-out, ease-out);
-  }
-
-  .check path {
-    animation: heroDraw var(--admin-motion-save-check-draw, 280ms) var(--admin-motion-ease-out, ease-out) var(--admin-motion-save-check-delay, 80ms) both;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .status:has(.check),
+  .check,
   .check path {
     animation: none;
   }
@@ -94,23 +281,7 @@
 }
 
 @keyframes heroPop {
-  0% { transform: scale(.97); }
-  60% { transform: scale(1.02); }
+  0% { transform: scale(.85); }
+  60% { transform: scale(1.1); }
   100% { transform: none; }
-}
-
-@keyframes heroDraw {
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
-}
-
-/* An empty live region stays in the DOM for screen readers but takes no space. */
-.status:empty {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
 }
