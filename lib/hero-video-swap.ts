@@ -217,9 +217,14 @@ export async function safeDeleteHeroVideo(clubId: string, collectionId: string, 
  * orphaned. `safeDeleteHeroVideo` still guards live, previous and Diverse City
  * guids, and `keepGuid` protects the video being finalized.
  */
-/** An upload that never received bytes, older than the upload window. */
-function staleZeroByte(video: { storageSize: number; dateUploaded: string }) {
+/**
+ * An upload that never received bytes, older than the upload window.
+ * Status 0 (Created) and 6 (UploadFailed) match the abandoned rule in sweepStale.
+ * A later status can still report storageSize 0 while an encode is slow.
+ */
+function staleZeroByte(video: { storageSize: number; status: number; dateUploaded: string }) {
   if (video.storageSize !== 0) return false;
+  if (video.status !== 0 && video.status !== 6) return false;
   const uploaded = Date.parse(video.dateUploaded);
   return !Number.isNaN(uploaded) && Date.now() - uploaded > UPLOAD_WINDOW_SECONDS * 1000;
 }

@@ -196,6 +196,13 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
         set({ status });
         return complete(liveFromStatus(status, guid), "replace");
       }
+      // The row was cleared (another upload replaced it, or the webhook/cron dropped it) and this guid did not go live.
+      if (!stillPending) {
+        pendingGuid = null;
+        clearAwaiting();
+        set({ ...idle(status) });
+        return;
+      }
       const encodeProgress = stillPending && typeof status.pending?.encodeProgress === "number" ? status.pending.encodeProgress : null;
       set({ phase: "preparing", status, progress: null, encodeProgress, error: null, message: HERO_VIDEO_PREPARING_COPY });
       await deps.sleep(HERO_VIDEO_POLL_MS);

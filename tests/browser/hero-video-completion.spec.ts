@@ -6,7 +6,7 @@ import type { ViteDevServer } from "vite";
 import { classifyBunnyStreamStatus, parseBunnyStreamWebhook, verifyBunnyStreamSignature } from "../../lib/bunny-stream-webhook";
 
 const repo = process.cwd();
-const artifactDir = "/opt/cursor/artifacts";
+const artifactDir = process.env.HERO_VIDEO_SCREENSHOT_DIR ?? resolve(repo, "test-results/hero-video-completion");
 const SECRET = "read-only-library-key";
 const LIVE = "11111111-1111-4111-8111-111111111111";
 const PREVIOUS = "22222222-2222-4222-8222-222222222222";
