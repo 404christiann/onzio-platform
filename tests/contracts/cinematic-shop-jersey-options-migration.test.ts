@@ -111,7 +111,8 @@ describe("Rose City shop and homepage migration, reconciled with main", () => {
     const later = others.filter((file) => file > NAME);
     // Only Rose City's own later migrations may sort after it (today: the archived-club purge tables),
     // plus main packages named here, which the loop below checks do not redefine its functions.
-    const laterMainPackages = ["20261118200000_media_upload_quota.sql", "20261119010000_sponsor_and_news_caps.sql", "20261119090000_staging_insert_requires_reservation.sql", "20261119120000_media_orphan_sweep.sql", "20261120230000_hero_video_swap.sql"]; // RC-ADMIN-10b, 10a, 10c, 10d, RC-HERO-VIDEO-SWAP (defines only hero_video functions)
+    // TELEMETRY-01's page telemetry redefines only the archived-club purge.
+    const laterMainPackages = ["20261118200000_media_upload_quota.sql", "20261119010000_sponsor_and_news_caps.sql", "20261119090000_staging_insert_requires_reservation.sql", "20261119120000_media_orphan_sweep.sql", "20261120230000_hero_video_swap.sql", "20261121060000_page_telemetry.sql"]; // RC-ADMIN-10b, 10a, 10c, 10d, RC-HERO-VIDEO-SWAP (defines only hero_video functions), TELEMETRY-01
     expect(later.every((file) => file.includes("_cinematic_") || laterMainPackages.includes(file)), later.join(", ")).toBe(true);
     const ours = /function (onzio_private\.validate_cinematic_shop_section|onzio\.save_shop_page|onzio_private\.validate_cinematic_shop_content|onzio_private\.homepage_binding_identity|onzio_private\.homepage_snapshot|onzio\.save_homepage)\(/;
     for (const file of later) expect(ours.test(readFileSync(resolve(MIGRATIONS, file), "utf8")), file).toBe(false);

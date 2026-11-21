@@ -1,5 +1,255 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-01 P1: 60 s timeout on the slow retention-sweep test
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01` at `008355c3`. **Status:** `in_progress`, waiting on the prod gate. The change is local and
+unstaged (not committed or pushed). Production untouched.
+
+**Completed:** the retention-sweep test "catches up on a backlog…" in `tests/database/page-telemetry.test.ts` now has
+its own `60_000` ms timeout, in the same per-test style as `site-coordination-full-site.test.ts`. The global 15 s
+timeout and all other tests are unchanged.
+
+**Files changed:** `tests/database/page-telemetry.test.ts` (one line), this file.
+
+**Verification (Mac local Supabase, reset plus both runs in one DB-lock hold, no `ANALYZE`):**
+
+| Run | Slow test | File result |
+|---|---|---|
+| First run after reset | 226 ms | 88/88 |
+| Second run, no reset | 22,502 ms | 88/88 (would have failed at 15 s) |
+
+`tsc --noEmit` and ESLint on the test file are clean.
+
+The earlier "known flake" note below had the order backwards for these runs: the first run after a reset was fast and
+the second was slow. A repeat attempt showed the same order (213 ms, then 20,574 ms). After the second run,
+`onzio.page_events` had about 34,600 dead tuples and had never been analyzed. That suggests the 12,000-row inserts
+leave dead rows and stale statistics that slow the next run. It is not proven. The 60 s timeout covers both orders.
+
+**Next step:** Christian's word to commit and push this. Then the prod gate below, each step on his word.
+
+## 2026-11-21 - TELEMETRY-01 P1: rebased onto #209, migration retimestamped to 20261121060000
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01`, rebased onto main `84de7060` (#209 RC-HERO-VIDEO-SWAP). **Status:** `in_progress`, waiting on
+the prod gate. Not merged; production untouched.
+
+**Completed:**
+- Rebased the branch onto main. Both sides were kept in every conflict:
+  - this file
+  - `lib/database.generated.ts`
+  - the three migration-order contract tests
+  - the architecture service-role allowlist (`lib/hero-video-swap.ts` and `lib/telemetry/retention.ts`)
+  - the purge test fixtures (auto-merged)
+- The migration is renamed to **`20261121060000_page_telemetry.sql`**. #209's `20261120230000_hero_video_swap.sql`,
+  which goes into production before #209 merges, would otherwise sort after it, and `db push` refuses out-of-order
+  migrations.
+  - The operator SQL guard messages and the tests point at the new name.
+  - The entries below that say `20261119130000` are history.
+- `purge_archived_club` check: no migration after `20261117020000` redefines it. Ours is that body plus
+  `'onzio.page_events'`.
+- The 2026-11-21 PR description and the fourth onzio-bot review reply (trade-off accepted, the plan doc line) are done.
+
+**Verification (Mac local Supabase, under the DB lock):**
+
+| Check | Result |
+|---|---|
+| Fresh reset | 95 migrations, ledger max `20261121060000` |
+| `db:types` / `db:types:check` | regenerated output identical; check passes |
+| Full `test:db` (warm DB) | 1,477 passed, twice |
+| `test:unit` | 4,689 passed |
+| `tsc`, ESLint | clean (after `npm ci` for #209's `tus-js-client`) |
+
+**Known flake:** on the first run right after a fresh `db reset`, without `ANALYZE`, the retention-sweep test "catches
+up on a backlog…" can exceed the 15 s test timeout (it took 16-19.5 s). It passes in about 240 ms on a warm DB, and
+reset plus `ANALYZE` gives 99/99. The cause is not proven.
+
+**Next step:** the prod gate, each step on Christian's word.
+1. Backup.
+2. `migration list --linked`: only `20261121060000` missing, with `20261120230000` already on Remote.
+3. Dry run.
+4. "push".
+5. Read-only check.
+6. `TELEMETRY_INGEST_SECRET`.
+7. Merge and deploy.
+8. Rose City SQL.
+9. Confirm a real event lands.
+10. Watch the retention logs.
+
+## 2026-11-20 - TELEMETRY-01 P1: third onzio-bot review Low (shared networks undercounted on busy days)
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01` at `fb09c216` (on main `c0eeafbe`). **Status:** `in_progress`. The fix is local, unstaged and
+uncommitted, waiting for Christian's word to commit and push. Not merged; production untouched.
+
+**Completed (migration `20261119130000_page_telemetry.sql` edited in place):**
+- The 600 "shared floor" cliff is replaced by a **headroom share** for both the network (`n:`) and IPv6 /48 (`w:`)
+  buckets: past its 120/min floor, a network is accepted while its own count plus the club's count is under 1,320.
+  That is at most half of the club's remaining headroom. `c_shared_floor` is removed.
+- Result: a shared network (stadium Wi-Fi, a carrier's CGNAT address or /48) records about (1,320 − other traffic) / 2.
+  - 660 alone on a quiet club (was 600).
+  - 360 with the club at 600 (was 120).
+  - 210 at 900.
+  - Held at its 120 floor once other traffic reaches 1,080.
+- Same protection as before: other networks can reach about 1,080 before the club cap blanks anyone.
+- The route limiter stays at 600/min per network per instance; its comment now says the database ceiling is 660.
+- The plan doc's paragraph is rewritten. The entry below is superseded on the 600 fair-share numbers.
+
+**Files changed:** the migration, `app/api/t/route.ts` (comment only), `docs/onzio-platform-plan.md`,
+`tests/database/page-telemetry.test.ts`, `tests/contracts/page-telemetry-beacon.test.ts`,
+`tests/contracts/page-telemetry-service-role-boundary.test.ts`, this file.
+
+**Verification (Mac local Supabase, under `scripts/with-local-db-lock.sh`):**
+
+| Check | Result |
+|---|---|
+| Fresh reset | 94 migrations, ledger max `20261119130000` |
+| `db:types` / `db:types:check` | regenerated file identical; check passes |
+| telemetry + purge DB tests | 99/99 |
+| Full `test:db` | 1,445 passed |
+| `test:unit` | 4,526 passed |
+| `tsc`, ESLint | clean |
+| Mutation: old condition restored | 10 telemetry tests fail, including busy club (expected 360, got 120); restored afterwards |
+
+**Known trade-offs:** under a rotating /48, the per-/64 counters keep counting to 130 each while the /48 refuses. They
+are still bounded. The concurrent overshoot of the once-read club count is documented, not tested.
+
+**Next step:** Christian's word to commit, push and update the PR #158 description. Then the prod gate (backup →
+`migration list --linked` → dry run → "push" → read-only check → `TELEMETRY_INGEST_SECRET` → merge and deploy →
+Rose City SQL → confirm a real event lands → watch for `telemetry.retention_failed` / `telemetry.retention_backlog`).
+
+## 2026-11-20 - TELEMETRY-01 P1: second onzio-bot review, two Lows plus the IPv6 rotation risk
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01` at `bed553e4` (on main `c0eeafbe`). **Status:** `in_progress`. The fixes are local, unstaged and
+uncommitted, waiting for Christian's word to commit and push. Not merged; production untouched.
+
+**Completed (migration `20261119130000_page_telemetry.sql` edited in place):**
+- **Low A (retention depends on traffic):** the daily cron `/api/cron/telemetry-retention` runs at `45 10 * * *`. It uses
+  the same `CRON_SECRET` pattern as the media orphan sweep.
+  - It calls `onzio.sweep_page_telemetry(p_max_events default 100000)`, which only the service role can run (security
+    definer, empty search path).
+  - For every club it deletes salts more than 2 UTC days old, rate windows older than 1 hour, drop counts older than
+    90 days, and events older than 90 days (in batches of 5,000, oldest first). It reports `moreEventsRemain`.
+  - The beacon's import graph still has no service-role client.
+- **Low B (shared IPs undercount) and the IPv6 rotation risk:**
+  - **Fair share:** a network over its 120/min share is still accepted while the club's counter is under 600 that
+    minute. The network counter stops at 1,200.
+  - **New IPv6 /48 tier:** a `w:` bucket follows the same rule. One IPv4 address or one /48 can take about 600 + 120 of
+    the 1,200.
+  - **Route limiter:** it now keys on the /48 (IPv6) or the address, and its per-instance limit is 600/min.
+  - **Counted drops:** every `rate_limited` result after the add-on gate is counted in
+    `onzio_private.page_event_drop_counts` by club, local day and reason, so the report can disclose drops.
+- **Plan:** the TELEMETRY-01 section is updated, and the P1 operator steps now end with "confirm a real event lands".
+
+**Files changed:** the migration, `app/api/t/route.ts`, `app/api/cron/telemetry-retention/route.ts` (new),
+`lib/telemetry/{beacon,visitor,retention}.ts` (`retention.ts` is new), `lib/database.generated.ts`, `vercel.json`,
+`docs/onzio-platform-plan.md`, telemetry tests (beacon, boundary, new retention-cron contract, new
+`lib/__tests__/telemetry-retention.test.ts`, `tests/database/page-telemetry.test.ts`),
+`tests/database/purge-archived-club.test.ts`, `tests/architecture/platform-architecture.test.ts`, and this entry.
+
+**Verification (Mac, shared local stack, under the lock after RC-HERO-VIDEO-SWAP released it):**
+- Fresh `supabase db reset --local`: 94 migrations, ledger max `20261119130000`.
+- `db:types` output is identical to the hand edit, and `db:types:check` matches.
+- `page-telemetry` + `purge-archived-club`: 95/95 passed.
+- Full `test:db`: 80 files, 1441 tests passed. The first run had one failure, a PostgREST schema-cache error right after
+  the reset in `owner-admin-membership`; the clean rerun passed.
+- `tsc` clean. `test:unit`: 378 files, 4526 tests passed. eslint clean.
+
+**Blockers / decisions:**
+- None for the code.
+- RC-HERO-VIDEO-SWAP (#209) overlaps on the three migration-order tests, `lib/database.generated.ts` and
+  `purge-archived-club.test.ts`, so whichever PR merges second rebases.
+
+**Next step:** Christian's word to commit and push. Then the prod gate: backup, `migration list`, dry run, "push",
+read-only check, read the ingest key and set `TELEMETRY_INGEST_SECRET`, merge, deploy, Rose City SQL, confirm a real
+event lands.
+
+## 2026-11-20 - TELEMETRY-01 P1: onzio-bot review fixes (signed writes, network cap, retention sweep)
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01` at `43c0cb54` (on main `9995de69`). **Status:** `in_progress`. The fixes are local, unstaged
+and uncommitted, waiting for Christian's word to commit and push. Not merged; production untouched.
+
+**Completed (migration `20261119130000_page_telemetry.sql` edited in place; it is not applied in production):**
+- **High (forgery through PostgREST):** the anon key could call `onzio.record_page_event` with any club and any fields.
+  - Writes are now signed. The migration creates `onzio_private.telemetry_ingest_keys`, one row holding a random
+    32-byte key, with no API grants.
+  - `/api/t` signs `club_id + "\n" + payload` with `TELEMETRY_INGEST_SECRET` (64 lowercase hex) and drops every event
+    when that variable is unset.
+  - The RPC is now `(uuid, text, text)`. It checks the HMAC before parsing anything and returns `bad_signature` or
+    `stale` (more than 5 minutes off) without writing. The unsigned `(uuid, jsonb)` versions are dropped.
+- **Medium (club-cap DoS):** a per-network cap runs first: 120 per minute per club, keyed on HMAC of the IPv4 address
+  or the IPv6 /64, salted daily and stored only in rate windows. Then the per-visitor cap (60), then the club cap
+  (1,200), which only events that passed the first two can spend. A counter already at its cap isn't rewritten. The
+  route limiter now keys on the network.
+- **Low (retention):**
+  - When a club's new minute opens on accepted traffic, a bounded sweep runs across all clubs. It deletes salts more
+    than 2 UTC days old and up to 5,000 events older than 90 days, using the new `page_events (occurred_at)` index.
+  - A trigger on `club_addons` delete removes that club's salts and counters.
+- **Test gaps:** contract tests for the layout mounting the beacon only behind `clubHasTelemetry`, and for `crawl` in the
+  bot list.
+- The plan section and both operator SQL files are updated. The SQL files now also guard that the key row exists.
+
+**Files changed:** the migration, `app/api/t/route.ts`, `lib/telemetry/{beacon,visitor,ingest}.ts` (`ingest.ts` is new),
+`lib/database.generated.ts`, both operator SQL files, `docs/onzio-platform-plan.md`, the three telemetry test files, and
+this entry.
+
+**Verification (Mac, shared local stack; DB work done in one lock hold after the RC-HERO-VIDEO-SWAP session released it):**
+- Fresh `supabase db reset --local` applied all 94 migrations (ledger max `20261119130000`).
+- `db:types` output is identical to the hand edit, and `db:types:check` matches.
+- `page-telemetry` + `purge-archived-club`: 72/72 passed.
+- Full `test:db`: 80 files, 1418 tests passed.
+- `tsc` clean. `test:unit`: 374 files, 4464 tests passed. eslint on the changed files is clean.
+
+**Blockers / decisions:**
+- Production gets one more step. After the migration, run `select encode(key, 'hex') from
+  onzio_private.telemetry_ingest_keys;` once and set `TELEMETRY_INGEST_SECRET` in Vercel Production.
+- The migration now runs `create extension if not exists pgcrypto with schema extensions`, and no earlier migration
+  uses pgcrypto. The production dry run must show it applies cleanly.
+- RC-HERO-VIDEO-SWAP also edits the three migration-order tests and `lib/database.generated.ts`, so whichever PR merges
+  second needs a small rebase.
+
+**Next step:** Christian's word to commit and force-push to PR #158 for onzio-bot re-review. Then follow the production
+gate: backup, `migration list`, dry run, his "push", a read-only check, merge.
+
+## 2026-11-20 - TELEMETRY-01 P1 finish: rebased onto main, migration retimestamped to 20261119130000
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch `agent/telemetry-01`,
+worktree `~/Downloads/onzio-telemetry-01`, on main `04fa6ae6`. **Status:** `in_progress`: local, unstaged and uncommitted;
+the PR, the remote branch and production are unchanged.
+
+**Completed:**
+- Reapplied PR commit `3e33720f` on current main as working-tree changes. The local branch ref moved to `origin/main`;
+  the old commit is still on `origin/agent/telemetry-01`.
+- Migration renamed `20261118020000_page_telemetry.sql` → `20261119130000_page_telemetry.sql` (after main's latest,
+  `20261119120000_media_orphan_sweep.sql`). Its `onzio_private.purge_archived_club` is main's current body from
+  `20261117020000_cinematic_purge_tables.sql`, verbatim, plus `'onzio.page_events'` at the head of `v_order`. The three
+  `onzio_private` telemetry tables cascade from `onzio.clubs` and are not listed.
+- PageBeacon mount kept in all three branches of `app/%5Fclubs/[slug]/layout.tsx`. `lib/database.generated.ts` was regenerated:
+  +85/-0 against main, telemetry only.
+- Old filename replaced in both operator SQL files, `page-telemetry-service-role-boundary`, `purge-archived-club`, and the
+  three migration-order contract tests.
+
+**Files changed:** the same 21 paths as the PR commit, plus this entry.
+
+**Verification (Mac, shared local stack, DB runs under `scripts/with-local-db-lock.sh`):**
+- `npx tsc --noEmit`: clean.
+- `npm run test:unit`: 371 files, 4401 tests passed.
+- Fresh `supabase db reset --local`: all 94 migrations applied in order (ledger max `20261119130000`). Full `test:db` in the
+  same lock hold: 80 files, 1395 tests passed. `npm run db:types:check` matched.
+- `next build` passed. PageBeacon compiles into the club layout chunk (about 0.7 KB minified) and imports only `react` and
+  `next/navigation`. That chunk has no cinematic or Rose City code, so the change adds none to Diverse City routes.
+  PageBeacon renders `null` (no DOM, no styles), so it adds 0 CLS.
+
+**Blockers / decisions:** none for the code. Every production step waits on Christian's word: the Vercel env var, the
+linked migration list, the migration push, the deploy, the operator SQL, the PR update and force-push, and the merge.
+Observed and left as is (outside P1): main's RC-PREVIEW middleware 404s `POST /api/t` on the Rose City preview host, so
+the preview records nothing. This fails closed.
+
+**Next step:** Christian reviews the diff, then says when to commit, force-push to PR #158, and run the production
+sequence.
+
 ## 2026-11-20 - RC-HERO-VIDEO-SWAP: Rose City admins replace the homepage hero video (migration, local only)
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet subagents building), `RC-HERO-VIDEO-SWAP`.

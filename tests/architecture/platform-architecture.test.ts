@@ -243,6 +243,9 @@ describe("tenant and privileged-boundary architecture contract", () => {
       /^lib\/media-orphan-sweep\.ts$/,
       // RC-HERO-VIDEO-SWAP: counter and swap RPCs for the hero video replace flow.
       /^lib\/hero-video-swap\.ts$/,
+      // TELEMETRY-01: the daily telemetry retention sweep. Never part of the public beacon's import graph
+      // (tests/contracts/page-telemetry-service-role-boundary.test.ts).
+      /^lib\/telemetry\/retention\.ts$/,
       /^lib\/billing-lifecycle\.ts$/,
       /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
