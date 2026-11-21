@@ -1,3 +1,9 @@
+## 2026-11-21 - TELEMETRY-05: monthly sponsor report (print to PDF)
+
+- **Status:** `ready for review`, branch `claude/telemetry-05-report` (from TELEMETRY-02 `dd4bfb85`), PR open, not merged. No migration, env or production change. Record: `STATUS.md` (TELEMETRY-05).
+- **What:** `/admin/insights/report?month=&sponsor=` prints one sheet per sponsor-month from the daily rollups only (signed-in client, Insights-tab access); "Download PDF" is the browser print dialog, no new dependency. `reportHref()` in `lib/telemetry/report-data.ts` is for TELEMETRY-04's slot.
+- **Exact next step:** merge after TELEMETRY-02 and TELEMETRY-04; rebase onto main and rerun the checks first.
+
 ## 2026-11-21 - TELEMETRY-04: Sponsor Insights dashboard, time on page, campaign link builder
 
 - **Status:** `ready for review`. Branch `claude/telemetry-04-insights`, rebased onto main `235eff36` (after

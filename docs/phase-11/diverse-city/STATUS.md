@@ -1,5 +1,62 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-05: monthly sponsor report (print to PDF)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet 5.5 workers), TELEMETRY-05 (telemetry P5). Branch
+`claude/telemetry-05-report` from `origin/claude/telemetry-02-data` at `dd4bfb85`; code commit `3c73d435` plus this
+record. PR open, not merged.
+**Status:** `ready for review`. Merge after TELEMETRY-02 and TELEMETRY-04. No migration, schema, env, Vercel, Stripe or
+production change.
+
+**Completed:**
+- Route `app/admin/(protected)/insights/report/page.tsx` (`?month=YYYY-MM&sponsor=<uuid|all>`), same access as the
+  Insights tab (`loadAdminTabPage("insights")`: fresh session, owner/admin, reimagined, `sponsor_insights`). Signed-in
+  client only; reads rollups, the sponsor list, the schedule and the club logo through `lib/telemetry/report-data.ts`.
+- One print sheet per sponsor-month (`components/admin/insights-report/`): club logo and name, sponsor logo and name,
+  month ("so far (through …)" for the current month); site traffic (page views, visitor-days, visits, avg. time on page
+  = engaged ms / views, "—" when not measured); the sponsor's logo views, people who saw it (visitor-days), clicks, click
+  rate ("—" at 0 views); the 3 busiest days by site views with match days labelled ("vs"/"at" opponent); a dropped-views
+  footnote when dropped > 0; the fixed footer. `sponsor=all` prints one sheet per sponsor with activity (deleted
+  sponsors as "Removed sponsor"). Month picker lists only months with rollup rows. "Download PDF" calls
+  `window.print()`. `@page { margin: 12mm }` with no fixed size (A4 and Letter both fit); every other print rule is
+  scoped to `body:has(.report)`, so other admin pages keep their frame.
+- `lib/telemetry/report-data.ts`: pure aggregation (`buildMonthlyReport`), month helpers, a thin reader (five tables,
+  every read `.eq("club_id")`), and `reportHref(month, sponsor)` for TELEMETRY-04's "Monthly sponsor report" slot (not
+  wired into the dashboard here).
+
+**Files changed:** `app/admin/(protected)/insights/report/page.tsx`, `components/admin/insights-report/{SponsorReport.tsx,
+PrintButton.tsx,report.module.css}`, `lib/telemetry/report-data.ts`, `lib/__tests__/telemetry-report-data.test.ts`,
+`tests/database/telemetry-report-data.test.ts`, `tests/contracts/telemetry-report-boundary.test.ts`,
+`tests/browser/admin-reimagined-telemetry-report.spec.ts`, this file, `HANDOFF.md`.
+
+**Verification (code at `3c73d435`, local only):**
+- `npx tsc --noEmit -p .`: clean. `npm run lint`: 0 errors; the 2 warnings are in untouched files.
+- `npx vitest run --exclude "tests/database/**"`: 391/394 files, 5242/5246 tests (1 skipped). The 3 failures are base
+  contracts whose migration lists don't yet include TELEMETRY-02's `20261121230000` (`admin-reimagined-league`,
+  `admin-reimagined-sponsors`, `cinematic-shop-jersey-options-migration`); they pass in the TELEMETRY-02 worktree, whose
+  uncommitted changes update them. New: unit 56/56, contract 9/9.
+- `npm run test:architecture`: 18/18 files, 432 passed, 1 skipped.
+- Under one `scripts/with-local-db-lock.sh` hold: `npx supabase@2.109.1 db reset --local` (ledger max `20261121230000`);
+  `npm run test:db` 80/82 files, 1534/1536 tests. The 2 failures are base tests TELEMETRY-02 has not committed fixes for
+  (`page-telemetry.test.ts` column list lacks `sponsor_id`/`engaged_ms`; `purge-archived-club.test.ts` club-table list).
+  New `telemetry-report-data.test.ts` 13/13 (Alpha owner reads Alpha; zero rows and no months for Charlie and Bravo; a
+  two-club member stays on the club asked for; non-member, removed admin and anon get nothing).
+- `npm run db:types:check`: types match. `npm run build`: passed.
+- `npx playwright test --config=playwright.admin-reimagined.config.ts` on the production build at
+  `alpha.localhost:3110`: 211 passed, 3 skipped, 4 failed. All 5 report tests pass (one sponsor, all sponsors = 3
+  sheets, print emulation hides the frame, other pages keep it, Letter/A4/all PDFs). The 4 failures are classic-admin
+  cases (`diverse-city` :127, `sign-in` :448, `sponsors` :294, `tabs` :273), all run before the report spec, in pages
+  this change does not import; not rerun on a base build.
+- Artifacts: `test-results/telemetry-report/{sponsor-report.pdf,sponsor-report-a4.pdf,sponsor-report-all.pdf,
+  one-sponsor.png,one-sponsor-390.png,all-sponsors.png}` (gitignored).
+- `git diff --stat origin/claude/telemetry-02-data -- supabase app/api middleware.ts package.json package-lock.json
+  "app/admin/(protected)/insights/page.tsx"`: empty.
+
+**Blockers / decisions:** none for this package. The browser's default PDF file name is the page title for every
+sponsor. A white-on-transparent sponsor logo sits in a small white tile and may be faint on paper.
+**Next step:** rebase onto `origin/main` after TELEMETRY-02 (and TELEMETRY-04 if merged) land, rerun the checks, then
+onzio-bot review and Christian merges. TELEMETRY-04 can link its slot with `reportHref`.
+
 ## 2026-11-21 - TELEMETRY-04: Sponsor Insights dashboard (P3), time on page and campaign link builder (P4)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet workers), TELEMETRY-04, branch
