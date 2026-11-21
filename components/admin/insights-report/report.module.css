@@ -1,0 +1,544 @@
+/* TELEMETRY-05: the monthly sponsor report. On screen: month and sponsor pickers,
+   then one paper card per sponsor. Printed (browser "Save as PDF"): the admin
+   frame is hidden and each card is one page, designed to fit the 186mm x 255mm
+   the page holds on US Letter with 12mm margins (A4 is taller, so it fits too).
+
+   The paper keeps its own light colors in every admin theme: a sponsor is sent
+   white paper. The pickers around it use the admin theme tokens. The club's
+   color only fills bars and borders, never text, so a pale club color still
+   prints legibly. Everything that can run long wraps instead of pushing the
+   page wide. */
+
+.page {
+  --report-accent: #334155;
+  --paper: #ffffff;
+  --ink: #111827;
+  --ink-soft: #4b5563;
+  --rule: #e5e7eb;
+  --tint: #f3f4f6;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 920px;
+  flex-direction: column;
+  gap: 20px;
+  margin: 0 auto;
+}
+
+/* ---------- Screen: the pickers ---------- */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  margin-top: 6px;
+  font-size: 15px;
+  color: hsl(var(--muted-foreground));
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+
+.select {
+  width: 100%;
+  min-height: 44px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.button {
+  display: inline-flex;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.secondary {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+}
+
+.button:focus-visible,
+.select:focus-visible,
+.back:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 2px;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: hsl(var(--primary));
+}
+
+.back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.message,
+.empty {
+  padding: 16px;
+  border-radius: 16px;
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  font-size: 15px;
+  color: hsl(var(--muted-foreground));
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- The sheets (paper) ---------- */
+
+.report {
+  min-width: 0;
+}
+
+.sheets {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sheet {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 18px 16px;
+  border-top: 6px solid var(--report-accent);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow:
+    0 0 0 1px hsl(var(--border)),
+    0 14px 32px -20px rgb(15 20 40 / 0.35);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+@media (min-width: 640px) {
+  .sheet {
+    padding: 34px 40px 22px;
+  }
+}
+
+.sheetHead {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.club {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.clubLogo {
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  object-fit: contain;
+}
+
+.clubName {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.eyebrow {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+
+.sponsorRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 16px;
+}
+
+.sponsorLogoTile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.sponsorLogo {
+  display: block;
+  max-width: 120px;
+  max-height: 56px;
+  object-fit: contain;
+}
+
+.sponsorText {
+  min-width: 0;
+}
+
+.sponsorName {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.period {
+  margin-top: 4px;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+.block {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.blockTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.blockTitle::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  flex: none;
+  align-self: center;
+  border-radius: 3px;
+  background: var(--report-accent);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.stat {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--tint);
+}
+
+.statLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.statValue {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.star {
+  margin-left: 2px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.statNote {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+.days {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+}
+
+.days th,
+.days td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.days thead th {
+  padding-top: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.days tbody th {
+  font-weight: 600;
+}
+
+.days .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.days tbody .num {
+  font-weight: 500;
+}
+
+.dayName {
+  display: block;
+}
+
+.matchLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--tint);
+  box-shadow: inset 0 0 0 1.5px var(--report-accent);
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.opponent {
+  overflow-wrap: anywhere;
+}
+
+.quiet {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+}
+
+.footnote {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.sheetFoot {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* ---------- Print ----------
+   @page cannot be scoped to a page. Every other print rule is under a body that
+   holds the report (:has(.report), the element that carries data-sponsor-report), so none
+   of it can touch another admin page after a client-side navigation. CSS
+   modules need a local class in every selector, which .report is. */
+
+@page {
+  margin: 12mm;
+}
+
+@media print {
+  :global(html):has(.report),
+  :global(body):has(.report) {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* The frame: side nav, both top bars, the phone tab bar, every nav, billing
+     notices and the pickers. Nothing but the sheets prints. */
+  :global(body):has(.report) :global(aside),
+  :global(body):has(.report) :global(nav),
+  :global(body):has(.report) :global([data-admin-shell]) > :global(div) > :global(header),
+  :global(body):has(.report) :global([data-admin-shell]) :global(main) > :not(.page):not(:has(.page)),
+  :global(body):has(.report) :global([data-report-controls]),
+  :global(body):has(.report) .controls {
+    display: none !important;
+  }
+
+  /* The frame's boxes become plain blocks on white. */
+  :global(body):has(.report) :global(.admin-theme),
+  :global(body):has(.report) :global([data-admin-shell]),
+  :global(body):has(.report) :global([data-admin-shell]) > :global(div),
+  :global(body):has(.report) :global([data-admin-shell]) :global(main) {
+    display: block !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  :global(body):has(.report) .page {
+    display: block;
+    width: auto;
+    max-width: none;
+    margin: 0;
+  }
+
+  :global(body):has(.report) .sheets {
+    display: block;
+  }
+
+  /* One sheet, one page, kept whole. Its height stays under the 255mm a Letter
+     page holds, so the break after it never leaves a blank page. */
+  :global(body):has(.report) .sheet {
+    min-height: 236mm;
+    gap: 6mm;
+    padding: 6mm 0 0;
+    border-top-width: 2mm;
+    border-radius: 0;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  :global(body):has(.report) .sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  :global(body):has(.report) .sheetHead,
+  :global(body):has(.report) .block,
+  :global(body):has(.report) .days tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  :global(body):has(.report) .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  :global(body):has(.report) .empty {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    color: #000000;
+  }
+}
