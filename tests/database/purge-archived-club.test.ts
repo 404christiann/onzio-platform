@@ -16,6 +16,7 @@ import { emptyStadiumContent } from "@/lib/stadium-content";
 import { emptyTicketsContent } from "@/lib/tickets-content";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
+import { localPostgresConfig } from "../helpers/local-postgres";
 
 // Operator hard purge (onzio.purge_archived_club): one transaction that
 // deletes every row of an archived club and leaves every other club as it
@@ -32,6 +33,19 @@ const ROSE_CITY_MIGRATION = resolve(
   __dirname,
   "../../supabase/migrations/20261117020000_cinematic_purge_tables.sql",
 );
+// TELEMETRY-01 redefines it again with onzio.page_events and must win over
+// both. Only the purge part of that migration is applied here: its tables
+// already exist in the local database.
+const TELEMETRY_MIGRATION = resolve(
+  __dirname,
+  "../../supabase/migrations/20261121060000_page_telemetry.sql",
+);
+function telemetryPurgeDefinition(): string {
+  const sql = readFileSync(TELEMETRY_MIGRATION, "utf8");
+  const start = sql.indexOf("create or replace function onzio_private.purge_archived_club");
+  if (start < 0) throw new Error("TELEMETRY-01 migration lost its purge definition");
+  return sql.slice(start);
+}
 const OPERATOR = USER_IDS.ownerAal2;
 const LEDGERS = ["onzio.audit_events", "onzio.stripe_events", "onzio.club_exports"];
 
@@ -195,6 +209,14 @@ begin
   insert into onzio_private.stadium_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
   insert into onzio_private.ticket_page_save_receipts (club_id, page, actor_id, operation_id, request_hash, response) values (c, 'season-membership', owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
   insert into onzio_private.tickets_save_receipts (club_id, actor_id, operation_id, request_hash, response) values (c, owner, gen_random_uuid(), repeat('f', 64), '{}'::jsonb);
+
+  -- TELEMETRY-01 page telemetry.
+  insert into onzio.page_events (club_id, local_date, event_type, visitor_hash, visit_id, is_entry, path, source_type, device)
+  values (c, current_date, 'view', repeat('e', 64), gen_random_uuid(), true, '/', 'direct', 'mobile');
+  insert into onzio_private.page_visitor_salts (club_id, salt_day, salt) values (c, current_date, decode(repeat('ab', 32), 'hex'));
+  insert into onzio_private.page_event_rate_windows (club_id, bucket, window_start, hits) values (c, '*', date_trunc('minute', now()), 1);
+  insert into onzio_private.page_event_drop_counts (club_id, local_date, reason, dropped) values (c, current_date, 'network', 1);
+  insert into onzio_private.club_addons (club_id, addon) values (c, 'telemetry');
 end
 $fixture$;
 `;
@@ -276,11 +298,12 @@ async function triggersEnabled(): Promise<string[]> {
 
 beforeEach(async () => {
   assertSafeTestEnvironment();
-  db = new Client({ host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" });
+  db = new Client(localPostgresConfig());
   await db.connect();
   await db.query("begin");
   await db.query(readFileSync(MIGRATION, "utf8"));
   await db.query(readFileSync(ROSE_CITY_MIGRATION, "utf8"));
+  await db.query(telemetryPurgeDefinition());
   club = randomUUID();
   slug = `purge-${club.slice(0, 8)}`;
   exportId = `export_${club}`;
