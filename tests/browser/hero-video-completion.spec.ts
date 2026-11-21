@@ -228,7 +228,8 @@ test("upload, preparing, leave, webhook, come back live; closing mid-upload does
 
   await page.goto(`${origin}/tests/browser/fixtures/hero-video-completion/`);
   await expect(page.getByText("Your new video is live.")).toBeVisible();
-  await expect(page.locator("[data-refreshed]")).toHaveAttribute("data-refreshed", "7:8");
+  // A fresh page load shows the notice but never refreshes the revision: the editor just loaded the current one.
+  await expect(page.locator("[data-refreshed]")).toHaveAttribute("data-refreshed", "");
   await page.screenshot({ path: resolve(artifactDir, "hero-video-live.png") });
 });
 

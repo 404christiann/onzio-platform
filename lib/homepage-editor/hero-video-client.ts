@@ -24,7 +24,7 @@ export type HeroVideoStatus = {
     deadlineAt?: string | null;
   } | null;
   failure?: { code: string } | null;
-  /** Set after the swap, so a returning tab can move the editor's base revision. */
+  /** Set only for HERO_VIDEO_LIVE_NOTICE_MS after the swap, so the editor can announce it. A tab that watched the swap uses it to move the editor's base revision. */
   completion?: { videoGuid: string; revisionBefore: string | null; revisionAfter: string | null } | null;
 };
 

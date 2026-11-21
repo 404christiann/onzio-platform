@@ -408,6 +408,74 @@ describe("hero video control: upload, processing and going live", () => {
   });
 });
 
+describe("hero video control: the live notice follows the server's window", () => {
+  const livePending = (effective: "live" | "idle") => ({ videoGuid: "new-guid", encodeProgress: null, phase: "live" as const, effective, deadlineAt: null });
+  const afterSwap = { ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", replacesUsedToday: 3 };
+  const fresh = { ...afterSwap, pending: livePending("live"), completion: { videoGuid: "new-guid", ...RANGE } };
+  const old = { ...afterSwap, pending: livePending("idle"), completion: null };
+
+  it("loading with a live row from an hour ago stays idle, with no notice, no revision refresh and the same replace count", async () => {
+    const getStatus = vi.fn(async () => old);
+    const { controller, deps } = harness({ getStatus });
+    await controller.load();
+    await settle();
+    expect(controller.getState()).toMatchObject({ phase: "idle", message: "", error: null, revisionWarning: false, revisionConflict: false, status: { liveGuid: "new-guid", replacesUsedToday: 3 } });
+    expect(deps.refreshRevision).not.toHaveBeenCalled();
+    expect(getStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("loading with a fresh completion shows the live notice but never refreshes the revision or bumps the replace count", async () => {
+    const getStatus = vi.fn(async () => fresh);
+    const { controller, deps } = harness({ getStatus });
+    await controller.load();
+    await settle();
+    expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY, error: null, revisionWarning: false, revisionConflict: false, status: { liveGuid: "new-guid", replacesUsedToday: 3 } });
+    expect(deps.refreshRevision).not.toHaveBeenCalled();
+    expect(getStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloading twice with the same fresh completion never moves the replace count", async () => {
+    const { controller, deps } = harness({ getStatus: vi.fn(async () => fresh) });
+    await controller.load();
+    await controller.load();
+    expect(controller.getState().status?.replacesUsedToday).toBe(3);
+    expect(deps.refreshRevision).not.toHaveBeenCalled();
+  });
+
+  it("the notice sets no timer and Replace works while it shows", async () => {
+    vi.useFakeTimers();
+    try {
+      const { controller, deps } = harness({ getStatus: vi.fn(async () => fresh) });
+      await controller.load();
+      expect(vi.getTimerCount()).toBe(0);
+      await controller.replace(video());
+      expect(deps.start).toHaveBeenCalledTimes(1);
+      controller.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("an in-tab watch that reaches live refreshes the revision once with that completion's range", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(fresh);
+    const { controller, handlers, deps } = harness({ getStatus });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(deps.refreshRevision).toHaveBeenCalledExactlyOnceWith({ before: "rev-1", after: "rev-2" });
+    expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY, revisionConflict: false });
+  });
+
+  it("an in-tab watch that only sees the swap after the window closed still ends live, without a refresh it cannot make", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(old);
+    let polls = 0;
+    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS && ++polls > 25) await new Promise<void>(() => undefined); });
+    const { controller, handlers, deps } = harness({ getStatus, sleep });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY });
+    expect(deps.refreshRevision).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+});
+
 describe("hero video control: revert", () => {
   it("reverts to the previous video, refetches the revision and refreshes the status", async () => {
     const swapped = { ...STATUS, liveGuid: "prev-1", previousGuid: "live-1", ...RANGE };

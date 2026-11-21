@@ -1,6 +1,5 @@
 import {
   HERO_VIDEO_LIVE_COPY,
-  HERO_VIDEO_LIVE_NOTICE_MS,
   HERO_VIDEO_OTHER_UPLOAD_NOTE,
   HERO_VIDEO_POLL_MS,
   HERO_VIDEO_PREPARING_COPY,
@@ -18,7 +17,7 @@ import { readVideoDuration } from "./hero-video-duration";
 import { startTusUpload, type TusUploadHandle, type TusUploadHandlers } from "./hero-video-tus";
 
 export {
-  HERO_VIDEO_LIVE_COPY, HERO_VIDEO_LIVE_NOTICE_MS, HERO_VIDEO_OTHER_UPLOAD_NOTE, HERO_VIDEO_POLL_MS,
+  HERO_VIDEO_LIVE_COPY, HERO_VIDEO_OTHER_UPLOAD_NOTE, HERO_VIDEO_POLL_MS,
   HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_SUPERSEDED_COPY, HERO_VIDEO_UPLOAD_DONE_MS, HERO_VIDEO_UPLOADING_COPY,
 };
 
@@ -116,7 +115,6 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
   let handle: TusUploadHandle | null = null;
   let uploadGuid: string | null = null;
   let disposed = false;
-  let liveTimer: ReturnType<typeof setTimeout> | null = null;
 
   const set = (patch: Partial<HeroVideoState>) => { state = { ...state, ...patch }; listeners.forEach(listener => listener()); };
   const ctx = () => ({ maxBytes: state.status?.maxBytes, replacesPerDay: state.status?.replacesPerDay });
@@ -130,13 +128,6 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
 
   async function reloadStatus() {
     try { set({ status: await deps.getStatus() }); } catch { /* keep what is shown */ }
-  }
-
-  function armLiveNotice() {
-    if (liveTimer) clearTimeout(liveTimer);
-    liveTimer = setTimeout(() => {
-      if (state.phase === "live") set({ ...idle(state.status) });
-    }, HERO_VIDEO_LIVE_NOTICE_MS);
   }
 
   async function complete(live: HeroVideoLive, kind: "replace" | "revert") {
@@ -153,7 +144,6 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       phase: "live", progress: null, encodeProgress: null, error: null, fileName: null, revisionWarning, revisionConflict,
       message: kind === "replace" ? HERO_VIDEO_LIVE_COPY : "The previous hero video is live again on your site. It went live by itself and did not need Save.",
     });
-    armLiveNotice();
   }
 
   function liveFromStatus(status: HeroVideoStatus, guid: string): HeroVideoLive {
@@ -181,7 +171,8 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       if (!alive(token)) return;
       const effective = shownEffective(status);
       const same = status.pending?.videoGuid === guid;
-      if (status.liveGuid === guid && (effective === "live" || !same)) {
+      // effective is idle for a live row only after the notice window closed. This tab was watching it, so it still finishes live.
+      if (status.liveGuid === guid && (effective === "live" || effective === "idle" || !same)) {
         set({ status });
         return complete(liveFromStatus(status, guid), "replace");
       }
@@ -255,9 +246,9 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
         const status = await deps.getStatus();
         if (!alive(token)) return;
         const next = renderLoaded(status);
-        if (next === "live" && status.completion) {
-          set({ ...idle(status) });
-          await complete(liveFromStatus(status, status.completion.videoGuid), "replace");
+        if (next === "live") {
+          // A swap this tab did not watch. The status just read is already current: no revision refresh, no replace count change.
+          set({ ...idle(status), phase: "live", message: HERO_VIDEO_LIVE_COPY });
         } else if (next === "failed" && status.failure) {
           set({ ...idle(status) });
           fail(new HeroVideoApiError(status.failure.code, "", 422));
@@ -361,7 +352,6 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       disposed = true;
       handle?.abort();
       handle = null;
-      if (liveTimer) clearTimeout(liveTimer);
       if (typeof window !== "undefined") window.removeEventListener("pagehide", onPageHide);
       listeners.clear();
     },

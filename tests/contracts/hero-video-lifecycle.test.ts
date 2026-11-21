@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  HERO_VIDEO_LIVE_NOTICE_MS,
   effectiveHeroUploadState,
   shouldExpireUpload,
   uploadDeadlineMs,
@@ -10,7 +11,7 @@ import {
 
 const sql = readFileSync("supabase/migrations/20261121183000_hero_video_pending.sql", "utf8");
 const at = (iso: string) => Date.parse(iso);
-const row = (phase: HeroStoredPhase, deadlineAt: string | null) => ({ phase, deadlineAt });
+const row = (phase: HeroStoredPhase, deadlineAt: string | null, updatedAt?: string | null) => ({ phase, deadlineAt, updatedAt });
 
 describe("effective hero upload state", () => {
   const now = at("2026-11-21T10:15:00.000Z");
@@ -20,12 +21,32 @@ describe("effective hero upload state", () => {
     ["uploading past the deadline", "uploading", "2026-11-21T10:14:00.000Z", "uploading_overdue"],
     ["preparing inside the deadline", "preparing", "2026-11-21T12:15:00.000Z", "preparing"],
     ["preparing past the deadline", "preparing", "2026-11-21T10:14:00.000Z", "preparing_overdue"],
-    ["live", "live", null, "live"],
+    ["live, updated a minute ago", "live", null, "live"],
     ["failed", "failed", null, "failed"],
     ["abandoned", "abandoned", null, "abandoned"],
   ];
   it.each(cases)("%s", (_label, phase, deadlineAt, expected) => {
-    expect(effectiveHeroUploadState(phase ? row(phase, deadlineAt) : null, now)).toBe(expected);
+    expect(effectiveHeroUploadState(phase ? row(phase, deadlineAt, "2026-11-21T10:14:00.000Z") : null, now)).toBe(expected);
+  });
+
+  it("a live row is live for HERO_VIDEO_LIVE_NOTICE_MS after updated_at, then idle", () => {
+    const updated = at("2026-11-21T10:00:00.000Z");
+    const live = row("live", null, new Date(updated).toISOString());
+    expect(effectiveHeroUploadState(live, updated)).toBe("live");
+    expect(effectiveHeroUploadState(live, updated + HERO_VIDEO_LIVE_NOTICE_MS - 1)).toBe("live");
+    expect(effectiveHeroUploadState(live, updated + HERO_VIDEO_LIVE_NOTICE_MS)).toBe("idle");
+    expect(effectiveHeroUploadState(live, updated + 60 * 60 * 1000)).toBe("idle");
+  });
+
+  it("a live row with a missing or unreadable updated_at is idle, never a stale notice", () => {
+    expect(effectiveHeroUploadState(row("live", null), now)).toBe("idle");
+    expect(effectiveHeroUploadState(row("live", null, null), now)).toBe("idle");
+    expect(effectiveHeroUploadState(row("live", null, "not a date"), now)).toBe("idle");
+  });
+
+  it("the notice window does not touch failed or abandoned rows", () => {
+    expect(effectiveHeroUploadState(row("failed", null, "2026-11-21T01:00:00.000Z"), now)).toBe("failed");
+    expect(effectiveHeroUploadState(row("abandoned", null, "2026-11-21T01:00:00.000Z"), now)).toBe("abandoned");
   });
 
   it("a slow upload started at 01:00 is still uploading at the 02:15 cron and at 02:40", () => {

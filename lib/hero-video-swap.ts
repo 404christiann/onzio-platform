@@ -103,6 +103,7 @@ type PendingRow = {
   landed_at?: string | null;
   deadline_at: string | null;
   replace_counted?: boolean;
+  updated_at?: string | null;
 };
 type EventRow = {
   outcome: string;
@@ -208,7 +209,11 @@ export async function applyHeroVideoEvent(input: {
   return mapped;
 }
 
-/** Read-only. Never deletes a video or a row. effective and deadlineAt come from the stored deadline. */
+/**
+ * Read-only. Never deletes a video or a row. effective comes from the stored
+ * deadline and updated_at. A live row sends its completion, and reads as live,
+ * only for HERO_VIDEO_LIVE_NOTICE_MS after the swap. After that it reads idle.
+ */
 export async function getHeroVideoState(clubId: string): Promise<HeroVideoState> {
   const live = await readLive(clubId);
   const used = await onzio().rpc("hero_video_replaces_today", { p_club_id: clubId });
@@ -222,7 +227,7 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
     videoGuid: pendingRow.video_guid,
     encodeProgress,
     phase: pendingRow.phase,
-    effective: effectiveHeroUploadState({ phase: pendingRow.phase, deadlineAt: pendingRow.deadline_at }, Date.now()),
+    effective: effectiveHeroUploadState({ phase: pendingRow.phase, deadlineAt: pendingRow.deadline_at, updatedAt: pendingRow.updated_at }, Date.now()),
     deadlineAt: pendingRow.deadline_at,
   } : null;
   return {
@@ -233,7 +238,7 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
     maxSeconds: HERO_VIDEO_MAX_SECONDS,
     pending,
     failure: pendingRow?.phase === "failed" && pendingRow.failure_code ? { code: pendingRow.failure_code } : null,
-    completion: pendingRow?.phase === "live" ? {
+    completion: pendingRow && pending?.effective === "live" ? {
       videoGuid: pendingRow.video_guid,
       revisionBefore: pendingRow.revision_before,
       revisionAfter: pendingRow.revision_after,

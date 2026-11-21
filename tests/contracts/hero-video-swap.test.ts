@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DIVERSE_CITY_HERO_VIDEO, DIVERSE_CITY_STORY_VIDEO } from "@/lib/bunny-video";
 
 const m = vi.hoisted(() => ({
@@ -18,6 +18,7 @@ vi.mock("@/lib/bunny-stream", () => ({
   tusUploadAuthorization: m.tusUploadAuthorization, videoReadiness: m.videoReadiness,
 }));
 
+import { HERO_VIDEO_LIVE_NOTICE_MS } from "@/lib/hero-video-lifecycle";
 import {
   checkReadiness, getHeroVideoState, HERO_VIDEO_MAX_BYTES, HERO_VIDEO_MAX_SECONDS, HERO_VIDEO_MAX_STORED_BYTES, HeroVideoError, revertHeroVideo,
   safeDeleteHeroVideo, startHeroVideoUpload,
@@ -124,6 +125,48 @@ describe("getHeroVideoState", () => {
     expect(await getHeroVideoState(club)).toEqual({
       liveGuid: OLD, previousGuid: PREV, replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 500 * 1024 * 1024, maxSeconds: 600,
       pending: null, failure: null, completion: null,
+    });
+  });
+
+  describe("a live row sends its completion only inside the notice window", () => {
+    const liveRow = (updatedAt: string) => ({
+      video_guid: NEW, collection_id: COL, phase: "live", failure_code: null, revision_before: "r1", revision_after: "r2",
+      started_at: updatedAt, landed_at: updatedAt, deadline_at: null, replace_counted: true, updated_at: updatedAt,
+    });
+    const read = async (updatedAt: string) => {
+      state(NEW, OLD);
+      rpcByName({ hero_video_replaces_today: 3, read_hero_video_pending: [liveRow(updatedAt)] });
+      return getHeroVideoState(club);
+    };
+    afterEach(() => { vi.useRealTimers(); });
+
+    it("a live row updated 1 hour ago has no completion and is idle", async () => {
+      const result = await read(new Date(Date.now() - 3600e3).toISOString());
+      expect(result.completion).toBeNull();
+      expect(result.pending).toEqual({ videoGuid: NEW, encodeProgress: null, phase: "live", effective: "idle", deadlineAt: null });
+      expect(result.liveGuid).toBe(NEW);
+      expect(result.replacesUsedToday).toBe(3);
+    });
+    it("a live row updated 1 minute ago sends the completion and stays live", async () => {
+      const result = await read(new Date(Date.now() - 60e3).toISOString());
+      expect(result.completion).toEqual({ videoGuid: NEW, revisionBefore: "r1", revisionAfter: "r2" });
+      expect(result.pending).toMatchObject({ phase: "live", effective: "live" });
+    });
+    it("the window closes exactly at HERO_VIDEO_LIVE_NOTICE_MS", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-11-21T12:00:00.000Z"));
+      const justInside = await read(new Date(Date.parse("2026-11-21T12:00:00.000Z") - HERO_VIDEO_LIVE_NOTICE_MS + 1).toISOString());
+      expect(justInside.completion).not.toBeNull();
+      const atEdge = await read(new Date(Date.parse("2026-11-21T12:00:00.000Z") - HERO_VIDEO_LIVE_NOTICE_MS).toISOString());
+      expect(atEdge.completion).toBeNull();
+      expect(atEdge.pending?.effective).toBe("idle");
+    });
+    it("a live row with no readable updated_at is never announced", async () => {
+      state(NEW, OLD);
+      rpcByName({ hero_video_replaces_today: 3, read_hero_video_pending: [{ ...liveRow("x"), updated_at: undefined }] });
+      const result = await getHeroVideoState(club);
+      expect(result.completion).toBeNull();
+      expect(result.pending?.effective).toBe("idle");
     });
   });
 });

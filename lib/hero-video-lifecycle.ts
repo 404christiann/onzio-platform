@@ -30,6 +30,8 @@ export type HeroVideoEventName = "start" | "land" | "ready" | "reject" | "abando
 export type HeroLifecycleRow = {
   phase: HeroStoredPhase;
   deadlineAt: string | null;
+  /** The row's updated_at. A live row is announced only while this is inside HERO_VIDEO_LIVE_NOTICE_MS. */
+  updatedAt?: string | null;
 };
 
 /** Milliseconds the SQL stores as deadline_at when an upload starts. The tus token itself expires at UPLOAD_WINDOW_MS. */
@@ -37,13 +39,21 @@ export function uploadDeadlineMs() {
   return UPLOAD_WINDOW_MS + UPLOAD_GRACE_MS;
 }
 
+/** True while a live row is young enough to announce. A missing or unreadable updated_at is never announced. */
+export function isHeroLiveNoticeFresh(updatedAt: string | null | undefined, now: number) {
+  const updated = Date.parse(updatedAt ?? "");
+  return !Number.isNaN(updated) && now - updated < HERO_VIDEO_LIVE_NOTICE_MS;
+}
+
 /**
- * What the editor should show. Overdue is derived from deadline_at, not from
- * updated_at. A missing row is idle.
+ * What the editor should show. Overdue is derived from deadline_at. A live row
+ * is live for HERO_VIDEO_LIVE_NOTICE_MS after updated_at and idle after that,
+ * so a later page load never announces an old swap. A missing row is idle.
  */
 export function effectiveHeroUploadState(row: HeroLifecycleRow | null | undefined, now: number): HeroEffective {
   if (!row) return "idle";
-  if (row.phase === "live" || row.phase === "failed" || row.phase === "abandoned") return row.phase;
+  if (row.phase === "live") return isHeroLiveNoticeFresh(row.updatedAt, now) ? "live" : "idle";
+  if (row.phase === "failed" || row.phase === "abandoned") return row.phase;
   const deadline = Date.parse(row.deadlineAt ?? "");
   const overdue = !Number.isNaN(deadline) && now >= deadline;
   if (row.phase === "uploading") return overdue ? "uploading_overdue" : "uploading";
