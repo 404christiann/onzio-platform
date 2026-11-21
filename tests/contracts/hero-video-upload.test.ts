@@ -19,7 +19,7 @@ vi.mock("tus-js-client", () => ({
 
 const STATUS = { liveGuid: "live-1", previousGuid: "prev-1", replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 524_288_000 };
 const RANGE = { revisionBefore: "rev-1", revisionAfter: "rev-2" };
-const TICKET = { videoGuid: "new-guid", upload: { endpoint: "https://video.bunnycdn.com/tusupload", libraryId: 723074, videoId: "new-guid", expire: 1_900_000_000, signature: "sig" }, maxBytes: STATUS.maxBytes };
+const TICKET = { videoGuid: "new-guid", upload: { endpoint: "https://video.bunnycdn.com/tusupload", libraryId: 723074, videoId: "new-guid", expire: 1_900_000_000, signature: "sig", enabledResolutions: "240p,360p,480p,720p" }, maxBytes: STATUS.maxBytes };
 const video = (size = 10_000_000, type = "video/mp4") => ({ name: "hero.mp4", size, type }) as unknown as File;
 const apiError = (code: string, httpStatus = 422) => new HeroVideoApiError(code, "server words", httpStatus);
 
@@ -168,7 +168,7 @@ describe("hero video control: upload, processing and going live", () => {
     ["start", "FILE_TOO_LARGE", /too large/],
     ["start", "UNSUPPORTED_TYPE", /not a video/],
     ["start", "VIDEO_NOT_CONFIGURED", /not set up/],
-    ["finalize", "FILE_TOO_LARGE", /larger than 500 MB once uploaded, so it was removed/],
+    ["finalize", "STORED_SIZE_TOO_LARGE", /too large once processed, so it was removed.*under 500 MB/],
     ["finalize", "VIDEO_FAILED", /could not process/],
     ["finalize", "RESOLUTION_TOO_LOW", /at least 720p/],
     ["finalize", "NOT_CLUB_VIDEO", /does not belong/],
@@ -185,6 +185,7 @@ describe("hero video control: upload, processing and going live", () => {
     expect(state.error?.message).not.toMatch(code);
     expect(state.error?.retry).toBeNull();
     expect(state.status).toBeTruthy();
+    if (where === "finalize") expect(state.error?.message).not.toMatch(/larger than 500 MB/);
   });
 
   it("every documented code has its own message", () => {
@@ -252,7 +253,7 @@ describe("hero video client and tus wrapper", () => {
     expect(upload.start).toHaveBeenCalled();
     expect(upload.options.endpoint).toBe("https://video.bunnycdn.com/tusupload");
     expect(upload.options.retryDelays).toEqual([0, 3000, 5000, 10000, 20000]);
-    expect(upload.options.headers).toEqual({ AuthorizationSignature: "sig", AuthorizationExpire: "1900000000", VideoId: "new-guid", LibraryId: "723074" });
+    expect(upload.options.headers).toEqual({ AuthorizationSignature: "sig", AuthorizationExpire: "1900000000", VideoId: "new-guid", LibraryId: "723074", EnabledResolutions: "240p,360p,480p,720p" });
     expect(upload.options.metadata).toEqual({ filetype: "video/mp4", title: "hero.mp4" });
     upload.options.onProgress(1, 3);
     expect(onProgress).toHaveBeenCalledWith(1, 3);

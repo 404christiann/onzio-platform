@@ -18,7 +18,7 @@ vi.mock("@/lib/bunny-stream", () => ({
   tusUploadAuthorization: m.tusUploadAuthorization, videoReadiness: m.videoReadiness,
 }));
 
-import { finalizeHeroVideo, HeroVideoError, revertHeroVideo, safeDeleteHeroVideo, startHeroVideoUpload } from "@/lib/hero-video-swap";
+import { finalizeHeroVideo, HERO_VIDEO_MAX_BYTES, HERO_VIDEO_MAX_STORED_BYTES, HeroVideoError, revertHeroVideo, safeDeleteHeroVideo, startHeroVideoUpload } from "@/lib/hero-video-swap";
 
 const club = "club-1";
 const COL = "col-1";
@@ -150,36 +150,58 @@ describe("finalizeHeroVideo", () => {
     expect(m.deleteVideo).toHaveBeenCalledExactlyOnceWith(NEW);
     expect(m.rpc).not.toHaveBeenCalled();
   });
-  describe("real size ceiling", () => {
-    const CAP = 500 * 1024 * 1024;
+  describe("stored size ceiling", () => {
+    const FILE_LIMIT = 500 * 1024 * 1024;
+    const CAP = 4 * FILE_LIMIT;
     const bunny = (over: Record<string, unknown>) => m.getVideo.mockImplementation(async (guid: string) => ({
       guid, collectionId: COL, status: 4, availableResolutions: ["720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, ...over,
     }));
-    it.each([["finished", 4], ["still processing", 2]])("rejects a %s video whose stored bytes exceed the cap with 413, deleting it and never swapping", async (_l, status) => {
-      rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }], swap_hero_video: [swapped] });
-      await startHeroVideoUpload(club, { fileName: "a.mp4", fileSize: 1000, mimeType: "video/mp4" });
-      bunny({ status, storageSize: 3_000_000_000 });
+    it("exposes a 2,000 MiB stored ceiling separate from the 500 MiB file limit", () => {
+      expect(HERO_VIDEO_MAX_BYTES).toBe(FILE_LIMIT);
+      expect(HERO_VIDEO_MAX_STORED_BYTES).toBe(CAP);
+    });
+    it("swaps a 450 MiB declared upload whose original plus renditions is 1.2 GB, deleting nothing", async () => {
+      rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }], swap_hero_video: [{ ...swapped, deletable_guid: null }] });
+      await startHeroVideoUpload(club, { fileName: "a.mp4", fileSize: 450 * 1024 * 1024, mimeType: "video/mp4" });
+      bunny({ storageSize: 1_200_000_000 });
+      const result = await finalizeHeroVideo(club, NEW);
+      expect(result.httpStatus).toBe(200);
+      expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(true);
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+    });
+    it.each([["finished", 4], ["still processing", 2]])("rejects a %s video whose stored bytes exceed the ceiling with 413, deleting it and never swapping", async (_l, status) => {
+      rpcByName({ swap_hero_video: [swapped] });
+      bunny({ status, storageSize: CAP + 1 });
       m.videoReadiness.mockResolvedValue(status === 4 ? "ready" : "processing");
       const e = await err(finalizeHeroVideo(club, NEW));
-      expect([e.status, e.code]).toEqual([413, "FILE_TOO_LARGE"]);
-      expect(e.message).toBe("That video is larger than 500 MB. Choose a smaller file.");
+      expect([e.status, e.code]).toEqual([413, "STORED_SIZE_TOO_LARGE"]);
+      expect(e.message).toBe("Once processed, this video takes more than 2,000 MB on the video service, which is over the hero video limit. Use a shorter or smaller clip.");
       expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
       expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(false);
     });
-    it("allows exactly the cap and rejects cap + 1", async () => {
+    it("still rejects a client that declared 1000 bytes but stored 3 GB", async () => {
+      rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }], swap_hero_video: [swapped] });
+      await startHeroVideoUpload(club, { fileName: "a.mp4", fileSize: 1000, mimeType: "video/mp4" });
+      bunny({ storageSize: 3_000_000_000 });
+      const e = await err(finalizeHeroVideo(club, NEW));
+      expect([e.status, e.code]).toEqual([413, "STORED_SIZE_TOO_LARGE"]);
+      expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
+      expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(false);
+    });
+    it("allows exactly the ceiling and rejects ceiling + 1", async () => {
       rpcByName({ swap_hero_video: [swapped] });
       bunny({ storageSize: CAP });
       expect((await finalizeHeroVideo(club, NEW)).httpStatus).toBe(200);
       m.deleteVideo.mockClear();
       m.rpc.mockClear();
       bunny({ storageSize: CAP + 1 });
-      expect((await err(finalizeHeroVideo(club, NEW))).code).toBe("FILE_TOO_LARGE");
+      expect((await err(finalizeHeroVideo(club, NEW))).code).toBe("STORED_SIZE_TOO_LARGE");
       expect(m.rpc).not.toHaveBeenCalled();
     });
     it.each([["live", NEW, ""], ["previous", "", NEW]])("never deletes an oversized video that is the %s guid", async (_l, live, previous) => {
       state(live, previous);
       bunny({ storageSize: CAP + 1 });
-      expect((await err(finalizeHeroVideo(club, NEW))).code).toBe("FILE_TOO_LARGE");
+      expect((await err(finalizeHeroVideo(club, NEW))).code).toBe("STORED_SIZE_TOO_LARGE");
       expect(m.deleteVideo).not.toHaveBeenCalled();
       expect(m.rpc).not.toHaveBeenCalled();
     });

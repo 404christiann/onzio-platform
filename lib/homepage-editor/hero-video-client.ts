@@ -20,6 +20,7 @@ export type HeroVideoUploadTicket = {
   videoId: string;
   expire: string | number;
   signature: string;
+  enabledResolutions: string;
 };
 
 export type HeroVideoStart = { videoGuid: string; upload: HeroVideoUploadTicket; maxBytes: number };

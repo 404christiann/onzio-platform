@@ -10,6 +10,8 @@ import { bunnyVideoMp4Url } from "@/lib/bunny-video";
 export const BUNNY_STREAM_LIBRARY_ID = "723074";
 const API_BASE = `https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}`;
 export const BUNNY_TUS_ENDPOINT = "https://video.bunnycdn.com/tusupload";
+/** The hero renderer only plays play_720p.mp4, so nothing above 720p is ever built. */
+export const HERO_VIDEO_RESOLUTIONS = "240p,360p,480p,720p";
 
 export class BunnyStreamError extends Error {
   readonly status: number;
@@ -41,6 +43,8 @@ export type BunnyUploadAuthorization = {
   videoId: string;
   expire: number;
   signature: string;
+  /** Sent as the tus EnabledResolutions header so Bunny only builds the renditions the hero needs. */
+  enabledResolutions: string;
 };
 
 export type VideoReadiness = "ready" | "processing" | "failed" | "resolution_too_low";
@@ -119,7 +123,7 @@ export async function deleteVideo(guid: string): Promise<true> {
 
 export function tusUploadAuthorization(videoGuid: string, expiresAtUnix: number): BunnyUploadAuthorization {
   const signature = createHash("sha256").update(`${BUNNY_STREAM_LIBRARY_ID}${apiKey()}${expiresAtUnix}${videoGuid}`).digest("hex");
-  return { endpoint: BUNNY_TUS_ENDPOINT, libraryId: BUNNY_STREAM_LIBRARY_ID, videoId: videoGuid, expire: expiresAtUnix, signature };
+  return { endpoint: BUNNY_TUS_ENDPOINT, libraryId: BUNNY_STREAM_LIBRARY_ID, videoId: videoGuid, expire: expiresAtUnix, signature, enabledResolutions: HERO_VIDEO_RESOLUTIONS };
 }
 
 /**

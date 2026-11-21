@@ -18,6 +18,7 @@ export function startTusUpload(file: File, ticket: HeroVideoUploadTicket, handle
       AuthorizationExpire: String(ticket.expire),
       VideoId: ticket.videoId,
       LibraryId: String(ticket.libraryId),
+      EnabledResolutions: ticket.enabledResolutions,
     },
     metadata: { filetype: file.type, title: file.name },
     onProgress: (sent, total) => handlers.onProgress(sent, total),

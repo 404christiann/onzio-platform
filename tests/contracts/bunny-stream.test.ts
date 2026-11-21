@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BunnyStreamError, createVideo, deleteVideo, findOrCreateCollection, getVideo,
-  isMp4FallbackReady, listCollectionVideos, tusUploadAuthorization, videoReadiness, type BunnyVideo,
+  isMp4FallbackReady, listCollectionVideos, tusUploadAuthorization, HERO_VIDEO_RESOLUTIONS, videoReadiness, type BunnyVideo,
 } from "@/lib/bunny-stream";
 
 const KEY = "test-secret-key-123";
@@ -68,9 +68,10 @@ describe("bunny stream client", () => {
   it("signs the tus authorization and never returns the key", () => {
     const auth = tusUploadAuthorization("vid", 1234);
     expect(auth).toEqual({
-      endpoint: "https://video.bunnycdn.com/tusupload", libraryId: "723074", videoId: "vid", expire: 1234,
+      endpoint: "https://video.bunnycdn.com/tusupload", libraryId: "723074", videoId: "vid", expire: 1234, enabledResolutions: "240p,360p,480p,720p",
       signature: createHash("sha256").update(`723074${KEY}1234vid`).digest("hex"),
     });
+    expect(auth.enabledResolutions).toBe(HERO_VIDEO_RESOLUTIONS);
     expect(JSON.stringify(auth)).not.toContain(KEY);
   });
 

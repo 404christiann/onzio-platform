@@ -53,6 +53,7 @@ export const megabytes = (bytes: number) => { const mb = bytes / 1024 / 1024; re
 export function heroVideoErrorMessage(code: string, context: { maxBytes?: number; replacesPerDay?: number } = {}): string {
   switch (code) {
     case "FILE_TOO_LARGE": return `That video is too large${context.maxBytes ? `. The limit is ${megabytes(context.maxBytes)}` : ""}. Choose a smaller file.`;
+    case "STORED_SIZE_TOO_LARGE": return "This video is too large once processed, so it was removed. Use a shorter or smaller clip (under 500 MB).";
     case "UNSUPPORTED_TYPE": return "That file is not a video we can use. Choose an MP4 or MOV video.";
     case "DAILY_LIMIT": return `You have used all ${context.replacesPerDay ?? 5} video replacements for today. Try again tomorrow.`;
     case "VIDEO_NOT_CONFIGURED": return "Video uploads are not set up for this site yet. Contact Onzio.";
@@ -144,8 +145,6 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
         if (error instanceof HeroVideoApiError) {
           if (error.code === "HERO_VIDEO_CHANGED") await reloadStatus();
           pendingGuid = null;
-          // Past the browser's own size check, so FILE_TOO_LARGE here means Bunny reported more bytes than declared.
-          if (error.code === "FILE_TOO_LARGE") return failWith(error.code, `That video is larger than ${state.status ? megabytes(state.status.maxBytes) : "500 MB"} once uploaded, so it was removed. Choose a smaller file.`);
           return fail(error, null);
         }
         if (++failures >= MAX_NETWORK_FAILURES) return fail(error, "finalize");
