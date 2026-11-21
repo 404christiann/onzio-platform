@@ -207,6 +207,17 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
  .cinematic-site .shop-update .shop-description{font-size:15px;line-height:32px;max-width:none}
 }
 
+/* RC-SAM-FIXES-2 (Sam: less space under the Buy it now bar): beside the copy, the photo box takes the copy column's height,
+   from the title to the bottom of Buy Now, and its 0.92 shape from that height, never wider than its column, centred. It
+   used to take its shape from the column width, so at 1920 and 2560 wide it ended about 125px below Buy Now, and at 701-1024
+   it grew wider than its column and covered the copy. The photo sizes against .9 of the box height (not .92) so that at the
+   default 80% scale its bottom lands on the bottom of Buy Now instead of being clipped. The extra selector step beats the
+   RC-DESKTOP-FIT width cap below, which can no longer push the box past the copy column. */
+@media(min-width:701px){
+  .cinematic-site .shop-update .shop-feature>.shop-portrait{width:auto;max-width:100%;height:auto;min-height:0;aspect-ratio:.92;align-self:stretch}
+  .cinematic-site .shop-update .shop-portrait img{--lead-width:min(100%,calc(var(--lead-scale-n,80) * .9cqh))}
+}
+
 /* RC-DESKTOP-FIT: desktop fit, wider than 1024px only. */
 @media (min-width:1025px){
   /* Lead (City of the Roses): the photo box is capped so its bottom edge stays inside one screen (97svh less the 14px + 34px of

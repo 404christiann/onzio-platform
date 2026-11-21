@@ -72,6 +72,20 @@ export function scheduleDisplay(fixtures: readonly Fixture[], now: Date, timeZon
   return { next, list: [...lead, ...past] };
 }
 
+/** Rose City plays in the UPSL, whose shield ships with the site; a match only gets it when its competition says UPSL. */
+export const UPSL_SHIELD_SRC = "/rose-city/icons/upsl-shield.png";
+
+/**
+ * The League column's logo: the one saved on the match, else the UPSL shield when the competition names the UPSL
+ * (Sam, RC-SAM-FIXES-2), else none, so the column falls back to the competition name or "—".
+ */
+export function scheduleLeagueLogo(fixture: Pick<Fixture, "competition" | "leagueLogoUrl">): { src: string; alt: string } | null {
+  const competition = fixture.competition?.trim() ?? "";
+  const alt = competition ? `${competition} league logo` : "League logo";
+  if (fixture.leagueLogoUrl) return { src: fixture.leagueLogoUrl, alt };
+  return /\bUPSL\b/i.test(competition) ? { src: UPSL_SHIELD_SRC, alt } : null;
+}
+
 export function scheduleDate(date: string): string {
   const parsed = new Date(`${date}T12:00:00Z`);
   return Number.isFinite(parsed.getTime())
