@@ -29,8 +29,10 @@ let store: Store;
 let openGate: () => void = () => undefined;
 let gate = Promise.resolve();
 let uploadLength = "0";
+let patches = 0;
 
 function resetStore() {
+  patches = 0;
   uploadLength = "0";
   gate = new Promise<void>((resolve) => { openGate = resolve; });
   store = {
@@ -99,8 +101,15 @@ async function installRoutes(page: Page) {
       await route.fulfill({ status: 200, headers: { "Upload-Offset": "0", "Upload-Length": uploadLength, "Tus-Resumable": "1.0.0", "Access-Control-Allow-Origin": "*", "Access-Control-Expose-Headers": "Upload-Offset, Upload-Length, Tus-Resumable" } });
       return;
     }
+    patches += 1;
+    const cors = { "Tus-Resumable": "1.0.0", "Access-Control-Allow-Origin": "*", "Access-Control-Expose-Headers": "Upload-Offset, Tus-Resumable" };
+    const total = Number(uploadLength);
+    if (patches === 1 && total > 1) {
+      await route.fulfill({ status: 204, headers: { "Upload-Offset": String(Math.floor(total / 2)), ...cors } });
+      return;
+    }
     await gate;
-    await route.fulfill({ status: 204, headers: { "Upload-Offset": uploadLength, "Tus-Resumable": "1.0.0", "Access-Control-Allow-Origin": "*", "Access-Control-Expose-Headers": "Upload-Offset, Tus-Resumable" } });
+    await route.fulfill({ status: 204, headers: { "Upload-Offset": uploadLength, ...cors } });
   });
   await page.route("**/api/admin/homepage/hero-video", async (route) => respondApi(route));
   await page.route("**/api/webhooks/bunny-stream", async (route) => {
@@ -188,6 +197,7 @@ test("upload, preparing, leave, webhook, come back live; closing mid-upload does
   await openEditor(page);
   await chooseVideo(page);
   await expect(page.getByText("Uploading your video. Keep this page open until the upload finishes.")).toBeVisible();
+  await expect.poll(async () => page.getByRole("progressbar", { name: "Video upload progress" }).getAttribute("aria-valuenow"), { timeout: 15_000 }).not.toBe("0");
   await page.getByRole("link", { name: "Roster" }).click();
   await expect(page).toHaveURL(/hero-video-completion/);
   await page.screenshot({ path: resolve(artifactDir, "hero-video-uploading.png") });
