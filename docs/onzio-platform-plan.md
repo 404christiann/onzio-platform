@@ -1391,6 +1391,9 @@ directly. The database therefore accepts only **signed** calls.
   pass both the /64 and the /48 check. The club counter is read once per call,
   so concurrent calls can overshoot the headroom share by the number in
   flight; the 1,200 cap is atomic and never overshot.
+  A few addresses (four) flooding in sequence can fill a club's 1,200/min cap;
+  accepted so shared networks like a stadium or carrier aren't undercounted.
+  The cap only drops events, it never blocks pages.
 - **Drops are counted.** Every `rate_limited` answer upserts +1 into
   `page_event_drop_counts` for the club's local day and the limit that said no
   (`network`, `visitor`, or `club`). The write happens once, after the caps and
