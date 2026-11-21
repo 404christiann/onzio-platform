@@ -4553,6 +4553,7 @@ export type Database = {
           revision_before: string
         }[]
       }
+      sweep_page_telemetry: { Args: { p_max_events?: number }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

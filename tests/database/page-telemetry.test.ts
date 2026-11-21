@@ -18,6 +18,9 @@ import { signPayload } from "../../lib/telemetry/ingest";
 // Every write is signed: the tests read the HMAC key from
 // onzio_private.telemetry_ingest_keys over this privileged connection and sign
 // with lib/telemetry/ingest (node:crypto), exactly as the beacon route does.
+// The retention sweep (onzio.sweep_page_telemetry) is global and runs as the service role; its tests
+// seed old rows inside their own transaction and compare against global counts taken just before, so
+// leftover rows from other work cannot change what they prove.
 
 let db: Client;
 let defaultsBeforeGrant: Record<string, boolean>;
@@ -180,6 +183,55 @@ async function traces(clubId: string) {
     [clubId],
   );
   return result[0];
+}
+
+async function asService(): Promise<void> {
+  await db.query("reset role");
+  await db.query("set local role service_role");
+}
+
+/** One retention sweep as the service role, called the way the cron calls it (the exposed wrapper). */
+async function sweep(maxEvents?: number | null): Promise<Record<string, unknown>> {
+  await asService();
+  // No try/finally: after a refusal the transaction is aborted and `rejects` restores the role itself.
+  const { rows: swept } =
+    maxEvents === undefined
+      ? await db.query("select onzio.sweep_page_telemetry() as result")
+      : await db.query("select onzio.sweep_page_telemetry($1::integer) as result", [maxEvents]);
+  await asOwner();
+  return swept[0].result;
+}
+
+/** The club's own calendar day right now, as the beacon stamps it on events and drop counts. */
+async function clubDay(clubId: string): Promise<string> {
+  await asOwner();
+  return (await db.query("select (now() at time zone time_zone)::date::text as day from onzio.clubs where id = $1", [clubId])).rows[0].day;
+}
+
+async function dropCounts(clubId: string) {
+  await asOwner();
+  return (
+    await db.query(
+      "select local_date::text, reason, dropped from onzio_private.page_event_drop_counts where club_id = $1 order by reason, local_date",
+      [clubId],
+    )
+  ).rows as Array<{ local_date: string; reason: string; dropped: number }>;
+}
+
+/** Puts a club's club-wide counter for the current minute at exactly this value. */
+async function setClubCounter(clubId: string, hits: number): Promise<void> {
+  await asOwner();
+  await db.query(
+    `insert into onzio_private.page_event_rate_windows (club_id, bucket, window_start, hits)
+     values ($1, '*', date_trunc('minute', now()), $2)
+     on conflict (club_id, bucket, window_start) do update set hits = excluded.hits`,
+    [clubId, hits],
+  );
+}
+
+/** n events from distinct visitors, all from the given network keys. */
+function manyVisitors(prefix: string, n: number, overrides: Event = {}): Event[] {
+  return Array.from({ length: n }, (_, i) => event({ visitorMaterial: material(`${prefix}-${i}`), ...overrides }));
 }
 
 const OPERATOR_SQL_DIR = resolve(__dirname, "../../scripts/operator-sql");
@@ -362,6 +414,8 @@ describe("onzio.record_page_event", () => {
     expect(statuses[1200]).toBe("rate_limited");
     expect(await rows(CLUB_IDS.alpha)).toHaveLength(1200);
     expect((await windows(CLUB_IDS.alpha)).find((window) => window.bucket === "*")?.hits).toBe(1200);
+    // The one event over the club cap was counted, as a club drop.
+    expect(await dropCounts(CLUB_IDS.alpha)).toEqual([{ local_date: await clubDay(CLUB_IDS.alpha), reason: "club", dropped: 1 }]);
     // The cap is per club: another club in the same minute is unaffected.
     expect(await record(CLUB_IDS.charlie, event())).toBe("recorded");
   });
@@ -400,6 +454,9 @@ describe("onzio.record_page_event", () => {
     ["a short network value", event({ networkMaterial: "abc" })],
     ["an upper-case network value", event({ networkMaterial: material("network-x").toUpperCase() })],
     ["a missing network value", event({ networkMaterial: null })],
+    ["a short wide network value", event({ wideNetworkMaterial: "abc" })],
+    ["an upper-case wide network value", event({ wideNetworkMaterial: material("wide-x").toUpperCase() })],
+    ["a numeric wide network value", event({ wideNetworkMaterial: 7 })],
     ["a text ts", event({ ts: "now" })],
     ["a missing ts", event({ ts: undefined })],
     ["an unknown source", event({ sourceType: "email" })],
@@ -548,28 +605,79 @@ describe("onzio.record_page_event signed calls", () => {
     expect((await rows(CLUB_IDS.alpha))[0].visitor_hash).toBe(salted(material("visitor-a")));
   });
 
-  it("rate-limits a flood from one network rotating visitor material at the network cap, keeping the club budget for others", async () => {
-    // One machine, 1,300 requests in a minute, a new "visitor" (user agent) every time.
+  it("stores the wide network key only as a salted, 'w:'-prefixed rate-window bucket, never in page_events", async () => {
+    const network = material("network-store-64");
+    const wide = material("network-store-48");
+    await record(CLUB_IDS.alpha, event({ networkMaterial: network, wideNetworkMaterial: wide }));
+    const salt = Buffer.from((await db.query("select encode(salt, 'hex') as hex from onzio_private.page_visitor_salts where club_id = $1", [CLUB_IDS.alpha])).rows[0].hex, "hex");
+    const salted = (value: string) => createHash("sha256").update(Buffer.concat([salt, Buffer.from(value, "utf8")])).digest("hex");
+
+    const buckets = (await windows(CLUB_IDS.alpha)).map((window) => window.bucket).sort();
+    expect(buckets).toEqual([`n:${salted(network)}`, `w:${salted(wide)}`, "*", salted(material("visitor-a"))].sort());
+    for (const bucket of buckets) {
+      expect(bucket).not.toContain(network);
+      expect(bucket).not.toContain(wide);
+    }
+    for (const value of [network, wide]) {
+      const { rows: stored } = await db.query("select count(*)::int as n from onzio.page_events e where e::text like '%' || $1 || '%'", [value]);
+      expect(stored[0].n).toBe(0);
+    }
+  });
+
+  it("accepts an event with no wide network key, or a null one, and keeps no wide counter for it", async () => {
+    expect(await record(CLUB_IDS.alpha, event())).toBe("recorded");
+    expect(await record(CLUB_IDS.alpha, event({ wideNetworkMaterial: null, visitorMaterial: material("visitor-b") }))).toBe("recorded");
+    expect((await windows(CLUB_IDS.alpha)).filter((window) => window.bucket.startsWith("w:"))).toEqual([]);
+    expect(await rows(CLUB_IDS.alpha)).toHaveLength(2);
+  });
+
+  it("allows only the known bucket kinds in the rate-limit table", async () => {
+    const insertBucket = (bucket: string) =>
+      db.query(
+        "insert into onzio_private.page_event_rate_windows (club_id, bucket, window_start, hits) values ($1, $2, date_trunc('minute', now()) - interval '1 day', 1)",
+        [CLUB_IDS.alpha, bucket],
+      );
+    await asOwner();
+    for (const good of [`w:${"a".repeat(64)}`, `n:${"a".repeat(64)}`, "a".repeat(64), "*"]) await insertBucket(good);
+    for (const bad of [`x:${"a".repeat(64)}`, `w:${"a".repeat(63)}`, `w:${"A".repeat(64)}`, `ww:${"a".repeat(64)}`, `w:n:${"a".repeat(64)}`, "w:", ""]) {
+      await rejects(() => insertBucket(bad), { code: "23514" });
+    }
+  });
+
+  it("rate-limits a flood from one network rotating visitor material at half the club budget, keeping the rest for others", async () => {
+    // One machine, 1,300 requests in a minute, a new "visitor" (user agent) every time. Over its 120 share a
+    // network is still accepted while the club has used less than half (600) of its 1,200 a minute, then limited.
     const statuses = await recordMany(
       CLUB_IDS.alpha,
       Array.from({ length: 1300 }, (_, i) => event({ visitorMaterial: material(`rotating-${i}`), path: `/news/n${i % 7}` })),
     );
-    expect(statuses.filter((status) => status === "recorded")).toHaveLength(120);
-    expect(statuses.filter((status) => status === "rate_limited")).toHaveLength(1180);
-    expect(statuses.slice(0, 120).every((status) => status === "recorded")).toBe(true);
-    expect(await rows(CLUB_IDS.alpha)).toHaveLength(120);
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(600);
+    expect(statuses.filter((status) => status === "rate_limited")).toHaveLength(700);
+    expect(statuses.slice(0, 600).every((status) => status === "recorded")).toBe(true);
+    expect(await rows(CLUB_IDS.alpha)).toHaveLength(600);
 
-    // Only accepted events spent club-wide budget: 120 of 1,200, not 1,300.
+    // Only accepted events spent club-wide budget: 600 of 1,200, not 1,300, and the network's counter
+    // stopped where it said no instead of being rewritten for every flood request.
     const afterFlood = await windows(CLUB_IDS.alpha);
-    expect(afterFlood.find((window) => window.bucket === "*")?.hits).toBe(120);
+    expect(afterFlood.find((window) => window.bucket === "*")?.hits).toBe(600);
     const networkBuckets = afterFlood.filter((window) => window.bucket.startsWith("n:"));
     expect(networkBuckets).toHaveLength(1);
-    expect(networkBuckets[0].hits).toBe(120);
+    expect(networkBuckets[0].hits).toBe(600);
+    // The 700 limited events are counted, not silent.
+    expect(await dropCounts(CLUB_IDS.alpha)).toEqual([{ local_date: await clubDay(CLUB_IDS.alpha), reason: "network", dropped: 700 }]);
 
-    // A real visitor on a different network in the same minute is still recorded.
+    // A real visitor on a different network in the same minute is still recorded...
     expect(await record(CLUB_IDS.alpha, event({ visitorMaterial: material("real-visitor"), networkMaterial: material("network-b"), path: "/real" }))).toBe("recorded");
-    expect((await windows(CLUB_IDS.alpha)).find((window) => window.bucket === "*")?.hits).toBe(121);
-    expect(await rows(CLUB_IDS.alpha)).toHaveLength(121);
+    expect((await windows(CLUB_IDS.alpha)).find((window) => window.bucket === "*")?.hits).toBe(601);
+    expect(await rows(CLUB_IDS.alpha)).toHaveLength(601);
+    // ...and the other half of the club budget is still there for other networks: 599 more fill it to 1,200.
+    const others = await recordMany(
+      CLUB_IDS.alpha,
+      Array.from({ length: 599 }, (_, i) => event({ visitorMaterial: material(`other-${i}`), networkMaterial: material(`other-network-${i}`) })),
+    );
+    expect(others.every((status) => status === "recorded")).toBe(true);
+    expect((await windows(CLUB_IDS.alpha)).find((window) => window.bucket === "*")?.hits).toBe(1200);
+    expect(await record(CLUB_IDS.alpha, event({ visitorMaterial: material("one-too-many"), networkMaterial: material("network-last") }))).toBe("rate_limited");
   });
 
   it("counts a visitor-capped event against its network, but not against the club", async () => {
@@ -578,6 +686,189 @@ describe("onzio.record_page_event signed calls", () => {
     const counters = await windows(CLUB_IDS.alpha);
     expect(counters.find((window) => window.bucket === "*")?.hits).toBe(60);
     expect(counters.find((window) => window.bucket.startsWith("n:"))?.hits).toBe(70);
+  });
+});
+
+describe("telemetry fair-share network limits", () => {
+  const alpha = CLUB_IDS.alpha;
+  const network = (name: string) => material(`network-${name}`);
+
+  it("records every event of a busy shared network (stadium Wi-Fi) while the club counter is low", async () => {
+    const statuses = await recordMany(alpha, manyVisitors("stadium", 400, { networkMaterial: network("stadium") }));
+    expect(statuses.every((status) => status === "recorded")).toBe(true);
+    expect(await rows(alpha)).toHaveLength(400);
+    const counters = await windows(alpha);
+    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(400);
+    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([400]);
+    // Nothing was limited, so nothing was counted as dropped.
+    expect(await dropCounts(alpha)).toEqual([]);
+  });
+
+  it("limits a network to its 120 share once the club counter is at the shared floor, while a new network still records", async () => {
+    await setClubCounter(alpha, 600);
+    const statuses = await recordMany(alpha, manyVisitors("over", 130, { networkMaterial: network("busy") }));
+    expect(statuses.slice(0, 120).every((status) => status === "recorded")).toBe(true);
+    expect(statuses.slice(120).every((status) => status === "rate_limited")).toBe(true);
+    expect(await rows(alpha)).toHaveLength(120);
+    // Accepted events spent club budget (600 + 120); the network's counter stopped at its share.
+    const counters = await windows(alpha);
+    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(720);
+    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([120]);
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 10 }]);
+
+    // A network that has not used its share is still recorded, even past the floor.
+    expect(await record(alpha, event({ visitorMaterial: material("newcomer"), networkMaterial: network("other") }))).toBe("recorded");
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(721);
+  });
+
+  it("limits a network that is past its share once other traffic takes the club past the shared floor", async () => {
+    const early = await recordMany(alpha, manyVisitors("early", 400, { networkMaterial: network("early") }));
+    expect(early.every((status) => status === "recorded")).toBe(true);
+    // 250 other networks, one event each: the club counter passes 600 (to 650).
+    const others = await recordMany(
+      alpha,
+      Array.from({ length: 250 }, (_, i) => event({ visitorMaterial: material(`other-${i}`), networkMaterial: network(`other-${i}`) })),
+    );
+    expect(others.every((status) => status === "recorded")).toBe(true);
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(650);
+
+    // The early network used 400 (over its 120 share) and is now limited; one that used 1 is not.
+    expect(await record(alpha, event({ visitorMaterial: material("early-again"), networkMaterial: network("early") }))).toBe("rate_limited");
+    expect(await record(alpha, event({ visitorMaterial: material("other-0-again"), networkMaterial: network("other-0") }))).toBe("recorded");
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 1 }]);
+  });
+
+  it("stops counting a network at the club cap, so its counter is not rewritten without bound", async () => {
+    // One visitor sends 1,300 events: 60 are recorded and the rest are visitor drops, but each one still reaches
+    // the network counter while the club is below the floor, which stops at 1,200.
+    const statuses = await recordMany(alpha, Array.from({ length: 1300 }, (_, i) => event({ path: `/news/n${i % 5}` })));
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(60);
+    expect((await windows(alpha)).filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([1200]);
+    expect(await dropCounts(alpha)).toEqual([
+      { local_date: await clubDay(alpha), reason: "network", dropped: 100 },
+      { local_date: await clubDay(alpha), reason: "visitor", dropped: 1140 },
+    ]);
+  });
+
+  it("keeps ten /64s inside one /48 to about half of the club budget, and still records a different /48", async () => {
+    const wide = material("wide-attacker");
+    // One block rotating ten /64 addresses, a new visitor every time, 1,300 requests in a minute.
+    const statuses = await recordMany(
+      alpha,
+      Array.from({ length: 1300 }, (_, i) =>
+        event({ visitorMaterial: material(`rotating-${i}`), networkMaterial: network(`rot64-${i % 10}`), wideNetworkMaterial: wide }),
+      ),
+    );
+    const accepted = statuses.filter((status) => status === "recorded").length;
+    // At most the shared floor (600) plus one share (120) of the club's 1,200; started first, it takes exactly 600.
+    expect(accepted).toBeLessThanOrEqual(600 + 120);
+    expect(accepted).toBe(600);
+    expect(statuses.slice(0, 600).every((status) => status === "recorded")).toBe(true);
+    expect(await rows(alpha)).toHaveLength(600);
+
+    const counters = await windows(alpha);
+    expect(counters.find((window) => window.bucket === "*")?.hits).toBe(600);
+    expect(counters.filter((window) => window.bucket.startsWith("w:")).map((window) => window.hits)).toEqual([600]);
+    // Each /64 counter stopped at its share; none was rewritten for every limited request.
+    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual(Array(10).fill(120));
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 700 }]);
+
+    // A different /48, and an IPv4 caller (no wide key), still record from the other half of the budget.
+    expect(
+      await record(alpha, event({ visitorMaterial: material("bystander-v6"), networkMaterial: network("bystander-64"), wideNetworkMaterial: material("wide-bystander") })),
+    ).toBe("recorded");
+    expect(await record(alpha, event({ visitorMaterial: material("bystander-v4"), networkMaterial: network("bystander-v4") }))).toBe("recorded");
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(602);
+  });
+
+  it("holds a /48 to its 120 share once the club counter is at the shared floor", async () => {
+    await setClubCounter(alpha, 600);
+    const wide = material("wide-late");
+    const statuses = await recordMany(
+      alpha,
+      Array.from({ length: 130 }, (_, i) =>
+        event({ visitorMaterial: material(`late-${i}`), networkMaterial: network(`late64-${i % 10}`), wideNetworkMaterial: wide }),
+      ),
+    );
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(120);
+    expect(statuses.slice(120).every((status) => status === "rate_limited")).toBe(true);
+    expect((await windows(alpha)).find((window) => window.bucket === "*")?.hits).toBe(720);
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "network", dropped: 10 }]);
+  });
+
+  it("does not spend a /48's counter on events its own /64 already limited", async () => {
+    await setClubCounter(alpha, 600);
+    const statuses = await recordMany(
+      alpha,
+      manyVisitors("single64", 125, { networkMaterial: network("single64"), wideNetworkMaterial: material("wide-single64") }),
+    );
+    expect(statuses.filter((status) => status === "recorded")).toHaveLength(120);
+    const counters = await windows(alpha);
+    expect(counters.filter((window) => window.bucket.startsWith("n:")).map((window) => window.hits)).toEqual([120]);
+    expect(counters.filter((window) => window.bucket.startsWith("w:")).map((window) => window.hits)).toEqual([120]);
+  });
+
+  it("counts every limited event by reason, on the club's own day, and only after the add-on gate", async () => {
+    const day = await clubDay(alpha);
+    // visitor: one visitor sends 63 events, 3 over its 60 a minute.
+    const visitor = await recordMany(alpha, Array.from({ length: 63 }, (_, i) => event({ path: `/news/n${i}` })));
+    expect(visitor.filter((status) => status === "rate_limited")).toHaveLength(3);
+    expect(await dropCounts(alpha)).toEqual([{ local_date: day, reason: "visitor", dropped: 3 }]);
+
+    // network: the club is at the shared floor and one network sends 122 events, 2 over its share.
+    await setClubCounter(alpha, 600);
+    const busy = await recordMany(alpha, manyVisitors("busy", 122, { networkMaterial: network("busy") }));
+    expect(busy.filter((status) => status === "rate_limited")).toHaveLength(2);
+
+    // club: the club counter is at its cap, so a brand-new visitor on a brand-new network is dropped.
+    await setClubCounter(alpha, 1200);
+    expect(await record(alpha, event({ visitorMaterial: material("late"), networkMaterial: network("late") }))).toBe("rate_limited");
+
+    expect(await dropCounts(alpha)).toEqual([
+      { local_date: day, reason: "club", dropped: 1 },
+      { local_date: day, reason: "network", dropped: 2 },
+      { local_date: day, reason: "visitor", dropped: 3 },
+    ]);
+
+    // Anything else that is turned away writes no drop count: bad signature, stale, not public, no add-on.
+    expect(await callRecord(alpha, payloadText(event()), null)).toBe("bad_signature");
+    expect(await record(alpha, event({ ts: 0 }))).toBe("stale");
+    expect(await record(CLUB_IDS.bravo, event())).toBe("not_public");
+    await revoke(CLUB_IDS.charlie);
+    expect(await record(CLUB_IDS.charlie, event())).toBe("not_entitled");
+    for (const club of [CLUB_IDS.bravo, CLUB_IDS.charlie]) expect(await dropCounts(club), club).toEqual([]);
+    expect((await dropCounts(alpha)).reduce((sum, row) => sum + row.dropped, 0)).toBe(6);
+  });
+
+  it("keeps drop counts when the add-on is removed, because they hold no visitor data", async () => {
+    await setClubCounter(alpha, 1200);
+    expect(await record(alpha, event())).toBe("rate_limited");
+    await revoke(alpha);
+    expect(await traces(alpha)).toEqual({ events: 0, salts: 0, windows: 0 });
+    expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "club", dropped: 1 }]);
+  });
+
+  it("keeps drop counts out of browser roles' reach and constrains what they can hold", async () => {
+    const { rows: security } = await db.query("select relrowsecurity from pg_class where oid = 'onzio_private.page_event_drop_counts'::regclass");
+    expect(security[0].relrowsecurity).toBe(true);
+    for (const actor of [asAnon, () => asUser(USER_IDS.ownerAal2)]) {
+      await actor();
+      await rejects(() => db.query("select * from onzio_private.page_event_drop_counts"), { code: "42501" });
+      await actor();
+      await rejects(
+        () => db.query("insert into onzio_private.page_event_drop_counts (club_id, local_date, reason, dropped) values ($1, current_date, 'club', 1)", [alpha]),
+        { code: "42501" },
+      );
+    }
+    const insertDrop = (club: string, reason: string, dropped: number) =>
+      db.query("insert into onzio_private.page_event_drop_counts (club_id, local_date, reason, dropped) values ($1, current_date, $2, $3)", [club, reason, dropped]);
+    await asOwner();
+    await insertDrop(alpha, "network", 1);
+    await rejects(() => insertDrop(alpha, "network", 1), { code: "23505" });
+    await rejects(() => insertDrop(alpha, "abuse", 1), { code: "23514" });
+    await rejects(() => insertDrop(alpha, "club", 0), { code: "23514" });
+    await rejects(() => insertDrop(alpha, "club", -1), { code: "23514" });
+    await rejects(() => insertDrop(randomUUID(), "club", 1), { code: "23503" });
   });
 });
 
@@ -716,6 +1007,225 @@ describe("telemetry retention sweep", () => {
       "select has_function_privilege('anon', 'onzio_private.forget_telemetry_when_addon_removed()', 'execute') as anon, has_function_privilege('authenticated', 'onzio_private.forget_telemetry_when_addon_removed()', 'execute') as authenticated, has_function_privilege('service_role', 'onzio_private.forget_telemetry_when_addon_removed()', 'execute') as service_role",
     );
     expect(grants[0]).toEqual({ anon: false, authenticated: false, service_role: false });
+  });
+});
+
+describe("onzio.sweep_page_telemetry (the daily retention cron)", () => {
+  const UTC_TODAY = "(now() at time zone 'UTC')::date";
+
+  async function saltAges(clubId: string): Promise<number[]> {
+    await asOwner();
+    const { rows: ages } = await db.query(
+      `select (${UTC_TODAY} - salt_day)::int as age from onzio_private.page_visitor_salts where club_id = $1 order by 1`,
+      [clubId],
+    );
+    return ages.map((row) => row.age);
+  }
+
+  async function addSalt(clubId: string, daysBeforeUtcToday: number): Promise<void> {
+    await asOwner();
+    await db.query(
+      `insert into onzio_private.page_visitor_salts (club_id, salt_day, salt) values ($1, ${UTC_TODAY} - $2::int, decode(repeat('ab', 32), 'hex'))`,
+      [clubId, daysBeforeUtcToday],
+    );
+  }
+
+  async function addWindow(clubId: string, minutesAgo: number, hits = 5): Promise<void> {
+    await asOwner();
+    await db.query(
+      "insert into onzio_private.page_event_rate_windows (club_id, bucket, window_start, hits) values ($1, '*', date_trunc('minute', now()) - make_interval(mins => $2::int), $3)",
+      [clubId, minutesAgo, hits],
+    );
+  }
+
+  /** How old, in whole minutes, each of a club's counters is. */
+  async function windowAges(clubId: string): Promise<number[]> {
+    await asOwner();
+    const { rows: ages } = await db.query(
+      "select (extract(epoch from (date_trunc('minute', now()) - window_start)) / 60)::int as age from onzio_private.page_event_rate_windows where club_id = $1 order by 1",
+      [clubId],
+    );
+    return ages.map((row) => row.age);
+  }
+
+  async function addDrop(clubId: string, daysBeforeUtcToday: number, reason: string): Promise<void> {
+    await asOwner();
+    await db.query(
+      `insert into onzio_private.page_event_drop_counts (club_id, local_date, reason, dropped) values ($1, ${UTC_TODAY} - $2::int, $3, 4)`,
+      [clubId, daysBeforeUtcToday, reason],
+    );
+  }
+
+  /** What the sweep should delete right now, across every club, from the database's own point of view. */
+  async function expired() {
+    await asOwner();
+    const { rows: counts } = await db.query(
+      `select (select count(*)::int from onzio.page_events where occurred_at < now() - interval '90 days') as events,
+              (select count(*)::int from onzio_private.page_visitor_salts where salt_day < ${UTC_TODAY} - 2) as salts,
+              (select count(*)::int from onzio_private.page_event_rate_windows where window_start < now() - interval '1 hour') as windows,
+              (select count(*)::int from onzio_private.page_event_drop_counts where local_date < ${UTC_TODAY} - 90) as drops`,
+    );
+    return counts[0] as { events: number; salts: number; windows: number; drops: number };
+  }
+
+  async function dropReasons(clubId: string): Promise<string[]> {
+    return (await dropCounts(clubId)).map((row) => row.reason);
+  }
+
+  it("with no traffic at all, deletes a de-entitled club's expired events, old salts, old counters and old drop counts", async () => {
+    await revoke(CLUB_IDS.charlie); // public, but without the add-on, so it can never record or sweep itself
+    await rawEvent(CLUB_IDS.charlie, "91 days");
+    await rawEvent(CLUB_IDS.charlie, "100 days");
+    const charlieKept = await rawEvent(CLUB_IDS.charlie, "89 days");
+    await rawEvent(CLUB_IDS.bravo, "120 days"); // not public at all
+    const bravoKept = await rawEvent(CLUB_IDS.bravo, "10 days");
+    await rawEvent(CLUB_IDS.alpha, "95 days"); // an entitled club that simply had no visitors today
+    for (const age of [3, 2, 1, 0]) await addSalt(CLUB_IDS.charlie, age);
+    for (const age of [30, 5]) await addSalt(CLUB_IDS.bravo, age);
+    for (const minutes of [180, 61, 59, 0]) await addWindow(CLUB_IDS.charlie, minutes);
+    await addDrop(CLUB_IDS.charlie, 91, "network");
+    await addDrop(CLUB_IDS.charlie, 91, "visitor");
+    await addDrop(CLUB_IDS.charlie, 90, "club");
+    await addDrop(CLUB_IDS.charlie, 5, "network");
+    await addDrop(CLUB_IDS.bravo, 200, "visitor");
+
+    const before = await expired();
+    expect(before.events).toBeGreaterThanOrEqual(4);
+    expect(before.salts).toBeGreaterThanOrEqual(3);
+    expect(before.windows).toBeGreaterThanOrEqual(2);
+    expect(before.drops).toBeGreaterThanOrEqual(3);
+
+    // No event was recorded in this test: the sweep ran on nothing but its own call.
+    expect(await sweep()).toEqual({
+      maxEvents: 100000,
+      eventsDeleted: before.events,
+      saltsDeleted: before.salts,
+      rateWindowsDeleted: before.windows,
+      dropCountsDeleted: before.drops,
+      moreEventsRemain: false,
+    });
+
+    expect((await rows(CLUB_IDS.charlie)).map((row) => row.id)).toEqual([charlieKept]);
+    expect((await rows(CLUB_IDS.bravo)).map((row) => row.id)).toEqual([bravoKept]);
+    expect(await rows(CLUB_IDS.alpha)).toEqual([]);
+    // Salts more than two UTC days old go; two days old and newer stay.
+    expect(await saltAges(CLUB_IDS.charlie)).toEqual([0, 1, 2]);
+    expect(await saltAges(CLUB_IDS.bravo)).toEqual([]);
+    // Counters more than an hour old go; the current minute and one 59 minutes old stay.
+    expect(await windowAges(CLUB_IDS.charlie)).toEqual([0, 59]);
+    // Drop counts more than 90 days old go; 90 days and newer stay.
+    expect(await dropReasons(CLUB_IDS.charlie)).toEqual(["club", "network"]);
+    expect(await dropReasons(CLUB_IDS.bravo)).toEqual([]);
+    expect(await expired()).toEqual({ events: 0, salts: 0, windows: 0, drops: 0 });
+  });
+
+  it("changes nothing when nothing has expired, and a second run deletes nothing", async () => {
+    await rawEvent(CLUB_IDS.alpha, "89 days");
+    await addSalt(CLUB_IDS.alpha, 1);
+    await addWindow(CLUB_IDS.alpha, 30);
+    await addDrop(CLUB_IDS.alpha, 10, "club");
+    await sweep();
+    const afterFirst = { events: (await rows(CLUB_IDS.alpha)).length, salts: await saltAges(CLUB_IDS.alpha), windows: await windowAges(CLUB_IDS.alpha), drops: await dropReasons(CLUB_IDS.alpha) };
+    expect(afterFirst).toEqual({ events: 1, salts: [1], windows: [30], drops: ["club"] });
+    expect(await sweep()).toEqual({
+      maxEvents: 100000,
+      eventsDeleted: 0,
+      saltsDeleted: 0,
+      rateWindowsDeleted: 0,
+      dropCountsDeleted: 0,
+      moreEventsRemain: false,
+    });
+  });
+
+  it("deletes at most p_max_events, in batches, oldest first, and reports that more remain", async () => {
+    await asOwner();
+    await db.query(
+      `insert into onzio.page_events (club_id, occurred_at, local_date, event_type, visitor_hash, visit_id, is_entry, path, source_type, device)
+       select $1, now() - interval '100 days' - make_interval(secs => g), (now() - interval '100 days')::date, 'view', repeat('c', 64), gen_random_uuid(), true, '/', 'direct', 'desktop'
+       from generate_series(1, 12000) as g`,
+      [CLUB_IDS.bravo],
+    );
+    const oldest = await rawEvent(CLUB_IDS.bravo, "3650 days");
+    const kept = await rawEvent(CLUB_IDS.bravo, "89 days");
+    const total = (await expired()).events;
+    expect(total).toBeGreaterThanOrEqual(12001);
+
+    // One row: the oldest of all goes first.
+    expect(await sweep(1)).toMatchObject({ maxEvents: 1, eventsDeleted: 1, moreEventsRemain: true });
+    expect((await rows(CLUB_IDS.bravo)).map((row) => row.id)).not.toContain(oldest);
+    expect((await expired()).events).toBe(total - 1);
+
+    // A bound that is not a multiple of the 5,000-row batch is still respected exactly.
+    expect(await sweep(7500)).toMatchObject({ maxEvents: 7500, eventsDeleted: 7500, moreEventsRemain: true });
+    expect((await expired()).events).toBe(total - 7501);
+
+    // Zero deletes no events but still reports the backlog.
+    expect(await sweep(0)).toMatchObject({ eventsDeleted: 0, moreEventsRemain: true });
+    expect((await expired()).events).toBe(total - 7501);
+
+    // A large bound finishes the job in one call and says nothing remains.
+    expect(await sweep(1_000_000)).toMatchObject({ eventsDeleted: total - 7501, moreEventsRemain: false });
+    expect((await expired()).events).toBe(0);
+    expect((await rows(CLUB_IDS.bravo)).map((row) => row.id)).toEqual([kept]);
+  });
+
+  it("refuses a negative or missing bound", async () => {
+    for (const bad of [-1, null]) {
+      await rejects(() => sweep(bad), { code: "22023", message: "INVALID_SWEEP_LIMIT" });
+    }
+  });
+
+  it("does not depend on, or interfere with, the sweep inside record_page_event", async () => {
+    await rawEvent(CLUB_IDS.bravo, "100 days");
+    // The cron removes it with no traffic; a later accepted event finds nothing left and records normally.
+    await sweep();
+    expect(await rows(CLUB_IDS.bravo)).toEqual([]);
+    expect(await record(CLUB_IDS.alpha, event())).toBe("recorded");
+    const stale = await rawEvent(CLUB_IDS.bravo, "100 days");
+    await nextMinute(CLUB_IDS.alpha);
+    expect(await record(CLUB_IDS.alpha, event({ visitorMaterial: material("visitor-b") }))).toBe("recorded");
+    expect((await rows(CLUB_IDS.bravo)).map((row) => row.id)).not.toContain(stale);
+  });
+
+  it("can be executed by the service role only: not by anon, signed-in users or public", async () => {
+    for (const fn of ["onzio.sweep_page_telemetry(integer)", "onzio_private.sweep_page_telemetry(integer)"]) {
+      const { rows: grants } = await db.query(
+        `select has_function_privilege('anon', $1, 'execute') as anon,
+                has_function_privilege('authenticated', $1, 'execute') as authenticated,
+                has_function_privilege('service_role', $1, 'execute') as service_role`,
+        [fn],
+      );
+      expect(grants[0], fn).toEqual({ anon: false, authenticated: false, service_role: true });
+      // No PUBLIC entry (an aclitem with an empty grantee), which would make it executable by every role.
+      const { rows: acl } = await db.query("select array_to_string(proacl, ',') as acl from pg_proc where oid = $1::regprocedure", [fn]);
+      expect(acl[0].acl, fn).not.toBeNull();
+      expect(acl[0].acl, fn).not.toMatch(/(^|,)=X\//);
+    }
+    for (const actor of [asAnon, () => asUser(USER_IDS.ownerAal2)]) {
+      await actor();
+      await rejects(() => db.query("select onzio.sweep_page_telemetry(1)"), { code: "42501" });
+      await actor();
+      await rejects(() => db.query("select onzio_private.sweep_page_telemetry(1)"), { code: "42501" });
+    }
+    // The service role can, and the call is the exposed wrapper the cron uses.
+    expect(await sweep(0)).toMatchObject({ maxEvents: 0, eventsDeleted: 0 });
+    await asService();
+    expect((await db.query("select onzio_private.sweep_page_telemetry(0) as result")).rows[0].result).toMatchObject({ maxEvents: 0 });
+    await asOwner();
+  });
+
+  it("is a security-definer function with an empty search path, behind a security-invoker wrapper", async () => {
+    const { rows: functions } = await db.query(
+      `select n.nspname, p.prosecdef, p.proconfig
+       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where p.proname = 'sweep_page_telemetry' order by n.nspname`,
+    );
+    // PostgreSQL stores `set search_path = ''` in proconfig as search_path="" (the empty value quoted).
+    const emptyPath = (config: string[] | null) => (config ?? []).some((entry) => /^search_path=(""|)$/.test(entry));
+    expect(functions.map((fn) => [fn.nspname, fn.prosecdef, emptyPath(fn.proconfig)])).toEqual([
+      ["onzio", false, true],
+      ["onzio_private", true, true],
+    ]);
   });
 });
 

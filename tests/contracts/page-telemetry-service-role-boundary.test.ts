@@ -89,19 +89,22 @@ describe("page telemetry beacon service-role boundary", () => {
     expect([...rpcs].sort()).toEqual(["club_has_addon", "record_page_event"]);
   });
 
-  it("keeps the migration narrow: three security-definer functions, no write grants, no grants by default", async () => {
+  it("keeps the migration narrow: four security-definer functions, no write grants, no grants by default", async () => {
     const sql = await readFile(resolve(ROOT, "supabase/migrations/20261119130000_page_telemetry.sql"), "utf8");
     const telemetry = sql.slice(0, sql.indexOf("create or replace function onzio_private.purge_archived_club"));
-    // Declarations only (comment lines mention the term too): the event writer, the add-on reader, and the
-    // trigger that forgets a club's salts when its add-on is removed.
-    expect(telemetry.match(/^security definer$/gm)).toHaveLength(3);
+    // Declarations only (comment lines mention the term too): the event writer, the add-on reader, the
+    // trigger that forgets a club's salts when its add-on is removed, and the daily retention sweep
+    // (service role only, see the next test).
+    expect(telemetry.match(/^security definer$/gm)).toHaveLength(4);
     expect(telemetry).toMatch(/create function onzio_private\.record_page_event[\s\S]*?security definer\s+set search_path = ''/);
     expect(telemetry).toMatch(/create function onzio_private\.club_has_addon[\s\S]*?security definer\s+set search_path = ''/);
     expect(telemetry).toMatch(
       /create function onzio_private\.forget_telemetry_when_addon_removed\(\)[\s\S]*?security definer\s+set search_path = ''/,
     );
+    expect(telemetry).toMatch(/create function onzio_private\.sweep_page_telemetry[\s\S]*?security definer\s+set search_path = ''/);
     expect(telemetry).toMatch(/create function onzio\.record_page_event[\s\S]*?security invoker/);
     expect(telemetry).toMatch(/create function onzio\.club_has_addon[\s\S]*?security invoker/);
+    expect(telemetry).toMatch(/create function onzio\.sweep_page_telemetry[\s\S]*?security invoker/);
     // The add-on is enforced inside the writer, before any salt, rate window or event is written.
     const writer = telemetry.slice(telemetry.indexOf("create function onzio_private.record_page_event"));
     const gate = writer.indexOf("if not onzio_private.club_has_addon(p_club_id, 'telemetry') then");
@@ -167,14 +170,95 @@ describe("page telemetry beacon service-role boundary", () => {
     expect(opened).toBeGreaterThan(writer.indexOf("values (p_club_id, '*', v_window, 1)"));
     expect(writer.indexOf("c_sweep_batch\n      for update skip locked")).toBeGreaterThan(opened);
     expect(writer.indexOf("where s.salt_day < (v_now at time zone 'UTC')::date - 2")).toBeGreaterThan(opened);
-    // Network cap, then visitor cap, then the club cap: a rejected event never spends club budget.
+    // Network cap, then the wide (/48) network cap, then visitor cap, then the club cap: a rejected event
+    // never spends club budget.
     const network = writer.indexOf("values (p_club_id, v_network_bucket, v_window, 1)");
+    const wide = writer.indexOf("values (p_club_id, v_wide_bucket, v_window, 1)");
     const visitor = writer.indexOf("values (p_club_id, v_hash, v_window, 1)");
     const club = writer.indexOf("values (p_club_id, '*', v_window, 1)");
     expect(network).toBeGreaterThan(0);
-    expect(visitor).toBeGreaterThan(network);
+    expect(wide).toBeGreaterThan(network);
+    expect(visitor).toBeGreaterThan(wide);
     expect(club).toBeGreaterThan(visitor);
     // Network keys live only in rate windows, salted and prefixed.
     expect(writer).toContain("'n:' || encode(sha256(v_salt || convert_to(v_network, 'UTF8')), 'hex')");
+    expect(writer).toContain("'w:' || encode(sha256(v_salt || convert_to(v_wide, 'UTF8')), 'hex')");
+  });
+
+  it("gives networks a fair share and counts every limited event, in the writer", async () => {
+    const sql = await readFile(resolve(ROOT, "supabase/migrations/20261119130000_page_telemetry.sql"), "utf8");
+    const writer = sql.slice(sql.indexOf("create function onzio_private.record_page_event"), sql.indexOf("-- Archived-club hard purge:"));
+    // Over its 120 share a network is accepted while the club is below the shared floor (half of 1,200),
+    // and its counter stops at the club cap: both network buckets use the same rule.
+    expect(writer).toContain("c_shared_floor constant integer := 600;");
+    const rule = /where w\.hits < c_network_limit\s+or \(w\.hits < c_club_limit and v_club_hits < c_shared_floor\)/g;
+    expect(writer.match(rule)).toHaveLength(2);
+    // The visitor and club caps keep their plain limits.
+    expect(writer).toMatch(/values \(p_club_id, v_hash, v_window, 1\)[\s\S]*?where w\.hits < c_visitor_limit/);
+    expect(writer).toMatch(/values \(p_club_id, '\*', v_window, 1\)[\s\S]*?where w\.hits < c_club_limit\s+returning/);
+    // The wide key is optional, 64 hex when present, and part of the signed key list.
+    expect(writer).toContain("'wideNetworkMaterial'");
+    expect(writer).toContain("v_wide := onzio_private.page_event_text(v_event, 'wideNetworkMaterial', '^[0-9a-f]{64}$', false);");
+    // Each cap records which limit said no; the drop is counted once, after the caps and before the
+    // new-minute sweep, and 'rate_limited' is returned from that one place only.
+    for (const reason of ["network", "visitor", "club"]) expect(writer).toContain(`v_drop := '${reason}';`);
+    expect(writer.match(/return 'rate_limited';/g)).toHaveLength(1);
+    const counted = writer.indexOf("insert into onzio_private.page_event_drop_counts as d");
+    expect(counted).toBeGreaterThan(writer.indexOf("end limits;"));
+    expect(counted).toBeLessThan(writer.indexOf("return 'rate_limited';"));
+    expect(writer.indexOf("return 'rate_limited';")).toBeLessThan(writer.indexOf("if v_hits = 1 then"));
+    // ...and only after the add-on gate, so a club without it leaves no trace.
+    expect(counted).toBeGreaterThan(writer.indexOf("if not onzio_private.club_has_addon(p_club_id, 'telemetry') then"));
+    // The drop-count table: RLS on, no API grants, cascade with the club, three fixed reasons.
+    expect(sql).toContain("alter table onzio_private.page_event_drop_counts enable row level security;");
+    expect(sql).toContain("revoke all on table onzio_private.page_event_drop_counts from public, anon, authenticated, service_role;");
+    expect(sql).not.toMatch(/grant[^;]*page_event_drop_counts/i);
+    expect(sql).toMatch(/create table onzio_private\.page_event_drop_counts \([\s\S]*?references onzio\.clubs\(id\) on delete cascade/);
+    expect(sql).toContain("reason in ('network', 'visitor', 'club')");
+    // The add-on removal trigger keeps the counts: they hold no visitor data.
+    const trigger = sql.slice(
+      sql.indexOf("create function onzio_private.forget_telemetry_when_addon_removed"),
+      sql.indexOf("create trigger club_addons_forget_telemetry"),
+    );
+    expect(trigger).not.toContain("page_event_drop_counts");
+  });
+
+  it("sweeps retention daily for every club through a service-role-only definer, like the media orphan sweep", async () => {
+    const sql = await readFile(resolve(ROOT, "supabase/migrations/20261119130000_page_telemetry.sql"), "utf8");
+    const telemetry = sql.slice(0, sql.indexOf("create or replace function onzio_private.purge_archived_club"));
+    expect(telemetry).toContain("revoke all on function onzio_private.sweep_page_telemetry(integer)\n  from public, anon, authenticated, service_role;");
+    expect(telemetry).toContain("grant execute on function onzio_private.sweep_page_telemetry(integer) to service_role;");
+    expect(telemetry).toContain("revoke all on function onzio.sweep_page_telemetry(integer) from public, anon, authenticated;");
+    expect(telemetry).toContain("grant execute on function onzio.sweep_page_telemetry(integer) to service_role;");
+    expect([...telemetry.matchAll(/grant\s+execute\s+on\s+function\s+onzio(?:_private)?\.sweep_page_telemetry[^;]*;/gi)].map((match) => match[0].replace(/\s+/g, " "))).toEqual([
+      "grant execute on function onzio_private.sweep_page_telemetry(integer) to service_role;",
+      "grant execute on function onzio.sweep_page_telemetry(integer) to service_role;",
+    ]);
+    const sweep = telemetry.slice(
+      telemetry.indexOf("create function onzio_private.sweep_page_telemetry"),
+      telemetry.indexOf("revoke all on function onzio_private.sweep_page_telemetry"),
+    );
+    // It touches every club (no club filter) and deletes in bounded batches.
+    expect(sweep).not.toContain("p_club_id");
+    expect(sweep).toContain("where s.salt_day < v_utc_today - 2;");
+    expect(sweep).toContain("where w.window_start < v_now - interval '1 hour';");
+    expect(sweep).toContain("where d.local_date < v_utc_today - 90;");
+    expect(sweep).toContain("limit least(c_batch, p_max_events - v_events)");
+    expect(sweep).toContain("c_batch constant integer := 5000;");
+  });
+
+  it("keeps the retention cron and its service-role client out of the public beacon's graph", async () => {
+    for (const entry of ENTRY_POINTS) {
+      const files = [...(await importGraph(entry)).keys()].map((file) => relative(ROOT, file).replaceAll("\\", "/"));
+      expect(files, entry).not.toContain("lib/telemetry/retention.ts");
+      expect(files, entry).not.toContain("lib/supabase-service-role.ts");
+      expect(files, entry).not.toContain("app/api/cron/telemetry-retention/route.ts");
+    }
+    // The cron is a separate graph: it, and only it, reaches the service role.
+    const cron = await importGraph("app/api/cron/telemetry-retention/route.ts");
+    const files = [...cron.keys()].map((file) => relative(ROOT, file).replaceAll("\\", "/"));
+    expect(files).toEqual(expect.arrayContaining(["lib/telemetry/retention.ts", "lib/supabase-service-role.ts"]));
+    expect(files).not.toContain("app/api/t/route.ts");
+    expect([...cron.values()].join("\n").match(/\.rpc\(\s*"([^"]+)"/g)).toEqual(['.rpc("sweep_page_telemetry"']);
   });
 });

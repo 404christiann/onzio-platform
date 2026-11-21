@@ -1,5 +1,52 @@
 # Diverse City FC Status
 
+## 2026-11-20 - TELEMETRY-01 P1: second onzio-bot review, two Lows plus the IPv6 rotation risk
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01` at `bed553e4` (on main `c0eeafbe`). **Status:** `in_progress`. The fixes are local, unstaged and
+uncommitted, waiting for Christian's word to commit and push. Not merged; production untouched.
+
+**Completed (migration `20261119130000_page_telemetry.sql` edited in place):**
+- **Low A (retention depends on traffic):** the daily cron `/api/cron/telemetry-retention` runs at `45 10 * * *`. It uses
+  the same `CRON_SECRET` pattern as the media orphan sweep.
+  - It calls `onzio.sweep_page_telemetry(p_max_events default 100000)`, which only the service role can run (security
+    definer, empty search path).
+  - For every club it deletes salts more than 2 UTC days old, rate windows older than 1 hour, drop counts older than
+    90 days, and events older than 90 days (in batches of 5,000, oldest first). It reports `moreEventsRemain`.
+  - The beacon's import graph still has no service-role client.
+- **Low B (shared IPs undercount) and the IPv6 rotation risk:**
+  - **Fair share:** a network over its 120/min share is still accepted while the club's counter is under 600 that
+    minute. The network counter stops at 1,200.
+  - **New IPv6 /48 tier:** a `w:` bucket follows the same rule. One IPv4 address or one /48 can take about 600 + 120 of
+    the 1,200.
+  - **Route limiter:** it now keys on the /48 (IPv6) or the address, and its per-instance limit is 600/min.
+  - **Counted drops:** every `rate_limited` result after the add-on gate is counted in
+    `onzio_private.page_event_drop_counts` by club, local day and reason, so the report can disclose drops.
+- **Plan:** the TELEMETRY-01 section is updated, and the P1 operator steps now end with "confirm a real event lands".
+
+**Files changed:** the migration, `app/api/t/route.ts`, `app/api/cron/telemetry-retention/route.ts` (new),
+`lib/telemetry/{beacon,visitor,retention}.ts` (`retention.ts` is new), `lib/database.generated.ts`, `vercel.json`,
+`docs/onzio-platform-plan.md`, telemetry tests (beacon, boundary, new retention-cron contract, new
+`lib/__tests__/telemetry-retention.test.ts`, `tests/database/page-telemetry.test.ts`),
+`tests/database/purge-archived-club.test.ts`, `tests/architecture/platform-architecture.test.ts`, and this entry.
+
+**Verification (Mac, shared local stack, under the lock after RC-HERO-VIDEO-SWAP released it):**
+- Fresh `supabase db reset --local`: 94 migrations, ledger max `20261119130000`.
+- `db:types` output is identical to the hand edit, and `db:types:check` matches.
+- `page-telemetry` + `purge-archived-club`: 95/95 passed.
+- Full `test:db`: 80 files, 1441 tests passed. The first run had one failure, a PostgREST schema-cache error right after
+  the reset in `owner-admin-membership`; the clean rerun passed.
+- `tsc` clean. `test:unit`: 378 files, 4526 tests passed. eslint clean.
+
+**Blockers / decisions:**
+- None for the code.
+- RC-HERO-VIDEO-SWAP (#209) overlaps on the three migration-order tests, `lib/database.generated.ts` and
+  `purge-archived-club.test.ts`, so whichever PR merges second rebases.
+
+**Next step:** Christian's word to commit and push. Then the prod gate: backup, `migration list`, dry run, "push",
+read-only check, read the ingest key and set `TELEMETRY_INGEST_SECRET`, merge, deploy, Rose City SQL, confirm a real
+event lands.
+
 ## 2026-11-20 - TELEMETRY-01 P1: onzio-bot review fixes (signed writes, network cap, retention sweep)
 
 **Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch

@@ -5,10 +5,12 @@ import { isIPv4, isIPv6 } from "node:net";
 // secret, so the raw IP never leaves this process. The database then applies
 // the club's daily random salt (onzio_private.record_page_event).
 //
-// The route also derives a network key from the same secret: the IPv4 address,
-// or the IPv6 /64 prefix, with no user agent. The in-process limiter and the
-// database's per-network cap both key on it, so rotating user agents from one
-// machine does not make a new "visitor" each time.
+// The route also derives network keys from the same secret, with no user agent:
+// the IPv4 address or IPv6 /64 prefix (networkMaterial), and for IPv6 only the
+// wider /48 prefix (wideNetworkMaterial). The in-process limiter and the
+// database's per-network caps key on them, so rotating user agents from one
+// machine does not make a new "visitor" each time, and one IPv6 block rotating
+// /64 addresses inside its /48 shares a single budget.
 
 export const VISITOR_SECRET_ENV = "TELEMETRY_VISITOR_SECRET";
 
@@ -52,6 +54,34 @@ function ipv6Groups(address: string): number[] | null {
   return parts.map((part) => Number.parseInt(part, 16));
 }
 
+type ParsedIp = { version: 4; address: string } | { version: 6; groups: number[] };
+
+/**
+ * An IP address in a canonical shape, or null. Brackets and a zone are stripped.
+ * An IPv4-mapped IPv6 address (::ffff:1.2.3.4, in either notation) is the IPv4
+ * address. Anything that is not an IP address gives null.
+ */
+function parseIp(ip: string): ParsedIp | null {
+  let value = ip.trim();
+  if (value.startsWith("[") && value.endsWith("]")) value = value.slice(1, -1);
+  value = value.replace(/%.*$/, "");
+  if (isIPv4(value)) return { version: 4, address: value };
+  if (!isIPv6(value)) return null;
+  const groups = ipv6Groups(value);
+  if (!groups) return null;
+  if (groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff) {
+    return { version: 4, address: `${groups[6] >> 8}.${groups[6] & 0xff}.${groups[7] >> 8}.${groups[7] & 0xff}` };
+  }
+  return { version: 6, groups };
+}
+
+function groupsPrefix(groups: number[], count: number): string {
+  return groups
+    .slice(0, count)
+    .map((group) => group.toString(16))
+    .join(":");
+}
+
 /**
  * What identifies one network: an IPv4 address as is, or the first 64 bits of an
  * IPv6 address (one household or site), written in a canonical form. An
@@ -59,24 +89,30 @@ function ipv6Groups(address: string): number[] | null {
  * address. Anything that is not an IP address gives null.
  */
 export function networkPrefix(ip: string): string | null {
-  let value = ip.trim();
-  if (value.startsWith("[") && value.endsWith("]")) value = value.slice(1, -1);
-  value = value.replace(/%.*$/, "");
-  if (isIPv4(value)) return value;
-  if (!isIPv6(value)) return null;
-  const groups = ipv6Groups(value);
-  if (!groups) return null;
-  if (groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff) {
-    return `${groups[6] >> 8}.${groups[6] & 0xff}.${groups[7] >> 8}.${groups[7] & 0xff}`;
-  }
-  return `${groups
-    .slice(0, 4)
-    .map((group) => group.toString(16))
-    .join(":")}::/64`;
+  const parsed = parseIp(ip);
+  if (!parsed) return null;
+  return parsed.version === 4 ? parsed.address : `${groupsPrefix(parsed.groups, 4)}::/64`;
+}
+
+/**
+ * The wider network of an IPv6 address: its first 48 bits (a typical site or
+ * ISP customer allocation, which can rotate through 65,536 /64 prefixes), in a
+ * canonical form. An IPv4 address, an IPv4-mapped IPv6 address, and anything
+ * that is not an IP address have no wide network and give null.
+ */
+export function widePrefix(ip: string): string | null {
+  const parsed = parseIp(ip);
+  return parsed?.version === 6 ? `${groupsPrefix(parsed.groups, 3)}::/48` : null;
 }
 
 /** Keyed hash of the network prefix; null when the address is not a valid IP. */
 export function networkMaterial(secret: string, ip: string): string | null {
   const prefix = networkPrefix(ip);
   return prefix === null ? null : createHmac("sha256", secret).update(`net\n${prefix}`).digest("hex");
+}
+
+/** Keyed hash of the IPv6 /48 prefix; null for IPv4, IPv4-mapped and invalid addresses. */
+export function wideNetworkMaterial(secret: string, ip: string): string | null {
+  const prefix = widePrefix(ip);
+  return prefix === null ? null : createHmac("sha256", secret).update(`net48\n${prefix}`).digest("hex");
 }

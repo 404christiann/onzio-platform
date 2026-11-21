@@ -4,7 +4,9 @@
 -- * onzio.page_events                     one row per accepted beacon event; no IP, user agent,
 --                                          user id or full referrer is ever stored
 -- * onzio_private.page_visitor_salts       one random salt per club per club-local day
--- * onzio_private.page_event_rate_windows  per-minute rate-limit counters (club, network, visitor)
+-- * onzio_private.page_event_rate_windows  per-minute rate-limit counters (club, network, wide network, visitor)
+-- * onzio_private.page_event_drop_counts   how many events the abuse limits dropped per club, local day and
+--                                          reason; holds no visitor data, so it outlives the add-on
 -- * onzio_private.telemetry_ingest_keys    the single HMAC key that signs every beacon write;
 --                                          generated here, so it is never in the repository
 -- * onzio_private.club_addons            per-club paid add-ons; empty, so telemetry starts OFF everywhere
@@ -16,6 +18,9 @@
 --                                          exact payload text the route signed, rejects anything unsigned
 --                                          or stale, and drops events for clubs without the add-on
 -- * onzio.record_page_event                exposed security-invoker wrapper for the anon beacon
+-- * onzio_private.sweep_page_telemetry     the daily retention sweep for ALL clubs (security definer), so
+--                                          retention never depends on traffic; service role only
+-- * onzio.sweep_page_telemetry             exposed security-invoker wrapper for the retention cron
 -- * onzio_private.purge_archived_club      redefined with onzio.page_events in its delete order
 --
 -- Additive only: no drops, renames, or data changes to existing tables.
@@ -96,16 +101,38 @@ create table onzio_private.page_visitor_salts (
 create table onzio_private.page_event_rate_windows (
   club_id uuid not null references onzio.clubs(id) on delete cascade,
   -- '*' is the club-wide counter; a bare 64-hex bucket is a salted visitor hash;
-  -- 'n:' + 64 hex is a salted network hash. The prefix keeps the two apart.
+  -- 'n:' + 64 hex is a salted network hash (an IPv4 address or an IPv6 /64) and
+  -- 'w:' + 64 hex a salted wide network hash (an IPv6 /48). The prefixes keep the kinds apart.
   bucket text not null
-    constraint page_event_rate_windows_bucket check (bucket = '*' or bucket ~ '^(n:)?[0-9a-f]{64}$'),
+    constraint page_event_rate_windows_bucket check (bucket = '*' or bucket ~ '^([nw]:)?[0-9a-f]{64}$'),
   window_start timestamptz not null,
   hits integer not null constraint page_event_rate_windows_hits check (hits > 0),
   primary key (club_id, bucket, window_start)
 );
 
+-- Events the abuse limits dropped, by the club's own day and the limit that dropped them, so a
+-- report can say how many views were dropped instead of silently undercounting. A count holds
+-- no visitor, network or event data, so removing the add-on does not clear it; the retention
+-- sweep deletes it after 90 days and the club purge cascades it. A dropped event touches this
+-- one row per (club, day, reason), so the table keeps spare room on each page for HOT updates.
+create table onzio_private.page_event_drop_counts (
+  club_id uuid not null references onzio.clubs(id) on delete cascade,
+  local_date date not null,
+  reason text not null
+    constraint page_event_drop_counts_reason check (reason in ('network', 'visitor', 'club')),
+  dropped integer not null constraint page_event_drop_counts_dropped check (dropped > 0),
+  primary key (club_id, local_date, reason)
+) with (fillfactor = 50);
+
+alter table onzio_private.page_event_drop_counts enable row level security;
+
 revoke all on table onzio_private.page_visitor_salts from public, anon, authenticated, service_role;
 revoke all on table onzio_private.page_event_rate_windows from public, anon, authenticated, service_role;
+revoke all on table onzio_private.page_event_drop_counts from public, anon, authenticated, service_role;
+
+comment on table onzio_private.page_event_drop_counts is
+  'TELEMETRY-01 events dropped by the abuse limits (network, visitor, club) per club and club-local day. '
+  'Holds no visitor data; deleted after 90 days by onzio_private.sweep_page_telemetry.';
 
 -- The key that signs every beacon write. One row, random, created here and read
 -- once by an operator (select encode(key, 'hex') ...) to set TELEMETRY_INGEST_SECRET
@@ -147,7 +174,8 @@ comment on table onzio_private.club_addons is
 
 -- Removing a club's telemetry add-on forgets its daily salts and rate counters at once, so a
 -- club that stops paying (or is suspended and then revoked) keeps nothing that can link
--- visitors. Its raw events are still deleted by the 90-day retention sweep.
+-- visitors. Its raw events are still deleted by the 90-day retention sweeps (the one inside
+-- record_page_event and the daily onzio_private.sweep_page_telemetry cron).
 create function onzio_private.forget_telemetry_when_addon_removed()
 returns trigger
 language plpgsql
@@ -247,8 +275,15 @@ revoke all on function onzio_private.page_event_text(jsonb, text, text, boolean)
 
 -- The writer. It receives the event as the exact text the route signed, in this order:
 -- signature, JSON, freshness, field validation, public club, add-on, then salt and the
--- three rate caps (network, visitor, club). Nothing before the add-on gate writes anything,
--- and an event rejected by the network or visitor cap never spends club-wide budget.
+-- rate caps (network, wide network, visitor, club). Nothing before the add-on gate writes
+-- anything, and an event rejected by a network or visitor cap never spends club-wide budget.
+--
+-- Fair share: a network (an IPv4 address or IPv6 /64, and for IPv6 also its /48) is entitled to
+-- 120 events a minute. Over that, an event is still accepted while the club as a whole has used
+-- less than half of its 1,200 a minute, so a stadium's shared Wi-Fi is not undercounted when the
+-- site is otherwise quiet. Once the club is past that shared floor, networks over their share are
+-- limited, so one network (or one /48 rotating /64s) can take about half of the club budget and
+-- never all of it. Every limited event is counted per club, local day and reason.
 create function onzio_private.record_page_event(
   p_club_id uuid,
   p_payload text,
@@ -262,6 +297,8 @@ declare
   c_network_limit constant integer := 120;
   c_visitor_limit constant integer := 60;
   c_club_limit constant integer := 1200;
+  -- Below this club-wide count (half of c_club_limit) a network over c_network_limit is still accepted.
+  c_shared_floor constant integer := 600;
   c_max_payload_bytes constant integer := 8192;
   c_max_skew_ms constant numeric := 300000;
   c_visit_gap constant interval := interval '30 minutes';
@@ -269,7 +306,7 @@ declare
   c_retention_batch constant integer := 10000;
   c_sweep_batch constant integer := 5000;
   c_keys constant text[] := array[
-    'type', 'visitorMaterial', 'networkMaterial', 'ts', 'path', 'referrerHost', 'sourceType',
+    'type', 'visitorMaterial', 'networkMaterial', 'wideNetworkMaterial', 'ts', 'path', 'referrerHost', 'sourceType',
     'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm',
     'device', 'country', 'city', 'isStaff'
   ];
@@ -284,6 +321,7 @@ declare
   v_type text;
   v_material text;
   v_network text;
+  v_wide text;
   v_path text;
   v_referrer_host text;
   v_source_type text;
@@ -296,7 +334,10 @@ declare
   v_salt bytea;
   v_hash text;
   v_network_bucket text;
+  v_wide_bucket text;
+  v_club_hits integer;
   v_hits integer;
+  v_drop text;
   v_visit uuid;
 begin
   -- Signature first: an unsigned or mis-signed call is parsed, read and written as nothing.
@@ -344,6 +385,8 @@ begin
   v_type := onzio_private.page_event_text(v_event, 'type', '^view$', true);
   v_material := onzio_private.page_event_text(v_event, 'visitorMaterial', '^[0-9a-f]{64}$', true);
   v_network := onzio_private.page_event_text(v_event, 'networkMaterial', '^[0-9a-f]{64}$', true);
+  -- Only IPv6 callers have a wide (/48) network key; for IPv4 the route omits it (null is accepted too).
+  v_wide := onzio_private.page_event_text(v_event, 'wideNetworkMaterial', '^[0-9a-f]{64}$', false);
   -- PostgreSQL regex repetition counts stop at 255, so length is checked apart.
   v_path := onzio_private.page_event_text(v_event, 'path', '^/[^[:space:][:cntrl:]]*$', true);
   if char_length(v_path) > 512 or v_path ~ '^/(admin|api)(/|$)' then
@@ -412,41 +455,88 @@ begin
   end if;
 
   v_hash := encode(sha256(v_salt || convert_to(v_material, 'UTF8')), 'hex');
-  -- The network key is salted like the visitor hash and stored only in rate windows,
-  -- under its own prefix, never in page_events.
+  -- The network keys are salted like the visitor hash and stored only in rate windows, under
+  -- their own prefixes ('n:' the IPv4 address or IPv6 /64, 'w:' the IPv6 /48), never in page_events.
   v_network_bucket := 'n:' || encode(sha256(v_salt || convert_to(v_network, 'UTF8')), 'hex');
-
-  -- Cap 1, per network: one machine rotating user agents is still one network. A counter
-  -- already at its limit is not written again, so a flood costs reads, not row versions.
-  v_hits := null;
-  insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
-  values (p_club_id, v_network_bucket, v_window, 1)
-  on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
-    where w.hits < c_network_limit
-  returning w.hits into v_hits;
-  if v_hits is null then
-    return 'rate_limited';
+  if v_wide is not null then
+    v_wide_bucket := 'w:' || encode(sha256(v_salt || convert_to(v_wide, 'UTF8')), 'hex');
   end if;
 
-  -- Cap 2, per visitor.
-  v_hits := null;
-  insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
-  values (p_club_id, v_hash, v_window, 1)
-  on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
-    where w.hits < c_visitor_limit
-  returning w.hits into v_hits;
-  if v_hits is null then
-    return 'rate_limited';
-  end if;
+  -- What the club has already used of this minute's budget. It decides whether a network over its
+  -- share is still accepted. It is read once, so concurrent calls can overshoot the floor by the
+  -- number of calls in flight; the club cap below is atomic and is never overshot.
+  v_club_hits := coalesce((
+    select w.hits
+    from onzio_private.page_event_rate_windows w
+    where w.club_id = p_club_id and w.bucket = '*' and w.window_start = v_window
+  ), 0);
 
-  -- Cap 3, club-wide. Only an event that passed both caps above spends this budget.
-  v_hits := null;
-  insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
-  values (p_club_id, '*', v_window, 1)
-  on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
-    where w.hits < c_club_limit
-  returning w.hits into v_hits;
-  if v_hits is null then
+  -- Exit this block on the first cap that says no, remembering which one; the drop is counted once,
+  -- after the block. The block has no exception clause, so it costs no subtransaction.
+  <<limits>>
+  begin
+    -- Cap 1, per network (IPv4 address or IPv6 /64): one machine rotating user agents is still one
+    -- network. Fair share: over c_network_limit it is accepted only while the club is below the
+    -- shared floor, and its counter stops at c_club_limit. A counter that says no is not written
+    -- again, so a flood costs reads, not row versions.
+    v_hits := null;
+    insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
+    values (p_club_id, v_network_bucket, v_window, 1)
+    on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+      where w.hits < c_network_limit
+         or (w.hits < c_club_limit and v_club_hits < c_shared_floor)
+    returning w.hits into v_hits;
+    if v_hits is null then
+      v_drop := 'network';
+      exit limits;
+    end if;
+
+    -- Cap 1b, per IPv6 /48 (IPv6 callers only), same fair share: one block rotating its /64s
+    -- still shares one budget. An event must pass both this and cap 1.
+    if v_wide_bucket is not null then
+      v_hits := null;
+      insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
+      values (p_club_id, v_wide_bucket, v_window, 1)
+      on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+        where w.hits < c_network_limit
+           or (w.hits < c_club_limit and v_club_hits < c_shared_floor)
+      returning w.hits into v_hits;
+      if v_hits is null then
+        v_drop := 'network';
+        exit limits;
+      end if;
+    end if;
+
+    -- Cap 2, per visitor.
+    v_hits := null;
+    insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
+    values (p_club_id, v_hash, v_window, 1)
+    on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+      where w.hits < c_visitor_limit
+    returning w.hits into v_hits;
+    if v_hits is null then
+      v_drop := 'visitor';
+      exit limits;
+    end if;
+
+    -- Cap 3, club-wide. Only an event that passed every cap above spends this budget.
+    v_hits := null;
+    insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
+    values (p_club_id, '*', v_window, 1)
+    on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+      where w.hits < c_club_limit
+    returning w.hits into v_hits;
+    if v_hits is null then
+      v_drop := 'club';
+      exit limits;
+    end if;
+  end limits;
+
+  if v_drop is not null then
+    -- Counted, not silent: the report can say how many views the abuse limits dropped.
+    insert into onzio_private.page_event_drop_counts as d (club_id, local_date, reason, dropped)
+    values (p_club_id, v_day, v_drop, 1)
+    on conflict (club_id, local_date, reason) do update set dropped = d.dropped + 1;
     return 'rate_limited';
   end if;
   if v_hits = 1 then
@@ -516,6 +606,101 @@ $$;
 
 revoke all on function onzio.record_page_event(uuid, text, text) from public;
 grant execute on function onzio.record_page_event(uuid, text, text) to anon, authenticated;
+
+-- The daily retention sweep, for every club, run by /api/cron/telemetry-retention as the service role.
+-- record_page_event also sweeps, but only when some club has accepted traffic, so a club that drops
+-- the add-on (or every club going quiet) would otherwise keep raw events past 90 days. This one never
+-- depends on traffic. Same grant pattern as onzio.media_orphan_sweep_scan: a private definer that only
+-- the service role may execute, behind an exposed security-invoker wrapper.
+--
+-- Deletes, for ALL clubs: salts older than two UTC days (no club's current local day can be that old);
+-- rate-limit windows older than an hour; raw events older than 90 days, oldest first, in batches of
+-- 5,000 and never more than p_max_events in one call; and drop counts older than 90 days.
+-- Returns what it deleted per table and whether expired events remain for the next run.
+create function onzio_private.sweep_page_telemetry(
+  p_max_events integer default 100000
+) returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  c_batch constant integer := 5000;
+  c_retention constant interval := interval '90 days';
+  v_now timestamptz := now();
+  v_utc_today date := (now() at time zone 'UTC')::date;
+  v_batch integer;
+  v_events integer := 0;
+  v_salts integer;
+  v_windows integer;
+  v_drops integer;
+  v_more boolean;
+begin
+  if p_max_events is null or p_max_events < 0 then
+    raise exception 'INVALID_SWEEP_LIMIT' using errcode = '22023', detail = coalesce(p_max_events::text, 'null');
+  end if;
+
+  delete from onzio_private.page_visitor_salts s
+  where s.salt_day < v_utc_today - 2;
+  get diagnostics v_salts = row_count;
+
+  delete from onzio_private.page_event_rate_windows w
+  where w.window_start < v_now - interval '1 hour';
+  get diagnostics v_windows = row_count;
+
+  -- local_date is the club's own day, which is within a day of the UTC date.
+  delete from onzio_private.page_event_drop_counts d
+  where d.local_date < v_utc_today - 90;
+  get diagnostics v_drops = row_count;
+
+  -- Bounded: each pass deletes at most the batch size or what is left of p_max_events, and the loop
+  -- ends when a pass deletes nothing. Rows locked by a concurrent writer are skipped, not waited for.
+  while v_events < p_max_events loop
+    delete from onzio.page_events e
+    where e.id in (
+      select old.id
+      from onzio.page_events old
+      where old.occurred_at < v_now - c_retention
+      order by old.occurred_at
+      limit least(c_batch, p_max_events - v_events)
+      for update skip locked
+    );
+    get diagnostics v_batch = row_count;
+    exit when v_batch = 0;
+    v_events := v_events + v_batch;
+  end loop;
+
+  v_more := exists (
+    select 1 from onzio.page_events e where e.occurred_at < v_now - c_retention
+  );
+
+  return jsonb_build_object(
+    'maxEvents', p_max_events,
+    'eventsDeleted', v_events,
+    'saltsDeleted', v_salts,
+    'rateWindowsDeleted', v_windows,
+    'dropCountsDeleted', v_drops,
+    'moreEventsRemain', v_more
+  );
+end;
+$$;
+
+revoke all on function onzio_private.sweep_page_telemetry(integer)
+  from public, anon, authenticated, service_role;
+grant execute on function onzio_private.sweep_page_telemetry(integer) to service_role;
+
+create function onzio.sweep_page_telemetry(
+  p_max_events integer default 100000
+) returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select onzio_private.sweep_page_telemetry(p_max_events);
+$$;
+
+revoke all on function onzio.sweep_page_telemetry(integer) from public, anon, authenticated;
+grant execute on function onzio.sweep_page_telemetry(integer) to service_role;
 
 -- Archived-club hard purge: copied from 20261117020000_cinematic_purge_tables.sql unchanged except that
 -- onzio.page_events is first in v_order (nothing references it). Same signature, security definer,

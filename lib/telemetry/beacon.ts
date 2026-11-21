@@ -11,7 +11,7 @@ import {
   type Device,
   type SourceType,
 } from "@/lib/telemetry/classify";
-import { clientIp, networkMaterial, visitorMaterial, visitorSecret } from "@/lib/telemetry/visitor";
+import { clientIp, networkMaterial, visitorMaterial, visitorSecret, wideNetworkMaterial } from "@/lib/telemetry/visitor";
 
 // TELEMETRY-01: turns one beacon request into the payload for
 // onzio.record_page_event, or a reason to drop it. Pure apart from reading the
@@ -36,6 +36,11 @@ export type PageEventPayload = {
   visitorMaterial: string;
   /** Keyed hash of the IPv4 address or IPv6 /64 prefix; the database's per-network cap keys on it. */
   networkMaterial: string;
+  /**
+   * Keyed hash of the IPv6 /48 prefix; the database's wide per-network cap keys on it, so rotating
+   * /64 addresses inside one /48 shares a budget. Absent for IPv4 and IPv4-mapped addresses.
+   */
+  wideNetworkMaterial?: string;
   /** Epoch milliseconds when the route built the event; the database rejects stale calls. */
   ts: number;
   path: string;
@@ -91,6 +96,7 @@ export function buildPageEvent(input: {
   // Not an IP address (a malformed header): no network to count it against.
   const network = networkMaterial(secret, ip);
   if (!network) return { kind: "drop", reason: "no_ip" };
+  const wideNetwork = wideNetworkMaterial(secret, ip);
 
   if (new TextEncoder().encode(input.bodyText).length > MAX_BEACON_BYTES) {
     return { kind: "drop", reason: "too_large" };
@@ -120,6 +126,7 @@ export function buildPageEvent(input: {
       type: "view",
       visitorMaterial: visitorMaterial(secret, ip, userAgent),
       networkMaterial: network,
+      ...(wideNetwork ? { wideNetworkMaterial: wideNetwork } : {}),
       ts: input.now ?? Date.now(),
       path,
       referrerHost,

@@ -215,6 +215,7 @@ begin
   values (c, current_date, 'view', repeat('e', 64), gen_random_uuid(), true, '/', 'direct', 'mobile');
   insert into onzio_private.page_visitor_salts (club_id, salt_day, salt) values (c, current_date, decode(repeat('ab', 32), 'hex'));
   insert into onzio_private.page_event_rate_windows (club_id, bucket, window_start, hits) values (c, '*', date_trunc('minute', now()), 1);
+  insert into onzio_private.page_event_drop_counts (club_id, local_date, reason, dropped) values (c, current_date, 'network', 1);
   insert into onzio_private.club_addons (club_id, addon) values (c, 'telemetry');
 end
 $fixture$;

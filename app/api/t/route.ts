@@ -14,7 +14,12 @@ import { createFixedWindowLimiter } from "@/lib/telemetry/rate-limit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const limiter = createFixedWindowLimiter({ limit: 120, windowMs: 60_000, maxKeys: 10_000 });
+// The database gives each network a fair share of 120 events a minute and lets it go on while the
+// club as a whole has room, up to about half of the club's 1,200 a minute (a stadium's shared Wi-Fi).
+// This best-effort per-instance limit therefore sits at that ceiling: it sheds only what the
+// database would drop anyway, and never an event a busy shared network is entitled to.
+const NETWORK_MAX_PER_MINUTE = 600;
+const limiter = createFixedWindowLimiter({ limit: NETWORK_MAX_PER_MINUTE, windowMs: 60_000, maxKeys: 10_000 });
 
 function noContent(): Response {
   return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
@@ -41,7 +46,10 @@ export async function POST(request: Request): Promise<Response> {
   // function is the real gate and checks again.
   if (!(await clubHasTelemetry(decision.clubId))) return noContent();
   // Keyed on the network, not ip + user agent, so rotating user agents from one machine shares a budget.
-  if (!limiter.allow(`${decision.clubId}:${decision.event.networkMaterial}`)) return noContent();
+  // An IPv6 caller is keyed on its /48, so rotating /64 addresses inside one block shares one too;
+  // an IPv4 caller on its address.
+  const networkKey = decision.event.wideNetworkMaterial ?? decision.event.networkMaterial;
+  if (!limiter.allow(`${decision.clubId}:${networkKey}`)) return noContent();
 
   // Serialise once and sign exactly that text; the database verifies the same bytes.
   const payload = JSON.stringify(decision.event);

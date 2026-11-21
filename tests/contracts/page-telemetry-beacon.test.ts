@@ -13,7 +13,15 @@ import {
 } from "@/lib/telemetry/classify";
 import { ingestSecret, signPayload } from "@/lib/telemetry/ingest";
 import { createFixedWindowLimiter } from "@/lib/telemetry/rate-limit";
-import { clientIp, networkMaterial, networkPrefix, visitorMaterial, visitorSecret } from "@/lib/telemetry/visitor";
+import {
+  clientIp,
+  networkMaterial,
+  networkPrefix,
+  visitorMaterial,
+  visitorSecret,
+  wideNetworkMaterial,
+  widePrefix,
+} from "@/lib/telemetry/visitor";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), schema: vi.fn(), createPublicClient: vi.fn(), createClient: vi.fn() }));
 vi.mock("@/lib/supabase-server", () => ({
@@ -202,6 +210,50 @@ describe("page telemetry network key", () => {
   });
 });
 
+describe("page telemetry wide (IPv6 /48) network key", () => {
+  it.each([
+    ["the first 48 bits of an IPv6 address", "2001:db8:1:2:aaaa:bbbb:cccc:dddd", "2001:db8:1::/48"],
+    ["the same /48 for another /64 inside it", "2001:db8:1:ffff::1", "2001:db8:1::/48"],
+    ["the same /48 for a compressed upper-case address", "2001:0DB8:1::1", "2001:db8:1::/48"],
+    ["a short prefix with leading zeros dropped", "2001:db8::1", "2001:db8:0::/48"],
+    ["a bracketed IPv6 address", "[2001:db8:1:2::1]", "2001:db8:1::/48"],
+    ["an IPv6 address with a zone", "fe80::1%eth0", "fe80:0:0::/48"],
+    ["the loopback address", "::1", "0:0:0::/48"],
+  ])("maps %s", (_label, ip, expected) => {
+    expect(widePrefix(ip)).toBe(expected);
+  });
+
+  it.each(["203.0.113.7", " 203.0.113.7 ", "::ffff:203.0.113.7", "::ffff:cb00:7107", "0:0:0:0:0:ffff:203.0.113.7"])(
+    "gives no wide network for the IPv4 address %j (plain or mapped)",
+    (ip) => {
+      expect(widePrefix(ip)).toBeNull();
+      expect(wideNetworkMaterial(SECRET, ip)).toBeNull();
+    },
+  );
+
+  it.each(["", "   ", "not-an-ip", "203.0.113", "203.0.113.256", "2001:db8::1::2", "2001:db8:1:2:3:4:5:6:7", "gggg::1", "203.0.113.7:8080", "<script>"])(
+    "gives no wide network for %j",
+    (garbage) => {
+      expect(widePrefix(garbage)).toBeNull();
+      expect(wideNetworkMaterial(SECRET, garbage)).toBeNull();
+    },
+  );
+
+  it("is a keyed hash of the /48, shared by every /64 inside it and apart from the /64 key", () => {
+    // Computed independently with openssl: HMAC-SHA256(secret, "net48\n2001:db8:1::/48").
+    expect(wideNetworkMaterial(SECRET, "2001:db8:1:2::1")).toBe("a5c025654e84ba13dd0511a2cdc2f0724732c3971e761c33ca676b447f5dd329");
+    expect(wideNetworkMaterial(SECRET, "2001:db8::1")).toBe("bb983cbba451e25410f805764fe8cd6ebd5815ed0839d0a845db93f7ea8a8457");
+    for (const inside of ["2001:db8:1:3::1", "2001:db8:1:ffff:9:9:9:9", "2001:db8:1::"]) {
+      expect(wideNetworkMaterial(SECRET, inside), inside).toBe(wideNetworkMaterial(SECRET, "2001:db8:1:2::1"));
+      expect(networkMaterial(SECRET, inside), inside).not.toBe(networkMaterial(SECRET, "2001:db8:1:2::1"));
+    }
+    expect(wideNetworkMaterial(SECRET, "2001:db8:2:2::1")).not.toBe(wideNetworkMaterial(SECRET, "2001:db8:1:2::1"));
+    expect(wideNetworkMaterial("t".repeat(48), "2001:db8:1:2::1")).not.toBe(wideNetworkMaterial(SECRET, "2001:db8:1:2::1"));
+    expect(wideNetworkMaterial(SECRET, "2001:db8:1:2::1")).not.toBe(networkMaterial(SECRET, "2001:db8:1:2::1"));
+    expect(wideNetworkMaterial(SECRET, "2001:db8:1:2::1")).not.toContain("2001");
+  });
+});
+
 describe("page telemetry signed calls", () => {
   const KEY_HEX = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
   const PAYLOAD = '{"type":"view","path":"/schedule","city":"São Paulo"}';
@@ -280,6 +332,24 @@ describe("page telemetry beacon decisions", () => {
     expect(otherAgent.event.networkMaterial).toBe(first.event.networkMaterial);
     const mapped = recorded({ headers: headers({ "x-real-ip": "::ffff:203.0.113.7" }), bodyText: body(), env });
     expect(mapped.event.networkMaterial).toBe(first.event.networkMaterial);
+  });
+
+  it("adds the wide network key for IPv6 callers only, shared by every /64 in the /48", () => {
+    const v6 = recorded({ headers: headers({ "x-real-ip": "2001:db8:1:2::1" }), bodyText: body(), env }).event;
+    expect(v6.networkMaterial).toBe(networkMaterial(SECRET, "2001:db8:1:2::1"));
+    expect(v6.wideNetworkMaterial).toBe("a5c025654e84ba13dd0511a2cdc2f0724732c3971e761c33ca676b447f5dd329");
+    const sibling = recorded({ headers: headers({ "x-real-ip": "2001:db8:1:9::1" }), bodyText: body(), env }).event;
+    expect(sibling.wideNetworkMaterial).toBe(v6.wideNetworkMaterial);
+    expect(sibling.networkMaterial).not.toBe(v6.networkMaterial);
+    const elsewhere = recorded({ headers: headers({ "x-real-ip": "2001:db8:2:2::1" }), bodyText: body(), env }).event;
+    expect(elsewhere.wideNetworkMaterial).not.toBe(v6.wideNetworkMaterial);
+    expect(JSON.stringify(v6)).not.toContain("2001:db8");
+
+    for (const ip of ["203.0.113.7", "::ffff:203.0.113.7", "::ffff:cb00:7107"]) {
+      const v4 = recorded({ headers: headers({ "x-real-ip": ip }), bodyText: body(), env }).event;
+      expect(v4, ip).not.toHaveProperty("wideNetworkMaterial");
+      expect(v4.networkMaterial, ip).toBe(NETWORK_OF_203_0_113_7);
+    }
   });
 
   it.each([
@@ -411,27 +481,70 @@ describe("POST /api/t", () => {
     expect((await post(headers({ "x-real-ip": "203.0.113.51" }), body())).status).toBe(204);
   });
 
-  it("sheds a flood from one visitor before the database", async () => {
+  // The database lets a network past its 120-a-minute share while the club has room, up to about half of
+  // the club's 1,200 a minute, so the route's best-effort limit is that ceiling (600), not 120.
+  it("sheds a flood from one visitor before the database, at the most one network can record", async () => {
     const flood = headers({ "x-real-ip": "203.0.113.99" });
-    for (let i = 0; i < 125; i += 1) await post(flood, body());
-    expect(calls("record_page_event")).toHaveLength(120);
+    for (let i = 0; i < 605; i += 1) await post(flood, body());
+    expect(calls("record_page_event")).toHaveLength(600);
+  });
+
+  it("lets a busy shared network (stadium Wi-Fi) past the 120-a-minute database share", async () => {
+    for (let i = 0; i < 400; i += 1) {
+      const agent = `Mozilla/5.0 (Linux; Android 14; Pixel ${i}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36`;
+      await post(headers({ "x-real-ip": "203.0.113.96", "user-agent": agent }), body());
+    }
+    expect(calls("record_page_event")).toHaveLength(400);
   });
 
   it("counts one machine rotating user agents as one network, and leaves other networks alone", async () => {
-    for (let i = 0; i < 130; i += 1) {
+    for (let i = 0; i < 610; i += 1) {
       const agent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.${i}.0 Safari/537.36`;
       await post(headers({ "x-real-ip": "203.0.113.98", "user-agent": agent }), body());
     }
-    expect(calls("record_page_event")).toHaveLength(120);
+    expect(calls("record_page_event")).toHaveLength(600);
     expect((await post(headers({ "x-real-ip": "203.0.113.97" }), body())).status).toBe(204);
-    expect(calls("record_page_event")).toHaveLength(121);
+    expect(calls("record_page_event")).toHaveLength(601);
   });
 
   it("counts a whole IPv6 /64 as one network", async () => {
-    for (let i = 0; i < 125; i += 1) {
+    for (let i = 0; i < 605; i += 1) {
       await post(headers({ "x-real-ip": `2001:db8:77:1:${(i + 1).toString(16)}::1` }), body());
     }
-    expect(calls("record_page_event")).toHaveLength(120);
+    expect(calls("record_page_event")).toHaveLength(600);
+  });
+
+  it("keys the limiter on the /48 for IPv6, so rotating /64 addresses inside one /48 share a budget", async () => {
+    for (let i = 0; i < 605; i += 1) {
+      await post(headers({ "x-real-ip": `2001:db8:78:${(i + 1).toString(16)}::1` }), body());
+    }
+    expect(calls("record_page_event")).toHaveLength(600);
+    // A different /48 is a different network, and so is an IPv4 address.
+    expect((await post(headers({ "x-real-ip": "2001:db8:79:1::1" }), body())).status).toBe(204);
+    expect((await post(headers({ "x-real-ip": "203.0.113.95" }), body())).status).toBe(204);
+    expect(calls("record_page_event")).toHaveLength(602);
+  });
+
+  it("keys the limiter on the IPv4 address, whatever the user agent", async () => {
+    for (let i = 0; i < 605; i += 1) {
+      await post(headers({ "x-real-ip": "203.0.113.94", "user-agent": `${IPHONE} build-${i}` }), body());
+    }
+    expect(calls("record_page_event")).toHaveLength(600);
+    // The same IPv4 address, mapped into IPv6 notation, is the same network.
+    await post(headers({ "x-real-ip": "::ffff:203.0.113.94" }), body());
+    expect(calls("record_page_event")).toHaveLength(600);
+  });
+
+  it("signs the wide network key for an IPv6 caller and leaves it out for an IPv4 caller", async () => {
+    await post(headers({ "x-real-ip": "2001:db8:80:1::1" }), body());
+    await post(headers({ "x-real-ip": "203.0.113.93" }), body());
+    const [v6, v4] = calls("record_page_event").map(([, args]) => args);
+    expect(JSON.parse(v6.p_payload).wideNetworkMaterial).toBe(wideNetworkMaterial(SECRET, "2001:db8:80:1::1"));
+    expect(JSON.parse(v6.p_payload).networkMaterial).toBe(networkMaterial(SECRET, "2001:db8:80:1::1"));
+    expect(v6.p_signature).toBe(signPayload(CLUB, v6.p_payload, INGEST_SECRET));
+    expect(JSON.parse(v4.p_payload)).not.toHaveProperty("wideNetworkMaterial");
+    expect(v4.p_signature).toBe(signPayload(CLUB, v4.p_payload, INGEST_SECRET));
+    expect(v6.p_payload).not.toContain("2001:db8");
   });
 });
 
