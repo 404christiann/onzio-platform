@@ -20,6 +20,8 @@ import {
 import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
 import { getHomepageSaveBlocker } from "@/lib/homepage-editor/model";
 import { useHomepageEditor } from "@/lib/homepage-editor/useHomepageEditor";
+import { useHeroVideoController } from "./useHeroVideoController";
+import { HeroVideoNotice } from "./HeroVideoControl";
 import HomepagePartFields, { type HomepagePartEditor } from "./HomepagePartFields";
 import HomepageOverviewPreview, { type PartNumbers } from "./HomepageOverviewPreview";
 import HomepageOverviewSkeleton from "./HomepageOverviewSkeleton";
@@ -69,6 +71,7 @@ export default function HomepageOverviewEditor() {
   latest.current = editor;
 
   const capabilities = snapshot ? resolveHomepageCapabilities(snapshot.design) : null;
+  const heroVideo = useHeroVideoController(capabilities?.heroVideoReplaceable === true, editor.refreshBaseRevision);
   const parts = useMemo(() => HOMEPAGE_PARTS.filter(part => capabilities?.editableSections.includes(part.section)), [capabilities]);
   const frozen = !!state?.submitted || !!editor.recoveryConflict;
   const dirty = editor.dirty.length > 0;
@@ -147,6 +150,7 @@ export default function HomepageOverviewEditor() {
     updatePhoto: editor.updatePhoto, removePhoto: editor.removePhoto, retryPhoto: id => void editor.retryPhoto(id),
     addPhotos: () => photoInput.current?.click(),
     replaceArtwork: editor.replaceArtwork, retryArtwork: slot => void editor.retryArtwork(slot),
+    heroVideo,
   };
   const sections: EditorDialogSection[] = parts.map(part => ({
     id: part.id, title: part.title,
@@ -156,6 +160,7 @@ export default function HomepageOverviewEditor() {
   const notice = <div className={styles.notices}>
     {editor.error && failure && <div className={styles.notice} role="alert" data-tone="error"><p>{editor.error.message}</p>
       {failure === "conflict" && !editor.recoveryConflict && <button type="button" onClick={() => { keepAfterReload.current = true; editor.retryLoad(); }}>Load latest and keep my edits</button>}</div>}
+    {heroVideo && <HeroVideoNotice controller={heroVideo} className={styles.notice} />}
     {waitingOnUploads && <div className={styles.notice} role="status"><p>Your uploads are still finishing. Save becomes available when they are done.</p></div>}
     {state.submitted && !editor.error && state.save !== "saving" && <div className={styles.notice} role="status"><p>Your browser draft and any unconfirmed save will be kept if you leave.</p></div>}
     {editor.recoveryUnavailable && <div className={styles.notice} role="alert"><p>Browser recovery is unavailable. Keep this page open until you save; your unsaved work may not survive closing it.</p></div>}

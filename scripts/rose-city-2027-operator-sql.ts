@@ -107,10 +107,13 @@ export const PRESENTATION_ARTWORK = [
 ] as const;
 export const DEFAULT_HERO_VIDEO = { guid: "d17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91", libraryId: "723074" };
 
+// The hero video keys are only part of the payload when the operator passes them: the admin can replace the video
+// afterwards (RC-HERO-VIDEO-SWAP), and a rerun of this step must not put the original back. The SQL falls back to
+// DEFAULT_HERO_VIDEO only when the row has no such key at all (first-time setup).
 export function presentationConfig(inputs: PresentationInputs) {
   return {
-    heroVideoGuid: inputs.heroVideoGuid ?? DEFAULT_HERO_VIDEO.guid,
-    heroVideoLibraryId: inputs.heroVideoLibraryId ?? DEFAULT_HERO_VIDEO.libraryId,
+    ...(inputs.heroVideoGuid === undefined ? {} : { heroVideoGuid: inputs.heroVideoGuid }),
+    ...(inputs.heroVideoLibraryId === undefined ? {} : { heroVideoLibraryId: inputs.heroVideoLibraryId }),
     sponsorTreatments: inputs.sponsorTreatments ?? {},
     artworkAlt: Object.fromEntries(PRESENTATION_ARTWORK.map(({ key, alt }) => [key, alt])),
   };
@@ -260,7 +263,8 @@ export function buildPresentationInputsSql(options: { inputs: PresentationInputs
     if (treatment !== "invert" && treatment !== "dark-lettering") throw new Error("--sponsor-treatment must be invert or dark-lettering.");
   }
   const config = presentationConfig(inputs);
-  if (!/^[0-9a-f-]{1,64}$/i.test(config.heroVideoGuid) || !/^[0-9]{1,12}$/.test(config.heroVideoLibraryId)) {
+  if ((config.heroVideoGuid !== undefined && !/^[0-9a-f-]{1,64}$/i.test(config.heroVideoGuid))
+    || (config.heroVideoLibraryId !== undefined && !/^[0-9]{1,12}$/.test(config.heroVideoLibraryId))) {
     throw new Error("--hero-video-guid or --hero-video-library-id is malformed.");
   }
   const sponsorIds = Object.keys(config.sponsorTreatments);
@@ -275,6 +279,7 @@ do $operator$
 declare
   v_club_id constant uuid := ${quote(ROSE_CITY_CLUB_ID)};
   v_config constant jsonb := ${jsonLiteral(config, "cfg")};
+  v_merge jsonb;
   v_video_url constant text := ${quote(videoUrl)};
   v_club onzio.clubs;
   v_template text;
@@ -295,6 +300,15 @@ ${CLUB_GUARD}
   select * into v_row from onzio.homepage_revamp_content where club_id = v_club_id for update;
   if not found then
     raise exception 'SAVE_THE_CINEMATIC_HOMEPAGE_FIRST: Rose City has no homepage_revamp_content row yet';
+  end if;
+  -- Add to the stored config, never replace it: every other key stays (including the admin's own hero video history).
+  -- The default hero video is used only for a key neither this run nor the row has.
+  v_merge := v_config;
+  if not (v_merge ? 'heroVideoGuid') and not (v_row.presentation_config ? 'heroVideoGuid') then
+    v_merge := v_merge || jsonb_build_object('heroVideoGuid', ${quote(DEFAULT_HERO_VIDEO.guid)});
+  end if;
+  if not (v_merge ? 'heroVideoLibraryId') and not (v_row.presentation_config ? 'heroVideoLibraryId') then
+    v_merge := v_merge || jsonb_build_object('heroVideoLibraryId', ${quote(DEFAULT_HERO_VIDEO.libraryId)});
   end if;
   select * into v_video from onzio.behind_the_rose_section where club_id = v_club_id for update;
   if not found then
@@ -326,7 +340,7 @@ ${sponsorIds.length ? `  select count(*) into v_count from onzio.site_sponsor_lo
     and v_row.hero_poster_media_asset_id is not distinct from ${quote(inputs.heroPoster)}::uuid
     and v_row.seats_background_media_asset_id is not distinct from ${quote(inputs.seatsBackground)}::uuid
     and v_row.episode_poster_media_asset_id is not distinct from ${quote(inputs.episodePoster)}::uuid
-    and v_row.presentation_config = v_config then
+    and (v_row.presentation_config || v_merge) = v_row.presentation_config then
     null;
   else
     update onzio.homepage_revamp_content
@@ -334,7 +348,7 @@ ${sponsorIds.length ? `  select count(*) into v_count from onzio.site_sponsor_lo
           hero_poster_media_asset_id = ${quote(inputs.heroPoster)}::uuid,
           seats_background_media_asset_id = ${quote(inputs.seatsBackground)}::uuid,
           episode_poster_media_asset_id = ${quote(inputs.episodePoster)}::uuid,
-          presentation_config = v_config
+          presentation_config = presentation_config || v_merge
       where club_id = v_club_id;
     get diagnostics v_count = row_count;
     if v_count <> 1 then raise exception 'EXPECTED_ONE_ROW: updated %', v_count; end if;
@@ -356,7 +370,7 @@ $operator$;
 -- Read-back.
 select current_setting('onzio_operator.result', true) as result,
   r.header_partner_media_asset_id, r.hero_poster_media_asset_id, r.seats_background_media_asset_id, r.episode_poster_media_asset_id,
-  r.presentation_config = ${jsonLiteral(config, "cfg")} as config_matches,
+  (r.presentation_config || ${jsonLiteral(config, "cfg")}) = r.presentation_config as config_matches,
   r.presentation_config->>'heroVideoGuid' as hero_video_guid,
   v.video_url as episode_video_url,
   v.video_url = ${quote(videoUrl)} as episode_video_matches,

@@ -9,6 +9,8 @@ import { HOMEPAGE_HERO_EYEBROW_MAX } from "@/lib/homepage-editor/contract";
 import type { HomepageDraft, HomepagePhoto } from "@/lib/homepage-editor/model";
 import { siteRouteOptionsWithFallback } from "@/lib/site-routes";
 import { useClubContext } from "@/components/ClubContextProvider";
+import type { HeroVideoController } from "@/lib/homepage-editor/hero-video-upload";
+import HeroVideoControl from "./HeroVideoControl";
 import CinematicHomepageFields from "./CinematicHomepageFields";
 import type { PartId } from "./homepage-parts";
 
@@ -31,6 +33,8 @@ export type HomepagePartEditor = {
   addPhotos: () => void;
   replaceArtwork: (slot: CinematicArtworkSlot, file: File) => void;
   retryArtwork: (slot: CinematicArtworkSlot) => void;
+  /** Rose City (cinematic@2) only. Absent for every other template, which keeps "set by Onzio". */
+  heroVideo?: HeroVideoController | null;
 };
 
 function Text({ label, value, max, disabled, multiline, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; onChange: (value: string) => void }) {
@@ -57,7 +61,9 @@ function HeroFields({ e }: { e: HomepagePartEditor }) {
     <EditorGroup legend="Main heading">{text("Line one", "headline_line_one", 80)}{text("Line two", "headline_line_two", 80)}</EditorGroup>
     <EditorGroup legend="First button">{text("Button text", "primary_cta_label", 20_000)}<Route label="Where it goes" value={hero.primary_cta_href} disabled={e.disabled} programs={e.programs} onChange={value => e.field("hero.primary_cta_href", value)} /></EditorGroup>
     <EditorGroup legend="Second button">{text("Button text", "secondary_cta_label", 20_000)}<Route label="Where it goes" value={hero.secondary_cta_href} disabled={e.disabled} programs={e.programs} onChange={value => e.field("hero.secondary_cta_href", value)} /></EditorGroup>
-    <p className={kit.hint}>The background video and poster are set by Onzio.</p>
+    {e.heroVideo
+      ? <HeroVideoControl controller={e.heroVideo} disabled={e.disabled} />
+      : <p className={kit.hint}>The background video and poster are set by Onzio.</p>}
   </div>;
 }
 

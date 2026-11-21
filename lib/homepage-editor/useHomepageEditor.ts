@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/admin-client";
+import { fetchHomepageRevision } from "./hero-video-client";
+import { applySwapRevision } from "./hero-video-upload";
 import { buildHomepageSaveRequest, type HomepageEditorSnapshot } from "./adapter";
 import { CINEMATIC_ARTWORK_SLOTS, defaultCinematicHomepageContent, cinematicArtwork, type CinematicArtworkSlot } from "@/lib/cinematic-homepage-content";
 import { homepageAllowedPieces, resolveHomepageBindings, resolveHomepageCapabilities, type HomepageBindingIdentity } from "./capabilities";
@@ -358,6 +360,21 @@ export function useHomepageEditor(clubId: string) {
     } finally { if (run === generation.current) busy.current = false; }
   }
 
+  /**
+   * After a hero video swap wrote the homepage (revision `before` -> `after`), move only the base revision forward,
+   * and only when nothing else changed it: the editor's base must be `before` and the server must now be at `after`.
+   * Otherwise another admin's save may be in between, so the base stays put and the next Save goes through the
+   * existing CONTENT_CHANGED recovery instead of overwriting it. The draft, baseline and recovery copy are untouched.
+   */
+  async function refreshBaseRevision(range: { before: string; after: string }): Promise<"applied" | "conflict"> {
+    const run = generation.current;
+    return applySwapRevision({
+      baseRevision: () => current.current?.baseRevision,
+      fetchRevision: async () => { const revision = await fetchHomepageRevision(); if (run !== generation.current) throw new Error("Editor reloaded."); return revision; },
+      apply: revision => { dispatch({ type: "base-revision-refreshed", revision }); setSnapshot(previous => previous && { ...previous, revision }); },
+    }, range);
+  }
+
   function updatePhoto(id: string, update: Partial<HomepagePhoto>) {
     const next = current.current;
     if (!next) return;
@@ -457,7 +474,7 @@ export function useHomepageEditor(clubId: string) {
       const id = current.current?.draft.revamp && cinematicArtwork(current.current.draft.revamp, slot).localFileKey;
       if (id) return startArtworkUpload(slot, id);
     },
-    state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos,
+    state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos, refreshBaseRevision,
     readState: () => current.current,
     cleanupRemovedPhotos: async (photos: readonly HomepagePhoto[]) => {
       if (current.current?.submitted || recoveryConflict) return true;
