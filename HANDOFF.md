@@ -2,7 +2,8 @@
 
 - **Status:** `in_progress`, branch `claude/rc-hero-video-completion` from main `84de706`. No pull request from this session. Migration `20261121183000_hero_video_pending.sql` is local-file only. Record: `STATUS.md` (RC-HERO-VIDEO-COMPLETION).
 - **What:** Bunny Stream encode webhooks and a new daily cron (`/api/cron/hero-video`, `15 10 * * *`, `CRON_SECRET`) call `finalizeHeroVideo` after the admin leaves. A pending row lets GET say preparing. The admin shows upload progress, a save-style check, a calm preparing state, and "Your new video is live." Club-facing copy does not name Bunny. New server env `BUNNY_STREAM_WEBHOOK_SECRET` (the library Read-Only API key).
-- **Exact next step:** open the pull request from the onzio-coder account. Then Christian's word, separately, for the production migration, the Vercel secret, and the Bunny webhook URL `POST /api/webhooks/bunny-stream`.
+- **Review fixes on PR 212:** Finished webhooks finalize only while the row is still uploading or preparing. A not-ready MP4 returns 503 so Bunny retries. The open admin tab keeps reading GET until the video is live or failed. The cron clears a stale zero-byte upload. The daily counter is still consumed once at start.
+- **Exact next step:** Christian reviews the follow-up on PR 212. Then, separately, the production migration, the Vercel secret, and the Bunny webhook URL `POST /api/webhooks/bunny-stream`.
 
 ## 2026-11-20 - RC-HERO-VIDEO-SWAP: Rose City admins replace the homepage hero video (migration, local only)
 

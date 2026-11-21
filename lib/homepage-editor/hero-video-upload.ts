@@ -8,9 +8,8 @@ import { startTusUpload, type TusUploadHandle, type TusUploadHandlers } from "./
 export const HERO_VIDEO_POLL_MS = 5_000;
 /** How long the upload-finished check stays up before preparing. */
 export const HERO_VIDEO_UPLOAD_DONE_MS = 1_200;
-/** About 30 minutes of display polling. Go-live does not depend on it. */
+/** How many display reads the old poll used to stop after. Watching now continues past this. */
 export const HERO_VIDEO_MAX_POLLS = 360;
-const MAX_NETWORK_FAILURES = 3;
 const AWAITING_KEY = "onzio.heroVideo.pending";
 
 export const HERO_VIDEO_UPLOADING_COPY = "Uploading your video. Keep this page open until the upload finishes.";
@@ -169,21 +168,19 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
 
   /**
    * Display-only. GET reports a processing percent and notices when the webhook
-   * or the cron has already made the video live. It never calls finalize.
+   * or the cron has already made the video live or failed. It never calls finalize.
+   * It keeps reading while this tab is open, so a late result does not wait for a reload.
    */
   async function watch(guid: string, token: number) {
     pendingGuid = guid;
     writeAwaiting(guid);
     set({ phase: "preparing", progress: null, encodeProgress: null, error: null, message: HERO_VIDEO_PREPARING_COPY });
-    let failures = 0;
-    for (let attempt = 0; attempt < HERO_VIDEO_MAX_POLLS; attempt++) {
+    while (alive(token)) {
       let status: HeroVideoStatus;
-      try { status = await deps.getStatus(); failures = 0; }
+      try { status = await deps.getStatus(); }
       catch {
         if (!alive(token)) return;
-        if (++failures >= MAX_NETWORK_FAILURES) return;
         await deps.sleep(HERO_VIDEO_POLL_MS);
-        if (!alive(token)) return;
         continue;
       }
       if (!alive(token)) return;
@@ -202,7 +199,6 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       const encodeProgress = stillPending && typeof status.pending?.encodeProgress === "number" ? status.pending.encodeProgress : null;
       set({ phase: "preparing", status, progress: null, encodeProgress, error: null, message: HERO_VIDEO_PREPARING_COPY });
       await deps.sleep(HERO_VIDEO_POLL_MS);
-      if (!alive(token)) return;
     }
   }
 

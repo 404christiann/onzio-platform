@@ -158,6 +158,25 @@ describe("hero video webhook route", () => {
     expect(m.deleteVideo).not.toHaveBeenCalled();
   });
 
+  it("does not put a reverted video live again when Finished arrives late", async () => {
+    m.maybeSingle.mockResolvedValue({ data: { presentation_config: { heroVideoGuid: OLD, previousHeroVideoGuid: NEW } }, error: null });
+    rpcByName({ lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "live" }] });
+    const response = await post(event(3));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ received: true, outcome: "already_live" });
+    expect(m.rpc.mock.calls.some((call) => call[0] === "swap_hero_video")).toBe(false);
+    expect(m.getVideo).not.toHaveBeenCalled();
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when Finished arrives before the MP4 is ready, so the delivery is retried", async () => {
+    m.videoReadiness.mockResolvedValue("processing");
+    const response = await post(event(3));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ outcome: "processing" });
+    expect(m.rpc.mock.calls.some((call) => call[0] === "swap_hero_video")).toBe(false);
+  });
+
   it("cleans up a failed encode with the existing delete guard", async () => {
     const response = await post(event(5));
     expect(await response.json()).toEqual({ received: true, outcome: "failed" });
@@ -239,6 +258,34 @@ describe("hero video cron backstop", () => {
     expect(await response.json()).toEqual({ data: { configured: true, inspected: 2, finalized: 1, swept: 1, failed: 0 }, error: null });
     expect(m.rpc).toHaveBeenCalledWith("swap_hero_video", expect.objectContaining({ p_new_guid: NEW }));
     expect(m.deleteVideo).not.toHaveBeenCalledWith(fresh);
+  });
+
+  it("clears a stale upload that never received any bytes and leaves a fresh one", async () => {
+    const stale = "00000000-0000-4000-8000-00000000000b";
+    const fresh = "00000000-0000-4000-8000-00000000000c";
+    const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3600e3).toISOString();
+    m.getVideo.mockImplementation(async (guid: string) => ({
+      guid, collectionId: COL, status: 0, availableResolutions: [], hasMP4Fallback: false,
+      width: 0, height: 0, length: 0, encodeProgress: null,
+      storageSize: guid === stale || guid === fresh ? 0 : 1000,
+      dateUploaded: guid === fresh ? hoursAgo(1) : hoursAgo(3),
+    }));
+    m.videoReadiness.mockResolvedValue("processing");
+    m.listCollectionVideos.mockResolvedValue([]);
+    rpcByName({
+      list_hero_video_pending: [
+        { club_id: CLUB, video_guid: stale, collection_id: COL, phase: "uploading" },
+        { club_id: CLUB, video_guid: fresh, collection_id: COL, phase: "uploading" },
+      ],
+      settle_hero_video_pending: "ok",
+    });
+    const result = await runHeroVideoBackstop();
+    expect(m.deleteVideo).toHaveBeenCalledWith(stale);
+    expect(m.deleteVideo).not.toHaveBeenCalledWith(fresh);
+    expect(m.rpc).toHaveBeenCalledWith("settle_hero_video_pending", expect.objectContaining({ p_video_guid: stale, p_phase: "clear" }));
+    expect(m.rpc.mock.calls.some((call) => call[0] === "swap_hero_video")).toBe(false);
+    expect(result.finalized).toBe(0);
+    expect(result.failed).toBe(0);
   });
 
   it("skips the run when the video host is not configured", async () => {
