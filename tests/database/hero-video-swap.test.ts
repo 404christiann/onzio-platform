@@ -89,6 +89,7 @@ beforeEach(async () => {
   await seedRow(OTHER_ROW, baseConfig());
   await db.query("reset role");
   await db.query("delete from onzio_private.hero_video_replace_counters where club_id = any($1)", [[WITH_ROW, OTHER_ROW, NO_ROW]]);
+  await db.query("delete from onzio_private.hero_video_pending where club_id = any($1)", [[WITH_ROW, OTHER_ROW, NO_ROW]]);
   await db.query("reset role");
   await asRole("service_role");
   await db.query("delete from onzio.homepage_revamp_content where club_id=$1", [NO_ROW]);
@@ -107,6 +108,11 @@ describe("hero video swap grants", () => {
     ["hero_video_replaces_today", "select onzio.hero_video_replaces_today($1)", [WITH_ROW]],
     ["swap_hero_video", "select * from onzio.swap_hero_video($1,$2,$3,$4)", [WITH_ROW, B, LIBRARY, A]],
     ["revert_hero_video", "select * from onzio.revert_hero_video($1,$2,$3)", [WITH_ROW, A, B]],
+    ["record_hero_video_pending", "select onzio.record_hero_video_pending($1,$2,$3,$4)", [WITH_ROW, B, "col", "uploading"]],
+    ["read_hero_video_pending", "select * from onzio.read_hero_video_pending($1)", [WITH_ROW]],
+    ["lookup_hero_video_pending", "select * from onzio.lookup_hero_video_pending($1)", [B]],
+    ["list_hero_video_pending", "select * from onzio.list_hero_video_pending()", []],
+    ["settle_hero_video_pending", "select onzio.settle_hero_video_pending($1,$2,$3,$4,$5,$6)", [WITH_ROW, B, "clear", null, null, null]],
   ];
 
   for (const role of ["authenticated", "anon"] as const) {
@@ -119,6 +125,10 @@ describe("hero video swap grants", () => {
     it(`${role} cannot read the counter table`, async () => {
       await asRole(role);
       await rejects(() => db.query("select * from onzio_private.hero_video_replace_counters"), /permission denied/);
+    });
+    it(`${role} cannot read the pending table`, async () => {
+      await asRole(role);
+      await rejects(() => db.query("select * from onzio_private.hero_video_pending"), /permission denied/);
     });
   }
 
@@ -310,5 +320,26 @@ describe("revision numbers returned by a write", () => {
     expect(await revert(D, A)).toMatchObject({ outcome: "conflict", ...nulls });
     expect(await revert(A, B, NO_ROW)).toMatchObject({ outcome: "missing_row", ...nulls });
     expect(await revision()).toBe(before);
+  });
+});
+
+describe("pending hero video", () => {
+  const GUID = "abababab-abab-4aba-8aba-abababababab";
+
+  it("records one uploading guid per club, advances it to preparing, and settles live without dropping revisions on a retry", async () => {
+    await asRole("service_role");
+    expect((await db.query("select onzio.record_hero_video_pending($1,$2,$3,$4) as s", [WITH_ROW, GUID, "col-a", "uploading"])).rows[0].s).toBe("ok");
+    expect((await db.query("select onzio.record_hero_video_pending($1,$2,$3,$4) as s", [WITH_ROW, B, "col-b", "uploading"])).rows[0].s).toBe("ok");
+    const read = async () => (await db.query("select * from onzio.read_hero_video_pending($1)", [WITH_ROW])).rows[0];
+    expect(await read()).toMatchObject({ video_guid: B, collection_id: "col-b", phase: "uploading" });
+    expect((await db.query("select onzio.record_hero_video_pending($1,$2,$3,$4) as s", [WITH_ROW, B, "", "preparing"])).rows[0].s).toBe("ok");
+    expect((await read()).phase).toBe("preparing");
+    expect((await db.query("select * from onzio.lookup_hero_video_pending($1)", [B])).rows[0].club_id).toBe(WITH_ROW);
+    expect((await db.query("select count(*)::int as n from onzio.list_hero_video_pending() where club_id=$1", [WITH_ROW])).rows[0].n).toBe(1);
+    expect((await db.query("select onzio.settle_hero_video_pending($1,$2,$3,$4,$5,$6) as s", [WITH_ROW, B, "live", null, "4", "5"])).rows[0].s).toBe("ok");
+    expect((await db.query("select onzio.settle_hero_video_pending($1,$2,$3,$4,$5,$6) as s", [WITH_ROW, B, "live", null, null, null])).rows[0].s).toBe("ok");
+    expect(await read()).toMatchObject({ phase: "live", revision_before: "4", revision_after: "5", failure_code: null });
+    expect((await db.query("select count(*)::int as n from onzio.list_hero_video_pending() where club_id=$1", [WITH_ROW])).rows[0].n).toBe(0);
+    expect((await db.query("select onzio.record_hero_video_pending($1,$2,$3,$4) as s", [OTHER_ROW, GUID, "col-a", "preparing"])).rows[0].s).toBe("missing");
   });
 });

@@ -13,6 +13,11 @@ export type HeroVideoStatus = {
   replacesPerDay: number;
   maxBytes: number;
   maxSeconds: number;
+  /** Present while this club's upload is still uploading or being prepared. */
+  pending?: { videoGuid: string; encodeProgress: number | null; phase?: "uploading" | "preparing" } | null;
+  failure?: { code: string } | null;
+  /** Set after the swap, so a returning tab can move the editor's base revision. */
+  completion?: { videoGuid: string; revisionBefore: string | null; revisionAfter: string | null } | null;
 };
 
 export type HeroVideoUploadTicket = {
@@ -58,7 +63,12 @@ export async function startHeroVideoUpload(file: { name: string; size: number; t
   return (await post(payload)).body as unknown as HeroVideoStart;
 }
 
-/** 202 means Bunny is still preparing the video; 200 means the swap is live. */
+/** Tells the server the bytes arrived, so GET can say preparing after this tab closes. */
+export async function markHeroVideoUploaded(videoGuid: string): Promise<void> {
+  await post({ action: "uploaded", videoGuid });
+}
+
+/** 202 means the video is still being prepared; 200 means the swap is live. The browser does not need this to go live. */
 export async function finalizeHeroVideo(videoGuid: string): Promise<HeroVideoFinalize> {
   const { body, status } = await post({ action: "finalize", videoGuid });
   return (status === 200 && body.status === "live" ? body : { status: "processing" }) as HeroVideoFinalize;

@@ -1,3 +1,10 @@
+## 2026-11-21 - RC-HERO-VIDEO-COMPLETION: hero video goes live without the admin tab
+
+- **Status:** `in_progress`, branch `claude/rc-hero-video-completion` from main `84de706`. No pull request from this session. Migration `20261121183000_hero_video_pending.sql` is local-file only. Record: `STATUS.md` (RC-HERO-VIDEO-COMPLETION).
+- **What:** Bunny Stream encode webhooks and a new daily cron (`/api/cron/hero-video`, `15 10 * * *`, `CRON_SECRET`) call `finalizeHeroVideo` after the admin leaves. A pending row lets GET say preparing. The admin shows upload progress, a save-style check, a calm preparing state, and "Your new video is live." Club-facing copy does not name Bunny. New server env `BUNNY_STREAM_WEBHOOK_SECRET` (the library Read-Only API key).
+- **Review fixes on PR 212:** Finished webhooks finalize only while the row is still uploading or preparing. A not-ready MP4 returns 503 so Bunny retries. GET reports an uploading row, and the open tab stays on preparing until that row has been seen as preparing and then disappears. The cron clears a stale zero-byte upload only when Bunny status is 0 or 6. Screenshots go to `HERO_VIDEO_SCREENSHOT_DIR` or `test-results/hero-video-completion`.
+- **Exact next step:** Christian reviews the follow-up on PR 212. Then, separately, the production migration, the Vercel secret, and the Bunny webhook URL `POST /api/webhooks/bunny-stream`.
+
 ## 2026-11-20 - RC-HERO-VIDEO-SWAP: Rose City admins replace the homepage hero video (migration, local only)
 
 - **Status:** `in_progress`, built and verified locally. Committed on branch

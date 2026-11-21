@@ -5,6 +5,10 @@
       "schedule": "0 10 * * *"
     },
     {
+      "path": "/api/cron/hero-video",
+      "schedule": "15 10 * * *"
+    },
+    {
       "path": "/api/cron/media-orphan-sweep",
       "schedule": "30 10 * * *"
     },

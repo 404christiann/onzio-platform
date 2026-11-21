@@ -9,6 +9,7 @@ import {
   finalizeHeroVideo,
   getHeroVideoState,
   HeroVideoError,
+  markHeroVideoUploaded,
   revertHeroVideo,
   startHeroVideoUpload,
 } from "@/lib/hero-video-swap";
@@ -25,6 +26,7 @@ const bodySchema = z.discriminatedUnion("action", [
     durationSeconds: z.number().positive().finite().optional(),
   }).strict(),
   z.object({ action: z.literal("finalize"), videoGuid: guid }).strict(),
+  z.object({ action: z.literal("uploaded"), videoGuid: guid }).strict(),
   z.object({ action: z.literal("revert"), expectedLiveGuid: z.union([guid, z.literal("")]), targetGuid: guid }).strict(),
 ]);
 
@@ -97,12 +99,16 @@ async function handle(request: Request, mutation: boolean) {
         ...(payload.durationSeconds === undefined ? {} : { durationSeconds: payload.durationSeconds }),
       }));
     }
+    if (payload.action === "uploaded") {
+      await markHeroVideoUploaded(club.id, payload.videoGuid);
+      return json({ status: "preparing" });
+    }
     const result = await finalizeHeroVideo(club.id, payload.videoGuid);
     return json(result.body, result.httpStatus);
   } catch (error) {
     if (error instanceof HeroVideoError) return failure(error.code, error.status, error.message);
     console.error("hero video request failed", { clubId: club.id, error: error instanceof Error ? error.name : "unknown" });
-    return failure("HERO_VIDEO_UNAVAILABLE", 502, "We could not reach the video service. Try again.");
+    return failure("HERO_VIDEO_UNAVAILABLE", 502, "We could not finish that just now. Try again.");
   }
 }
 

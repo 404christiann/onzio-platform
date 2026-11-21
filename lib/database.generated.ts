@@ -4214,6 +4214,16 @@ export type Database = {
         Args: { p_club_id: string }
         Returns: number
       }
+      list_hero_video_pending: {
+        Args: never
+        Returns: {
+          club_id: string
+          collection_id: string
+          phase: string
+          updated_at: string
+          video_guid: string
+        }[]
+      }
       load_about_editor: {
         Args: { p_club_id: string; p_operation_id?: string; p_page: string }
         Returns: Json
@@ -4290,6 +4300,14 @@ export type Database = {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
       }
+      lookup_hero_video_pending: {
+        Args: { p_video_guid: string }
+        Returns: {
+          club_id: string
+          collection_id: string
+          phase: string
+        }[]
+      }
       mark_free_registration_paid: {
         Args: { p_club_id: string; p_registration_id: string }
         Returns: undefined
@@ -4304,6 +4322,26 @@ export type Database = {
           p_export_id: string
         }
         Returns: Json
+      }
+      read_hero_video_pending: {
+        Args: { p_club_id: string }
+        Returns: {
+          collection_id: string
+          failure_code: string
+          phase: string
+          revision_after: string
+          revision_before: string
+          video_guid: string
+        }[]
+      }
+      record_hero_video_pending: {
+        Args: {
+          p_club_id: string
+          p_collection_id: string
+          p_phase: string
+          p_video_guid: string
+        }
+        Returns: string
       }
       record_stripe_rejection: {
         Args: {
@@ -4451,6 +4489,17 @@ export type Database = {
       save_tryouts_page: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
+      }
+      settle_hero_video_pending: {
+        Args: {
+          p_club_id: string
+          p_failure_code: string
+          p_phase: string
+          p_revision_after: string
+          p_revision_before: string
+          p_video_guid: string
+        }
+        Returns: string
       }
       swap_hero_video: {
         Args: {
