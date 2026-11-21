@@ -25,7 +25,7 @@ export const CINEMATIC_NAV_ITEMS = [
   // RC2027-TICKET-PAGES: Sam's Season Ticket Membership and Know Before You Go designs both sit under Tickets.
   { id: "tickets", label: "Tickets", children: [
     { id: "season-membership", label: "Season ticket membership", href: "/tickets/season-membership" },
-    { id: "tickets-page", label: "Match tickets", href: "/tickets" },
+    { id: "tickets-page", label: "Single match tickets", href: "/tickets" },
     { id: "know-before-you", label: "Know before you go", href: "/tickets/know-before-you-go" },
   ] },
   { id: "schedule", label: "Schedule", href: "/schedule" },

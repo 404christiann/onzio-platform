@@ -1,5 +1,30 @@
 # Diverse City FC Status
 
+## 2026-11-20 - RC-SAM-MOBILE-HEADINGS: Foothill Transit headings bold on phones; "Single match tickets"; square Jersey Details boxes
+
+**Agent/package:** Claude Code (Opus 5.5), RC-SAM-MOBILE-HEADINGS (Christian's three follow-ups from his phone), branch
+`claude/rc-sam-mobile-headings` from main `266db9a6`. **Status:** `ready for review`, PR open. CSS, one label and tests; plus
+one admin text change. No data, schema, env or deploy change; Diverse City untouched.
+
+1. **Directions headings not bold on his iPhone** (Foothill Transit page, `/stadium/foothill-transit`: "Directions By Foothill
+   Transit", "Parking Lot No 5", ...). Chrome renders them Avenir Heavy 800 at 390 and 1440, the font file is Avenir Heavy
+   (usWeightClass 850) with `access-control-allow-origin: *`, so the iPhone result could not be reproduced: the iOS Simulator
+   hits Vercel's login on `rc-sam`, and the shared local DB had been reset. The rule (`stadium.css`, since #151) asked for
+   weight 800 with `font-synthesis:none`, so a phone that lands on any face without Heavy shows it regular, as in his
+   screenshot. Removed `font-synthesis:none` there (Robinson's own headings never had it). #206's local Avenir Heavy stand-in,
+   now on main, should also give iPhones the real Heavy. To confirm on his phone after merge.
+2. **"Match tickets" back to "Single match tickets"** (Tickets drop-down label, `lib/cinematic-homepage-content.ts`) and, in
+   production admin, the `/tickets` heading "Match Tickets" -> "Single Match Tickets" (saved in the Tickets editor).
+3. **Jersey Details photo boxes square** on desktop and phones (`shop.css`: `border-radius:0` instead of 0 0 16px 16px and
+   0 0 12px 12px).
+
+**Verification:** new `cinematic-rc-sam-mobile` (heading rule without `font-synthesis:none`; box radius 0) and the updated
+`cinematic-navigation` case, written red first. `test:unit` 4383/4383.
+
+**Also:** `rc-sam` was fast-forwarded to `266db9a6` (#208 + #206 + #207); Sam's link is re-pointed once that build is Ready.
+
+**Exact next step:** Christian merges; fast-forward `rc-sam`, re-point Sam's alias, and Christian checks the headings on his phone.
+
 ## 2026-11-20 - RC-SCHEDULE-DATE-FIT: long Schedule dates no longer run under the opponent crest (CSS only)
 
 **Agent/package:** Claude Code (Opus 5.5), RC-SCHEDULE-DATE-FIT (Christian's follow-up bug from `rc-sam`), branch

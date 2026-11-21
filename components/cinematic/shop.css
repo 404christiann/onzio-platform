@@ -87,7 +87,7 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
 .cinematic-site .shop-jersey-details{width:83.4%;margin:0 auto;padding:12px 0 64px;position:relative;z-index:1}
 .cinematic-site .shop-jersey-details .shop-rule-heading{margin:0 0 3.4vw .9vw}
 .cinematic-site .shop-detail-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3.7vw 4.3vw}
-.cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{display:block;aspect-ratio:349/334;width:85%;height:auto;object-fit:cover;background:#fff;border-radius:0 0 16px 16px;box-shadow:0 0 12px #0000002e}
+.cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{display:block;aspect-ratio:349/334;width:85%;height:auto;object-fit:cover;background:#fff;border-radius:0;box-shadow:0 0 12px #0000002e}
 .cinematic-site .shop-detail-tiles h3{font:500 13px/1.3 var(--body);color:var(--shop-red);text-transform:uppercase;margin:38px 0 4px}
 .cinematic-site .shop-detail-tiles p{font:400 12.5px/1.35 var(--body);color:#141414}
 .cinematic-site .shop-jersey-details:after{content:'';position:absolute;left:calc(50% - 50vw);bottom:0;width:100vw;height:1px;box-shadow:0 4px 8px #0002}
@@ -149,7 +149,7 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
  .cinematic-site .shop-jersey-details .shop-rule-heading{margin:0 0 24px}
  .cinematic-site .shop-detail-tiles{grid-template-columns:1fr;gap:22px}
  .cinematic-site .shop-detail-tiles article{display:grid;grid-template-columns:38% 1fr;grid-template-rows:auto 1fr;column-gap:16px;align-items:start}
- .cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{grid-row:span 2;border-radius:0 0 12px 12px}
+ .cinematic-site .shop-photo-pending,.cinematic-site .shop-detail-photo{grid-row:span 2;border-radius:0}
  .cinematic-site .shop-detail-tiles h3{margin:2px 0 4px}
  .cinematic-site .shop-detail-tiles p{font-size:13px;line-height:1.45}
  .cinematic-site .shop-information{padding-top:36px}
