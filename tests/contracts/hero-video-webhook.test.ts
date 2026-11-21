@@ -205,20 +205,20 @@ describe("pending hero video state", () => {
     });
     m.getVideo.mockResolvedValueOnce({ guid: NEW, collectionId: COL, encodeProgress: 42 });
     const state = await getHeroVideoState(CLUB);
-    expect(state.pending).toEqual({ videoGuid: NEW, encodeProgress: 42 });
+    expect(state.pending).toEqual({ videoGuid: NEW, encodeProgress: 42, phase: "preparing" });
     expect(state.failure).toBeNull();
 
     m.getVideo.mockResolvedValueOnce({ guid: NEW, collectionId: COL, encodeProgress: null });
-    expect((await getHeroVideoState(CLUB)).pending).toEqual({ videoGuid: NEW, encodeProgress: null });
+    expect((await getHeroVideoState(CLUB)).pending).toEqual({ videoGuid: NEW, encodeProgress: null, phase: "preparing" });
   });
 
-  it("hides an in-progress byte upload and reports a stored failure", async () => {
+  it("reports an uploading row so a finished byte upload is not mistaken for gone, and reports a stored failure", async () => {
     m.maybeSingle.mockResolvedValue({ data: { presentation_config: { heroVideoGuid: OLD, previousHeroVideoGuid: "" } }, error: null });
     rpcByName({
       hero_video_replaces_today: 1,
       read_hero_video_pending: [{ video_guid: NEW, collection_id: COL, phase: "uploading", failure_code: null, revision_before: null, revision_after: null }],
     });
-    expect((await getHeroVideoState(CLUB)).pending).toBeNull();
+    expect((await getHeroVideoState(CLUB)).pending).toEqual({ videoGuid: NEW, encodeProgress: null, phase: "uploading" });
     rpcByName({
       hero_video_replaces_today: 1,
       read_hero_video_pending: [{ video_guid: NEW, collection_id: COL, phase: "failed", failure_code: "VIDEO_FAILED", revision_before: null, revision_after: null }],

@@ -13,8 +13,8 @@ export type HeroVideoStatus = {
   replacesPerDay: number;
   maxBytes: number;
   maxSeconds: number;
-  /** Present while a finished upload is still being prepared. Absent during the byte upload and when idle. */
-  pending?: { videoGuid: string; encodeProgress: number | null } | null;
+  /** Present while this club's upload is still uploading or being prepared. */
+  pending?: { videoGuid: string; encodeProgress: number | null; phase?: "uploading" | "preparing" } | null;
   failure?: { code: string } | null;
   /** Set after the swap, so a returning tab can move the editor's base revision. */
   completion?: { videoGuid: string; revisionBefore: string | null; revisionAfter: string | null } | null;
