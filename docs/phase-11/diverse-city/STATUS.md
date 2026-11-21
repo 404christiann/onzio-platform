@@ -52,6 +52,16 @@ PrintButton.tsx,report.module.css}`, `lib/telemetry/report-data.ts`, `lib/__test
 - `git diff --stat origin/claude/telemetry-02-data -- supabase app/api middleware.ts package.json package-lock.json
   "app/admin/(protected)/insights/page.tsx"`: empty.
 
+**Review fixes (onzio-coder, 0 High / 0 Medium / 2 Low on `270703c`), commit `931edb15`:**
+- Low 1: avg. time on page now averages only days with engaged time (`SiteTraffic.timeMeasuredDays` / `trafficDays`),
+  and the sheet says "measured on N of M days" when coverage is partial, so the month heartbeats ship doesn't read low.
+- Low 2: the month's sponsor rows are read in 1,000-row pages ordered by date then sponsor, capped at 31 pages (an
+  error, not a partial report).
+- Verification: tsc clean; unit + contract 76/76; eslint clean on the touched files. One lock hold: db reset (max
+  `20261121230000`), `npm run test:db` 1535/1537 (the 2 failures are the same TELEMETRY-02 base tests; the new 1,240-row
+  paging case passes), `db:types:check` match, `npm run build` passed, report Playwright spec 5/5 (avg time now
+  "3m 37s, measured on 1 of 6 days" for the seed).
+
 **Blockers / decisions:** none for this package. The browser's default PDF file name is the page title for every
 sponsor. A white-on-transparent sponsor logo sits in a small white tile and may be faint on paper.
 **Next step:** rebase onto `origin/main` after TELEMETRY-02 (and TELEMETRY-04 if merged) land, rerun the checks, then
