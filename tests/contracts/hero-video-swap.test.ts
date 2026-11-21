@@ -74,7 +74,7 @@ describe("startHeroVideoUpload", () => {
   it.each([["exactly the cap", { durationSeconds: 600 }], ["a short clip", { durationSeconds: 90.25 }], ["no declared duration", {}]])("allows %s and consumes the counter once", async (_l, extra) => {
     rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }] });
     const r = await startHeroVideoUpload(club, { ...ok, ...extra });
-    expect(m.rpc).toHaveBeenCalledWith("consume_hero_video_replace", { p_club_id: club, p_cap: 5 });
+    expect(m.rpc.mock.calls.filter((call) => call[0] === "consume_hero_video_replace")).toEqual([["consume_hero_video_replace", { p_club_id: club, p_cap: 5 }]]);
     expect(m.rpc).toHaveBeenCalledWith("record_hero_video_pending", expect.objectContaining({ p_club_id: club, p_phase: "uploading", p_video_guid: "new-guid" }));
     expect(r.videoGuid).toBe("new-guid");
   });
@@ -87,7 +87,7 @@ describe("startHeroVideoUpload", () => {
   it("consumes once then creates the video and returns the upload authorization", async () => {
     rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }] });
     const r = await startHeroVideoUpload(club, ok);
-    expect(m.rpc).toHaveBeenCalledWith("consume_hero_video_replace", { p_club_id: club, p_cap: 5 });
+    expect(m.rpc.mock.calls.filter((call) => call[0] === "consume_hero_video_replace")).toEqual([["consume_hero_video_replace", { p_club_id: club, p_cap: 5 }]]);
     expect(m.rpc).toHaveBeenCalledWith("record_hero_video_pending", expect.objectContaining({ p_club_id: club, p_phase: "uploading" }));
     expect(m.createVideo).toHaveBeenCalledWith({ title: expect.stringMatching(/^Hero video 20/), collectionId: COL });
     expect(r).toMatchObject({ videoGuid: "new-guid", maxBytes: 500 * 1024 * 1024, upload: { signature: "s" } });

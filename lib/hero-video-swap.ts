@@ -217,6 +217,13 @@ export async function safeDeleteHeroVideo(clubId: string, collectionId: string, 
  * orphaned. `safeDeleteHeroVideo` still guards live, previous and Diverse City
  * guids, and `keepGuid` protects the video being finalized.
  */
+/** An upload that never received bytes, older than the upload window. */
+function staleZeroByte(video: { storageSize: number; dateUploaded: string }) {
+  if (video.storageSize !== 0) return false;
+  const uploaded = Date.parse(video.dateUploaded);
+  return !Number.isNaN(uploaded) && Date.now() - uploaded > UPLOAD_WINDOW_SECONDS * 1000;
+}
+
 async function sweepStale(clubId: string, collectionId: string, keepGuid?: string) {
   try {
     const videos = await listCollectionVideos(collectionId);
@@ -354,6 +361,11 @@ export async function applyBunnyStreamWebhook(input: {
 
   const action = classifyBunnyStreamStatus(event.status);
   if (action === "ignore") return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
+  // A Finished delivery can be retried for hours and can arrive after the admin reverted.
+  // Only an upload that is still in flight may be finalized. A later one is a no-op.
+  if (action === "finalize" && job.phase !== "uploading" && job.phase !== "preparing") {
+    return { httpStatus: 200, body: { received: true, outcome: job.phase === "live" ? "already_live" : "ignored" } };
+  }
 
   const video = await getVideo(event.videoGuid);
   if (!video) {
@@ -387,7 +399,8 @@ export async function applyBunnyStreamWebhook(input: {
           p_club_id: job.club_id, p_video_guid: event.videoGuid, p_collection_id: job.collection_id, p_phase: "preparing",
         });
       }
-      return { httpStatus: 200, body: { received: true, outcome: "processing" } };
+      // 2xx tells Bunny the event was delivered and it will not retry. The file is not playable yet.
+      return { httpStatus: 503, body: { received: false, outcome: "processing" } };
     }
     const already = result.body.revisionBefore == null && result.body.revisionAfter == null;
     await settlePending(job.club_id, event.videoGuid, "live", null, result.body.revisionBefore ?? null, result.body.revisionAfter ?? null);
@@ -423,6 +436,16 @@ export async function runHeroVideoBackstop(): Promise<HeroVideoBackstopResult> {
   for (const job of jobs) {
     result.inspected += 1;
     try {
+      const video = await getVideo(job.video_guid);
+      if (video && staleZeroByte(video)) {
+        const deleted = await safeDeleteHeroVideo(job.club_id, job.collection_id, job.video_guid);
+        if (deleted) {
+          await settlePending(job.club_id, job.video_guid, "clear", null, null, null);
+          await sweepStale(job.club_id, job.collection_id);
+          result.swept += 1;
+          continue;
+        }
+      }
       const finished = await finalizeHeroVideo(job.club_id, job.video_guid);
       if (finished.httpStatus === 200) {
         await settlePending(job.club_id, job.video_guid, "live", null, finished.body.revisionBefore ?? null, finished.body.revisionAfter ?? null);

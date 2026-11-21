@@ -214,9 +214,10 @@ describe("hero video control: upload, processing and going live", () => {
   });
 
   it("a returning visit during preparing shows preparing, not an empty form", async () => {
-    const { controller } = harness({ getStatus: vi.fn(async () => preparing) });
+    const { controller } = harness({ getStatus: vi.fn(async () => preparing), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
     await controller.load();
     expect(controller.getState()).toMatchObject({ phase: "preparing", message: HERO_VIDEO_PREPARING_COPY, status: { pending: { videoGuid: "new-guid" } } });
+    controller.dispose();
   });
 
   it("a swap that is already live still refetches the revision", async () => {
@@ -236,13 +237,26 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState()).toMatchObject({ phase: "live", revisionWarning: true });
   });
 
-  it("keeps showing preparing after the display poll ends, and never needs that poll to go live", async () => {
-    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(preparing);
+  it("moves to live without a reload when GET changes after a long stretch of preparing", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS);
+    for (let i = 0; i < HERO_VIDEO_MAX_POLLS; i++) getStatus.mockResolvedValueOnce(preparing);
+    getStatus.mockResolvedValue(liveStatus);
     const { controller, handlers } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
-    expect(getStatus).toHaveBeenCalledTimes(1 + HERO_VIDEO_MAX_POLLS);
-    expect(controller.getState()).toMatchObject({ phase: "preparing", error: null, message: HERO_VIDEO_PREPARING_COPY });
+    expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY });
+  });
+
+  it("moves to failed without a reload when GET reports a failure while preparing", async () => {
+    const getStatus = vi.fn()
+      .mockResolvedValueOnce(STATUS)
+      .mockResolvedValueOnce(preparing)
+      .mockResolvedValue({ ...STATUS, pending: null, failure: { code: "VIDEO_FAILED" } });
+    const { controller, handlers } = harness({ getStatus });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState()).toMatchObject({ phase: "error", error: { code: "VIDEO_FAILED" } });
+    expect(controller.getState().error?.message).toMatch(/could not be processed/);
   });
 
   it("an interrupted upload explains that nothing changed and lets the person choose a file again", async () => {
@@ -254,15 +268,17 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState().phase).toBe("uploading");
   });
 
-  it("a display poll that cannot reach the server stays on preparing, and checking again can see that it went live", async () => {
-    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockRejectedValue(new TypeError("fetch failed"));
+  it("keeps watching through network errors and moves to live when a later GET succeeds", async () => {
+    const getStatus = vi.fn()
+      .mockResolvedValueOnce(STATUS)
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValue(liveStatus);
     const { controller, handlers } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
-    expect(controller.getState()).toMatchObject({ phase: "preparing", error: null, message: HERO_VIDEO_PREPARING_COPY });
-    getStatus.mockResolvedValue(liveStatus);
-    await controller.retryStatus();
-    expect(controller.getState().phase).toBe("live");
+    expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY });
   });
 
   it.each([
