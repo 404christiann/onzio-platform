@@ -47,7 +47,7 @@ export class HeroVideoError extends Error {
   }
 }
 
-export type HeroVideoPending = { videoGuid: string; encodeProgress: number | null };
+export type HeroVideoPending = { videoGuid: string; encodeProgress: number | null; phase: "uploading" | "preparing" };
 export type HeroVideoFailure = { code: string };
 export type HeroVideoCompletion = { videoGuid: string; revisionBefore: string | null; revisionAfter: string | null };
 
@@ -58,7 +58,7 @@ export type HeroVideoState = {
   replacesPerDay: number;
   maxBytes: number;
   maxSeconds: number;
-  /** Set only while Bunny is preparing a finished upload. Hidden during the byte upload itself. */
+  /** Set while this club's upload is still uploading or preparing. */
   pending: HeroVideoPending | null;
   failure: HeroVideoFailure | null;
   completion: HeroVideoCompletion | null;
@@ -137,7 +137,9 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
     replacesPerDay: HERO_VIDEO_REPLACES_PER_DAY,
     maxBytes: HERO_VIDEO_MAX_BYTES,
     maxSeconds: HERO_VIDEO_MAX_SECONDS,
-    pending: pendingRow?.phase === "preparing" ? { videoGuid: pendingRow.video_guid, encodeProgress } : null,
+    pending: pendingRow?.phase === "preparing" || pendingRow?.phase === "uploading"
+      ? { videoGuid: pendingRow.video_guid, encodeProgress, phase: pendingRow.phase }
+      : null,
     failure: pendingRow?.phase === "failed" && pendingRow.failure_code ? { code: pendingRow.failure_code } : null,
     completion: pendingRow?.phase === "live" ? {
       videoGuid: pendingRow.video_guid,

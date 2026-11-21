@@ -49,7 +49,9 @@ function statusBody() {
     replacesPerDay: 5,
     maxBytes: 500 * 1024 * 1024,
     maxSeconds: 600,
-    pending: store.phase === "preparing" && store.guid ? { videoGuid: store.guid, encodeProgress: store.encode } : null,
+    pending: (store.phase === "preparing" || store.phase === "uploading") && store.guid
+      ? { videoGuid: store.guid, encodeProgress: store.phase === "preparing" ? store.encode : null, phase: store.phase }
+      : null,
     failure: store.phase === "failed" && store.failure ? { code: store.failure } : null,
     completion: store.phase === "live" && store.guid ? { videoGuid: store.guid, revisionBefore: "7", revisionAfter: "8" } : null,
   };

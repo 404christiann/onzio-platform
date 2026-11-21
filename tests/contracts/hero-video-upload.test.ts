@@ -247,6 +247,21 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY });
   });
 
+  it("stays preparing when the upload-finished call fails and GET still has this upload", async () => {
+    const uploadingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "uploading" as const } };
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(uploadingRow);
+    const markUploaded = vi.fn(async () => { throw new HeroVideoApiError("NETWORK", "offline", 0); });
+    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise<void>(() => undefined); });
+    const { controller, handlers } = harness({ getStatus, markUploaded, sleep });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(markUploaded).toHaveBeenCalledWith("new-guid");
+    expect(controller.getState().phase).toBe("preparing");
+    expect(controller.getState().message).toBe(HERO_VIDEO_PREPARING_COPY);
+    expect(controller.getState().message).not.toMatch(/bunny|video service/i);
+    controller.dispose();
+  });
+
   it("returns to idle when the pending row is gone and this video did not go live", async () => {
     const getStatus = vi.fn()
       .mockResolvedValueOnce(STATUS)

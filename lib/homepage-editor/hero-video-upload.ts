@@ -175,6 +175,9 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     pendingGuid = guid;
     writeAwaiting(guid);
     set({ phase: "preparing", progress: null, encodeProgress: null, error: null, message: HERO_VIDEO_PREPARING_COPY });
+    // Idle only after this tab has seen the row as preparing and it then disappears. An uploading
+    // row, or no row yet, means the finish call may have failed while the bytes are already stored.
+    let confirmedPreparing = false;
     while (alive(token)) {
       let status: HeroVideoStatus;
       try { status = await deps.getStatus(); }
@@ -191,13 +194,14 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
         return fail(new HeroVideoApiError(status.failure.code, "", 422));
       }
       const stillPending = status.pending?.videoGuid === guid;
+      if (stillPending && status.pending?.phase !== "uploading") confirmedPreparing = true;
       if (status.liveGuid === guid && !stillPending) {
         pendingGuid = null;
         set({ status });
         return complete(liveFromStatus(status, guid), "replace");
       }
-      // The row was cleared (another upload replaced it, or the webhook/cron dropped it) and this guid did not go live.
-      if (!stillPending) {
+      // The row was cleared after we had seen it preparing, and this guid did not go live.
+      if (!stillPending && confirmedPreparing) {
         pendingGuid = null;
         clearAwaiting();
         set({ ...idle(status) });
