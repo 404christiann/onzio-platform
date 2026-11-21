@@ -274,6 +274,29 @@ describe("hero video control: upload, processing and going live", () => {
     controller.dispose();
   });
 
+  it("another tab stays idle while an upload is still in progress, and this tab resumes its own", async () => {
+    const uploadingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "uploading" as const } };
+    const store = new Map<string, string>();
+    vi.stubGlobal("sessionStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+    });
+    const other = harness({ getStatus: vi.fn(async () => uploadingRow) });
+    await other.controller.load();
+    expect(other.controller.getState().phase).toBe("idle");
+    await other.controller.revert();
+    expect(other.deps.revert).toHaveBeenCalled();
+    await other.controller.replace(video());
+    expect(other.deps.start).toHaveBeenCalled();
+
+    store.set("onzio.heroVideo.pending", "new-guid");
+    const own = harness({ getStatus: vi.fn(async () => uploadingRow), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
+    await own.controller.load();
+    expect(own.controller.getState()).toMatchObject({ phase: "preparing", message: HERO_VIDEO_PREPARING_COPY });
+    own.controller.dispose();
+  });
+
   it("an abandoned upload with no bytes leaves Replace and Revert enabled", async () => {
     const { controller, deps } = harness({ getStatus: vi.fn(async () => ({ ...STATUS, pending: null })) });
     await controller.load();

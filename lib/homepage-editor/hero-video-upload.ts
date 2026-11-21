@@ -226,9 +226,12 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       try {
         const status = await deps.getStatus();
         if (!alive(token)) return;
-        if (status.pending?.videoGuid) {
-          set({ ...idle(status), phase: "preparing", message: HERO_VIDEO_PREPARING_COPY, encodeProgress: typeof status.pending.encodeProgress === "number" ? status.pending.encodeProgress : null });
-          void watch(status.pending.videoGuid, token);
+        const pending = status.pending;
+        const ownUpload = !!pending?.videoGuid && readAwaiting() === pending.videoGuid;
+        // Another tab's in-flight upload must not lock Replace and Revert. This tab's own upload, and a real preparing row, do.
+        if (pending?.videoGuid && (pending.phase !== "uploading" || ownUpload)) {
+          set({ ...idle(status), phase: "preparing", message: HERO_VIDEO_PREPARING_COPY, encodeProgress: typeof pending.encodeProgress === "number" ? pending.encodeProgress : null });
+          void watch(pending.videoGuid, token);
           return;
         }
         if (status.failure?.code) {
@@ -264,7 +267,8 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       try { ticket = await deps.start({ name: file.name, size: file.size, type: file.type, ...(durationSeconds === undefined ? {} : { durationSeconds }) }); } catch (error) { if (alive(token)) fail(error); return; }
       if (!alive(token)) { void deps.abandon(ticket.videoGuid).catch(() => undefined); return; }
       uploadGuid = ticket.videoGuid;
-      const abandonUpload = () => { const guid = uploadGuid; uploadGuid = null; if (guid) void deps.abandon(guid).catch(() => undefined); };
+      writeAwaiting(ticket.videoGuid);
+      const abandonUpload = () => { const guid = uploadGuid; uploadGuid = null; clearAwaiting(); if (guid) void deps.abandon(guid).catch(() => undefined); };
       handle = deps.startUpload(file, ticket.upload, {
         onProgress: (sent, total) => { if (alive(token)) set({ progress: { sent, total } }); },
         onError: () => {
@@ -296,6 +300,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       handle?.abort(); handle = null;
       const guid = uploadGuid;
       uploadGuid = null;
+      clearAwaiting();
       if (guid) void deps.abandon(guid).catch(() => undefined);
       set({ ...idle(state.status), message: "Upload canceled. Your current hero video is unchanged." });
     },

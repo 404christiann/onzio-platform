@@ -106,6 +106,11 @@ function videoHasBytes(video: { status: number }) {
   return video.status >= 1 && video.status !== 6;
 }
 
+function pendingRowExpired(updatedAt: string | undefined) {
+  const updated = Date.parse(updatedAt ?? "");
+  return !Number.isNaN(updated) && Date.now() - updated >= UPLOADING_LOOKUP_GRACE_MS;
+}
+
 const UPLOADING_LOOKUP_GRACE_MS = 30 * 60 * 1000;
 
 function rowOf<T>(data: unknown): T | null {
@@ -141,7 +146,11 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
     }
     pending = { videoGuid: pendingRow.video_guid, encodeProgress, phase: "preparing" };
   } else if (pendingRow?.phase === "uploading") {
-    pending = await resolveUploadingRow(clubId, pendingRow);
+    // Read-only. Status 0 means the upload is still running, so this must not delete it.
+    // Another tab only hears about the row for a short while, then sees idle.
+    const updated = Date.parse(pendingRow.updated_at ?? "");
+    const young = !Number.isNaN(updated) && Date.now() - updated < UPLOADING_LOOKUP_GRACE_MS;
+    pending = young ? { videoGuid: pendingRow.video_guid, encodeProgress: null, phase: "uploading" } : null;
   }
   return {
     ...live,
@@ -193,28 +202,6 @@ export async function startHeroVideoUpload(
   }
   const expire = Math.floor(Date.now() / 1000) + UPLOAD_WINDOW_SECONDS;
   return { videoGuid, upload: tusUploadAuthorization(videoGuid, expire), maxBytes: HERO_VIDEO_MAX_BYTES };
-}
-
-/**
- * An `uploading` row is still this club's upload only when the file has bytes.
- * Otherwise it was canceled or never finished: drop it so the editor is not locked.
- * If the lookup fails, keep a young row and hide an old one. Do not delete on a lookup error.
- */
-async function resolveUploadingRow(clubId: string, row: PendingRow): Promise<HeroVideoPending | null> {
-  let video;
-  try {
-    video = await getVideo(row.video_guid);
-  } catch {
-    const updated = Date.parse(row.updated_at ?? "");
-    if (!Number.isNaN(updated) && Date.now() - updated < UPLOADING_LOOKUP_GRACE_MS) {
-      return { videoGuid: row.video_guid, encodeProgress: null, phase: "uploading" };
-    }
-    return null;
-  }
-  if (video && videoHasBytes(video)) return { videoGuid: row.video_guid, encodeProgress: null, phase: "uploading" };
-  if (video) await safeDeleteHeroVideo(clubId, row.collection_id, row.video_guid);
-  await settlePending(clubId, row.video_guid, "clear", null, null, null);
-  return null;
 }
 
 /** The bytes are on the host. GET can now say preparing even if this tab closes. */
@@ -354,7 +341,7 @@ export async function revertHeroVideo(clubId: string, input: { expectedLiveGuid:
 
 const TERMINAL_VIDEO = new Set(["VIDEO_FAILED", "VIDEO_TOO_LONG", "RESOLUTION_TOO_LOW", "STORED_SIZE_TOO_LARGE", "NOT_CLUB_VIDEO"]);
 
-type PendingJob = { club_id: string; video_guid: string; collection_id: string; phase: string };
+type PendingJob = { club_id: string; video_guid: string; collection_id: string; phase: string; updated_at?: string };
 
 async function settlePending(
   clubId: string,
@@ -484,6 +471,16 @@ export async function runHeroVideoBackstop(): Promise<HeroVideoBackstopResult> {
     result.inspected += 1;
     try {
       const video = await getVideo(job.video_guid);
+      // An uploading row older than the editor's grace is abandoned. Clear it here.
+      // Delete the Bunny video only when it is actually stale. A video that already
+      // has bytes stays, so the finish path below can still make it live.
+      if (job.phase === "uploading" && pendingRowExpired(job.updated_at) && !(video && videoHasBytes(video))) {
+        if (video && staleZeroByte(video)) await safeDeleteHeroVideo(job.club_id, job.collection_id, job.video_guid);
+        await settlePending(job.club_id, job.video_guid, "clear", null, null, null);
+        await sweepStale(job.club_id, job.collection_id);
+        result.swept += 1;
+        continue;
+      }
       if (video && staleZeroByte(video)) {
         const deleted = await safeDeleteHeroVideo(job.club_id, job.collection_id, job.video_guid);
         if (deleted) {
