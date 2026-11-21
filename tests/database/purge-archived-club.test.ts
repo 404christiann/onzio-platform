@@ -38,7 +38,7 @@ const ROSE_CITY_MIGRATION = resolve(
 // already exist in the local database.
 const TELEMETRY_MIGRATION = resolve(
   __dirname,
-  "../../supabase/migrations/20261119130000_page_telemetry.sql",
+  "../../supabase/migrations/20261121060000_page_telemetry.sql",
 );
 function telemetryPurgeDefinition(): string {
   const sql = readFileSync(TELEMETRY_MIGRATION, "utf8");

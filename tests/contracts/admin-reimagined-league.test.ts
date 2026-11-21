@@ -106,7 +106,7 @@ describe("the migration", () => {
       "20261119120000_media_orphan_sweep.sql",
       "20261120230000_hero_video_swap.sql",
       // TELEMETRY-01 P1 page telemetry.
-      "20261119130000_page_telemetry.sql",
+      "20261121060000_page_telemetry.sql",
     ]);
   });
 
