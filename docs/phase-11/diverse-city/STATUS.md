@@ -4,7 +4,7 @@
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet subagents building), `RC-HERO-VIDEO-SWAP`.
 - **Status:** `in_progress`, built and verified locally. Committed on branch `claude/rc-hero-video-swap`
-  (rebased on main `266db9a6`), pushed, PR open (Christian's word, 2026-11-20). Not merged.
+  (rebased on main `c0eeafbe`), pushed, PR open (Christian's word, 2026-11-20). Not merged.
   Migration `20261120230000_hero_video_swap.sql` is applied to the shared local Supabase only.
 - **Completed:**
   - New kernel route `POST/GET /api/admin/homepage/hero-video` (`start`, `finalize`, `revert`). It uses the homepage route's auth
@@ -13,7 +13,11 @@
   - Server-only `BUNNY_STREAM_API_KEY` (never `NEXT_PUBLIC`). A missing key returns 503 `VIDEO_NOT_CONFIGURED`.
   - The browser uploads straight to Bunny with tus-js-client and a signed, expiring upload token. The key never leaves the server.
   - Uploads go to library 723074, collection `club-<clubId>`. Limits: video mime only, 500 MB, 5 replaces per club per UTC day
-    on its own counter, consumed only after the request validates.
+    on its own counter, consumed only after the request validates. The 500 MB is checked twice: on the declared size at
+    start, and on Bunny's real `storageSize` at every finalize poll (review fix). Anything over is deleted with a 413 and never
+    swapped. `storageSize` is the total Bunny stores for the video (original plus renditions), so it's a hard ceiling.
+  - Cleanup (review fix): each start and each finalize sweeps the club collection. It deletes Created/UploadFailed videos older
+    than the 2 h upload-token window and any other non-live, non-previous video older than 24 h.
   - `finalize` switches only when Bunny reports status 4, the MP4 fallback and a 720p rendition, and a HEAD on `play_720p.mp4`
     succeeds. Lower than 720p or a failed transcode is deleted with a clear error.
   - The swap is a service-role jsonb merge of `presentation_config`: the new video goes live and the old live video becomes
@@ -31,7 +35,9 @@
     confirm), real upload progress with cancel, a processing state, plain errors, and "N of 5 replaces left today". It says
     replace and revert go live by themselves and aren't part of Save. There's no paste-a-GUID field. Other templates still show
     "set by Onzio".
-  - `scripts/rose-city-2027-operator-sql.ts` now merges `presentation_config` (`||`, containment no-op check). It never writes
+  - `scripts/rose-city-2027-operator-sql.ts` now merges `presentation_config` with `||`. The no-op check and the read-back's
+    `config_matches` are `(config || payload) = config` (review fix, replacing `@>`), so a removed sponsor treatment is written
+    and not reported as matching. It never writes
     `previousHeroVideoGuid`, and it only writes the hero keys when `--hero-video-guid`/`--hero-video-library-id` are passed
     (falling back to the default only when the row has none).
   - `cinematic.css` and the Diverse City constants in `lib/bunny-video.ts` are untouched.
@@ -55,9 +61,13 @@
     live/previous, kept `sponsorTreatments` and moved the revision 1→2. The editor then saved the restored draft (revision 3,
     POST 200, no `CONTENT_CHANGED`). Escape cancels only the inline confirm.
 - **Blockers / decisions:**
-  - An upload that is still processing when the admin closes the page is never finalized. It stays in the club collection
-    until the 24 h sweep, and its daily slot is used.
-  - The 500 MB cap is enforced on the declared size; Bunny's library-level max upload size would make it a hard cap.
+  - An upload that is still processing when the admin closes the page is never finalized, and its daily slot is used. The
+    sweep removes it at the club's next start or finalize after it ages out. There's no cron, so a club that never uploads
+    again keeps at most that last batch (≤ 5) until it does.
+  - The 500 MB ceiling uses Bunny's total `storageSize`, so an original near 500 MB can be rejected once renditions are added.
+    Bunny's library-level max upload size (dashboard) would also stop oversized uploads before they finish.
+  - onzio-bot review at `e58802f`: 1 Medium (real size and cleanup) and 1 Low (operator `@>`), both fixed in the follow-up
+    commit.
   - The telemetry branch also edits `lib/database.generated.ts`, `docs/onzio-platform-plan.md` and the two
     admin-reimagined migration-order tests, so whichever merges second rebases and regenerates.
 - **Exact next step:** onzio-bot review and Christian's review. Then, each only on his exact word: production migration gate

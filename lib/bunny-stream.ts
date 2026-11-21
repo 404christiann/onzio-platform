@@ -28,7 +28,12 @@ export type BunnyVideo = {
   hasMP4Fallback: boolean;
   width: number;
   height: number;
+  /** Bytes Bunny stores for the video (original plus renditions). */
+  storageSize: number;
+  dateUploaded: string;
 };
+
+export type BunnyCollectionVideo = { guid: string; status: number; storageSize: number; dateUploaded: string };
 
 export type BunnyUploadAuthorization = {
   endpoint: string;
@@ -94,13 +99,17 @@ export async function getVideo(guid: string): Promise<BunnyVideo | null> {
     hasMP4Fallback: raw.hasMP4Fallback === true,
     width: Number(raw.width ?? 0),
     height: Number(raw.height ?? 0),
+    storageSize: Number(raw.storageSize ?? 0) || 0,
+    dateUploaded: typeof raw.dateUploaded === "string" ? raw.dateUploaded : "",
   };
 }
 
-export async function listCollectionVideos(collectionId: string): Promise<Array<{ guid: string; dateUploaded: string }>> {
+export async function listCollectionVideos(collectionId: string): Promise<BunnyCollectionVideo[]> {
   const response = await call("collection video list", `/videos?collection=${encodeURIComponent(collectionId)}&itemsPerPage=100`);
-  const body = (await response.json()) as { items?: Array<{ guid: string; dateUploaded?: string }> };
-  return (body.items ?? []).map((item) => ({ guid: item.guid, dateUploaded: item.dateUploaded ?? "" }));
+  const body = (await response.json()) as { items?: Array<{ guid: string; status?: number; storageSize?: number; dateUploaded?: string }> };
+  return (body.items ?? []).map((item) => ({
+    guid: item.guid, status: Number(item.status ?? 0), storageSize: Number(item.storageSize ?? 0) || 0, dateUploaded: item.dateUploaded ?? "",
+  }));
 }
 
 export async function deleteVideo(guid: string): Promise<true> {

@@ -9,7 +9,7 @@ const KEY = "test-secret-key-123";
 const fetchStub = vi.fn();
 const res = (status: number, body: unknown = {}) => new Response(JSON.stringify(body), { status });
 const video = (over: Partial<BunnyVideo> = {}): BunnyVideo => ({
-  guid: "g1", collectionId: "c1", status: 4, availableResolutions: ["480p", "720p"], hasMP4Fallback: true, width: 1280, height: 720, ...over,
+  guid: "g1", collectionId: "c1", status: 4, availableResolutions: ["480p", "720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, dateUploaded: "", ...over,
 });
 
 beforeEach(() => { fetchStub.mockReset(); vi.stubGlobal("fetch", fetchStub); vi.stubEnv("BUNNY_STREAM_API_KEY", KEY); });
@@ -40,13 +40,18 @@ describe("bunny stream client", () => {
   it("getVideo returns null on 404 and parses fields", async () => {
     fetchStub.mockResolvedValueOnce(res(404));
     expect(await getVideo("g1")).toBeNull();
-    fetchStub.mockResolvedValueOnce(res(200, { guid: "g1", collectionId: "c1", status: 4, availableResolutions: "240p,720p", hasMP4Fallback: true, width: 1, height: 2 }));
-    expect(await getVideo("g1")).toMatchObject({ availableResolutions: ["240p", "720p"], hasMP4Fallback: true, collectionId: "c1" });
+    fetchStub.mockResolvedValueOnce(res(200, { guid: "g1", collectionId: "c1", status: 4, availableResolutions: "240p,720p", hasMP4Fallback: true, width: 1, height: 2, storageSize: 3_000_000_000, dateUploaded: "2026-01-01T00:00:00Z" }));
+    expect(await getVideo("g1")).toMatchObject({ availableResolutions: ["240p", "720p"], hasMP4Fallback: true, collectionId: "c1", storageSize: 3_000_000_000, dateUploaded: "2026-01-01T00:00:00Z" });
+    fetchStub.mockResolvedValueOnce(res(200, { guid: "g2" }));
+    expect(await getVideo("g2")).toMatchObject({ storageSize: 0, dateUploaded: "" });
   });
 
   it("lists collection videos", async () => {
-    fetchStub.mockResolvedValueOnce(res(200, { items: [{ guid: "a", dateUploaded: "2026-01-01T00:00:00Z" }] }));
-    expect(await listCollectionVideos("c1")).toEqual([{ guid: "a", dateUploaded: "2026-01-01T00:00:00Z" }]);
+    fetchStub.mockResolvedValueOnce(res(200, { items: [{ guid: "a", status: 4, storageSize: 42, dateUploaded: "2026-01-01T00:00:00Z" }, { guid: "b" }] }));
+    expect(await listCollectionVideos("c1")).toEqual([
+      { guid: "a", status: 4, storageSize: 42, dateUploaded: "2026-01-01T00:00:00Z" },
+      { guid: "b", status: 0, storageSize: 0, dateUploaded: "" },
+    ]);
     expect(fetchStub.mock.calls[0][0]).toContain("/videos?collection=c1&itemsPerPage=100");
   });
 

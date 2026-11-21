@@ -70,6 +70,39 @@ describe("startHeroVideoUpload", () => {
   });
 });
 
+describe("startHeroVideoUpload sweep", () => {
+  const ok = { fileName: "a.mp4", fileSize: 1000, mimeType: "video/mp4" };
+  const ago = (hours: number) => new Date(Date.now() - hours * 3600e3).toISOString();
+  const item = (guid: string, status: number, hours: number) => ({ guid, status, storageSize: 0, dateUploaded: ago(hours) });
+  const G = (n: number) => `00000000-0000-4000-8000-0000000001${String(n).padStart(2, "0")}`;
+  beforeEach(() => rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }] }));
+
+  it("deletes abandoned (0/6 older than 2h) and old (24h) videos, keeps the rest, before creating the video", async () => {
+    state(G(1), G(2));
+    m.listCollectionVideos.mockResolvedValue([
+      item(G(10), 0, 3), item(G(11), 6, 3), item(G(12), 4, 25), item(G(13), 2, 25),
+      item(G(14), 0, 1), item(G(15), 4, 3), item(G(1), 0, 30), item(G(2), 4, 30),
+      item(DIVERSE_CITY_HERO_VIDEO.guid, 4, 90), item(DIVERSE_CITY_STORY_VIDEO.guid, 0, 90),
+    ]);
+    await startHeroVideoUpload(club, ok);
+    expect(m.deleteVideo.mock.calls.map((c) => c[0]).sort()).toEqual([G(10), G(11), G(12), G(13)].sort());
+    expect(m.deleteVideo.mock.invocationCallOrder[0]).toBeLessThan(m.createVideo.mock.invocationCallOrder[0]);
+  });
+  it("a sweep failure does not fail start", async () => {
+    m.listCollectionVideos.mockRejectedValue(new Error("bunny down"));
+    await expect(startHeroVideoUpload(club, ok)).resolves.toMatchObject({ videoGuid: "new-guid" });
+    m.listCollectionVideos.mockResolvedValue([item(G(10), 0, 3)]);
+    m.deleteVideo.mockRejectedValue(new Error("nope"));
+    await expect(startHeroVideoUpload(club, ok)).resolves.toMatchObject({ videoGuid: "new-guid" });
+  });
+  it("does not sweep when validation or the daily cap rejects the request", async () => {
+    await err(startHeroVideoUpload(club, { ...ok, fileSize: 0 }));
+    rpcByName({ consume_hero_video_replace: [{ allowed: false }] });
+    await err(startHeroVideoUpload(club, ok));
+    expect(m.listCollectionVideos).not.toHaveBeenCalled();
+  });
+});
+
 describe("safeDeleteHeroVideo", () => {
   it.each([["live", OLD, ""], ["previous", "", OLD]])("refuses the %s guid", async (_l, live, previous) => {
     state(live || NEW, previous);
@@ -116,6 +149,47 @@ describe("finalizeHeroVideo", () => {
     expect([e.status, e.code]).toEqual([422, code]);
     expect(m.deleteVideo).toHaveBeenCalledExactlyOnceWith(NEW);
     expect(m.rpc).not.toHaveBeenCalled();
+  });
+  describe("real size ceiling", () => {
+    const CAP = 500 * 1024 * 1024;
+    const bunny = (over: Record<string, unknown>) => m.getVideo.mockImplementation(async (guid: string) => ({
+      guid, collectionId: COL, status: 4, availableResolutions: ["720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, ...over,
+    }));
+    it.each([["finished", 4], ["still processing", 2]])("rejects a %s video whose stored bytes exceed the cap with 413, deleting it and never swapping", async (_l, status) => {
+      rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }], swap_hero_video: [swapped] });
+      await startHeroVideoUpload(club, { fileName: "a.mp4", fileSize: 1000, mimeType: "video/mp4" });
+      bunny({ status, storageSize: 3_000_000_000 });
+      m.videoReadiness.mockResolvedValue(status === 4 ? "ready" : "processing");
+      const e = await err(finalizeHeroVideo(club, NEW));
+      expect([e.status, e.code]).toEqual([413, "FILE_TOO_LARGE"]);
+      expect(e.message).toBe("That video is larger than 500 MB. Choose a smaller file.");
+      expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
+      expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(false);
+    });
+    it("allows exactly the cap and rejects cap + 1", async () => {
+      rpcByName({ swap_hero_video: [swapped] });
+      bunny({ storageSize: CAP });
+      expect((await finalizeHeroVideo(club, NEW)).httpStatus).toBe(200);
+      m.deleteVideo.mockClear();
+      m.rpc.mockClear();
+      bunny({ storageSize: CAP + 1 });
+      expect((await err(finalizeHeroVideo(club, NEW))).code).toBe("FILE_TOO_LARGE");
+      expect(m.rpc).not.toHaveBeenCalled();
+    });
+    it.each([["live", NEW, ""], ["previous", "", NEW]])("never deletes an oversized video that is the %s guid", async (_l, live, previous) => {
+      state(live, previous);
+      bunny({ storageSize: CAP + 1 });
+      expect((await err(finalizeHeroVideo(club, NEW))).code).toBe("FILE_TOO_LARGE");
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+      expect(m.rpc).not.toHaveBeenCalled();
+    });
+  });
+  it.each([["failed"], ["resolution_too_low"]])("%s failure also sweeps stale club videos but not the one being finalized", async (readiness) => {
+    m.videoReadiness.mockResolvedValue(readiness);
+    m.listCollectionVideos.mockResolvedValue([{ guid: OLD, status: 0, storageSize: 0, dateUploaded: new Date(Date.now() - 3 * 3600e3).toISOString() }]);
+    await err(finalizeHeroVideo(club, NEW));
+    expect(m.listCollectionVideos).toHaveBeenCalledWith(COL);
+    expect(m.deleteVideo.mock.calls.map((c) => c[0]).sort()).toEqual([NEW, OLD].sort());
   });
   it("swaps, deletes the deletable guid, and sweeps only old unreferenced club videos", async () => {
     state(OLD, PREV);

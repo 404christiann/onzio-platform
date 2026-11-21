@@ -92,6 +92,7 @@ export async function startHeroVideoUpload(
     throw new HeroVideoError(429, "DAILY_LIMIT", "You have reached today's limit of 5 video replacements. Try again tomorrow.");
   }
   const collectionId = await findOrCreateCollection(clubId);
+  await sweepStale(clubId, collectionId);
   const videoGuid = await createVideo({ title: `Hero video ${new Date().toISOString()}`, collectionId });
   const expire = Math.floor(Date.now() / 1000) + UPLOAD_WINDOW_SECONDS;
   return { videoGuid, upload: tusUploadAuthorization(videoGuid, expire), maxBytes: HERO_VIDEO_MAX_BYTES };
@@ -116,13 +117,24 @@ export async function safeDeleteHeroVideo(clubId: string, collectionId: string, 
   }
 }
 
-async function sweepStale(clubId: string, collectionId: string) {
+/**
+ * Best-effort cleanup of club videos that can no longer matter. Never throws.
+ * Created (0) or UploadFailed (6) videos older than the upload token window can
+ * never complete; anything else older than 24 h that is not live or previous is
+ * orphaned. `safeDeleteHeroVideo` still guards live, previous and Diverse City
+ * guids, and `keepGuid` protects the video being finalized.
+ */
+async function sweepStale(clubId: string, collectionId: string, keepGuid?: string) {
   try {
     const videos = await listCollectionVideos(collectionId);
-    const cutoff = Date.now() - SWEEP_AGE_MS;
+    const now = Date.now();
     for (const video of videos) {
+      if (video.guid === keepGuid) continue;
       const uploaded = Date.parse(video.dateUploaded);
-      if (Number.isNaN(uploaded) || uploaded > cutoff) continue;
+      if (Number.isNaN(uploaded)) continue;
+      const age = now - uploaded;
+      const abandoned = (video.status === 0 || video.status === 6) && age > UPLOAD_WINDOW_SECONDS * 1000;
+      if (!abandoned && age <= SWEEP_AGE_MS) continue;
       await safeDeleteHeroVideo(clubId, collectionId, video.guid);
     }
   } catch (error) {
@@ -136,13 +148,23 @@ export async function finalizeHeroVideo(clubId: string, videoGuid: string): Prom
   if (!video || video.collectionId !== collectionId) {
     throw new HeroVideoError(404, "NOT_CLUB_VIDEO", "We could not find that upload. Start the upload again.");
   }
+  // The browser uploads straight to Bunny, so the declared size at start is not trustworthy. Bunny's storageSize is
+  // the total stored for the video (original plus renditions), so this is a hard ceiling on what Onzio stores per
+  // video. It runs on every poll, including while processing.
+  if (video.storageSize > HERO_VIDEO_MAX_BYTES) {
+    await safeDeleteHeroVideo(clubId, collectionId, videoGuid);
+    await sweepStale(clubId, collectionId, videoGuid);
+    throw new HeroVideoError(413, "FILE_TOO_LARGE", "That video is larger than 500 MB. Choose a smaller file.");
+  }
   const readiness = await videoReadiness(video);
   if (readiness === "failed") {
     await safeDeleteHeroVideo(clubId, collectionId, videoGuid);
+    await sweepStale(clubId, collectionId, videoGuid);
     throw new HeroVideoError(422, "VIDEO_FAILED", "That video could not be processed. Try a different file.");
   }
   if (readiness === "resolution_too_low") {
     await safeDeleteHeroVideo(clubId, collectionId, videoGuid);
+    await sweepStale(clubId, collectionId, videoGuid);
     throw new HeroVideoError(422, "RESOLUTION_TOO_LOW", "That video is lower than 720p. Choose a higher-resolution video.");
   }
   if (readiness === "processing") return { httpStatus: 202, body: { status: "processing" } };
@@ -161,7 +183,7 @@ export async function finalizeHeroVideo(clubId: string, videoGuid: string): Prom
   if (swap.outcome !== "swapped" && swap.outcome !== "already_live") throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not switch the homepage video.");
 
   if (swap.deletable_guid) await safeDeleteHeroVideo(clubId, collectionId, swap.deletable_guid);
-  await sweepStale(clubId, collectionId);
+  await sweepStale(clubId, collectionId, videoGuid);
   return { httpStatus: 200, body: { status: "live", liveGuid: swap.live_guid, previousGuid: swap.previous_guid ?? "", ...revisions(swap, "swapped") } };
 }
 

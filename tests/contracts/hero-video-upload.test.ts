@@ -168,6 +168,7 @@ describe("hero video control: upload, processing and going live", () => {
     ["start", "FILE_TOO_LARGE", /too large/],
     ["start", "UNSUPPORTED_TYPE", /not a video/],
     ["start", "VIDEO_NOT_CONFIGURED", /not set up/],
+    ["finalize", "FILE_TOO_LARGE", /larger than 500 MB once uploaded, so it was removed/],
     ["finalize", "VIDEO_FAILED", /could not process/],
     ["finalize", "RESOLUTION_TOO_LOW", /at least 720p/],
     ["finalize", "NOT_CLUB_VIDEO", /does not belong/],

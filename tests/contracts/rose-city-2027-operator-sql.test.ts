@@ -153,12 +153,19 @@ describe("Rose City 2027 operator SQL", () => {
     const run = (inputs: Partial<PresentationInputs> = {}) => buildPresentationInputsSql({ inputs: { ...INPUTS, ...inputs }, commit: false });
     const cfgLiteral = (sql: string) => JSON.parse(/\$cfg\$([\s\S]*?)\$cfg\$/.exec(sql)![1]);
 
-    it("merges with || and checks containment with @>, never overwriting", () => {
+    it("merges with || and treats the run as a no-op only when the merge would change nothing", () => {
       const scan = withoutJson(run());
       expect(scan).toContain("presentation_config = presentation_config || v_merge");
-      expect(scan).toContain("v_row.presentation_config @> v_merge");
+      expect(scan).toContain("(v_row.presentation_config || v_merge) = v_row.presentation_config");
       expect(scan).not.toMatch(/presentation_config\s*=\s*v_config/);
       expect(scan).not.toMatch(/v_row\.presentation_config\s*=/);
+    });
+
+    it("compares owned keys by equality in the no-op check and the read-back, never containment", () => {
+      const scan = withoutJson(run());
+      expect(scan).not.toContain("@>");
+      expect(scan).toMatch(/and \(v_row\.presentation_config \|\| v_merge\) = v_row\.presentation_config then/);
+      expect(scan).toMatch(/\(r\.presentation_config \|\| [^)]*\) = r\.presentation_config as config_matches/);
     });
 
     it("leaves the hero video out of the payload unless the operator passes it", () => {

@@ -340,7 +340,7 @@ ${sponsorIds.length ? `  select count(*) into v_count from onzio.site_sponsor_lo
     and v_row.hero_poster_media_asset_id is not distinct from ${quote(inputs.heroPoster)}::uuid
     and v_row.seats_background_media_asset_id is not distinct from ${quote(inputs.seatsBackground)}::uuid
     and v_row.episode_poster_media_asset_id is not distinct from ${quote(inputs.episodePoster)}::uuid
-    and v_row.presentation_config @> v_merge then
+    and (v_row.presentation_config || v_merge) = v_row.presentation_config then
     null;
   else
     update onzio.homepage_revamp_content
@@ -370,7 +370,7 @@ $operator$;
 -- Read-back.
 select current_setting('onzio_operator.result', true) as result,
   r.header_partner_media_asset_id, r.hero_poster_media_asset_id, r.seats_background_media_asset_id, r.episode_poster_media_asset_id,
-  r.presentation_config @> ${jsonLiteral(config, "cfg")} as config_matches,
+  (r.presentation_config || ${jsonLiteral(config, "cfg")}) = r.presentation_config as config_matches,
   r.presentation_config->>'heroVideoGuid' as hero_video_guid,
   v.video_url as episode_video_url,
   v.video_url = ${quote(videoUrl)} as episode_video_matches,

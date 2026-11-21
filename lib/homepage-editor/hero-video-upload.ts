@@ -107,6 +107,8 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     set({ phase: "error", progress: null, error: { code, message, retry }, message });
   };
 
+  const failWith = (code: string, message: string) => set({ phase: "error", progress: null, error: { code, message, retry: null }, message });
+
   async function reloadStatus() {
     try { set({ status: await deps.getStatus() }); } catch { /* keep what is shown */ }
   }
@@ -141,7 +143,10 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
         if (!alive(token)) return;
         if (error instanceof HeroVideoApiError) {
           if (error.code === "HERO_VIDEO_CHANGED") await reloadStatus();
-          pendingGuid = null; return fail(error, null);
+          pendingGuid = null;
+          // Past the browser's own size check, so FILE_TOO_LARGE here means Bunny reported more bytes than declared.
+          if (error.code === "FILE_TOO_LARGE") return failWith(error.code, `That video is larger than ${state.status ? megabytes(state.status.maxBytes) : "500 MB"} once uploaded, so it was removed. Choose a smaller file.`);
+          return fail(error, null);
         }
         if (++failures >= MAX_NETWORK_FAILURES) return fail(error, "finalize");
         await deps.sleep(HERO_VIDEO_POLL_MS);
