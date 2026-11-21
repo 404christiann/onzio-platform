@@ -7,7 +7,8 @@
 .cinematic-site .robinson-route-phone{display:none}
 .cinematic-site .robinson-heading>div{min-width:0}.cinematic-site .robinson-2027 h1,.cinematic-site .robinson-2027 h2,.cinematic-site .robinson-2027 h3,.cinematic-site .robinson-directions p,.cinematic-site .robinson-directions li{overflow-wrap:anywhere}
 .cinematic-site .robinson-directions{padding:12px 5.8% 20px;font:400 clamp(15px,1.33vw,18px)/1.8 var(--body);color:#222}
-.cinematic-site .robinson-directions h2{font:800 clamp(18px,1.65vw,23px)/1.4 'CinematicAvenirHeavy','CinematicAvenirHeavyLocal','CinematicAvenirHeavyMetric','CinematicFigtree',sans-serif;font-synthesis:none;margin-bottom:19px}
+/* RC-SAM-MOBILE-HEADINGS: no font-synthesis:none here, so the headings stay bold even if a phone lands on a face without Heavy. */
+.cinematic-site .robinson-directions h2{font:800 clamp(18px,1.65vw,23px)/1.4 'CinematicAvenirHeavy','CinematicAvenirHeavyLocal','CinematicAvenirHeavyMetric','CinematicFigtree',sans-serif;margin-bottom:19px}
 .cinematic-site .robinson-directions>div+div{margin-top:36px}
 .cinematic-site .robinson-directions p{padding-left:22px}
 .cinematic-site .robinson-directions .robinson-parking-note{margin-top:30px}
