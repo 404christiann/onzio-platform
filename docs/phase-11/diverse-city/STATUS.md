@@ -1,5 +1,45 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-01 P1: in production, Rose City add-on on
+
+**Agent/package:** Claude Code (Opus 5.5), TELEMETRY-01 P1, PR #158 (merged as `d6adb080` from head `c33c6251`).
+**Status:** live in production; the first real Rose City event waits on the public-site hold lifting. **Files
+changed:** this file only (branch `agent/telemetry-01-prod-status`, from main `df3e9a3d`).
+
+**Completed (each step on Christian's word, run from his Mac with `npx supabase@2.122.0` and the link files copied into
+this worktree's `supabase/.temp/`):**
+- `migration list --linked` before: 94 of 95 on Remote, only `20261121060000` missing.
+- `db push --linked --dry-run --skip-vault`: only `20261121060000_page_telemetry.sql`.
+- Backup: `pg_dump -Fc`, Christian typed the password,
+  `~/Documents/onzio-prod-backups.nosync/onzio-prod-backup-20261121-pre-telemetry01.dump` (2.05 MB, 0600,
+  `pg_restore -l` reads it: 68 `onzio` and 29 `onzio_private` table-data entries).
+- On "push": `db push --linked --skip-vault` applied `20261121060000_page_telemetry.sql`.
+
+**Read-only check after the push:** ledger 95 rows, max `20261121060000`, Local and Remote match. The tables
+`onzio.page_events`, `onzio_private.club_addons`, `telemetry_ingest_keys` and `page_event_drop_counts` exist. One ingest
+key row; anon and authenticated can't read it. `club_addons` and `page_events` are empty (every club is off).
+`onzio.record_page_event(uuid,text,text)` exists and anon can execute it; the unsigned `(uuid,jsonb)` version is gone.
+`onzio.sweep_page_telemetry(integer)` is executable by service_role only.
+
+- On "You set it": `TELEMETRY_INGEST_SECRET` is set in Vercel Production as a sensitive variable. The key was read from
+  production and piped into `vercel env add` without being printed; it was checked to be 64 lowercase hex characters.
+  `vercel env ls production` lists it next to `TELEMETRY_VISITOR_SECRET`.
+
+- Grokbot merged PR #158 as `d6adb080` (head `c33c6251`); the production deploy at 10:42 carries it, and the current one
+  (13:11, main with #212 and #213 on top) does too. Production's ledger also has #212's `20261121183000`.
+- On "Run rehearsal": `rose-city-telemetry-enable.rehearsal.sql` via `supabase db query --linked -f` returned `all_ok`
+  (audit event 1238); a read afterwards showed nothing kept.
+- On "Run commit": the commit file returned `all_ok`, audit event 1239. Read back: one `club_addons` row, Rose City on.
+- **No real event yet, by design.** Christian loaded rosecityfutbolclub.com, and `onzio.page_events` has 0 Rose City rows
+  and 0 drops. Every public Rose City host answers 404 because of the public-site hold (`lib/public-site-hold.ts`,
+  PR #85, until the 2027 relaunch). The club layout never renders, so the beacon never mounts. The Preview host allows
+  only GET/HEAD, so beacons are blocked there too. Rose City is `active` and `live` in the DB, so events should record
+  once the hold lifts.
+
+**Next step:** confirm a real event lands when the Rose City hold lifts at the 2027 relaunch, then watch for
+`telemetry.retention_failed` / `telemetry.retention_backlog`. The copied production link files were deleted from this
+worktree's `supabase/.temp/` on Christian's word.
+
 ## 2026-11-21 - RC-HERO-VIDEO-READINESS: hero readiness from Bunny's API, one progress bar, cap 10
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet workers), `RC-HERO-VIDEO-READINESS`, branch `claude/rc-hero-video-readiness` from main `c31939d`.
