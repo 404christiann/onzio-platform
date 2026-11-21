@@ -10,6 +10,13 @@ export const PREPARE_DEADLINE_MS = 2 * 60 * 60 * 1000;
 export const ORPHAN_SWEEP_MS = 24 * 60 * 60 * 1000;
 export const HERO_VIDEO_POLL_MS = 5_000;
 export const HERO_VIDEO_LIVE_NOTICE_MS = 10 * 60 * 1000;
+/**
+ * How long a video that Bunny reports Finished (with 720p) may still lack its MP4 copy before that
+ * counts as a failure. Bunny should set hasMP4Fallback with Finished, but if it flips a moment later,
+ * rejecting at once would delete a good video. Inside this window the webhook answers 503 so Bunny
+ * retries (30 s, 2 min, 10 min, 30 min), and the cron leaves the row alone. Counted from landed_at.
+ */
+export const HERO_VIDEO_MP4_GRACE_MS = 15 * 60 * 1000;
 
 export const HERO_VIDEO_MAX_BYTES = 500 * 1024 * 1024;
 export const HERO_VIDEO_MAX_SECONDS = 600;
@@ -45,6 +52,17 @@ export function uploadDeadlineMs() {
 export function isHeroLiveNoticeFresh(updatedAt: string | null | undefined, now: number) {
   const updated = Date.parse(updatedAt ?? "");
   return !Number.isNaN(updated) && now - updated < HERO_VIDEO_LIVE_NOTICE_MS;
+}
+
+/**
+ * True while a missing MP4 copy may still be on its way: less than HERO_VIDEO_MP4_GRACE_MS since the
+ * bytes landed, so the 15th minute itself is already past it. Counted from landed_at, then from
+ * started_at when landed_at is missing or unreadable. With neither time the grace is closed, so a
+ * row can never be retried forever.
+ */
+export function isHeroMp4GraceOpen(times: { landedAt?: string | null; startedAt?: string | null }, now: number) {
+  const since = [times.landedAt, times.startedAt].map((value) => Date.parse(value ?? "")).find((time) => !Number.isNaN(time));
+  return since !== undefined && now - since < HERO_VIDEO_MP4_GRACE_MS;
 }
 
 /**

@@ -50,6 +50,7 @@ const bunnyVideo = (over: Record<string, unknown> = {}) => ({
   guid: NEW, collectionId: COL, status: 4, availableResolutions: ["240p", "360p", "480p", "720p"], hasMP4Fallback: true,
   width: 1280, height: 720, storageSize: 1000, length: 30, dateUploaded: "2026-11-21T00:00:00Z", encodeProgress: 100, ...over,
 });
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 const rejectEvents = () => m.rpc.mock.calls.filter((call) => call[0] === "hero_video_event" && call[1]?.p_event === "reject");
 
 beforeEach(() => {
@@ -199,7 +200,7 @@ describe("hero video webhook route", () => {
   ])("answers 200 and rejects the row when Finished arrives for a video that is %s", async (_label, over, code) => {
     m.getVideo.mockResolvedValue(bunnyVideo(over));
     rpcByName({
-      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing" }],
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing", landed_at: minutesAgo(16) }],
       hero_video_event: [{ outcome: "failed", delete_guid: NEW, phase: "failed", replace_counted: true, revision_before: null, revision_after: null, used: 1, collection_id: COL }],
     });
     const response = await post(event(3));
@@ -211,6 +212,93 @@ describe("hero video webhook route", () => {
     expect(m.rpc.mock.calls.some((call) => call[0] === "swap_hero_video")).toBe(false);
     expect(m.deleteVideo).toHaveBeenCalledTimes(1);
     expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
+  });
+
+  describe("MP4 grace: Bunny can flip hasMP4Fallback a moment after Finished", () => {
+    const failedRow = [{ outcome: "failed", delete_guid: NEW, phase: "failed", replace_counted: true, revision_before: null, revision_after: null, used: 1, collection_id: COL }];
+    const lookup = (times: Record<string, string | null>) => [{ club_id: CLUB, collection_id: COL, phase: "preparing", ...times }];
+    const noMp4 = () => m.getVideo.mockResolvedValue(bunnyVideo({ hasMP4Fallback: false }));
+    const writes = () => m.rpc.mock.calls.filter((call) => call[0] === "hero_video_event");
+
+    it("Finished with no MP4 fallback for a video that landed 1 minute ago answers 503, rejects nothing and deletes nothing", async () => {
+      noMp4();
+      rpcByName({ lookup_hero_video_pending: lookup({ landed_at: minutesAgo(1) }), hero_video_event: failedRow });
+      const response = await post(event(3));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ received: false, outcome: "processing" });
+      expect(writes()).toHaveLength(0);
+      expect(rejectEvents()).toHaveLength(0);
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+    });
+
+    it("the same video landed 16 minutes ago answers 200, rejects with MP4_MISSING and deletes it", async () => {
+      noMp4();
+      rpcByName({ lookup_hero_video_pending: lookup({ landed_at: minutesAgo(16) }), hero_video_event: failedRow });
+      const response = await post(event(3));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ received: true, outcome: "failed" });
+      expect(rejectEvents()).toHaveLength(1);
+      expect(rejectEvents()[0][1]).toMatchObject({ p_failure_code: "MP4_MISSING", p_video_guid: NEW });
+      expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
+    });
+
+    it("a late flip goes live on the retry: 503 first, then the next delivery sees the MP4 copy", async () => {
+      noMp4();
+      const liveRow = [{ outcome: "swapped", delete_guid: null, phase: "live", replace_counted: true, revision_before: "r1", revision_after: "r2", used: 1, collection_id: COL }];
+      rpcByName({ lookup_hero_video_pending: lookup({ landed_at: minutesAgo(2) }), hero_video_event: liveRow });
+      expect((await post(event(3))).status).toBe(503);
+      expect(writes()).toHaveLength(0);
+      m.getVideo.mockResolvedValue(bunnyVideo({ hasMP4Fallback: true }));
+      const retry = await post(event(3));
+      expect(retry.status).toBe(200);
+      expect(await retry.json()).toEqual({ received: true, outcome: "live" });
+      expect(m.rpc).toHaveBeenCalledWith("hero_video_event", expect.objectContaining({ p_event: "ready", p_video_guid: NEW }));
+      expect(rejectEvents()).toHaveLength(0);
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+    });
+
+    it("a still-missing copy is rejected by the retry that arrives after the grace", async () => {
+      noMp4();
+      rpcByName({ lookup_hero_video_pending: lookup({ landed_at: minutesAgo(1) }), hero_video_event: failedRow });
+      expect((await post(event(3))).status).toBe(503);
+      rpcByName({ lookup_hero_video_pending: lookup({ landed_at: minutesAgo(31) }), hero_video_event: failedRow });
+      expect((await post(event(3))).status).toBe(200);
+      expect(rejectEvents()).toHaveLength(1);
+      expect(rejectEvents()[0][1]).toMatchObject({ p_failure_code: "MP4_MISSING" });
+    });
+
+    it("counts from started_at when landed_at is missing", async () => {
+      noMp4();
+      rpcByName({ lookup_hero_video_pending: lookup({ landed_at: null, started_at: minutesAgo(1) }), hero_video_event: failedRow });
+      expect((await post(event(3))).status).toBe(503);
+      expect(rejectEvents()).toHaveLength(0);
+      rpcByName({ lookup_hero_video_pending: lookup({ landed_at: null, started_at: minutesAgo(16) }), hero_video_event: failedRow });
+      expect((await post(event(3))).status).toBe(200);
+      expect(rejectEvents()).toHaveLength(1);
+    });
+
+    it("rejects at once when the row has neither landed_at nor started_at, so Bunny is never asked to retry forever", async () => {
+      noMp4();
+      rpcByName({ lookup_hero_video_pending: lookup({}), hero_video_event: failedRow });
+      const response = await post(event(3));
+      expect(response.status).toBe(200);
+      expect(rejectEvents()).toHaveLength(1);
+      expect(rejectEvents()[0][1]).toMatchObject({ p_failure_code: "MP4_MISSING" });
+    });
+
+    it("a missing 720p rendition and an Error status still reject at once, even for a video that landed 1 minute ago", async () => {
+      for (const [over, code] of [[{ availableResolutions: ["240p", "480p"] }, "RESOLUTION_TOO_LOW"], [{ status: 5 }, "VIDEO_FAILED"]] as const) {
+        m.rpc.mockReset();
+        m.deleteVideo.mockClear();
+        m.getVideo.mockResolvedValue(bunnyVideo({ ...over, hasMP4Fallback: false }));
+        rpcByName({ lookup_hero_video_pending: lookup({ landed_at: minutesAgo(1) }), hero_video_event: failedRow });
+        const response = await post(event(3));
+        expect(response.status).toBe(200);
+        expect(rejectEvents()).toHaveLength(1);
+        expect(rejectEvents()[0][1]).toMatchObject({ p_failure_code: code });
+        expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
+      }
+    });
   });
 
   it("the video of a rejected row is deleted only through the delete guards", async () => {
@@ -474,7 +562,7 @@ describe("hero video cron backstop", () => {
 
   describe("readiness through the same Stream API check as the webhook", () => {
     const deadline = () => new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    const open = (guid = NEW) => ({ club_id: CLUB, video_guid: guid, collection_id: COL, phase: "preparing", deadline_at: deadline() });
+    const open = (guid = NEW, times: Record<string, string | null> = { started_at: minutesAgo(30), landed_at: minutesAgo(20) }) => ({ club_id: CLUB, video_guid: guid, collection_id: COL, phase: "preparing", deadline_at: deadline(), ...times });
 
     it("an encoding video gets only an expire event, which the database refuses until the deadline", async () => {
       m.getVideo.mockResolvedValue(bunnyVideo({ status: 3 }));
@@ -502,6 +590,69 @@ describe("hero video cron backstop", () => {
       expect(m.deleteVideo).toHaveBeenCalledTimes(1);
       expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
       expect(result).toMatchObject({ inspected: 1, finalized: 0, swept: 1, failed: 0 });
+    });
+
+    describe("MP4 grace", () => {
+      const rejecting = ({ p_event }: { p_event: string }) => (p_event === "reject" ? { outcome: "failed", delete_guid: NEW, phase: "failed" } : { outcome: "stale" });
+      const noMp4 = () => m.getVideo.mockResolvedValue(bunnyVideo({ hasMP4Fallback: false }));
+
+      it("a video that landed 1 minute ago with no MP4 fallback gets only an expire event, and nothing is rejected or deleted", async () => {
+        noMp4();
+        eventRows(rejecting, { list_hero_video_pending: [open(NEW, { started_at: minutesAgo(5), landed_at: minutesAgo(1) })] });
+        const result = await runHeroVideoBackstop();
+        expect(events("expire")).toHaveLength(1);
+        expect(events("reject")).toHaveLength(0);
+        expect(events("ready")).toHaveLength(0);
+        expect(m.deleteVideo).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ inspected: 1, finalized: 0, failed: 0 });
+      });
+
+      it("one that landed 16 minutes ago is rejected with MP4_MISSING and deleted through the guards", async () => {
+        noMp4();
+        eventRows(rejecting, { list_hero_video_pending: [open(NEW, { started_at: minutesAgo(30), landed_at: minutesAgo(16) })] });
+        const result = await runHeroVideoBackstop();
+        expect(events("reject")).toHaveLength(1);
+        expect(events("reject")[0][1]).toMatchObject({ p_video_guid: NEW, p_failure_code: "MP4_MISSING" });
+        expect(events("expire")).toHaveLength(0);
+        expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
+        expect(result).toMatchObject({ inspected: 1, finalized: 0, swept: 1, failed: 0 });
+      });
+
+      it("counts from started_at when landed_at is missing, and rejects when both are missing", async () => {
+        noMp4();
+        eventRows(rejecting, { list_hero_video_pending: [open(NEW, { started_at: minutesAgo(1), landed_at: null })] });
+        await runHeroVideoBackstop();
+        expect(events("reject")).toHaveLength(0);
+        expect(events("expire")).toHaveLength(1);
+        m.rpc.mockClear();
+        eventRows(rejecting, { list_hero_video_pending: [open(NEW, { started_at: minutesAgo(16), landed_at: null })] });
+        await runHeroVideoBackstop();
+        expect(events("reject")).toHaveLength(1);
+        m.rpc.mockClear();
+        eventRows(rejecting, { list_hero_video_pending: [open(NEW, {})] });
+        await runHeroVideoBackstop();
+        expect(events("reject")).toHaveLength(1);
+        expect(events("reject")[0][1]).toMatchObject({ p_failure_code: "MP4_MISSING" });
+      });
+
+      it("goes live in the same run when the MP4 copy has appeared, however recently the bytes landed", async () => {
+        m.getVideo.mockResolvedValue(bunnyVideo({ hasMP4Fallback: true }));
+        eventRows(({ p_event }) => (p_event === "ready" ? { outcome: "swapped", phase: "live" } : { outcome: "stale" }), {
+          list_hero_video_pending: [open(NEW, { started_at: minutesAgo(5), landed_at: minutesAgo(1) })],
+        });
+        expect(await runHeroVideoBackstop()).toMatchObject({ inspected: 1, finalized: 1, failed: 0 });
+        expect(events("ready")).toHaveLength(1);
+        expect(events("reject")).toHaveLength(0);
+      });
+
+      it("a missing 720p rendition still rejects at once for a video that landed 1 minute ago", async () => {
+        m.getVideo.mockResolvedValue(bunnyVideo({ availableResolutions: ["240p"], hasMP4Fallback: false }));
+        eventRows(rejecting, { list_hero_video_pending: [open(NEW, { started_at: minutesAgo(5), landed_at: minutesAgo(1) })] });
+        await runHeroVideoBackstop();
+        expect(events("reject")).toHaveLength(1);
+        expect(events("reject")[0][1]).toMatchObject({ p_failure_code: "RESOLUTION_TOO_LOW" });
+        expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
+      });
     });
 
     it("a Stream API error on one row is counted and logged, and the next row is still finished", async () => {
@@ -609,11 +760,21 @@ describe("webhook and cron over stubbed Bunny HTTP", () => {
 
   it("Finished with no MP4 fallback answers 200, rejects with MP4_MISSING and deletes the video over the API", async () => {
     apiVideo = { ...(apiVideo as Record<string, unknown>), hasMP4Fallback: false };
-    rpcByName({ lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing" }], hero_video_event: failedRow });
+    rpcByName({ lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing", landed_at: minutesAgo(16) }], hero_video_event: failedRow });
     const response = await finished();
     expect(response.status).toBe(200);
     expect(rejectEvents()[0][1]).toMatchObject({ p_failure_code: "MP4_MISSING", p_video_guid: NEW });
     expect(apiRequests("DELETE")).toHaveLength(1);
+  });
+
+  it("Finished with no MP4 fallback for a video that landed 1 minute ago answers 503 and sends no DELETE, so Bunny retries", async () => {
+    apiVideo = { ...(apiVideo as Record<string, unknown>), hasMP4Fallback: false };
+    rpcByName({ lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing", landed_at: minutesAgo(1) }], hero_video_event: failedRow });
+    const response = await finished();
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ received: false, outcome: "processing" });
+    expect(rejectEvents()).toHaveLength(0);
+    expect(apiRequests("DELETE")).toHaveLength(0);
   });
 
   it("a Stream API 500 answers 500 so Bunny retries", async () => {
@@ -624,7 +785,7 @@ describe("webhook and cron over stubbed Bunny HTTP", () => {
   });
 
   it("the cron finishes a row from the Stream API alone, and rejects one with no MP4 fallback", async () => {
-    const row = { club_id: CLUB, video_guid: NEW, collection_id: COL, phase: "preparing", deadline_at: new Date(Date.now() + 3600e3).toISOString() };
+    const row = { club_id: CLUB, video_guid: NEW, collection_id: COL, phase: "preparing", landed_at: minutesAgo(16), deadline_at: new Date(Date.now() + 3600e3).toISOString() };
     rpcByName({ list_hero_video_pending: [row], hero_video_event: [{ ...failedRow[0], outcome: "swapped", delete_guid: null, phase: "live" }] });
     expect(await runHeroVideoBackstop()).toMatchObject({ inspected: 1, finalized: 1, failed: 0 });
     expect(m.rpc.mock.calls.some((call) => call[0] === "hero_video_event" && call[1]?.p_event === "ready")).toBe(true);

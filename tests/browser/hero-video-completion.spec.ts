@@ -378,6 +378,20 @@ test("a missing mp4 shows the plain failure copy, with Replace and Revert still 
   await shot(page, "failed");
 });
 
+test("a video below 720p says what to change, with Replace and Revert still enabled", async ({ page }) => {
+  await openEditor(page);
+  await uploadToProcessing(page);
+  store.phase = "failed";
+  store.failure = "RESOLUTION_TOO_LOW";
+  await expect(page.getByRole("alert")).toHaveText(/^This video is below 720p\. Use a video that is at least 720p\./, { timeout: 12_000 });
+  await expect(page.getByRole("alert")).not.toContainText(FAILED);
+  await expect(page.getByRole("alert")).not.toContainText(/bunny|video service|RESOLUTION_TOO_LOW/i);
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Replace video" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
+  await shot(page, "failed-resolution");
+});
+
 test("a video that is not live by its deadline shows the same failure copy", async ({ page }) => {
   await openEditor(page);
   await uploadToProcessing(page);

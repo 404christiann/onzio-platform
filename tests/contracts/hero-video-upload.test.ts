@@ -387,9 +387,14 @@ describe("hero video control: upload, processing and going live", () => {
     expect(heroVideoErrorMessage("DAILY_LIMIT")).toBe("You have used all 10 video replacements for today. Try again tomorrow.");
   });
 
-  it.each(["MP4_MISSING", "RESOLUTION_MISSING", "VIDEO_FAILED", "VIDEO_TOO_LONG", "STORED_SIZE_TOO_LARGE", "RESOLUTION_TOO_LOW", "NOT_CLUB_VIDEO", "PREPARE_TIMEOUT", "A_CODE_ADDED_LATER"])(
-    "a failed row with code %s shows the one failure copy and Replace still starts an upload", async code => {
-      const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "failed" as const }, failure: { code } });
+  const TOO_LONG = "This video is longer than 10 minutes. Use a shorter clip.";
+  const TOO_LOW = "This video is below 720p. Use a video that is at least 720p.";
+  const TOO_BIG = "This video is too large once processed. Use a shorter clip (up to 10 minutes).";
+  const failedStatus = (code: string) => ({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "failed" as const }, failure: { code } });
+
+  it.each(["MP4_MISSING", "RESOLUTION_MISSING", "VIDEO_FAILED", "NOT_CLUB_VIDEO", "PREPARE_TIMEOUT", "A_CODE_ADDED_LATER"])(
+    "a failed row with code %s shows the one generic failure copy and Replace still starts an upload", async code => {
+      const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(failedStatus(code));
       const { controller, handlers, deps } = harness({ getStatus });
       await controller.load(); await controller.replace(video());
       handlers.current!.onSuccess(); await settle();
@@ -398,6 +403,45 @@ describe("hero video control: upload, processing and going live", () => {
       await controller.replace(video());
       expect(deps.start).toHaveBeenCalledTimes(2);
     });
+
+  it.each([
+    ["VIDEO_TOO_LONG", TOO_LONG],
+    ["RESOLUTION_TOO_LOW", TOO_LOW],
+    ["STORED_SIZE_TOO_LARGE", TOO_BIG],
+  ])("a failed row with code %s tells the person what to change, and Replace still starts an upload", async (code, message) => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(failedStatus(code));
+    const { controller, handlers, deps } = harness({ getStatus });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState()).toMatchObject({ phase: "error", error: { code, message, retry: null }, message, barPercent: null, status: { previousGuid: "prev-1" } });
+    expect(controller.getState().error?.message).not.toBe(HERO_VIDEO_FAILED_COPY);
+    expect(controller.getState().error?.message).not.toMatch(/bunny|video service|_/i);
+    await controller.replace(video());
+    expect(deps.start).toHaveBeenCalledTimes(2);
+  });
+
+  it("a failed row read on load shows the specific copy too, not only one the tab was watching", async () => {
+    const { controller } = harness({ getStatus: vi.fn(async () => failedStatus("RESOLUTION_TOO_LOW")) });
+    await controller.load();
+    expect(controller.getState()).toMatchObject({ phase: "error", error: { code: "RESOLUTION_TOO_LOW", message: TOO_LOW } });
+  });
+
+  it("the minutes in the length and processed-size copy come from the status the server sent, falling back to the shared 10-minute cap", () => {
+    expect(heroVideoErrorMessage("VIDEO_TOO_LONG")).toBe(TOO_LONG);
+    expect(heroVideoErrorMessage("STORED_SIZE_TOO_LARGE")).toBe(TOO_BIG);
+    expect(heroVideoErrorMessage("VIDEO_TOO_LONG", { maxSeconds: 300 })).toBe("This video is longer than 5 minutes. Use a shorter clip.");
+    expect(heroVideoErrorMessage("STORED_SIZE_TOO_LARGE", { maxSeconds: 300 })).toBe("This video is too large once processed. Use a shorter clip (up to 5 minutes).");
+    expect(heroVideoErrorMessage("RESOLUTION_TOO_LOW")).toBe(TOO_LOW);
+  });
+
+  it("the pre-upload length check and a failed row's length failure read the same", async () => {
+    const pre = harness({ readDuration: vi.fn(async () => 601) });
+    await pre.controller.load(); await pre.controller.replace(video());
+    const server = harness({ getStatus: vi.fn(async () => failedStatus("VIDEO_TOO_LONG")) });
+    await server.controller.load();
+    expect(pre.controller.getState().error?.message).toBe(TOO_LONG);
+    expect(server.controller.getState().error?.message).toBe(pre.controller.getState().error?.message);
+  });
 
   it("after a failed video, Revert to previous still works", async () => {
     const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "failed" as const }, failure: { code: "MP4_MISSING" } });
@@ -610,7 +654,10 @@ describe("hero video control: reload shows what the server says", () => {
     ["reload after preparing timed out", { ...STATUS, pending: pending("preparing_overdue") }, "error", HERO_VIDEO_FAILED_COPY, "PREPARE_TIMEOUT", true],
     ["reload after an encode failure", { ...STATUS, pending: pending("failed"), failure: { code: "VIDEO_FAILED" } }, "error", HERO_VIDEO_FAILED_COPY, "VIDEO_FAILED", true],
     ["reload after a missing mp4", { ...STATUS, pending: pending("failed"), failure: { code: "MP4_MISSING" } }, "error", HERO_VIDEO_FAILED_COPY, "MP4_MISSING", true],
-    ["reload after a missing resolution", { ...STATUS, pending: pending("failed"), failure: { code: "RESOLUTION_MISSING" } }, "error", HERO_VIDEO_FAILED_COPY, "RESOLUTION_MISSING", true],
+    ["reload after a missing resolution code the editor does not word", { ...STATUS, pending: pending("failed"), failure: { code: "RESOLUTION_MISSING" } }, "error", HERO_VIDEO_FAILED_COPY, "RESOLUTION_MISSING", true],
+    ["reload after a video that is too long", { ...STATUS, pending: pending("failed"), failure: { code: "VIDEO_TOO_LONG" } }, "error", "This video is longer than 10 minutes. Use a shorter clip.", "VIDEO_TOO_LONG", true],
+    ["reload after a video below 720p", { ...STATUS, pending: pending("failed"), failure: { code: "RESOLUTION_TOO_LOW" } }, "error", "This video is below 720p. Use a video that is at least 720p.", "RESOLUTION_TOO_LOW", true],
+    ["reload after a video too large once processed", { ...STATUS, pending: pending("failed"), failure: { code: "STORED_SIZE_TOO_LARGE" } }, "error", "This video is too large once processed. Use a shorter clip (up to 10 minutes).", "STORED_SIZE_TOO_LARGE", true],
     ["reload after an abandoned upload", { ...STATUS, pending: pending("abandoned") }, "idle", "", null, true],
     ["reload inside the live notice window", { ...STATUS, liveGuid: GUID, pending: pending("live") }, "live", HERO_VIDEO_LIVE_COPY, null, true],
     ["reload after the live notice window", { ...STATUS, liveGuid: GUID, pending: pending("idle") }, "idle", "", null, true],
@@ -623,7 +670,7 @@ describe("hero video control: reload shows what the server says", () => {
     const { controller, deps } = harness({ getStatus: vi.fn(async () => status), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
     await controller.load();
     expect(controller.getState()).toMatchObject({ phase, message });
-    if (phase === "error") expect(controller.getState().error).toMatchObject({ code, message: HERO_VIDEO_FAILED_COPY });
+    if (phase === "error") expect(controller.getState().error).toMatchObject({ code, message });
     await controller.replace(video());
     expect(deps.start).toHaveBeenCalledTimes(canReplace ? 1 : 0);
     // Loading is read-only: it never lands, cancels, reverts or refreshes the editor revision.

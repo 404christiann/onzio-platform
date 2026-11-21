@@ -202,6 +202,23 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(markup).toMatch(/<button(?![^>]*disabled)[^>]*>(?:(?!<\/button>).)*Revert to previous<\/button>/);
   });
 
+  it.each([
+    ["VIDEO_TOO_LONG", "This video is longer than 10 minutes. Use a shorter clip."],
+    ["RESOLUTION_TOO_LOW", "This video is below 720p. Use a video that is at least 720p."],
+    ["STORED_SIZE_TOO_LARGE", "This video is too large once processed. Use a shorter clip (up to 10 minutes)."],
+  ])("a failed row with %s shows its own copy instead of the generic one, with Replace and Revert enabled and no code or video-service words", async (code, copy) => {
+    const controller = createHeroVideoController({ getStatus: async () => ({ ...STATUS, pending: row("failed"), failure: { code } }) } as unknown as HeroVideoDeps);
+    await controller.load();
+    const markup = html(editor(controller));
+    expect(markup).toMatch(new RegExp(`<div role="alert"[^>]*><p>${copy.replace(/[().]/g, "\\$&")}</p>`));
+    expect(markup).not.toContain(FAILED);
+    expect(markup).not.toMatch(/bunny|video service|VIDEO_TOO_LONG|RESOLUTION_TOO_LOW|STORED_SIZE_TOO_LARGE/i);
+    expect(markup).not.toContain("progressbar");
+    expect(replaceButton(markup)).not.toBe("");
+    expect(replaceButton(markup)).not.toContain("disabled");
+    expect(markup).toMatch(/<button(?![^>]*disabled)[^>]*>(?:(?!<\/button>).)*Revert to previous<\/button>/);
+  });
+
   it("a failure keeps the specific pre-upload messages for the other errors", async () => {
     const controller = createHeroVideoController({ getStatus: async () => STATUS, readDuration: async () => 601 } as unknown as HeroVideoDeps);
     await controller.load();

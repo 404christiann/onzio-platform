@@ -3,6 +3,7 @@ import {
   HERO_VIDEO_KEEP_OPEN_COPY,
   HERO_VIDEO_LEAVE_COPY,
   HERO_VIDEO_LIVE_COPY,
+  HERO_VIDEO_MAX_SECONDS,
   HERO_VIDEO_OTHER_UPLOAD_NOTE,
   HERO_VIDEO_POLL_MS,
   HERO_VIDEO_PROCESSING_COPY,
@@ -59,10 +60,14 @@ export function defaultHeroVideoDeps(refreshRevision: HeroVideoDeps["refreshRevi
 
 export const megabytes = (bytes: number) => { const mb = bytes / 1024 / 1024; return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`; };
 
-export function heroVideoErrorMessage(code: string, context: { maxBytes?: number; replacesPerDay?: number } = {}): string {
+/** The words for every code the person can fix by choosing a different file, and for every request refusal. Minutes come from the status the server sent. */
+export function heroVideoErrorMessage(code: string, context: { maxBytes?: number; maxSeconds?: number; replacesPerDay?: number } = {}): string {
+  const minutes = Math.round((context.maxSeconds ?? HERO_VIDEO_MAX_SECONDS) / 60);
   switch (code) {
     case "FILE_TOO_LARGE": return `That video is too large${context.maxBytes ? `. The limit is ${megabytes(context.maxBytes)}` : ""}. Choose a smaller file.`;
-    case "VIDEO_TOO_LONG": return "This video is longer than 10 minutes. Use a shorter clip.";
+    case "VIDEO_TOO_LONG": return `This video is longer than ${minutes} minutes. Use a shorter clip.`;
+    case "RESOLUTION_TOO_LOW": return "This video is below 720p. Use a video that is at least 720p.";
+    case "STORED_SIZE_TOO_LARGE": return `This video is too large once processed. Use a shorter clip (up to ${minutes} minutes).`;
     case "UNSUPPORTED_TYPE": return "That file is not a video we can use. Choose an MP4 or MOV video.";
     case "DAILY_LIMIT": return `You have used all ${context.replacesPerDay ?? HERO_VIDEO_REPLACES_PER_DAY} video replacements for today. Try again tomorrow.`;
     case "VIDEO_NOT_CONFIGURED": return "Video uploads are not set up for this site yet. Contact Onzio.";
@@ -86,6 +91,9 @@ export async function applySwapRevision(
   io.apply(revision);
   return "applied";
 }
+
+/** Failed-row codes that mean the FILE is the problem. They say what to change. Every other code, and an overdue upload, reads as the generic failure. */
+const FILE_FAULT_CODES = new Set(["VIDEO_TOO_LONG", "RESOLUTION_TOO_LOW", "STORED_SIZE_TOO_LARGE"]);
 
 const idle = (status: HeroVideoStatus | null, message = ""): HeroVideoState => ({
   phase: "idle", status, progress: null, encodeProgress: null, barPercent: null, fileName: null, error: null, message, revisionWarning: false, revisionConflict: false,
@@ -142,7 +150,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     state = next;
     listeners.forEach(listener => listener());
   };
-  const ctx = () => ({ maxBytes: state.status?.maxBytes, replacesPerDay: state.status?.replacesPerDay });
+  const ctx = () => ({ maxBytes: state.status?.maxBytes, maxSeconds: state.status?.maxSeconds, replacesPerDay: state.status?.replacesPerDay });
   const alive = (token: number) => !disposed && token === run;
   const fail = (error: unknown, retry: HeroVideoError["retry"] = null) => {
     const code = error instanceof HeroVideoApiError ? error.code : "NETWORK";
@@ -195,9 +203,10 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       await complete(liveFromStatus(status, guid), "replace");
     } else if (view === "live") set({ ...idle(status), phase: "live", barPercent: 100, message: HERO_VIDEO_LIVE_COPY });
     else if (view === "failed" || view === "timeout") {
-      // Every readiness failure, and any upload that is not live by its deadline, reads the same: nothing here is the person's to diagnose.
+      // A file the person can fix (too long, below 720p, too large once processed) says what to change. Everything else, and any upload that is not live by its deadline, reads the same generic line.
       set({ ...idle(status) });
-      failWith(status.failure?.code ?? (view === "timeout" ? "PREPARE_TIMEOUT" : "VIDEO_FAILED"), HERO_VIDEO_FAILED_COPY);
+      const code = status.failure?.code ?? (view === "timeout" ? "PREPARE_TIMEOUT" : "VIDEO_FAILED");
+      failWith(code, FILE_FAULT_CODES.has(code) ? heroVideoErrorMessage(code, ctx()) : HERO_VIDEO_FAILED_COPY);
     } else set({ ...idle(status, IDLE_NOTES[view]) });
     return false;
   }
@@ -267,7 +276,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       let durationSeconds: number | undefined;
       try { durationSeconds = await deps.readDuration(file); } catch { durationSeconds = undefined; }
       if (!alive(token)) return;
-      if (durationSeconds !== undefined && durationSeconds > maxSeconds) return failWith("VIDEO_TOO_LONG", heroVideoErrorMessage("VIDEO_TOO_LONG"));
+      if (durationSeconds !== undefined && durationSeconds > maxSeconds) return failWith("VIDEO_TOO_LONG", heroVideoErrorMessage("VIDEO_TOO_LONG", ctx()));
       let ticket: HeroVideoStart;
       try { ticket = await deps.start({ name: file.name, size: file.size, type: file.type, ...(durationSeconds === undefined ? {} : { durationSeconds }) }); }
       catch (error) { if (alive(token)) fail(error); return; }

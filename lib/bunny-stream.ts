@@ -150,7 +150,10 @@ export function tusUploadAuthorization(videoGuid: string, expiresAtUnix: number)
  *
  * Once Finished, the hero needs the 720p rendition (availableResolutions lists the
  * renditions that finished encoding) and the MP4 fallback (hasMP4Fallback) the
- * renderer plays. Missing either will not fix itself, so that is a failure, not a wait.
+ * renderer plays. A missing 720p will not fix itself, so that is a failure, not a wait.
+ * A missing MP4 copy is reported as failed here too, but Bunny may set it a moment after
+ * Finished, so checkReadiness (hero-video-swap) holds that one as still processing for
+ * HERO_VIDEO_MP4_GRACE_MS after the bytes landed. This function stays pure and clock-free.
  */
 export function videoReadiness(video: BunnyVideo): HeroVideoReadiness {
   if (video.status === 5 || video.status === 6) return { status: "failed", reason: "failed" };

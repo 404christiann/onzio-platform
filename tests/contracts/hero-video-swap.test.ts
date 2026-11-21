@@ -20,7 +20,7 @@ vi.mock("@/lib/bunny-stream", async (importActual) => ({
 }));
 
 import { BunnyStreamError } from "@/lib/bunny-stream";
-import { HERO_VIDEO_LIVE_NOTICE_MS } from "@/lib/hero-video-lifecycle";
+import { HERO_VIDEO_LIVE_NOTICE_MS, HERO_VIDEO_MP4_GRACE_MS } from "@/lib/hero-video-lifecycle";
 import {
   checkReadiness, getHeroVideoState, HERO_VIDEO_MAX_BYTES, HERO_VIDEO_MAX_SECONDS, HERO_VIDEO_MAX_STORED_BYTES, HERO_VIDEO_REPLACES_PER_DAY, HeroVideoError, revertHeroVideo,
   safeDeleteHeroVideo, startHeroVideoUpload,
@@ -277,6 +277,61 @@ describe("checkReadiness", () => {
     expect(await checkReadiness(club, NEW)).toEqual({ status: "rejected", code });
     expect(m.deleteVideo).not.toHaveBeenCalled();
     expect(m.rpc).not.toHaveBeenCalled();
+  });
+  describe("MP4 grace: Finished before Bunny reports the MP4 copy", () => {
+    const NOW = Date.parse("2026-11-21T12:00:00.000Z");
+    const ago = (ms: number) => new Date(NOW - ms).toISOString();
+    const MIN = 60_000;
+    it("a video landed 1 minute ago with no MP4 fallback is still processing, and nothing is written or deleted", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "processing" });
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+      expect(m.rpc).not.toHaveBeenCalled();
+    });
+    it("one millisecond inside the grace is still processing, and exactly at 15 minutes it rejects with MP4_MISSING", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(HERO_VIDEO_MP4_GRACE_MS).toBe(15 * MIN);
+      expect(await checkReadiness(club, NEW, { landedAt: ago(HERO_VIDEO_MP4_GRACE_MS - 1) }, NOW)).toEqual({ status: "processing" });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(HERO_VIDEO_MP4_GRACE_MS) }, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+    });
+    it("a video landed 16 minutes ago with no MP4 fallback rejects with MP4_MISSING and deletes nothing itself", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(16 * MIN) }, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+      expect(m.rpc).not.toHaveBeenCalled();
+    });
+    it("uses started_at when landed_at is missing, and landed_at when both are there", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: null, startedAt: ago(MIN) }, NOW)).toEqual({ status: "processing" });
+      expect(await checkReadiness(club, NEW, { landedAt: undefined, startedAt: ago(16 * MIN) }, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN), startedAt: ago(3 * 60 * MIN) }, NOW)).toEqual({ status: "processing" });
+    });
+    it("rejects at once when neither time is known, so a row is never retried forever", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, {}, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+      expect(await checkReadiness(club, NEW, { landedAt: null, startedAt: null }, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+      expect(await checkReadiness(club, NEW, undefined, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+    });
+    it("goes ready when the MP4 copy appears inside the grace", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "processing" });
+      bunny({ hasMP4Fallback: true });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(2 * MIN) }, NOW)).toEqual({ status: "ready" });
+    });
+    it.each([
+      ["a missing 720p rendition", { availableResolutions: ["240p", "360p", "480p"] }, "RESOLUTION_TOO_LOW"],
+      ["Error (5)", { status: 5 }, "VIDEO_FAILED"],
+      ["UploadFailed (6)", { status: 6 }, "VIDEO_FAILED"],
+    ])("%s still rejects at once, grace or not", async (_label, over, code) => {
+      bunny({ ...over, hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "rejected", code });
+    });
+    it("the grace does not soften the length or stored-size ceilings", async () => {
+      bunny({ hasMP4Fallback: false, length: 601 });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "rejected", code: "VIDEO_TOO_LONG" });
+      bunny({ hasMP4Fallback: false, storageSize: HERO_VIDEO_MAX_STORED_BYTES + 1 });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "rejected", code: "STORED_SIZE_TOO_LARGE" });
+    });
   });
   it("lets a Stream API error through, so the caller answers 5xx or counts a failure", async () => {
     m.getVideo.mockRejectedValue(new BunnyStreamError(500, "video lookup"));

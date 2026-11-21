@@ -22,6 +22,7 @@ import {
   PREPARE_DEADLINE_MS,
   UPLOAD_WINDOW_MS,
   effectiveHeroUploadState,
+  isHeroMp4GraceOpen,
   uploadDeadlineMs,
   type HeroEffective,
   type HeroStoredPhase,
@@ -313,17 +314,22 @@ export async function revertHeroVideo(clubId: string, input: { expectedLiveGuid:
   };
 }
 
-/** The failure code stored on the row for each way a video can never become ready. RESOLUTION_TOO_LOW keeps the code the editor already words for the admin. */
+/** The failure code stored on the row for each way a video can never become ready. The editor words VIDEO_TOO_LONG, RESOLUTION_TOO_LOW and STORED_SIZE_TOO_LARGE for the admin, so they say what to change. */
 const READINESS_FAILURE_CODE = { failed: "VIDEO_FAILED", mp4_missing: "MP4_MISSING", resolution_missing: "RESOLUTION_TOO_LOW" } as const;
+
+/** When the pending row's bytes landed, and when it started: the clocks the MP4 grace counts from. */
+export type HeroVideoReadinessTiming = { landedAt?: string | null; startedAt?: string | null };
 
 /**
  * Pure. It does not delete, swap, or write the pending row.
  * The webhook and the cron both decide through here, from one Stream API read and nothing else:
  * processing means the video is still encoding (the webhook answers 503 so Bunny retries),
  * rejected means it can never be ready (the caller sends a reject event and answers normally).
- * A Stream API error throws.
+ * A Finished video with 720p but no MP4 copy yet is processing for HERO_VIDEO_MP4_GRACE_MS after the
+ * bytes landed (timing), and rejected with MP4_MISSING after that, or at once when no time is known.
+ * A missing 720p rendition or an Error status rejects at once. A Stream API error throws.
  */
-export async function checkReadiness(clubId: string, videoGuid: string): Promise<Readiness> {
+export async function checkReadiness(clubId: string, videoGuid: string, timing: HeroVideoReadinessTiming = {}, now = Date.now()): Promise<Readiness> {
   const collectionId = await findOrCreateCollection(clubId);
   const video = await getVideo(videoGuid);
   if (!video || video.collectionId !== collectionId) return { status: "rejected", code: "NOT_CLUB_VIDEO" };
@@ -332,6 +338,7 @@ export async function checkReadiness(clubId: string, videoGuid: string): Promise
   const readiness = videoReadiness(video);
   if (readiness.status === "ready") return { status: "ready" };
   if (readiness.status === "not_ready") return { status: "processing" };
+  if (readiness.reason === "mp4_missing" && isHeroMp4GraceOpen(timing, now)) return { status: "processing" };
   return { status: "rejected", code: READINESS_FAILURE_CODE[readiness.reason] };
 }
 
@@ -367,7 +374,7 @@ async function webhookOutcome(input: { rawBody: string; signature: string | null
   if (action === "reject") return (await applyReject(clubId, guid, "VIDEO_FAILED")).outcome === "stale" ? "ignored" : "failed";
 
   if (!OPEN_PHASES.includes(job.phase)) return job.phase === "live" ? "already_live" : "ignored";
-  const readiness = await checkReadiness(clubId, guid);
+  const readiness = await checkReadiness(clubId, guid, { landedAt: job.landed_at, startedAt: job.started_at });
   if (readiness.status === "processing") return "processing";
   if (readiness.status === "rejected") {
     if (readiness.code === "NOT_CLUB_VIDEO") return "ignored";
@@ -418,7 +425,7 @@ async function finishOpen(job: PendingRow & { club_id: string }, video: BunnyVid
   // Bunny status 0 is still uploading and 6 is UploadFailed. Neither has a usable file.
   if (video && video.status >= 1 && video.status !== 6) {
     if (job.phase === "uploading") await markHeroVideoUploaded(job.club_id, job.video_guid);
-    const readiness = await checkReadiness(job.club_id, job.video_guid);
+    const readiness = await checkReadiness(job.club_id, job.video_guid, { landedAt: job.landed_at, startedAt: job.started_at });
     if (readiness.status === "ready") return applyReady(job.club_id, job.video_guid);
     if (readiness.status === "rejected" && readiness.code !== "NOT_CLUB_VIDEO") return applyReject(job.club_id, job.video_guid, readiness.code);
   }
