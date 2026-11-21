@@ -27,13 +27,16 @@ const settle = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 const file = { name: "hero.mp4", size: 10_000_000, type: "video/mp4" } as unknown as File;
 const row = (effective: string, encodeProgress: number | null = null) => ({ videoGuid: "new-guid", encodeProgress, effective });
 const bar = (markup: string) => markup.match(/<div class="[^"]*track[^"]*" role="progressbar"[^>]*>/)?.[0] ?? "";
-const replaceButton = (markup: string) => markup.match(/<button[^>]*>(?:(?!<\/button>).)*Replace video<\/button>/)?.[0] ?? "";
+const zone = (markup: string) => markup.match(/<button[^>]*>(?:(?!<\/button>).)*Click to upload(?:(?!<\/button>).)*<\/button>/)?.[0] ?? "";
+const cancelButton = (markup: string) => markup.match(/<button[^>]*aria-label="Cancel upload"[^>]*>/)?.[0] ?? "";
+const COMPLETED = ">Completed<";
+const LIVE_COPY = "Your new video is live.";
 
 describe("hero video control rendering", () => {
   it("templates without the control keep the Onzio line and render no video control", () => {
     const markup = html(editor());
     expect(markup).toContain("The background video and poster are set by Onzio.");
-    expect(markup).not.toContain("Hero video");
+    expect(markup).not.toContain("<legend>Video</legend>");
   });
 
   it("shows the preview, replace, revert, allowance and the not-part-of-Save note", async () => {
@@ -42,15 +45,21 @@ describe("hero video control rendering", () => {
     const markup = html(editor(controller));
     expect(markup).not.toContain("set by Onzio");
     expect(markup).toContain("play_240p.mp4");
-    expect(markup).toContain("Replace video");
+    expect(markup).toContain("<legend>Video</legend>");
+    expect(markup).not.toContain("Hero video");
+    expect(markup).toContain("Click to upload");
+    expect(markup).toContain("or drag and drop");
+    expect(markup).toContain("MP4, MOV or WebM · up to 500 MB · up to 10 minutes · at least 720p");
     expect(markup).toContain("Revert to previous");
     expect(markup).toContain("8 of 10 replaces left today");
     expect(markup).toContain("not part of the Save button");
     expect(markup).toContain('accept="video/*"');
     expect(markup).toContain('aria-live="polite"');
-    expect(markup).toContain("Maximum file size 500 MB");
-    expect(markup).toContain("up to 10 minutes");
-    expect(markup).toContain("8 of 10 replaces left today. Maximum file size 500 MB, up to 10 minutes, at least 720p.");
+    expect(markup).toContain("8 of 10 replaces left today.");
+    expect(markup).not.toContain("Maximum file size");
+    expect(zone(markup)).not.toContain("aria-label");
+    expect(zone(markup)).not.toMatch(/ disabled/);
+    expect(zone(markup)).not.toContain("aria-disabled");
     expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*"><\/p>/);
     expect(markup).not.toMatch(/guid/i);
   });
@@ -92,7 +101,7 @@ describe("hero video control rendering", () => {
     const controller = createHeroVideoController({ getStatus: async () => ({ ...STATUS, liveGuid: "", previousGuid: "" }) } as unknown as HeroVideoDeps);
     await controller.load();
     const markup = html(editor(controller));
-    expect(markup).toContain("No hero video yet");
+    expect(markup).toContain("No video yet");
     expect(markup).not.toContain("Revert to previous");
     expect(markup).not.toContain("<video");
   });
@@ -122,13 +131,24 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(bar(markup)).toContain('aria-valuemin="0"');
     expect(bar(markup)).toContain('aria-valuemax="100"');
     expect(bar(markup)).toContain('aria-valuetext="Uploading…"');
-    expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*">Uploading…<\/p>/);
+    expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*srOnly[^"]*">Uploading…<\/p>/);
+    expect(markup).toMatch(/<span aria-hidden="true" class="[^"]*percent[^"]*">20%<\/span>/);
+    expect(markup).toContain('title="hero.mp4"');
+    expect(markup).toContain(">hero.mp4<");
+    expect(markup).toContain(">9.5 MB<");
+    expect(markup).not.toContain(COMPLETED);
+    expect(cancelButton(markup)).not.toBe("");
+    expect(zone(markup)).toBe("");
+    expect(markup).not.toContain("Click to upload");
+    expect(markup).toContain("8 of 10 replaces left today.");
+    // The row sits where the drop zone was: above the allowance line.
+    expect(markup.indexOf('data-hero-row="uploading"')).toBeGreaterThan(-1);
+    expect(markup.indexOf('data-hero-row="uploading"')).toBeLessThan(markup.indexOf("8 of 10 replaces left today."));
     expect(markup).toContain('style="width:20%"');
     expect(markup).toContain(KEEP_OPEN);
     expect(markup).not.toContain(LEAVE);
     expect(markup).not.toContain("data-hero-check");
     expect(markup).not.toContain("data-working");
-    expect(markup).not.toMatch(/\d+%<\/span>/);
     controller.dispose();
   });
 
@@ -143,6 +163,9 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(markup).toContain(LEAVE);
     expect(markup).not.toContain(KEEP_OPEN);
     expect(markup).toContain("data-working");
+    expect(markup).not.toContain(COMPLETED);
+    expect(cancelButton(markup)).toBe("");
+    expect(zone(markup)).toBe("");
     controller.dispose();
   });
 
@@ -161,7 +184,7 @@ describe("hero video control rendering: one bar from upload to live", () => {
     none.dispose();
   });
 
-  it("live is the only success state: Your new video is live. with the drawn check and a full bar, and no leave line", async () => {
+  it("live is the only success state: Completed with the check and a full bar, the live sentence for screen readers only, and no leave line", async () => {
     const live = { ...STATUS, liveGuid: "new-guid", pending: row("live"), completion: { videoGuid: "new-guid", revisionBefore: null, revisionAfter: null } };
     const controller = createHeroVideoController({ getStatus: async () => live } as unknown as HeroVideoDeps);
     await controller.load();
@@ -169,7 +192,10 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(markup.match(/data-hero-check/g)).toHaveLength(1);
     expect(bar(markup)).toContain('aria-valuenow="100"');
     expect(bar(markup)).toContain('aria-valuetext="Your new video is live."');
-    expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*"><svg[^>]*data-hero-check[^>]*>.*<\/svg>Your new video is live\.<\/p>/);
+    expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*srOnly[^"]*">Your new video is live\.<\/p>/);
+    expect(markup).toMatch(/<p class="[^"]*phaseLabel[^"]*" aria-hidden="true"><svg[^>]*data-hero-check[^>]*>.*<\/svg>Completed<\/p>/);
+    expect(markup).toContain('title="Video">Video<');
+    expect(cancelButton(markup)).toBe("");
     expect(markup).not.toContain(LEAVE);
   });
 
@@ -180,6 +206,10 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(markup).not.toContain("progressbar");
     expect(markup).not.toContain(LEAVE);
     expect(markup).not.toContain(KEEP_OPEN);
+    expect(markup).not.toContain(COMPLETED);
+    expect(markup).not.toContain(LIVE_COPY);
+    expect(markup).not.toContain("data-hero-row");
+    expect(cancelButton(markup)).toBe("");
   });
 
   it.each([
@@ -197,8 +227,12 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(markup).toContain(FAILED);
     expect(markup).not.toMatch(/bunny|video service|MP4_MISSING|RESOLUTION_MISSING|VIDEO_FAILED|PREPARE_TIMEOUT/i);
     expect(markup).not.toContain("progressbar");
-    expect(replaceButton(markup)).not.toBe("");
-    expect(replaceButton(markup)).not.toContain("disabled");
+    expect(zone(markup)).not.toBe("");
+    expect(zone(markup)).not.toContain("disabled");
+    expect(markup).toContain('data-hero-row="failed"');
+    expect(markup).toMatch(/<button[^>]*>Try again<\/button>/);
+    expect(markup).not.toContain(COMPLETED);
+    expect(cancelButton(markup)).toBe("");
     expect(markup).toMatch(/<button(?![^>]*disabled)[^>]*>(?:(?!<\/button>).)*Revert to previous<\/button>/);
   });
 
@@ -214,8 +248,8 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(markup).not.toContain(FAILED);
     expect(markup).not.toMatch(/bunny|video service|VIDEO_TOO_LONG|RESOLUTION_TOO_LOW|STORED_SIZE_TOO_LARGE/i);
     expect(markup).not.toContain("progressbar");
-    expect(replaceButton(markup)).not.toBe("");
-    expect(replaceButton(markup)).not.toContain("disabled");
+    expect(zone(markup)).not.toBe("");
+    expect(zone(markup)).not.toContain("disabled");
     expect(markup).toMatch(/<button(?![^>]*disabled)[^>]*>(?:(?!<\/button>).)*Revert to previous<\/button>/);
   });
 
@@ -247,8 +281,17 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(source).not.toContain("progressText");
     expect(source.match(/role="progressbar"/g)).toHaveLength(1);
     expect(css).not.toMatch(/\.working|heroWork|\.progressText/);
-    const animated = css.slice(css.indexOf("@media (prefers-reduced-motion: no-preference)"), css.indexOf("@media (prefers-reduced-motion: reduce) {\n  .status:has(.check)"));
+    const animated = css.slice(css.indexOf("@media (prefers-reduced-motion: no-preference)"), css.indexOf("@media (prefers-reduced-motion: reduce) {\n  .check,"));
     expect(animated).toContain(".bar[data-working]");
     expect(css.replace(animated, "")).not.toContain("heroBarPulse 1.6s");
+  });
+
+  it("the drop zone is a native button that is aria-disabled, never disabled, while locked, and is replaced by the file row while a video uploads or processes", () => {
+    const source = readFileSync("components/admin/homepage/HeroVideoControl.tsx", "utf8");
+    expect(source).toContain("aria-disabled={!enabled || undefined}");
+    expect(source).not.toMatch(/Click to upload[\s\S]{0,40}disabled=/);
+    expect(source).toContain('const inFlight = phase === "uploading" || phase === "preparing";');
+    expect(source).toContain("{!inFlight && <div className={styles.uploader}>");
+    expect(source).toContain("event.preventDefault()");
   });
 });

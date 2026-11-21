@@ -1,5 +1,21 @@
 # Diverse City FC Status
 
+## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI: Untitled-style uploader on the proven one-bar flow
+
+- **Agent / package:** Claude Code (Opus coordinating, Sonnet worker), `RC-HERO-VIDEO-UPLOADER-UI`, branch `claude/rc-hero-video-uploader-ui` from main `df3e9a3`.
+- **Status:** `in_progress`, committed and pushed, PR open. Not merged. UI only: no migration, no server, route, SQL, or dependency change.
+- **Completed:**
+  - `HeroVideoControl` restyled as an Untitled-UI-style uploader with the admin's own tokens (Tailwind v3, lucide icons). The group is titled "Video" (Christian, 2026-11-21: "just call it Video").
+  - Idle: a dashed drop zone (CloudUpload, "Click to upload or drag and drop", "MP4, MOV or WebM · up to 500 MB · up to 10 minutes · at least 720p"), with the "{n} of 10 replaces left today." line under it. The zone is one native button using `aria-disabled`, not `disabled`, so a drop is always cancelled and never opens the file. Click, Enter and Space open the picker. Drag and drop is new.
+  - While a video uploads or processes, the drop zone is hidden and the file row takes its place (Christian, 2026-11-21). The row shows a FileVideo icon, the file name (truncated, with a `title`), the size, the same bar with an aria-hidden % beside it, and "Uploading…"/"Processing…" with the existing hint line. A Trash2 cancel button shows only while uploading.
+  - Live: full bar, CheckCircle2, and the visible label "Completed". The live region still says "Your new video is live." for screen readers.
+  - Failed: a red row with CircleAlert and the unchanged error copy, plus "Try again" (opens the picker) and the existing Dismiss.
+  - Revert: the same flow and confirmation, restyled as a secondary button with Undo2.
+  - The only controller change is display-only: `fileSize` was added next to `fileName`, and both are kept at live for a replace. The progress formula, phases, polling, nav guard, cancel and revert are untouched.
+- **Verification:** final table in the PR body at the pushed head. Screenshots: `test-results/hero-video-completion/uploader-{idle,uploading,processing,completed,failed}-{desktop,375}.png`.
+  - Admin-facing messages no longer say "hero video" (Christian, 2026-11-21: "drop hero"). For example, "Your current video is unchanged." and "The previous video is live again on your site." Screen-reader labels ("Choose hero video", "Hero video progress", "Current hero video preview") and server/route copy (frozen) are unchanged.
+- **Exact next step:** Christian reviews and merges the PR. No production gate is needed (no migration).
+
 ## 2026-11-21 - RC-HERO-VIDEO-READINESS: hero readiness from Bunny's API, one progress bar, cap 10
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet workers), `RC-HERO-VIDEO-READINESS`, branch `claude/rc-hero-video-readiness` from main `c31939d`.

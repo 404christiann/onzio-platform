@@ -160,7 +160,7 @@ async function respondApi(route: Route) {
 async function openEditor(page: Page) {
   await installRoutes(page);
   await page.goto(`${origin}/tests/browser/fixtures/hero-video-completion/`);
-  await expect(page.getByRole("button", { name: "Replace video" })).toBeVisible();
+  await expect(zoneOf(page)).toBeVisible();
 }
 
 async function chooseVideo(page: Page) {
@@ -203,9 +203,22 @@ const FAILED = "We couldn't finish this video. Try again or use a different file
 const LEAVE = "You can leave this page; we'll finish in the background.";
 const KEEP_OPEN = "Keep this page open until the upload finishes.";
 const LIVE_COPY = "Your new video is live.";
+const CAP = (left: number) => `${left} of 10 replaces left today.`;
+const LIMITS = "MP4, MOV or WebM · up to 500 MB · up to 10 minutes · at least 720p";
+const zoneOf = (page: Page) => page.getByRole("button", { name: /Click to upload/ });
 const bar = (page: Page) => page.getByRole("progressbar", { name: "Hero video progress" });
 const fill = (page: Page) => bar(page).locator(":scope > div");
 const shot = (page: Page, name: string) => page.screenshot({ path: resolve(artifactDir, `readiness-${name}.png`) });
+/** Desktop (the config default) and 375px captures of the uploader in one state. */
+async function uploaderShots(page: Page, state: string) {
+  await page.screenshot({ path: resolve(artifactDir, `uploader-${state}-desktop.png`) });
+  const size = page.viewportSize();
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: resolve(artifactDir, `uploader-${state}-375.png`) });
+  if (size) await page.setViewportSize(size);
+}
+const liveText = (page: Page) => page.locator('[role="status"][aria-live="polite"]').first();
 
 type Sample = { bars: number; now: number | null; text: string | null; label: string; check: number; alert: boolean };
 
@@ -254,6 +267,93 @@ async function uploadToProcessing(page: Page) {
   await expect(bar(page)).toHaveAttribute("aria-valuetext", "Processing…", { timeout: 15_000 });
 }
 
+test("idle: the drop zone reads like an upload area, with the limits and the allowance under it", async ({ page }) => {
+  await openEditor(page);
+  await expect(zoneOf(page)).toBeEnabled();
+  await expect(zoneOf(page)).toHaveText(/Click to upload or drag and drop/);
+  await expect(page.getByText(LIMITS)).toBeVisible();
+  await expect(page.getByText(CAP(10))).toBeVisible();
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0);
+  await expect(page.getByText("Completed", { exact: true })).toHaveCount(0);
+  await uploaderShots(page, "idle");
+});
+
+test("dropping a file on the zone starts the upload row with its name and size", async ({ page }) => {
+  await openEditor(page);
+  const transfer = await page.evaluateHandle(() => {
+    const data = new DataTransfer();
+    data.items.add(new File([new Uint8Array(64 * 1024)], "dropped-hero.mp4", { type: "video/mp4" }));
+    return data;
+  });
+  const target = zoneOf(page);
+  await target.dispatchEvent("dragenter", { dataTransfer: transfer });
+  await target.dispatchEvent("dragover", { dataTransfer: transfer });
+  await expect(target).toHaveAttribute("data-dragging", "true");
+  await target.dispatchEvent("drop", { dataTransfer: transfer });
+  await expect(bar(page)).toHaveAttribute("aria-valuetext", "Uploading…");
+  await expect(page.getByText("dropped-hero.mp4", { exact: true })).toBeVisible();
+  await expect(page.getByText("0.1 MB", { exact: true })).toBeVisible();
+  // The file row takes the drop zone's place while the video uploads.
+  await expect(zoneOf(page)).toHaveCount(0);
+});
+
+test("Enter on the focused zone opens the file picker", async ({ page }) => {
+  await openEditor(page);
+  await zoneOf(page).focus();
+  const chooser = page.waitForEvent("filechooser");
+  await page.keyboard.press("Enter");
+  expect((await chooser).isMultiple()).toBe(false);
+});
+
+test("the file name and size show in the row", async ({ page }) => {
+  await openEditor(page);
+  await chooseVideo(page);
+  await expect(page.getByText("hero.mp4", { exact: true })).toBeVisible();
+  await expect(page.getByText("0.1 MB", { exact: true })).toBeVisible();
+});
+
+test("cancelling mid-upload with the trash button returns to idle with nothing swapped or counted", async ({ page }) => {
+  await openEditor(page);
+  let swaps = 0;
+  page.on("request", (request) => { if (request.method() === "POST" && request.url().includes("/api/admin/homepage/hero-video") && (request.postData() ?? "").includes('"uploaded"')) swaps += 1; });
+  await chooseVideo(page);
+  await expect(bar(page)).toHaveAttribute("aria-valuetext", "Uploading…");
+  await page.getByRole("button", { name: "Cancel upload" }).click();
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Cancel upload" })).toHaveCount(0);
+  await expect(page.getByText("Upload canceled. Your current video is unchanged.")).toBeVisible();
+  await expect(zoneOf(page)).toBeEnabled();
+  await expect(page.getByText(CAP(10))).toBeVisible();
+  await expect(page.locator("video")).toHaveAttribute("src", new RegExp(LIVE));
+  openGate();
+  await page.waitForTimeout(500);
+  expect(swaps).toBe(0);
+  expect(store.replacesUsed).toBe(0);
+  expect(store.live).toBe(LIVE);
+});
+
+test("Completed and the check appear only at live", async ({ page }) => {
+  await openEditor(page);
+  await uploadToProcessing(page);
+  await expect(page.getByText("Completed", { exact: true })).toHaveCount(0);
+  await expect(page.locator("[data-hero-check]")).toHaveCount(0);
+  await postReadyWebhook(page);
+  await expect(page.getByText("Completed", { exact: true })).toBeVisible({ timeout: 12_000 });
+  await expect(page.locator("[data-hero-check]")).toHaveCount(1);
+});
+
+test("Try again on a failed row opens the file picker", async ({ page }) => {
+  await openEditor(page);
+  await uploadToProcessing(page);
+  store.phase = "failed";
+  store.failure = "MP4_MISSING";
+  await expect(page.locator('[data-hero-row="failed"]')).toBeVisible({ timeout: 12_000 });
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Try again" }).click();
+  await chooser;
+});
+
 test("one bar runs from upload through processing to live, never backwards, with one success state", async ({ page }) => {
   await openEditor(page);
   const samples = await recordProgress(page);
@@ -267,6 +367,7 @@ test("one bar runs from upload through processing to live, never backwards, with
   await page.getByRole("link", { name: "Roster" }).click();
   await expect(page).toHaveURL(/hero-video-completion/);
   await shot(page, "uploading");
+  await uploaderShots(page, "uploading");
 
   openGate();
   await expect(bar(page)).toHaveAttribute("aria-valuetext", "Processing…", { timeout: 15_000 });
@@ -274,19 +375,26 @@ test("one bar runs from upload through processing to live, never backwards, with
   await expect(page.locator("[data-hero-check]")).toHaveCount(0);
   await expect(page.getByText(LEAVE)).toBeVisible();
   await expect(page.getByText(KEEP_OPEN)).toHaveCount(0);
-  await expect(page.getByText("9 of 10 replaces left today. Maximum file size 500 MB, up to 10 minutes, at least 720p.")).toBeVisible();
+  await expect(page.getByText(CAP(9))).toBeVisible();
+  await expect(page.getByText(LIMITS)).toHaveCount(0); // the drop zone, with its limits line, gives its place to the file row while processing
   expect(await fill(page).evaluate((element) => getComputedStyle(element).animationName)).not.toBe("none");
 
   store.encode = 50;
   await expect(bar(page)).toHaveAttribute("aria-valuenow", "70", { timeout: 12_000 });
   await shot(page, "processing");
+  await uploaderShots(page, "processing");
 
   expect(await postReadyWebhook(page)).toEqual({ status: 200, body: { received: true, outcome: "live" } });
-  await expect(page.getByText(LIVE_COPY)).toBeVisible({ timeout: 12_000 });
+  await expect(page.getByText("Completed", { exact: true })).toBeVisible({ timeout: 12_000 });
+  await expect(liveText(page)).toHaveText(LIVE_COPY);
+  // Visually hidden (a 1px clipped box): it is for screen readers only.
+  expect(await liveText(page).evaluate((element) => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
   await expect(bar(page)).toHaveAttribute("aria-valuenow", "100");
   await expect(page.locator("[data-hero-check]")).toHaveCount(1);
   await expect(page.getByText(LEAVE)).toHaveCount(0);
+  await expect(page.locator('[aria-hidden="true"]', { hasText: "100%" })).toHaveCount(1);
   await shot(page, "live");
+  await uploaderShots(page, "completed");
 
   const all = await samples();
   const run = all.slice(all.findIndex((sample) => sample.bars > 0));
@@ -313,7 +421,8 @@ test("leaving mid-processing keeps going: the webhook lands while away and the n
   expect(store.videos.has(LIVE)).toBe(true);
 
   await page.goto(`${origin}/tests/browser/fixtures/hero-video-completion/`);
-  await expect(page.getByText(LIVE_COPY)).toBeVisible();
+  await expect(liveText(page)).toHaveText(LIVE_COPY);
+  await expect(page.getByText("Completed", { exact: true })).toBeVisible();
   await expect(bar(page)).toHaveAttribute("aria-valuenow", "100");
   await expect(page.locator("[data-hero-check]")).toHaveCount(1);
   // A fresh page load shows the notice but never refreshes the revision: the editor just loaded the current one.
@@ -330,7 +439,7 @@ test("coming back while it is still processing resumes the bar, not an empty for
   await expect(bar(page)).toHaveAttribute("aria-valuetext", "Processing…");
   await expect(bar(page)).toHaveAttribute("aria-valuenow", "70");
   await expect(page.getByText(LEAVE)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Replace video" })).toBeDisabled();
+  await expect(zoneOf(page)).toHaveCount(0);
 });
 
 test("reloading during the upload leaves Replace and Revert on, with no bar", async ({ page }) => {
@@ -338,7 +447,7 @@ test("reloading during the upload leaves Replace and Revert on, with no bar", as
   await chooseVideo(page);
   await expect(bar(page)).toHaveAttribute("aria-valuetext", "Uploading…");
   await page.reload();
-  await expect(page.getByRole("button", { name: "Replace video" })).toBeEnabled();
+  await expect(zoneOf(page)).toBeEnabled();
   await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await expect(page.getByRole("progressbar")).toHaveCount(0);
   await expect(page.getByText("An upload is in progress in another window, or it was interrupted. Choosing a new video replaces it.")).toBeVisible();
@@ -354,10 +463,11 @@ test("closing the tab during the upload leaves the current video live", async ({
   const next = await page.context().newPage();
   await installRoutes(next);
   await next.goto(`${origin}/tests/browser/fixtures/hero-video-completion/`);
-  await expect(next.getByRole("button", { name: "Replace video" })).toBeEnabled();
+  await expect(zoneOf(next)).toBeEnabled();
   await expect(next.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await expect(next.getByRole("progressbar")).toHaveCount(0);
   await expect(next.getByText(LIVE_COPY)).toHaveCount(0);
+  await expect(next.getByText("Completed", { exact: true })).toHaveCount(0);
   await expect(next.locator("video")).toHaveAttribute("src", new RegExp(LIVE));
   expect(store.live).toBe(LIVE);
   expect(store.videos.has(PREVIOUS)).toBe(true);
@@ -373,9 +483,10 @@ test("a missing mp4 shows the plain failure copy, with Replace and Revert still 
   await expect(page.getByRole("alert")).not.toContainText(/bunny|video service|MP4_MISSING/i);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
   await expect(page.locator("[data-hero-check]")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Replace video" })).toBeEnabled();
+  await expect(zoneOf(page)).toBeEnabled();
   await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await shot(page, "failed");
+  await uploaderShots(page, "failed");
 });
 
 test("a video below 720p says what to change, with Replace and Revert still enabled", async ({ page }) => {
@@ -387,7 +498,7 @@ test("a video below 720p says what to change, with Replace and Revert still enab
   await expect(page.getByRole("alert")).not.toContainText(FAILED);
   await expect(page.getByRole("alert")).not.toContainText(/bunny|video service|RESOLUTION_TOO_LOW/i);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Replace video" })).toBeEnabled();
+  await expect(zoneOf(page)).toBeEnabled();
   await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await shot(page, "failed-resolution");
 });
@@ -397,20 +508,20 @@ test("a video that is not live by its deadline shows the same failure copy", asy
   await uploadToProcessing(page);
   store.phase = "preparing_overdue";
   await expect(page.getByRole("alert")).toHaveText(new RegExp(`^${FAILED}`), { timeout: 12_000 });
-  await expect(page.getByRole("button", { name: "Replace video" })).toBeEnabled();
+  await expect(zoneOf(page)).toBeEnabled();
   await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await shot(page, "failed-overdue");
 });
 
 test("the daily allowance reads 10, and the limit message uses that number", async ({ page }) => {
   await openEditor(page);
-  await expect(page.getByText("10 of 10 replaces left today. Maximum file size 500 MB, up to 10 minutes, at least 720p.")).toBeVisible();
+  await expect(page.getByText(CAP(10))).toBeVisible();
   await page.close();
   const full = await page.context().newPage();
   store.replacesUsed = 10;
   await installRoutes(full);
   await full.goto(`${origin}/tests/browser/fixtures/hero-video-completion/`);
-  await expect(full.getByText("0 of 10 replaces left today. Maximum file size 500 MB, up to 10 minutes, at least 720p.")).toBeVisible();
+  await expect(full.getByText(CAP(0))).toBeVisible();
   await chooseVideo(full);
   await expect(full.getByRole("alert")).toContainText("You have used all 10 video replacements for today. Try again tomorrow.");
   await full.close();
