@@ -4291,6 +4291,29 @@ export type Database = {
         Returns: undefined
       }
       get_club_runtime_access: { Args: { p_club_id: string }; Returns: string }
+      hero_video_event: {
+        Args: {
+          p_cap?: number
+          p_club_id: string
+          p_collection_id?: string
+          p_deadline_ms?: number
+          p_event: string
+          p_expected: string[]
+          p_expected_live?: string
+          p_failure_code?: string
+          p_library_id?: string
+          p_video_guid: string
+        }
+        Returns: {
+          delete_guid: string
+          outcome: string
+          phase: string
+          replace_counted: boolean
+          revision_after: string
+          revision_before: string
+          used: number
+        }[]
+      }
       hero_video_replaces_today: {
         Args: { p_club_id: string }
         Returns: number
@@ -4300,8 +4323,11 @@ export type Database = {
         Returns: {
           club_id: string
           collection_id: string
+          deadline_at: string
+          landed_at: string
           phase: string
-          updated_at: string
+          replace_counted: boolean
+          started_at: string
           video_guid: string
         }[]
       }
@@ -4386,7 +4412,12 @@ export type Database = {
         Returns: {
           club_id: string
           collection_id: string
+          deadline_at: string
+          failure_code: string
+          landed_at: string
           phase: string
+          replace_counted: boolean
+          started_at: string
         }[]
       }
       mark_free_registration_paid: {
@@ -4554,17 +4585,6 @@ export type Database = {
       save_tryouts_page: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
-      }
-      settle_hero_video_pending: {
-        Args: {
-          p_club_id: string
-          p_failure_code: string
-          p_phase: string
-          p_revision_after: string
-          p_revision_before: string
-          p_video_guid: string
-        }
-        Returns: string
       }
       swap_hero_video: {
         Args: {

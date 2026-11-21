@@ -17,7 +17,7 @@ export type BunnyStreamWebhookEvent = {
   isLiveStream: boolean;
 };
 
-export type BunnyStreamWebhookAction = "finalize" | "fail" | "preparing" | "ignore";
+export type BunnyStreamWebhookAction = "ready" | "reject" | "land" | "upload_failed" | "ignore";
 
 export function verifyBunnyStreamSignature(input: {
   rawBody: string;
@@ -33,11 +33,12 @@ export function verifyBunnyStreamSignature(input: {
   return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(signature, "hex"));
 }
 
-/** Webhook status list from Bunny's Stream webhook docs. */
+/** Webhook status list from Bunny's Stream webhook docs. 8 is an abandoned upload, not a failed encode. */
 export function classifyBunnyStreamStatus(status: number): BunnyStreamWebhookAction {
-  if (status === 3) return "finalize";
-  if (status === 5 || status === 8) return "fail";
-  if (status === 0 || status === 1 || status === 2 || status === 4 || status === 7) return "preparing";
+  if (status === 3) return "ready";
+  if (status === 5) return "reject";
+  if (status === 8) return "upload_failed";
+  if (status === 0 || status === 1 || status === 2 || status === 4 || status === 7) return "land";
   return "ignore";
 }
 

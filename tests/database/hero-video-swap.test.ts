@@ -108,11 +108,10 @@ describe("hero video swap grants", () => {
     ["hero_video_replaces_today", "select onzio.hero_video_replaces_today($1)", [WITH_ROW]],
     ["swap_hero_video", "select * from onzio.swap_hero_video($1,$2,$3,$4)", [WITH_ROW, B, LIBRARY, A]],
     ["revert_hero_video", "select * from onzio.revert_hero_video($1,$2,$3)", [WITH_ROW, A, B]],
-    ["record_hero_video_pending", "select onzio.record_hero_video_pending($1,$2,$3,$4)", [WITH_ROW, B, "col", "uploading"]],
+    ["hero_video_event", "select * from onzio.hero_video_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)", [WITH_ROW, B, "abandon", ["uploading"], "col", null, null, null, 5, 7_200_000]],
     ["read_hero_video_pending", "select * from onzio.read_hero_video_pending($1)", [WITH_ROW]],
     ["lookup_hero_video_pending", "select * from onzio.lookup_hero_video_pending($1)", [B]],
     ["list_hero_video_pending", "select * from onzio.list_hero_video_pending()", []],
-    ["settle_hero_video_pending", "select onzio.settle_hero_video_pending($1,$2,$3,$4,$5,$6)", [WITH_ROW, B, "clear", null, null, null]],
   ];
 
   for (const role of ["authenticated", "anon"] as const) {
@@ -325,21 +324,47 @@ describe("revision numbers returned by a write", () => {
 
 describe("pending hero video", () => {
   const GUID = "abababab-abab-4aba-8aba-abababababab";
-
-  it("records one uploading guid per club, advances it to preparing, and settles live without dropping revisions on a retry", async () => {
+  const WINDOW = (2 * 60 + 15) * 60 * 1000;
+  const PREPARE = 2 * 60 * 60 * 1000;
+  const event = async (club: string, guid: string, name: string, expected: string[], extra: { collection?: string; failure?: string | null; deadline?: number; cap?: number } = {}) => {
     await asRole("service_role");
-    expect((await db.query("select onzio.record_hero_video_pending($1,$2,$3,$4) as s", [WITH_ROW, GUID, "col-a", "uploading"])).rows[0].s).toBe("ok");
-    expect((await db.query("select onzio.record_hero_video_pending($1,$2,$3,$4) as s", [WITH_ROW, B, "col-b", "uploading"])).rows[0].s).toBe("ok");
-    const read = async () => (await db.query("select * from onzio.read_hero_video_pending($1)", [WITH_ROW])).rows[0];
-    expect(await read()).toMatchObject({ video_guid: B, collection_id: "col-b", phase: "uploading" });
-    expect((await db.query("select onzio.record_hero_video_pending($1,$2,$3,$4) as s", [WITH_ROW, B, "", "preparing"])).rows[0].s).toBe("ok");
-    expect((await read()).phase).toBe("preparing");
-    expect((await db.query("select * from onzio.lookup_hero_video_pending($1)", [B])).rows[0].club_id).toBe(WITH_ROW);
-    expect((await db.query("select count(*)::int as n from onzio.list_hero_video_pending() where club_id=$1", [WITH_ROW])).rows[0].n).toBe(1);
-    expect((await db.query("select onzio.settle_hero_video_pending($1,$2,$3,$4,$5,$6) as s", [WITH_ROW, B, "live", null, "4", "5"])).rows[0].s).toBe("ok");
-    expect((await db.query("select onzio.settle_hero_video_pending($1,$2,$3,$4,$5,$6) as s", [WITH_ROW, B, "live", null, null, null])).rows[0].s).toBe("ok");
-    expect(await read()).toMatchObject({ phase: "live", revision_before: "4", revision_after: "5", failure_code: null });
+    return (await db.query(
+      "select * from onzio.hero_video_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+      [club, guid, name, expected, extra.collection ?? "col-a", extra.failure ?? null, "723074", null, extra.cap ?? 5, extra.deadline ?? WINDOW],
+    )).rows[0];
+  };
+  const read = async () => (await db.query("select * from onzio.read_hero_video_pending($1)", [WITH_ROW])).rows[0];
+  const used = async () => (await db.query("select onzio.hero_video_replaces_today($1) as n", [WITH_ROW])).rows[0].n;
+
+  it("walks start, land, ready and a stale retry without counting until bytes land", async () => {
+    expect((await event(WITH_ROW, GUID, "start", ["uploading", "preparing", "live", "failed", "abandoned"])).outcome).toBe("ok");
+    expect((await event(WITH_ROW, B, "start", ["uploading", "preparing", "live", "failed", "abandoned"], { collection: "col-b" })).delete_guid).toBe(GUID);
+    expect(await read()).toMatchObject({ video_guid: B, collection_id: "col-b", phase: "uploading", replace_counted: false });
+    expect(await used()).toBe(0);
+    expect((await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).outcome).toBe("ok");
+    expect(await read()).toMatchObject({ phase: "preparing", replace_counted: true });
+    expect(await used()).toBe(1);
+    expect((await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).outcome).toBe("stale");
+    expect(await used()).toBe(1);
+    const ready = await event(WITH_ROW, B, "ready", ["uploading", "preparing"]);
+    expect(ready.outcome).toBe("swapped");
+    expect(ready.phase).toBe("live");
+    expect(await used()).toBe(1);
+    expect((await event(WITH_ROW, B, "ready", ["uploading", "preparing"])).outcome).toBe("stale");
+    expect(await used()).toBe(1);
     expect((await db.query("select count(*)::int as n from onzio.list_hero_video_pending() where club_id=$1", [WITH_ROW])).rows[0].n).toBe(0);
-    expect((await db.query("select onzio.record_hero_video_pending($1,$2,$3,$4) as s", [OTHER_ROW, GUID, "col-a", "preparing"])).rows[0].s).toBe("missing");
+  });
+
+  it("refuses start while preparing is inside its deadline and does not count an abandon", async () => {
+    expect((await event(WITH_ROW, B, "start", ["uploading"])).outcome).toBe("ok");
+    expect((await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).outcome).toBe("ok");
+    const blocked = await event(WITH_ROW, GUID, "start", ["uploading", "preparing", "live", "failed", "abandoned"], { collection: "col-b" });
+    expect(blocked.outcome).toBe("preparing");
+    expect(await read()).toMatchObject({ video_guid: B, phase: "preparing" });
+    await db.query("update onzio_private.hero_video_pending set phase='uploading', failure_code=null, landed_at=null, replace_counted=false, deadline_at=now() - interval '1 minute' where club_id=$1", [WITH_ROW]);
+    await db.query("delete from onzio_private.hero_video_replace_counters where club_id=$1", [WITH_ROW]);
+    expect((await event(WITH_ROW, B, "expire", ["uploading"])).outcome).toBe("abandoned");
+    expect(await used()).toBe(0);
+    expect((await event(WITH_ROW, B, "abandon", ["uploading"])).outcome).toBe("stale");
   });
 });

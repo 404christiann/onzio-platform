@@ -49,8 +49,8 @@ function statusBody() {
     replacesPerDay: 5,
     maxBytes: 500 * 1024 * 1024,
     maxSeconds: 600,
-    pending: store.phase === "preparing" && store.guid
-      ? { videoGuid: store.guid, encodeProgress: store.encode, phase: "preparing" as const }
+    pending: store.guid && (store.phase === "preparing" || store.phase === "uploading")
+      ? { videoGuid: store.guid, encodeProgress: store.encode, phase: store.phase, effective: store.phase, deadlineAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() }
       : null,
     failure: store.phase === "failed" && store.failure ? { code: store.failure } : null,
     completion: store.phase === "live" && store.guid ? { videoGuid: store.guid, revisionBefore: "7", revisionAfter: "8" } : null,
@@ -70,7 +70,7 @@ function applyWebhook(raw: string, signature: string | null, version: string | n
     return { status: 200, body: { received: true, outcome: "ignored" } };
   }
   const action = classifyBunnyStreamStatus(parsed.status);
-  if (action === "finalize") {
+  if (action === "ready") {
     store.videos.delete(store.previous);
     store.previous = store.live;
     store.live = parsed.videoGuid;
@@ -78,7 +78,7 @@ function applyWebhook(raw: string, signature: string | null, version: string | n
     store.encode = null;
     return { status: 200, body: { received: true, outcome: "live" } };
   }
-  if (action === "fail") {
+  if (action === "reject" || action === "upload_failed") {
     store.videos.delete(parsed.videoGuid);
     store.phase = "failed";
     store.failure = "VIDEO_FAILED";
@@ -133,7 +133,6 @@ async function respondApi(route: Route) {
     store.phase = "uploading";
     store.guid = NEXT;
     store.videos.add(NEXT);
-    store.replacesUsed += 1;
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
@@ -147,6 +146,7 @@ async function respondApi(route: Route) {
   if (body.action === "uploaded" && body.videoGuid === store.guid) {
     store.phase = "preparing";
     store.encode = null;
+    store.replacesUsed += 1;
     await route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "preparing" }) });
     return;
   }
@@ -230,6 +230,19 @@ test("upload, preparing, leave, webhook, come back live; closing mid-upload does
   await expect(page.getByText("Your new video is live.")).toBeVisible();
   await expect(page.locator("[data-refreshed]")).toHaveAttribute("data-refreshed", "7:8");
   await page.screenshot({ path: resolve(artifactDir, "hero-video-live.png") });
+});
+
+test("reloading during the upload leaves Replace and Revert on, with no spinner", async ({ page }) => {
+  await openEditor(page);
+  await chooseVideo(page);
+  await expect(page.getByText("Uploading your video. Keep this page open until the upload finishes.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Replace video" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
+  await expect(page.locator("[data-hero-working]")).toHaveCount(0);
+  await expect(page.getByText("An upload is in progress in another window, or it was interrupted. Choosing a new video replaces it.")).toBeVisible();
+  expect(store.replacesUsed).toBe(0);
+  expect(store.videos.has(NEXT)).toBe(true);
 });
 
 test("closing the tab during the upload leaves the current video live", async ({ page }) => {

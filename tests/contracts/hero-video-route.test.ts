@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
   authorizeAdminAccess: vi.fn(), authorizeMutation: vi.fn(), createClient: vi.fn(), getClubContext: vi.fn(),
   requireFreshClubSession: vi.fn(), getHeroVideoState: vi.fn(), startHeroVideoUpload: vi.fn(),
-  finalizeHeroVideo: vi.fn(), revertHeroVideo: vi.fn(), rpc: vi.fn(),
+  revertHeroVideo: vi.fn(), rpc: vi.fn(),
 }));
 vi.mock("@/lib/authorization", () => ({ authorizeAdminAccess: m.authorizeAdminAccess, authorizeMutation: m.authorizeMutation }));
 vi.mock("@/lib/auth-session", () => ({ requireFreshClubSession: m.requireFreshClubSession }));
@@ -16,7 +16,7 @@ vi.mock("@/lib/supabase-service-role", () => ({
 }));
 vi.mock("@/lib/hero-video-swap", async (importActual) => {
   const actual = await importActual<typeof import("@/lib/hero-video-swap")>();
-  return { ...actual, getHeroVideoState: m.getHeroVideoState, startHeroVideoUpload: m.startHeroVideoUpload, finalizeHeroVideo: m.finalizeHeroVideo, revertHeroVideo: m.revertHeroVideo };
+  return { ...actual, getHeroVideoState: m.getHeroVideoState, startHeroVideoUpload: m.startHeroVideoUpload, revertHeroVideo: m.revertHeroVideo };
 });
 
 import { GET, POST } from "@/app/api/admin/homepage/hero-video/route";
@@ -84,7 +84,7 @@ describe("hero video route", () => {
     expect(r.status).toBe(503);
     expect((await r.json()).code).toBe("VIDEO_NOT_CONFIGURED");
     expect(m.startHeroVideoUpload).not.toHaveBeenCalled();
-    expect((await POST(req("POST", { action: "finalize", videoGuid: G1 }))).status).toBe(503);
+    expect((await POST(req("POST", { action: "uploaded", videoGuid: G1 }))).status).toBe(503);
   });
   it.each([
     ["bad json", "{"], ["unknown action", { action: "nope" }], ["extra key", { ...start, clubId }],
@@ -134,12 +134,10 @@ describe("hero video route", () => {
       expect(fetchStub).not.toHaveBeenCalled();
     });
   });
-  it("finalize relays 202 and 200", async () => {
-    m.finalizeHeroVideo.mockResolvedValueOnce({ httpStatus: 202, body: { status: "processing" } });
-    const a = await POST(req("POST", { action: "finalize", videoGuid: G1 }));
-    expect([a.status, await a.json()]).toEqual([202, { status: "processing" }]);
-    m.finalizeHeroVideo.mockResolvedValueOnce({ httpStatus: 200, body: { status: "live", liveGuid: G1, previousGuid: G2 } });
-    expect((await POST(req("POST", { action: "finalize", videoGuid: G1 }))).status).toBe(200);
+  it("the old finalize action is not a route", async () => {
+    const r = await POST(req("POST", { action: "finalize", videoGuid: G1 }));
+    expect(r.status).toBe(400);
+    expect(m.startHeroVideoUpload).not.toHaveBeenCalled();
   });
   it("revert works without Bunny configured and maps conflicts", async () => {
     vi.stubEnv("BUNNY_STREAM_API_KEY", "");
@@ -151,8 +149,8 @@ describe("hero video route", () => {
   });
   it("hides unexpected errors behind a generic 502", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    m.finalizeHeroVideo.mockRejectedValue(new Error("secret detail k"));
-    const r = await POST(req("POST", { action: "finalize", videoGuid: G1 }));
+    m.startHeroVideoUpload.mockRejectedValue(new Error("secret detail k"));
+    const r = await POST(req("POST", start));
     expect(r.status).toBe(502);
     expect(JSON.stringify(await r.json())).not.toContain("secret");
   });

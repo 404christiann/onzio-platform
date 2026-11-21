@@ -4,6 +4,8 @@
  * place. Errors come back as `{ code, message }`; they surface as HeroVideoApiError.
  */
 
+import type { HeroEffective, HeroStoredPhase } from "@/lib/hero-video-lifecycle";
+
 const ENDPOINT = "/api/admin/homepage/hero-video";
 
 export type HeroVideoStatus = {
@@ -13,8 +15,14 @@ export type HeroVideoStatus = {
   replacesPerDay: number;
   maxBytes: number;
   maxSeconds: number;
-  /** Present while this club's upload is still uploading or being prepared. */
-  pending?: { videoGuid: string; encodeProgress: number | null; phase?: "uploading" | "preparing" } | null;
+  /** The club's current row. GET is read-only; effective is computed on the server. */
+  pending?: {
+    videoGuid: string;
+    encodeProgress: number | null;
+    phase?: HeroStoredPhase;
+    effective?: HeroEffective;
+    deadlineAt?: string | null;
+  } | null;
   failure?: { code: string } | null;
   /** Set after the swap, so a returning tab can move the editor's base revision. */
   completion?: { videoGuid: string; revisionBefore: string | null; revisionAfter: string | null } | null;
@@ -32,7 +40,7 @@ export type HeroVideoUploadTicket = {
 export type HeroVideoStart = { videoGuid: string; upload: HeroVideoUploadTicket; maxBytes: number };
 /** revisionBefore/After are non-null only when this request actually wrote the homepage. */
 export type HeroVideoLive = { status: "live"; liveGuid: string; previousGuid: string; revisionBefore?: string | null; revisionAfter?: string | null };
-export type HeroVideoFinalize = { status: "processing" } | HeroVideoLive;
+export type HeroVideoEventReply = { outcome: string };
 
 export class HeroVideoApiError extends Error {
   constructor(readonly code: string, message: string, readonly httpStatus: number) { super(message); this.name = "HeroVideoApiError"; }
@@ -63,20 +71,14 @@ export async function startHeroVideoUpload(file: { name: string; size: number; t
   return (await post(payload)).body as unknown as HeroVideoStart;
 }
 
-/** Tells the server the bytes arrived, so GET can say preparing after this tab closes. */
-export async function markHeroVideoUploaded(videoGuid: string): Promise<void> {
-  await post({ action: "uploaded", videoGuid });
+/** Tells the server the bytes arrived. A stale reply means a newer upload already replaced this one. */
+export async function markHeroVideoUploaded(videoGuid: string): Promise<HeroVideoEventReply> {
+  return (await post({ action: "uploaded", videoGuid })).body as unknown as HeroVideoEventReply;
 }
 
-/** Drops an upload that was canceled or failed before the bytes were stored. */
-export async function abandonHeroVideoUpload(videoGuid: string): Promise<void> {
-  await post({ action: "abandon", videoGuid });
-}
-
-/** 202 means the video is still being prepared; 200 means the swap is live. The browser does not need this to go live. */
-export async function finalizeHeroVideo(videoGuid: string): Promise<HeroVideoFinalize> {
-  const { body, status } = await post({ action: "finalize", videoGuid });
-  return (status === 200 && body.status === "live" ? body : { status: "processing" }) as HeroVideoFinalize;
+/** Drops an upload that was canceled or failed before the bytes were stored. Stale means land already won. */
+export async function abandonHeroVideoUpload(videoGuid: string): Promise<HeroVideoEventReply> {
+  return (await post({ action: "abandon", videoGuid })).body as unknown as HeroVideoEventReply;
 }
 
 export async function revertHeroVideo(expectedLiveGuid: string, targetGuid: string): Promise<HeroVideoLive> {

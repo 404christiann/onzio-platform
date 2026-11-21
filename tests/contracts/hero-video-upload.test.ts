@@ -4,10 +4,10 @@ import { buildHomepageSaveRequest } from "@/lib/homepage-editor/adapter";
 import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
 import { createHomepageEditorState, reduceHomepageEditor, type HomepageEditorState } from "@/lib/homepage-editor/model";
 import { defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
-import { HeroVideoApiError, fetchHomepageRevision, finalizeHeroVideo, startHeroVideoUpload } from "@/lib/homepage-editor/hero-video-client";
+import { HeroVideoApiError, abandonHeroVideoUpload, fetchHomepageRevision, markHeroVideoUploaded, startHeroVideoUpload } from "@/lib/homepage-editor/hero-video-client";
 import { readVideoDuration } from "@/lib/homepage-editor/hero-video-duration";
 import {
-  HERO_VIDEO_LIVE_COPY, HERO_VIDEO_MAX_POLLS, HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_UPLOAD_DONE_MS, HERO_VIDEO_UPLOADING_COPY,
+  HERO_VIDEO_LIVE_COPY, HERO_VIDEO_OTHER_UPLOAD_NOTE, HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_SUPERSEDED_COPY, HERO_VIDEO_UPLOAD_DONE_MS, HERO_VIDEO_UPLOADING_COPY,
   applySwapRevision, megabytes, createHeroVideoController, heroVideoErrorMessage, type HeroVideoDeps,
 } from "@/lib/homepage-editor/hero-video-upload";
 
@@ -241,7 +241,7 @@ describe("hero video control: upload, processing and going live", () => {
 
   it("moves to live without a reload when GET changes after a long stretch of preparing", async () => {
     const getStatus = vi.fn().mockResolvedValueOnce(STATUS);
-    for (let i = 0; i < HERO_VIDEO_MAX_POLLS; i++) getStatus.mockResolvedValueOnce(preparing);
+    for (let i = 0; i < 30; i++) getStatus.mockResolvedValueOnce(preparing);
     getStatus.mockResolvedValue(liveStatus);
     const { controller, handlers } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
@@ -264,37 +264,43 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState().message).not.toMatch(/bunny|video service/i);
   });
 
-  it("does not go idle before this tab has seen the row as preparing", async () => {
-    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, pending: null });
+  it("a reload during an upload stays idle with both buttons, even if sessionStorage still names the guid", async () => {
+    vi.stubGlobal("sessionStorage", { getItem: () => "new-guid", setItem() {}, removeItem() {} });
+    const uploadingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "uploading" as const, effective: "uploading" as const, deadlineAt: new Date(Date.now() + 3_600_000).toISOString() } };
+    const { controller, deps } = harness({ getStatus: vi.fn(async () => uploadingRow) });
+    await controller.load();
+    expect(controller.getState()).toMatchObject({ phase: "idle", message: HERO_VIDEO_OTHER_UPLOAD_NOTE });
+    await controller.revert();
+    expect(deps.revert).toHaveBeenCalled();
+    await controller.replace(video());
+    expect(deps.start).toHaveBeenCalled();
+  });
+
+  it("cancel racing with land is a no-op and the tab stays preparing", async () => {
+    const preparingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "preparing" as const, effective: "preparing" as const } };
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(preparingRow);
+    const abandon = vi.fn(async () => ({ outcome: "stale" }));
     const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise<void>(() => undefined); });
-    const { controller, handlers } = harness({ getStatus, sleep });
-    await controller.load(); await controller.replace(video());
-    handlers.current!.onSuccess(); await settle();
+    const { controller } = harness({ getStatus, abandon, sleep });
+    await controller.load();
+    await controller.replace(video());
+    controller.cancel();
+    await settle();
+    expect(abandon).toHaveBeenCalledWith("new-guid");
     expect(controller.getState().phase).toBe("preparing");
     controller.dispose();
   });
 
-  it("another tab stays idle while an upload is still in progress, and this tab resumes its own", async () => {
-    const uploadingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "uploading" as const } };
-    const store = new Map<string, string>();
-    vi.stubGlobal("sessionStorage", {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => { store.set(key, value); },
-      removeItem: (key: string) => { store.delete(key); },
-    });
-    const other = harness({ getStatus: vi.fn(async () => uploadingRow) });
-    await other.controller.load();
-    expect(other.controller.getState().phase).toBe("idle");
-    await other.controller.revert();
-    expect(other.deps.revert).toHaveBeenCalled();
-    await other.controller.replace(video());
-    expect(other.deps.start).toHaveBeenCalled();
-
-    store.set("onzio.heroVideo.pending", "new-guid");
-    const own = harness({ getStatus: vi.fn(async () => uploadingRow), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
-    await own.controller.load();
-    expect(own.controller.getState()).toMatchObject({ phase: "preparing", message: HERO_VIDEO_PREPARING_COPY });
-    own.controller.dispose();
+  it("a superseded upload says a newer upload replaced this one", async () => {
+    const other = { ...STATUS, pending: { videoGuid: "other-guid", encodeProgress: null, phase: "uploading" as const, effective: "uploading" as const } };
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(other);
+    const abandon = vi.fn(async () => ({ outcome: "stale" }));
+    const { controller, handlers } = harness({ getStatus, abandon });
+    await controller.load();
+    await controller.replace(video());
+    handlers.current!.onError(new Error("missing"));
+    await settle();
+    expect(controller.getState()).toMatchObject({ phase: "idle", message: HERO_VIDEO_SUPERSEDED_COPY });
   });
 
   it("an abandoned upload with no bytes leaves Replace and Revert enabled", async () => {
@@ -432,15 +438,17 @@ describe("hero video client and tus wrapper", () => {
   it("sends the documented bodies and reads error bodies as {code, message}", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify(TICKET), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "processing" }), { status: 202 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "live", liveGuid: "g", previousGuid: "p" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ outcome: "ok", status: "preparing" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ outcome: "abandoned", status: "idle" }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ code: "DAILY_LIMIT", message: "x" }), { status: 429 }));
     vi.stubGlobal("fetch", fetchMock);
     await startHeroVideoUpload({ name: "a.mp4", size: 5, type: "video/mp4" });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ action: "start", fileName: "a.mp4", fileSize: 5, mimeType: "video/mp4" });
     expect(fetchMock.mock.calls[0][1].body).not.toContain("durationSeconds");
-    expect(await finalizeHeroVideo("g")).toEqual({ status: "processing" });
-    expect(await finalizeHeroVideo("g")).toEqual({ status: "live", liveGuid: "g", previousGuid: "p" });
+    expect(await markHeroVideoUploaded("g")).toMatchObject({ outcome: "ok" });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ action: "uploaded", videoGuid: "g" });
+    expect(await abandonHeroVideoUpload("g")).toMatchObject({ outcome: "abandoned" });
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({ action: "abandon", videoGuid: "g" });
     await expect(startHeroVideoUpload({ name: "a.mp4", size: 5, type: "video/mp4" })).rejects.toMatchObject({ code: "DAILY_LIMIT", httpStatus: 429 });
   });
 
