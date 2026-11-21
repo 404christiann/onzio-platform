@@ -9,7 +9,7 @@ const KEY = "test-secret-key-123";
 const fetchStub = vi.fn();
 const res = (status: number, body: unknown = {}) => new Response(JSON.stringify(body), { status });
 const video = (over: Partial<BunnyVideo> = {}): BunnyVideo => ({
-  guid: "g1", collectionId: "c1", status: 4, availableResolutions: ["480p", "720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, dateUploaded: "", ...over,
+  guid: "g1", collectionId: "c1", status: 4, availableResolutions: ["480p", "720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, length: 0, dateUploaded: "", ...over,
 });
 
 beforeEach(() => { fetchStub.mockReset(); vi.stubGlobal("fetch", fetchStub); vi.stubEnv("BUNNY_STREAM_API_KEY", KEY); });
@@ -44,6 +44,17 @@ describe("bunny stream client", () => {
     expect(await getVideo("g1")).toMatchObject({ availableResolutions: ["240p", "720p"], hasMP4Fallback: true, collectionId: "c1", storageSize: 3_000_000_000, dateUploaded: "2026-01-01T00:00:00Z" });
     fetchStub.mockResolvedValueOnce(res(200, { guid: "g2" }));
     expect(await getVideo("g2")).toMatchObject({ storageSize: 0, dateUploaded: "" });
+  });
+
+  it("getVideo maps Bunny's length (seconds), with 0 for missing or unusable values", async () => {
+    fetchStub.mockResolvedValueOnce(res(200, { guid: "g1", length: 601 }));
+    expect((await getVideo("g1"))?.length).toBe(601);
+    fetchStub.mockResolvedValueOnce(res(200, { guid: "g1", length: 1234.5 }));
+    expect((await getVideo("g1"))?.length).toBe(1234.5);
+    fetchStub.mockResolvedValueOnce(res(200, { guid: "g1" }));
+    expect((await getVideo("g1"))?.length).toBe(0);
+    fetchStub.mockResolvedValueOnce(res(200, { guid: "g1", length: "not a number" }));
+    expect((await getVideo("g1"))?.length).toBe(0);
   });
 
   it("lists collection videos", async () => {

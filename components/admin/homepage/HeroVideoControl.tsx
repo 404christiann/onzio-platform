@@ -84,7 +84,7 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
       </div></div>}
     {state.revisionWarning && <EditorNotice failed>The video is live, but we couldn’t refresh this page’s version. Reload the page before you save other changes.</EditorNotice>}
     {state.revisionConflict && <EditorNotice failed>The homepage also changed somewhere else while your video was switching. Use “Load latest and keep my edits” before saving.</EditorNotice>}
-    {left !== null && <p className={kit.hint}>{left} of {status!.replacesPerDay} replaces left today. Maximum file size {megabytes(status!.maxBytes)}, at least 720p.</p>}
+    {left !== null && <p className={kit.hint}>{left} of {status!.replacesPerDay} replaces left today. Maximum file size {megabytes(status!.maxBytes)}, up to {Math.round(status!.maxSeconds / 60)} minutes, at least 720p.</p>}
   </EditorGroup>;
 }
 

@@ -2,6 +2,7 @@ import {
   HeroVideoApiError, fetchHomepageRevision, finalizeHeroVideo, getHeroVideoStatus, revertHeroVideo, startHeroVideoUpload,
   type HeroVideoFinalize, type HeroVideoLive, type HeroVideoStart, type HeroVideoStatus, type HeroVideoUploadTicket,
 } from "./hero-video-client";
+import { readVideoDuration } from "./hero-video-duration";
 import { startTusUpload, type TusUploadHandle, type TusUploadHandlers } from "./hero-video-tus";
 
 export const HERO_VIDEO_POLL_MS = 5_000;
@@ -27,7 +28,9 @@ export type HeroVideoState = {
 
 export type HeroVideoDeps = {
   getStatus: () => Promise<HeroVideoStatus>;
-  start: (file: { name: string; size: number; type: string }) => Promise<HeroVideoStart>;
+  start: (file: { name: string; size: number; type: string; durationSeconds?: number }) => Promise<HeroVideoStart>;
+  /** The file's duration in seconds when the browser can read it, otherwise `undefined` (the server checks again later). */
+  readDuration: (file: File) => Promise<number | undefined>;
   finalize: (videoGuid: string) => Promise<HeroVideoFinalize>;
   revert: (expectedLiveGuid: string, targetGuid: string) => Promise<HeroVideoLive>;
   startUpload: (file: File, ticket: HeroVideoUploadTicket, handlers: TusUploadHandlers) => TusUploadHandle;
@@ -41,7 +44,7 @@ export type HeroVideoDeps = {
 
 export function defaultHeroVideoDeps(refreshRevision: HeroVideoDeps["refreshRevision"]): HeroVideoDeps {
   return {
-    getStatus: getHeroVideoStatus, start: startHeroVideoUpload, finalize: finalizeHeroVideo, revert: revertHeroVideo,
+    getStatus: getHeroVideoStatus, start: startHeroVideoUpload, readDuration: readVideoDuration, finalize: finalizeHeroVideo, revert: revertHeroVideo,
     startUpload: startTusUpload, refreshRevision, sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
   };
 }
@@ -53,7 +56,8 @@ export const megabytes = (bytes: number) => { const mb = bytes / 1024 / 1024; re
 export function heroVideoErrorMessage(code: string, context: { maxBytes?: number; replacesPerDay?: number } = {}): string {
   switch (code) {
     case "FILE_TOO_LARGE": return `That video is too large${context.maxBytes ? `. The limit is ${megabytes(context.maxBytes)}` : ""}. Choose a smaller file.`;
-    case "STORED_SIZE_TOO_LARGE": return "This video is too large once processed, so it was removed. Use a shorter or smaller clip (under 500 MB).";
+    case "VIDEO_TOO_LONG": return "This video is longer than 10 minutes. Use a shorter clip.";
+    case "STORED_SIZE_TOO_LARGE": return "This video was too long or too large once processed, so it was removed. Use a shorter clip (up to 10 minutes).";
     case "UNSUPPORTED_TYPE": return "That file is not a video we can use. Choose an MP4 or MOV video.";
     case "DAILY_LIMIT": return `You have used all ${context.replacesPerDay ?? 5} video replacements for today. Try again tomorrow.`;
     case "VIDEO_NOT_CONFIGURED": return "Video uploads are not set up for this site yet. Contact Onzio.";
@@ -177,10 +181,17 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       const { maxBytes } = state.status;
       if (!file.type.startsWith("video/")) return set({ phase: "error", error: { code: "UNSUPPORTED_TYPE", message: heroVideoErrorMessage("UNSUPPORTED_TYPE"), retry: null }, message: heroVideoErrorMessage("UNSUPPORTED_TYPE") });
       if (file.size > maxBytes) return set({ phase: "error", error: { code: "FILE_TOO_LARGE", message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()), retry: null }, message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()) });
+      const { maxSeconds } = state.status;
       const token = ++run;
       set({ phase: "uploading", fileName: file.name, progress: { sent: 0, total: file.size }, error: null, revisionWarning: false, revisionConflict: false, message: `Uploading ${file.name}…` });
+      // Read the duration before start so a clip that is too long never uses one of the day's replaces. An unreadable
+      // duration (undefined) skips this early check; the server checks Bunny's real length at finalize.
+      let durationSeconds: number | undefined;
+      try { durationSeconds = await deps.readDuration(file); } catch { durationSeconds = undefined; }
+      if (!alive(token)) return;
+      if (durationSeconds !== undefined && durationSeconds > maxSeconds) return failWith("VIDEO_TOO_LONG", heroVideoErrorMessage("VIDEO_TOO_LONG"));
       let ticket: HeroVideoStart;
-      try { ticket = await deps.start(file); } catch (error) { if (alive(token)) fail(error); return; }
+      try { ticket = await deps.start({ name: file.name, size: file.size, type: file.type, ...(durationSeconds === undefined ? {} : { durationSeconds }) }); } catch (error) { if (alive(token)) fail(error); return; }
       if (!alive(token)) return;
       handle = deps.startUpload(file, ticket.upload, {
         onProgress: (sent, total) => { if (alive(token)) set({ progress: { sent, total } }); },

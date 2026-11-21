@@ -12,6 +12,7 @@ export type HeroVideoStatus = {
   replacesUsedToday: number;
   replacesPerDay: number;
   maxBytes: number;
+  maxSeconds: number;
 };
 
 export type HeroVideoUploadTicket = {
@@ -51,8 +52,10 @@ export async function getHeroVideoStatus(): Promise<HeroVideoStatus> {
   return (await read(await fetch(ENDPOINT, { credentials: "same-origin", cache: "no-store" }))).body as unknown as HeroVideoStatus;
 }
 
-export async function startHeroVideoUpload(file: { name: string; size: number; type: string }): Promise<HeroVideoStart> {
-  return (await post({ action: "start", fileName: file.name, fileSize: file.size, mimeType: file.type })).body as unknown as HeroVideoStart;
+/** `durationSeconds` is sent only when the browser could read it; the server re-checks Bunny's real length at finalize. */
+export async function startHeroVideoUpload(file: { name: string; size: number; type: string; durationSeconds?: number }): Promise<HeroVideoStart> {
+  const payload = { action: "start", fileName: file.name, fileSize: file.size, mimeType: file.type, ...(file.durationSeconds === undefined ? {} : { durationSeconds: file.durationSeconds }) };
+  return (await post(payload)).body as unknown as HeroVideoStart;
 }
 
 /** 202 means Bunny is still preparing the video; 200 means the swap is live. */

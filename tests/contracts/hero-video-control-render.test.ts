@@ -10,7 +10,7 @@ import HomepagePartFields, { type HomepagePartEditor } from "@/components/admin/
 vi.mock("@/components/ClubContextProvider", () => ({ useClubContext: () => ({ storeEnabled: true }) }));
 vi.mock("@/components/ResilientNativeImage", () => ({ default: () => null }));
 
-const STATUS = { liveGuid: "11111111-2222-3333-4444-555555555555", previousGuid: "prev", replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 524_288_000 };
+const STATUS = { liveGuid: "11111111-2222-3333-4444-555555555555", previousGuid: "prev", replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 524_288_000, maxSeconds: 600 };
 const editor = (heroVideo?: ReturnType<typeof createHeroVideoController>): HomepagePartEditor => ({
   draft: { ...homepageDraft(), revamp: defaultCinematicHomepageContent() }, disabled: false, maxPhotos: 7, programs: [], photoCaptionEditable: false, videoSourceSet: true,
   field: () => undefined, setRevamp: () => undefined, setPhotos: () => undefined, updatePhoto: () => undefined, removePhoto: () => undefined,
@@ -38,6 +38,8 @@ describe("hero video control rendering", () => {
     expect(markup).toContain('accept="video/*"');
     expect(markup).toContain('aria-live="polite"');
     expect(markup).toContain("Maximum file size 500 MB");
+    expect(markup).toContain("up to 10 minutes");
+    expect(markup).toContain("Maximum file size 500 MB, up to 10 minutes, at least 720p.");
     expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*"><\/p>/);
     expect(markup).not.toMatch(/guid/i);
   });

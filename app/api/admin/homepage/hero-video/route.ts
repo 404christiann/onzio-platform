@@ -19,7 +19,11 @@ export const dynamic = "force-dynamic";
 
 const guid = z.string().uuid().refine((value) => value === value.toLowerCase());
 const bodySchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("start"), fileName: z.string().min(1).max(200), fileSize: z.number().int(), mimeType: z.string().min(1).max(100) }).strict(),
+  // durationSeconds is optional: some browsers cannot read a file's metadata (e.g. HEVC .mov in Chrome). The server re-checks at finalize.
+  z.object({
+    action: z.literal("start"), fileName: z.string().min(1).max(200), fileSize: z.number().int(), mimeType: z.string().min(1).max(100),
+    durationSeconds: z.number().positive().finite().optional(),
+  }).strict(),
   z.object({ action: z.literal("finalize"), videoGuid: guid }).strict(),
   z.object({ action: z.literal("revert"), expectedLiveGuid: z.union([guid, z.literal("")]), targetGuid: guid }).strict(),
 ]);
@@ -88,7 +92,10 @@ async function handle(request: Request, mutation: boolean) {
     }
     if (!isBunnyStreamConfigured()) return failure("VIDEO_NOT_CONFIGURED", 503);
     if (payload.action === "start") {
-      return json(await startHeroVideoUpload(club.id, { fileName: payload.fileName, fileSize: payload.fileSize, mimeType: payload.mimeType }));
+      return json(await startHeroVideoUpload(club.id, {
+        fileName: payload.fileName, fileSize: payload.fileSize, mimeType: payload.mimeType,
+        ...(payload.durationSeconds === undefined ? {} : { durationSeconds: payload.durationSeconds }),
+      }));
     }
     const result = await finalizeHeroVideo(club.id, payload.videoGuid);
     return json(result.body, result.httpStatus);

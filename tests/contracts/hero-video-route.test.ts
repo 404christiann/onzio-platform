@@ -3,21 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
   authorizeAdminAccess: vi.fn(), authorizeMutation: vi.fn(), createClient: vi.fn(), getClubContext: vi.fn(),
   requireFreshClubSession: vi.fn(), getHeroVideoState: vi.fn(), startHeroVideoUpload: vi.fn(),
-  finalizeHeroVideo: vi.fn(), revertHeroVideo: vi.fn(),
+  finalizeHeroVideo: vi.fn(), revertHeroVideo: vi.fn(), rpc: vi.fn(),
 }));
 vi.mock("@/lib/authorization", () => ({ authorizeAdminAccess: m.authorizeAdminAccess, authorizeMutation: m.authorizeMutation }));
 vi.mock("@/lib/auth-session", () => ({ requireFreshClubSession: m.requireFreshClubSession }));
 vi.mock("@/lib/club-context", () => ({ getClubContext: m.getClubContext }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: m.createClient }));
-vi.mock("@/lib/hero-video-swap", async () => {
-  class HeroVideoError extends Error {
-    constructor(readonly status: number, readonly code: string, message: string) { super(message); }
-  }
-  return { HeroVideoError, getHeroVideoState: m.getHeroVideoState, startHeroVideoUpload: m.startHeroVideoUpload, finalizeHeroVideo: m.finalizeHeroVideo, revertHeroVideo: m.revertHeroVideo };
+// The real module stays importable (its HeroVideoError and limits are the ones the route sees); only the entry points are
+// spies, so one test can hand `startHeroVideoUpload` back to the real service with a stubbed service-role client.
+vi.mock("@/lib/supabase-service-role", () => ({
+  createServiceRoleClient: () => ({ schema: () => ({ rpc: m.rpc }) }),
+}));
+vi.mock("@/lib/hero-video-swap", async (importActual) => {
+  const actual = await importActual<typeof import("@/lib/hero-video-swap")>();
+  return { ...actual, getHeroVideoState: m.getHeroVideoState, startHeroVideoUpload: m.startHeroVideoUpload, finalizeHeroVideo: m.finalizeHeroVideo, revertHeroVideo: m.revertHeroVideo };
 });
 
 import { GET, POST } from "@/app/api/admin/homepage/hero-video/route";
-import { HeroVideoError } from "@/lib/hero-video-swap";
+import { HERO_VIDEO_MAX_SECONDS, HeroVideoError } from "@/lib/hero-video-swap";
 import { ContractError } from "@/lib/contract-error";
 
 const clubId = "11111111-1111-4111-8111-111111111111";
@@ -87,6 +90,9 @@ describe("hero video route", () => {
     ["bad json", "{"], ["unknown action", { action: "nope" }], ["extra key", { ...start, clubId }],
     ["uppercase guid", { action: "finalize", videoGuid: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA" }],
     ["non-uuid", { action: "finalize", videoGuid: "abc" }], ["revert missing target", { action: "revert", expectedLiveGuid: G1 }],
+    ["zero duration", { ...start, durationSeconds: 0 }], ["negative duration", { ...start, durationSeconds: -5 }],
+    ["string duration", { ...start, durationSeconds: "600" }], ["null duration", { ...start, durationSeconds: null }],
+    ["duration on finalize", { action: "finalize", videoGuid: G1, durationSeconds: 5 }],
   ])("400 for %s", async (_l, body) => {
     const r = await POST(req("POST", body));
     expect(r.status).toBe(400);
@@ -106,6 +112,27 @@ describe("hero video route", () => {
     m.startHeroVideoUpload.mockRejectedValue(new HeroVideoError(429, "DAILY_LIMIT", "Limit."));
     const r = await POST(req("POST", start));
     expect([r.status, await r.json()]).toEqual([429, { code: "DAILY_LIMIT", message: "Limit." }]);
+  });
+  describe("start duration", () => {
+    it("is optional: an omitted duration reaches the service as no duration at all", async () => {
+      m.startHeroVideoUpload.mockResolvedValue({ videoGuid: G1, upload: {}, maxBytes: 1 });
+      expect((await POST(req("POST", start))).status).toBe(200);
+      expect(m.startHeroVideoUpload.mock.calls[0][1]).not.toHaveProperty("durationSeconds");
+    });
+    it.each([[HERO_VIDEO_MAX_SECONDS], [90.25]])("passes a declared duration of %s seconds through to the service", async (durationSeconds) => {
+      m.startHeroVideoUpload.mockResolvedValue({ videoGuid: G1, upload: {}, maxBytes: 1 });
+      expect((await POST(req("POST", { ...start, durationSeconds }))).status).toBe(200);
+      expect(m.startHeroVideoUpload).toHaveBeenCalledWith(clubId, { fileName: "a.mp4", fileSize: 1000, mimeType: "video/mp4", durationSeconds });
+    });
+    it("a declared duration of 601 seconds answers 422 VIDEO_TOO_LONG from the real service, without touching the daily counter or Bunny", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/hero-video-swap")>("@/lib/hero-video-swap");
+      m.startHeroVideoUpload.mockImplementation(actual.startHeroVideoUpload);
+      const r = await POST(req("POST", { ...start, durationSeconds: 601 }));
+      expect(r.status).toBe(422);
+      expect(await r.json()).toEqual({ code: "VIDEO_TOO_LONG", message: "That video is longer than 10 minutes. Choose a shorter clip." });
+      expect(m.rpc).not.toHaveBeenCalled();
+      expect(fetchStub).not.toHaveBeenCalled();
+    });
   });
   it("finalize relays 202 and 200", async () => {
     m.finalizeHeroVideo.mockResolvedValueOnce({ httpStatus: 202, body: { status: "processing" } });

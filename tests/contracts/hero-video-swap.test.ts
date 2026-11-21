@@ -18,7 +18,10 @@ vi.mock("@/lib/bunny-stream", () => ({
   tusUploadAuthorization: m.tusUploadAuthorization, videoReadiness: m.videoReadiness,
 }));
 
-import { finalizeHeroVideo, HERO_VIDEO_MAX_BYTES, HERO_VIDEO_MAX_STORED_BYTES, HeroVideoError, revertHeroVideo, safeDeleteHeroVideo, startHeroVideoUpload } from "@/lib/hero-video-swap";
+import {
+  finalizeHeroVideo, getHeroVideoState, HERO_VIDEO_MAX_BYTES, HERO_VIDEO_MAX_SECONDS, HERO_VIDEO_MAX_STORED_BYTES, HeroVideoError, revertHeroVideo,
+  safeDeleteHeroVideo, startHeroVideoUpload,
+} from "@/lib/hero-video-swap";
 
 const club = "club-1";
 const COL = "col-1";
@@ -49,11 +52,30 @@ describe("startHeroVideoUpload", () => {
     [{ ...ok, fileSize: 500 * 1024 * 1024 + 1 }, 413, "FILE_TOO_LARGE"],
     [{ ...ok, fileSize: 0 }, 413, "FILE_TOO_LARGE"],
     [{ ...ok, fileName: "x".repeat(201) }, 400, "INVALID_FILE_NAME"],
+    [{ ...ok, durationSeconds: 601 }, 422, "VIDEO_TOO_LONG"],
   ])("rejects invalid input without consuming the counter", async (input, status, code) => {
     const e = await err(startHeroVideoUpload(club, input));
     expect([e.status, e.code]).toEqual([status, code]);
     expect(m.rpc).not.toHaveBeenCalled();
     expect(m.createVideo).not.toHaveBeenCalled();
+  });
+  it("exposes a 10 minute duration cap", () => {
+    expect(HERO_VIDEO_MAX_SECONDS).toBe(600);
+  });
+  it("rejects a declared duration over the cap with a plain 422, before the counter, the sweep or Bunny", async () => {
+    const e = await err(startHeroVideoUpload(club, { ...ok, durationSeconds: 600.5 }));
+    expect([e.status, e.code]).toEqual([422, "VIDEO_TOO_LONG"]);
+    expect(e.message).toBe("That video is longer than 10 minutes. Choose a shorter clip.");
+    expect(m.rpc).not.toHaveBeenCalled();
+    expect(m.findOrCreateCollection).not.toHaveBeenCalled();
+    expect(m.listCollectionVideos).not.toHaveBeenCalled();
+    expect(m.createVideo).not.toHaveBeenCalled();
+  });
+  it.each([["exactly the cap", { durationSeconds: 600 }], ["a short clip", { durationSeconds: 90.25 }], ["no declared duration", {}]])("allows %s and consumes the counter once", async (_l, extra) => {
+    rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }] });
+    const r = await startHeroVideoUpload(club, { ...ok, ...extra });
+    expect(m.rpc).toHaveBeenCalledExactlyOnceWith("consume_hero_video_replace", { p_club_id: club, p_cap: 5 });
+    expect(r.videoGuid).toBe("new-guid");
   });
   it("answers 429 at the daily cap and creates nothing", async () => {
     rpcByName({ consume_hero_video_replace: [{ allowed: false, used: 5, cap: 5 }] });
@@ -67,6 +89,16 @@ describe("startHeroVideoUpload", () => {
     expect(m.rpc).toHaveBeenCalledExactlyOnceWith("consume_hero_video_replace", { p_club_id: club, p_cap: 5 });
     expect(m.createVideo).toHaveBeenCalledWith({ title: expect.stringMatching(/^Hero video 20/), collectionId: COL });
     expect(r).toMatchObject({ videoGuid: "new-guid", maxBytes: 500 * 1024 * 1024, upload: { signature: "s" } });
+  });
+});
+
+describe("getHeroVideoState", () => {
+  it("reports the file, duration and daily limits the UI shows", async () => {
+    state(OLD, PREV);
+    rpcByName({ hero_video_replaces_today: 2 });
+    expect(await getHeroVideoState(club)).toEqual({
+      liveGuid: OLD, previousGuid: PREV, replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 500 * 1024 * 1024, maxSeconds: 600,
+    });
   });
 });
 
@@ -175,7 +207,7 @@ describe("finalizeHeroVideo", () => {
       m.videoReadiness.mockResolvedValue(status === 4 ? "ready" : "processing");
       const e = await err(finalizeHeroVideo(club, NEW));
       expect([e.status, e.code]).toEqual([413, "STORED_SIZE_TOO_LARGE"]);
-      expect(e.message).toBe("Once processed, this video takes more than 2,000 MB on the video service, which is over the hero video limit. Use a shorter or smaller clip.");
+      expect(e.message).toBe("Once processed, this video takes more than 2,000 MB on the video service, so it was removed. Use a shorter clip (up to 10 minutes).");
       expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
       expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(false);
     });
@@ -202,6 +234,52 @@ describe("finalizeHeroVideo", () => {
       state(live, previous);
       bunny({ storageSize: CAP + 1 });
       expect((await err(finalizeHeroVideo(club, NEW))).code).toBe("STORED_SIZE_TOO_LARGE");
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+      expect(m.rpc).not.toHaveBeenCalled();
+    });
+  });
+  describe("duration cap", () => {
+    const bunnyLength = (length: unknown, over: Record<string, unknown> = {}) => m.getVideo.mockImplementation(async (guid: string) => ({
+      guid, collectionId: COL, status: 4, availableResolutions: ["720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, length, ...over,
+    }));
+    it.each([["finished", 4, "ready"], ["still processing", 2, "processing"]])("deletes a %s video longer than the cap, answers 422 and never swaps", async (_l, status, readiness) => {
+      rpcByName({ swap_hero_video: [swapped] });
+      bunnyLength(601, { status });
+      m.videoReadiness.mockResolvedValue(readiness);
+      const e = await err(finalizeHeroVideo(club, NEW));
+      expect([e.status, e.code]).toEqual([422, "VIDEO_TOO_LONG"]);
+      expect(e.message).toBe("That video is longer than 10 minutes, so it was removed. Use a shorter clip.");
+      expect(m.deleteVideo).toHaveBeenCalledExactlyOnceWith(NEW);
+      expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(false);
+    });
+    it("also sweeps stale club videos but not the one being finalized", async () => {
+      bunnyLength(601);
+      m.listCollectionVideos.mockResolvedValue([{ guid: OLD, status: 0, storageSize: 0, dateUploaded: new Date(Date.now() - 3 * 3600e3).toISOString() }]);
+      await err(finalizeHeroVideo(club, NEW));
+      expect(m.listCollectionVideos).toHaveBeenCalledWith(COL);
+      expect(m.deleteVideo.mock.calls.map((c) => c[0]).sort()).toEqual([NEW, OLD].sort());
+    });
+    it("proceeds to the swap for a video of exactly the cap", async () => {
+      rpcByName({ swap_hero_video: [swapped] });
+      bunnyLength(600);
+      expect((await finalizeHeroVideo(club, NEW)).httpStatus).toBe(200);
+      expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(true);
+    });
+    it.each([[0], [undefined]])("does not reject on length when Bunny has not reported it yet (%s)", async (length) => {
+      rpcByName({ swap_hero_video: [swapped] });
+      bunnyLength(length);
+      expect((await finalizeHeroVideo(club, NEW)).httpStatus).toBe(200);
+      expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(true);
+    });
+    it("keeps the stored-size check: a short video that stores over the ceiling is still rejected with 413", async () => {
+      bunnyLength(120, { storageSize: HERO_VIDEO_MAX_STORED_BYTES + 1 });
+      const e = await err(finalizeHeroVideo(club, NEW));
+      expect([e.status, e.code]).toEqual([413, "STORED_SIZE_TOO_LARGE"]);
+    });
+    it.each([["live", NEW, ""], ["previous", "", NEW]])("never deletes a too-long video that is the %s guid", async (_l, live, previous) => {
+      state(live, previous);
+      bunnyLength(601);
+      expect((await err(finalizeHeroVideo(club, NEW))).code).toBe("VIDEO_TOO_LONG");
       expect(m.deleteVideo).not.toHaveBeenCalled();
       expect(m.rpc).not.toHaveBeenCalled();
     });

@@ -15,7 +15,7 @@
   - Uploads go to library 723074, collection `club-<clubId>`. Limits: video mime only, 500 MB, 5 replaces per club per UTC day
     on its own counter, consumed only after the request validates. The 500 MB file limit is checked on the declared size at
     start (413 FILE_TOO_LARGE). Separately, Bunny's total `storageSize` (original plus renditions) has a 2,000 MB ceiling at
-    every finalize poll (review fix) that only stops a client that lied about its size: over it is deleted with a 413
+    every finalize poll (review fix) that only stops a client that lied about its size or duration: over it is deleted with a 413
     STORED_SIZE_TOO_LARGE and never swapped. Renditions are capped at 720p via the tus `EnabledResolutions` header the start
     response returns. A rejected upload still used its daily slot.
   - Cleanup (review fix): each start and each finalize sweeps the club collection. It deletes Created/UploadFailed videos older
@@ -66,10 +66,12 @@
   - An upload that is still processing when the admin closes the page is never finalized, and its daily slot is used. The
     sweep removes it at the club's next start or finalize after it ages out. There's no cron, so a club that never uploads
     again keeps at most that last batch (≤ 5) until it does.
-  - The 2,000 MB stored ceiling uses Bunny's total `storageSize`; with renditions capped at 720p an honest 500 MB original stays under it.
+  - The 2,000 MB stored ceiling uses Bunny's total `storageSize`; the 10-minute duration cap keeps honest uploads under it (about 1,340 MB worst case).
     Bunny's library-level max upload size (dashboard) would also stop oversized uploads before they finish.
   - onzio-bot review at `e58802f`: 1 Medium (real size and cleanup) and 1 Low (operator `@>`), both fixed in the follow-up
     commit.
+  - Review Low (long clips): 10-minute duration cap at start (declared, before the counter) and at finalize (Bunny `length`),
+    new VIDEO_TOO_LONG code, STORED_SIZE_TOO_LARGE message no longer says "under 500 MB".
   - The telemetry branch also edits `lib/database.generated.ts`, `docs/onzio-platform-plan.md` and the two
     admin-reimagined migration-order tests, so whichever merges second rebases and regenerates.
 - **Exact next step:** onzio-bot review and Christian's review. Then, each only on his exact word: production migration gate

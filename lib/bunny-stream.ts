@@ -32,6 +32,8 @@ export type BunnyVideo = {
   height: number;
   /** Bytes Bunny stores for the video (original plus renditions). */
   storageSize: number;
+  /** Duration in seconds as Bunny measured it; 0 until Bunny has read the file. */
+  length: number;
   dateUploaded: string;
 };
 
@@ -104,6 +106,7 @@ export async function getVideo(guid: string): Promise<BunnyVideo | null> {
     width: Number(raw.width ?? 0),
     height: Number(raw.height ?? 0),
     storageSize: Number(raw.storageSize ?? 0) || 0,
+    length: Number(raw.length ?? 0) || 0,
     dateUploaded: typeof raw.dateUploaded === "string" ? raw.dateUploaded : "",
   };
 }

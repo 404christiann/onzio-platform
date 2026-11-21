@@ -5,6 +5,7 @@ import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities"
 import { createHomepageEditorState, reduceHomepageEditor, type HomepageEditorState } from "@/lib/homepage-editor/model";
 import { defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { HeroVideoApiError, fetchHomepageRevision, finalizeHeroVideo, startHeroVideoUpload } from "@/lib/homepage-editor/hero-video-client";
+import { readVideoDuration } from "@/lib/homepage-editor/hero-video-duration";
 import {
   HERO_VIDEO_MAX_POLLS, applySwapRevision, megabytes, createHeroVideoController, heroVideoErrorMessage, type HeroVideoDeps,
 } from "@/lib/homepage-editor/hero-video-upload";
@@ -17,7 +18,7 @@ vi.mock("tus-js-client", () => ({
   },
 }));
 
-const STATUS = { liveGuid: "live-1", previousGuid: "prev-1", replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 524_288_000 };
+const STATUS = { liveGuid: "live-1", previousGuid: "prev-1", replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 524_288_000, maxSeconds: 600 };
 const RANGE = { revisionBefore: "rev-1", revisionAfter: "rev-2" };
 const TICKET = { videoGuid: "new-guid", upload: { endpoint: "https://video.bunnycdn.com/tusupload", libraryId: 723074, videoId: "new-guid", expire: 1_900_000_000, signature: "sig", enabledResolutions: "240p,360p,480p,720p" }, maxBytes: STATUS.maxBytes };
 const video = (size = 10_000_000, type = "video/mp4") => ({ name: "hero.mp4", size, type }) as unknown as File;
@@ -29,6 +30,7 @@ function harness(overrides: Partial<HeroVideoDeps> = {}) {
   const deps: HeroVideoDeps = {
     getStatus: vi.fn(async () => STATUS),
     start: vi.fn(async () => TICKET),
+    readDuration: vi.fn(async () => undefined),
     finalize: vi.fn(async () => ({ status: "processing" as const })),
     revert: vi.fn(async () => ({ status: "live" as const, liveGuid: "prev-1", previousGuid: "live-1", ...RANGE })),
     startUpload: vi.fn((_file, _ticket, h) => { handlers.current = h; return { abort }; }),
@@ -67,6 +69,87 @@ describe("hero video control: loading and pre-checks", () => {
     expect(controller.getState().error?.message).toMatch(/too large.*500 MB/);
     expect(deps.start).not.toHaveBeenCalled();
     expect(controller.getState().status).toEqual(STATUS);
+  });
+});
+
+describe("hero video control: duration cap", () => {
+  const TOO_LONG = "This video is longer than 10 minutes. Use a shorter clip.";
+
+  it("a stubbed duration of 601 s fails at once with the VIDEO_TOO_LONG message, never starting or using a slot", async () => {
+    const { controller, deps } = harness({ readDuration: vi.fn(async () => 601) });
+    await controller.load();
+    await controller.replace(video());
+    expect(controller.getState()).toMatchObject({ phase: "error", error: { code: "VIDEO_TOO_LONG", retry: null, message: TOO_LONG }, progress: null, status: STATUS });
+    expect(controller.getState().message).toBe(TOO_LONG);
+    expect(deps.start).not.toHaveBeenCalled();
+    expect(deps.startUpload).not.toHaveBeenCalled();
+    await controller.replace(video());
+    expect(deps.readDuration).toHaveBeenCalledTimes(2);
+    expect(deps.start).not.toHaveBeenCalled();
+  });
+
+  it("an unknown duration (undefined) still starts, without durationSeconds", async () => {
+    const { controller, deps } = harness({ readDuration: vi.fn(async () => undefined) });
+    await controller.load();
+    await controller.replace(video());
+    expect(controller.getState().phase).toBe("uploading");
+    expect(deps.start).toHaveBeenCalledTimes(1);
+    expect(deps.start).toHaveBeenCalledWith({ name: "hero.mp4", size: 10_000_000, type: "video/mp4" });
+    expect(vi.mocked(deps.start).mock.calls[0][0]).not.toHaveProperty("durationSeconds");
+  });
+
+  it.each([[120], [600]])("a known duration of %s s starts with durationSeconds in the start request", async seconds => {
+    const { controller, deps } = harness({ readDuration: vi.fn(async () => seconds) });
+    await controller.load();
+    const file = video();
+    await controller.replace(file);
+    expect(controller.getState().phase).toBe("uploading");
+    expect(deps.readDuration).toHaveBeenCalledWith(file);
+    expect(deps.start).toHaveBeenCalledExactlyOnceWith({ name: "hero.mp4", size: 10_000_000, type: "video/mp4", durationSeconds: seconds });
+    expect(deps.startUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads the duration only after the type and size checks pass", async () => {
+    const { controller, deps } = harness();
+    await controller.load();
+    await controller.replace(video(1000, "image/png"));
+    await controller.replace(video(STATUS.maxBytes + 1));
+    expect(deps.readDuration).not.toHaveBeenCalled();
+  });
+
+  it("stays busy while the metadata is read, so a second pick is ignored", async () => {
+    let release: (seconds: number | undefined) => void = () => undefined;
+    const readDuration = vi.fn(() => new Promise<number | undefined>(resolve => { release = resolve; }));
+    const { controller, deps } = harness({ readDuration });
+    await controller.load();
+    const first = controller.replace(video());
+    expect(controller.getState().phase).toBe("uploading");
+    await controller.replace(video());
+    expect(readDuration).toHaveBeenCalledTimes(1);
+    release(30);
+    await first;
+    expect(deps.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("canceling while the metadata is read means start is never called", async () => {
+    let release: (seconds: number | undefined) => void = () => undefined;
+    const readDuration = vi.fn(() => new Promise<number | undefined>(resolve => { release = resolve; }));
+    const { controller, deps } = harness({ readDuration });
+    await controller.load();
+    const pending = controller.replace(video());
+    controller.cancel();
+    release(30);
+    await pending;
+    expect(deps.start).not.toHaveBeenCalled();
+    expect(controller.getState()).toMatchObject({ phase: "idle", error: null });
+  });
+
+  it("a reader that throws is treated as an unknown duration", async () => {
+    const { controller, deps } = harness({ readDuration: vi.fn(async () => { throw new Error("no metadata"); }) });
+    await controller.load();
+    await controller.replace(video());
+    expect(controller.getState().phase).toBe("uploading");
+    expect(vi.mocked(deps.start).mock.calls[0][0]).not.toHaveProperty("durationSeconds");
   });
 });
 
@@ -168,7 +251,9 @@ describe("hero video control: upload, processing and going live", () => {
     ["start", "FILE_TOO_LARGE", /too large/],
     ["start", "UNSUPPORTED_TYPE", /not a video/],
     ["start", "VIDEO_NOT_CONFIGURED", /not set up/],
-    ["finalize", "STORED_SIZE_TOO_LARGE", /too large once processed, so it was removed.*under 500 MB/],
+    ["start", "VIDEO_TOO_LONG", /longer than 10 minutes.*shorter clip/],
+    ["finalize", "VIDEO_TOO_LONG", /longer than 10 minutes.*shorter clip/],
+    ["finalize", "STORED_SIZE_TOO_LARGE", /too long or too large once processed, so it was removed.*shorter clip \(up to 10 minutes\)/],
     ["finalize", "VIDEO_FAILED", /could not process/],
     ["finalize", "RESOLUTION_TOO_LOW", /at least 720p/],
     ["finalize", "NOT_CLUB_VIDEO", /does not belong/],
@@ -186,10 +271,11 @@ describe("hero video control: upload, processing and going live", () => {
     expect(state.error?.retry).toBeNull();
     expect(state.status).toBeTruthy();
     if (where === "finalize") expect(state.error?.message).not.toMatch(/larger than 500 MB/);
+    if (code === "STORED_SIZE_TOO_LARGE") expect(state.error?.message).not.toContain("under 500 MB");
   });
 
   it("every documented code has its own message", () => {
-    for (const code of ["FILE_TOO_LARGE", "UNSUPPORTED_TYPE", "DAILY_LIMIT", "VIDEO_NOT_CONFIGURED", "HERO_VIDEO_NOT_AVAILABLE", "VIDEO_FAILED", "RESOLUTION_TOO_LOW", "NOT_CLUB_VIDEO", "HERO_VIDEO_CHANGED", "HOMEPAGE_NOT_READY", "NO_PREVIOUS_VIDEO"]) {
+    for (const code of ["FILE_TOO_LARGE", "UNSUPPORTED_TYPE", "DAILY_LIMIT", "VIDEO_NOT_CONFIGURED", "HERO_VIDEO_NOT_AVAILABLE", "VIDEO_TOO_LONG", "STORED_SIZE_TOO_LARGE", "VIDEO_FAILED", "RESOLUTION_TOO_LOW", "NOT_CLUB_VIDEO", "HERO_VIDEO_CHANGED", "HOMEPAGE_NOT_READY", "NO_PREVIOUS_VIDEO"]) {
       expect(heroVideoErrorMessage(code)).not.toBe(heroVideoErrorMessage("SOMETHING_ELSE"));
     }
   });
@@ -239,9 +325,19 @@ describe("hero video client and tus wrapper", () => {
     vi.stubGlobal("fetch", fetchMock);
     await startHeroVideoUpload({ name: "a.mp4", size: 5, type: "video/mp4" });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ action: "start", fileName: "a.mp4", fileSize: 5, mimeType: "video/mp4" });
+    expect(fetchMock.mock.calls[0][1].body).not.toContain("durationSeconds");
     expect(await finalizeHeroVideo("g")).toEqual({ status: "processing" });
     expect(await finalizeHeroVideo("g")).toEqual({ status: "live", liveGuid: "g", previousGuid: "p" });
     await expect(startHeroVideoUpload({ name: "a.mp4", size: 5, type: "video/mp4" })).rejects.toMatchObject({ code: "DAILY_LIMIT", httpStatus: 429 });
+  });
+
+  it("sends durationSeconds in the start body only when the browser could read it", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(TICKET), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await startHeroVideoUpload({ name: "a.mp4", size: 5, type: "video/mp4", durationSeconds: 120.5 });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ action: "start", fileName: "a.mp4", fileSize: 5, mimeType: "video/mp4", durationSeconds: 120.5 });
+    await startHeroVideoUpload({ name: "a.mp4", size: 5, type: "video/mp4", durationSeconds: undefined });
+    expect(fetchMock.mock.calls[1][1].body).not.toContain("durationSeconds");
   });
 
   it("starts tus with the signed headers, metadata and retry schedule", async () => {
@@ -349,5 +445,90 @@ describe("hero video control: the editor's base revision follows the swap and th
   it("an unchanged revision leaves the state object alone", () => {
     const state = createHomepageEditorState({ content: homepageDraft(), revision: "r", designRevision: "d", editableSections: capabilities.editableSections, maxPhotos: 7 });
     expect(reduceHomepageEditor(state, { type: "base-revision-refreshed", revision: "r" })).toBe(state);
+  });
+});
+
+describe("hero video duration reader (browser metadata)", () => {
+  const FILE = { name: "hero.mp4", type: "video/mp4", size: 3 } as unknown as File;
+  type FakeVideo = {
+    preload: string; muted: boolean; src: string; duration: number;
+    onloadedmetadata: (() => void) | null; onerror: (() => void) | null;
+    removeAttribute: ReturnType<typeof vi.fn>; load: ReturnType<typeof vi.fn>;
+  };
+  function env() {
+    const video: FakeVideo = { preload: "", muted: false, src: "", duration: Number.NaN, onloadedmetadata: null, onerror: null, removeAttribute: vi.fn(), load: vi.fn() };
+    const createElement = vi.fn(() => video);
+    vi.stubGlobal("document", { createElement });
+    const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:hero-1");
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    return { video, createElement, create, revoke };
+  }
+  afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
+
+  it("reads loadedmetadata on an off-DOM video with preload metadata, then revokes the object URL", async () => {
+    const { video, createElement, create, revoke } = env();
+    const result = readVideoDuration(FILE);
+    expect(createElement).toHaveBeenCalledWith("video");
+    expect(create).toHaveBeenCalledWith(FILE);
+    expect(video).toMatchObject({ preload: "metadata", src: "blob:hero-1" });
+    expect(revoke).not.toHaveBeenCalled();
+    video.duration = 125.4;
+    video.onloadedmetadata?.();
+    expect(await result).toBe(125.4);
+    expect(revoke).toHaveBeenCalledExactlyOnceWith("blob:hero-1");
+    expect(video.removeAttribute).toHaveBeenCalledWith("src");
+  });
+
+  it("resolves undefined on a media error (some HEVC .mov in Chrome) and still revokes the URL", async () => {
+    const { video, revoke } = env();
+    const result = readVideoDuration(FILE);
+    video.onerror?.();
+    expect(await result).toBeUndefined();
+    expect(revoke).toHaveBeenCalledExactlyOnceWith("blob:hero-1");
+  });
+
+  it("resolves undefined after about 5 seconds without metadata and revokes the URL", async () => {
+    vi.useFakeTimers();
+    const { revoke } = env();
+    let settled = false;
+    const result = readVideoDuration(FILE).then(value => { settled = true; return value; });
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(settled).toBe(false);
+    expect(revoke).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await result).toBeUndefined();
+    expect(revoke).toHaveBeenCalledExactlyOnceWith("blob:hero-1");
+  });
+
+  it.each([[Number.POSITIVE_INFINITY], [Number.NaN], [0]])("treats a duration of %s as unknown", async duration => {
+    const { video, revoke } = env();
+    const result = readVideoDuration(FILE);
+    video.duration = duration;
+    video.onloadedmetadata?.();
+    expect(await result).toBeUndefined();
+    expect(revoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("settles once: a late event after the timeout neither resolves again nor revokes twice", async () => {
+    vi.useFakeTimers();
+    const { video, revoke } = env();
+    const result = readVideoDuration(FILE);
+    const lateLoaded = video.onloadedmetadata;
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(await result).toBeUndefined();
+    video.duration = 50;
+    lateLoaded?.();
+    expect(revoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves undefined and revokes nothing when the URL cannot be created", async () => {
+    const { create, revoke } = env();
+    create.mockImplementation(() => { throw new Error("blocked"); });
+    expect(await readVideoDuration(FILE)).toBeUndefined();
+    expect(revoke).not.toHaveBeenCalled();
+  });
+
+  it("resolves undefined where there is no DOM", async () => {
+    expect(await readVideoDuration(FILE)).toBeUndefined();
   });
 });

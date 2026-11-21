@@ -16,13 +16,19 @@ import { createServiceRoleClient } from "@/lib/supabase-service-role";
 // for the hero-video swap RPCs. Server-only; the Bunny key never leaves it.
 
 /**
- * Two separate limits. HERO_VIDEO_MAX_BYTES is the FILE limit: it is checked on the declared size at start and is the
- * number the UI shows. HERO_VIDEO_MAX_STORED_BYTES is a storage CEILING on Bunny's total `storageSize` (original plus
- * renditions) at finalize. It only exists to stop a client that lied about its file size, so it is not user-facing.
- * It is 4x the file limit because renditions are capped at 720p (HERO_VIDEO_RESOLUTIONS), which keeps them well under
- * 3x the original even for long low-bitrate clips, so an honest upload never reaches it.
+ * Three separate limits.
+ * - HERO_VIDEO_MAX_BYTES is the FILE limit: it is checked on the declared size at start and is a number the UI shows.
+ * - HERO_VIDEO_MAX_SECONDS is the DURATION limit: it is checked on the declared duration at start (when the browser
+ *   could read it) and on Bunny's measured `length` at finalize, and the UI shows it too. It is what keeps an honest
+ *   upload under the stored ceiling: Bunny encodes each rendition at a fixed bitrate (720p 2,800, 480p 1,400,
+ *   360p 800, 240p 600 kbps, about 0.7 MB/s for the 240p-720p ladder HERO_VIDEO_RESOLUTIONS builds), so renditions
+ *   grow with duration, not with the size of the original. 600 s x 0.7 MB/s is about 420 MB of renditions, about
+ *   840 MB even if the MP4 fallback stores a second copy, plus a 500 MB original is about 1,340 MB, under 2,000 MB.
+ * - HERO_VIDEO_MAX_STORED_BYTES is a storage CEILING on Bunny's total `storageSize` (original plus renditions) at
+ *   finalize. It is not user-facing: it only catches a client that lied about its size or duration.
  */
 export const HERO_VIDEO_MAX_BYTES = 500 * 1024 * 1024;
+export const HERO_VIDEO_MAX_SECONDS = 600;
 export const HERO_VIDEO_MAX_STORED_BYTES = 4 * HERO_VIDEO_MAX_BYTES;
 export const HERO_VIDEO_REPLACES_PER_DAY = 5;
 const UPLOAD_WINDOW_SECONDS = 2 * 60 * 60;
@@ -46,6 +52,7 @@ export type HeroVideoState = {
   replacesUsedToday: number;
   replacesPerDay: number;
   maxBytes: number;
+  maxSeconds: number;
 };
 
 export type HeroVideoLive = { status: "live"; liveGuid: string; previousGuid: string; revisionBefore: string | null; revisionAfter: string | null };
@@ -79,16 +86,20 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
   const live = await readLive(clubId);
   const used = await onzio().rpc("hero_video_replaces_today", { p_club_id: clubId });
   if (used.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not read today's video replacement count.");
-  return { ...live, replacesUsedToday: Number(used.data ?? 0), replacesPerDay: HERO_VIDEO_REPLACES_PER_DAY, maxBytes: HERO_VIDEO_MAX_BYTES };
+  return { ...live, replacesUsedToday: Number(used.data ?? 0), replacesPerDay: HERO_VIDEO_REPLACES_PER_DAY, maxBytes: HERO_VIDEO_MAX_BYTES, maxSeconds: HERO_VIDEO_MAX_SECONDS };
 }
 
 export async function startHeroVideoUpload(
   clubId: string,
-  input: { fileName: string; fileSize: number; mimeType: string },
+  input: { fileName: string; fileSize: number; mimeType: string; durationSeconds?: number },
 ): Promise<{ videoGuid: string; upload: BunnyUploadAuthorization; maxBytes: number }> {
   if (!input.mimeType.startsWith("video/")) throw new HeroVideoError(415, "UNSUPPORTED_TYPE", "Choose a video file.");
   if (!(input.fileSize > 0) || input.fileSize > HERO_VIDEO_MAX_BYTES) {
     throw new HeroVideoError(413, "FILE_TOO_LARGE", "That video is larger than 500 MB. Choose a smaller file.");
+  }
+  // Declared by the browser, so it is only a courtesy check before a slot is used; finalize re-checks Bunny's `length`.
+  if (input.durationSeconds !== undefined && input.durationSeconds > HERO_VIDEO_MAX_SECONDS) {
+    throw new HeroVideoError(422, "VIDEO_TOO_LONG", `That video is longer than ${HERO_VIDEO_MAX_SECONDS / 60} minutes. Choose a shorter clip.`);
   }
   if (input.fileName.length > 200) throw new HeroVideoError(400, "INVALID_FILE_NAME", "That file name is too long.");
 
@@ -156,13 +167,20 @@ export async function finalizeHeroVideo(clubId: string, videoGuid: string): Prom
   if (!video || video.collectionId !== collectionId) {
     throw new HeroVideoError(404, "NOT_CLUB_VIDEO", "We could not find that upload. Start the upload again.");
   }
-  // The browser uploads straight to Bunny, so the declared size at start is not trustworthy. Bunny's storageSize is
-  // the original plus every rendition, so it is compared with the stored ceiling, not the 500 MB file limit. Storage
-  // only grows and the swap happens at the ready poll, so checking on every poll decides at the poll that matters.
+  // The browser uploads straight to Bunny, so the declared size and duration at start are not trustworthy. Bunny's
+  // `length` is what it measured, so it is the duration check that counts; 0 means Bunny has not read the file yet and
+  // the next poll decides. Bunny's storageSize is the original plus every rendition, so it is compared with the stored
+  // ceiling, not the 500 MB file limit. Both only grow or settle and the swap happens at the ready poll, so checking on
+  // every poll decides at the poll that matters.
+  if (video.length > HERO_VIDEO_MAX_SECONDS) {
+    await safeDeleteHeroVideo(clubId, collectionId, videoGuid);
+    await sweepStale(clubId, collectionId, videoGuid);
+    throw new HeroVideoError(422, "VIDEO_TOO_LONG", `That video is longer than ${HERO_VIDEO_MAX_SECONDS / 60} minutes, so it was removed. Use a shorter clip.`);
+  }
   if (video.storageSize > HERO_VIDEO_MAX_STORED_BYTES) {
     await safeDeleteHeroVideo(clubId, collectionId, videoGuid);
     await sweepStale(clubId, collectionId, videoGuid);
-    throw new HeroVideoError(413, "STORED_SIZE_TOO_LARGE", "Once processed, this video takes more than 2,000 MB on the video service, which is over the hero video limit. Use a shorter or smaller clip.");
+    throw new HeroVideoError(413, "STORED_SIZE_TOO_LARGE", `Once processed, this video takes more than 2,000 MB on the video service, so it was removed. Use a shorter clip (up to ${HERO_VIDEO_MAX_SECONDS / 60} minutes).`);
   }
   const readiness = await videoReadiness(video);
   if (readiness === "failed") {
