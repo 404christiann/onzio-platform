@@ -4293,15 +4293,15 @@ export type Database = {
       get_club_runtime_access: { Args: { p_club_id: string }; Returns: string }
       hero_video_event: {
         Args: {
-          p_cap?: number
+          p_cap: number
           p_club_id: string
-          p_collection_id?: string
-          p_deadline_ms?: number
+          p_collection_id: string
+          p_deadline_ms: number
           p_event: string
           p_expected: string[]
-          p_expected_live?: string
-          p_failure_code?: string
-          p_library_id?: string
+          p_expected_live: string
+          p_failure_code: string
+          p_library_id: string
           p_video_guid: string
         }
         Returns: {

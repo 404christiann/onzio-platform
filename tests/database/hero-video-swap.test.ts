@@ -361,6 +361,8 @@ describe("pending hero video", () => {
     const blocked = await event(WITH_ROW, GUID, "start", ["uploading", "preparing", "live", "failed", "abandoned"], { collection: "col-b" });
     expect(blocked.outcome).toBe("preparing");
     expect(await read()).toMatchObject({ video_guid: B, phase: "preparing" });
+    // The pending table is not granted to service_role. Rewind it as the table owner.
+    await db.query("reset role");
     await db.query("update onzio_private.hero_video_pending set phase='uploading', failure_code=null, landed_at=null, replace_counted=false, deadline_at=now() - interval '1 minute' where club_id=$1", [WITH_ROW]);
     await db.query("delete from onzio_private.hero_video_replace_counters where club_id=$1", [WITH_ROW]);
     expect((await event(WITH_ROW, B, "expire", ["uploading"])).outcome).toBe("abandoned");
