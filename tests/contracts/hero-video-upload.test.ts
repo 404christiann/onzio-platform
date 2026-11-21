@@ -247,6 +247,17 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY });
   });
 
+  it("returns to idle when the pending row is gone and this video did not go live", async () => {
+    const getStatus = vi.fn()
+      .mockResolvedValueOnce(STATUS)
+      .mockResolvedValueOnce(preparing)
+      .mockResolvedValue({ ...STATUS, pending: null });
+    const { controller, handlers } = harness({ getStatus });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState()).toMatchObject({ phase: "idle", status: { liveGuid: STATUS.liveGuid, pending: null }, error: null });
+  });
+
   it("moves to failed without a reload when GET reports a failure while preparing", async () => {
     const getStatus = vi.fn()
       .mockResolvedValueOnce(STATUS)

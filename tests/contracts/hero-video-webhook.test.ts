@@ -263,11 +263,14 @@ describe("hero video cron backstop", () => {
   it("clears a stale upload that never received any bytes and leaves a fresh one", async () => {
     const stale = "00000000-0000-4000-8000-00000000000b";
     const fresh = "00000000-0000-4000-8000-00000000000c";
+    const encoding = "00000000-0000-4000-8000-00000000000d";
     const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3600e3).toISOString();
     m.getVideo.mockImplementation(async (guid: string) => ({
-      guid, collectionId: COL, status: 0, availableResolutions: [], hasMP4Fallback: false,
+      guid, collectionId: COL,
+      status: guid === encoding ? 4 : 0,
+      availableResolutions: [], hasMP4Fallback: false,
       width: 0, height: 0, length: 0, encodeProgress: null,
-      storageSize: guid === stale || guid === fresh ? 0 : 1000,
+      storageSize: guid === stale || guid === fresh || guid === encoding ? 0 : 1000,
       dateUploaded: guid === fresh ? hoursAgo(1) : hoursAgo(3),
     }));
     m.videoReadiness.mockResolvedValue("processing");
@@ -276,12 +279,14 @@ describe("hero video cron backstop", () => {
       list_hero_video_pending: [
         { club_id: CLUB, video_guid: stale, collection_id: COL, phase: "uploading" },
         { club_id: CLUB, video_guid: fresh, collection_id: COL, phase: "uploading" },
+        { club_id: CLUB, video_guid: encoding, collection_id: COL, phase: "preparing" },
       ],
       settle_hero_video_pending: "ok",
     });
     const result = await runHeroVideoBackstop();
     expect(m.deleteVideo).toHaveBeenCalledWith(stale);
     expect(m.deleteVideo).not.toHaveBeenCalledWith(fresh);
+    expect(m.deleteVideo).not.toHaveBeenCalledWith(encoding);
     expect(m.rpc).toHaveBeenCalledWith("settle_hero_video_pending", expect.objectContaining({ p_video_guid: stale, p_phase: "clear" }));
     expect(m.rpc.mock.calls.some((call) => call[0] === "swap_hero_video")).toBe(false);
     expect(result.finalized).toBe(0);
