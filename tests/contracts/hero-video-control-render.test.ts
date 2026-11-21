@@ -295,3 +295,65 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(source).toContain("event.preventDefault()");
   });
 });
+
+describe("hero video control rendering: a later failure never shows the live file", () => {
+  /** A control whose own upload of hero.mp4 (10 MB) went live in this tab, so the row keeps that name and size. */
+  async function liveAfterUpload(extra: Partial<HeroVideoDeps> = {}) {
+    let status: Record<string, unknown> = STATUS;
+    const handlers: { current: Parameters<HeroVideoDeps["startUpload"]>[2] | null } = { current: null };
+    const controller = createHeroVideoController({
+      getStatus: async () => status, start: async () => ({ videoGuid: "new-guid", upload: {} as never, maxBytes: STATUS.maxBytes }), readDuration: async () => undefined,
+      markUploaded: async () => undefined, abandon: async () => undefined, startUpload: (_file, _ticket, h) => { handlers.current = h; return { abort: () => undefined }; },
+      refreshRevision: async () => "applied", sleep: NEVER, ...extra,
+    } as HeroVideoDeps);
+    await controller.load();
+    await controller.replace(file);
+    status = { ...STATUS, liveGuid: "new-guid", previousGuid: STATUS.liveGuid, replacesUsedToday: 3, pending: row("live"), completion: { videoGuid: "new-guid", revisionBefore: null, revisionAfter: null } };
+    handlers.current!.onSuccess();
+    for (let i = 0; i < 20 && controller.getState().phase !== "live"; i += 1) await settle();
+    const markup = html(editor(controller));
+    expect(markup).toContain(COMPLETED);
+    expect(markup).toContain('title="hero.mp4"');
+    expect(markup).toContain(">9.5 MB<");
+    return controller;
+  }
+
+  it.each([
+    ["too large", { name: "huge.mov", size: 600 * 1024 * 1024, type: "video/quicktime" }, "That video is too large. The limit is 500 MB. Choose a smaller file."],
+    ["not a video", { name: "notes.pdf", size: 2_000, type: "application/pdf" }, "That file is not a video we can use. Choose an MP4 or MOV video."],
+  ])("a second file rejected as %s shows the red row without the live file's name or size", async (_label, second, copy) => {
+    const controller = await liveAfterUpload();
+    await controller.replace(second as unknown as File);
+    const markup = html(editor(controller));
+    expect(markup).toContain('data-hero-row="failed"');
+    expect(markup).toContain(`<div role="alert" class="`);
+    expect(markup).toContain(`<p>${copy}</p>`);
+    expect(markup).toContain('title="Video">Video<');
+    expect(markup).not.toContain("hero.mp4");
+    expect(markup).not.toContain("9.5 MB");
+    expect(markup).not.toContain(COMPLETED);
+    controller.dispose();
+  });
+
+  it("huge.mov then notes.pdf in a row: neither red row names the live file", async () => {
+    const controller = await liveAfterUpload();
+    await controller.replace({ name: "huge.mov", size: 600 * 1024 * 1024, type: "video/quicktime" } as unknown as File);
+    await controller.replace({ name: "notes.pdf", size: 2_000, type: "application/pdf" } as unknown as File);
+    const markup = html(editor(controller));
+    expect(markup).toContain("That file is not a video we can use.");
+    expect(markup).not.toContain("hero.mp4");
+    expect(markup).not.toContain("9.5 MB");
+    controller.dispose();
+  });
+
+  it("a failed revert after a live upload shows the red row without the live file's name or size", async () => {
+    const controller = await liveAfterUpload({ revert: async () => { throw new Error("offline"); } });
+    await controller.revert();
+    const markup = html(editor(controller));
+    expect(markup).toContain('data-hero-row="failed"');
+    expect(markup).toContain("We couldn't reach the server.");
+    expect(markup).not.toContain("hero.mp4");
+    expect(markup).not.toContain("9.5 MB");
+    controller.dispose();
+  });
+});

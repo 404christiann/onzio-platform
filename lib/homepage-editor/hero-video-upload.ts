@@ -271,8 +271,8 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     async replace(file: File) {
       if (BLOCKS_REPLACE.has(state.phase) || !state.status) return;
       const { maxBytes, maxSeconds } = state.status;
-      if (!file.type.startsWith("video/")) return set({ phase: "error", error: { code: "UNSUPPORTED_TYPE", message: heroVideoErrorMessage("UNSUPPORTED_TYPE"), retry: null }, message: heroVideoErrorMessage("UNSUPPORTED_TYPE") });
-      if (file.size > maxBytes) return set({ phase: "error", error: { code: "FILE_TOO_LARGE", message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()), retry: null }, message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()) });
+      if (!file.type.startsWith("video/")) return set({ phase: "error", fileName: null, fileSize: null, error: { code: "UNSUPPORTED_TYPE", message: heroVideoErrorMessage("UNSUPPORTED_TYPE"), retry: null }, message: heroVideoErrorMessage("UNSUPPORTED_TYPE") });
+      if (file.size > maxBytes) return set({ phase: "error", fileName: null, fileSize: null, error: { code: "FILE_TOO_LARGE", message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()), retry: null }, message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()) });
       const token = ++run;
       set({ phase: "uploading", fileName: file.name, fileSize: file.size, progress: { sent: 0, total: file.size }, encodeProgress: null, error: null, revisionWarning: false, revisionConflict: false, message: HERO_VIDEO_UPLOADING_COPY });
       let durationSeconds: number | undefined;
@@ -329,7 +329,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       const status = state.status;
       if (BLOCKS_REPLACE.has(state.phase) || !status?.previousGuid) return;
       const token = ++run;
-      set({ phase: "reverting", error: null, revisionWarning: false, revisionConflict: false, message: "Going back to the previous video…" });
+      set({ phase: "reverting", fileName: null, fileSize: null, error: null, revisionWarning: false, revisionConflict: false, message: "Going back to the previous video…" });
       try {
         const live = await deps.revert(status.liveGuid, status.previousGuid);
         if (alive(token)) await complete(live, "revert");

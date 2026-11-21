@@ -354,6 +354,58 @@ test("Try again on a failed row opens the file picker", async ({ page }) => {
   await chooser;
 });
 
+test("after a video goes live, a rejected second file shows a red row without the live file's name or size", async ({ page }) => {
+  await openEditor(page);
+  await uploadToProcessing(page);
+  await postReadyWebhook(page);
+  await expect(page.getByText("Completed", { exact: true })).toBeVisible({ timeout: 12_000 });
+  await expect(page.getByText("hero.mp4", { exact: true })).toBeVisible();
+  await page.getByLabel("Choose hero video").setInputFiles({ name: "notes.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(1024, 1) });
+  const row = page.locator('[data-hero-row="failed"]');
+  await expect(row).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveText(/^That file is not a video we can use\./);
+  await expect(row.getByText("Video", { exact: true })).toBeVisible();
+  await expect(page.getByText("hero.mp4", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("0.1 MB", { exact: true })).toHaveCount(0);
+});
+
+test("while the editor is disabled the zone is aria-disabled, and a click or a drop starts nothing", async ({ page }) => {
+  await installRoutes(page);
+  let starts = 0;
+  page.on("request", (request) => { if (request.method() === "POST" && (request.postData() ?? "").includes('"start"')) starts += 1; });
+  let choosers = 0;
+  page.on("filechooser", () => { choosers += 1; });
+  // The status loads, so the controller itself would accept a file: only the zone's own guard can stop it.
+  await page.goto(`${origin}/tests/browser/fixtures/hero-video-completion/?disabled`);
+  await expect(page.getByText(CAP(10))).toBeVisible();
+  const zone = zoneOf(page);
+  await expect(zone).toBeDisabled();
+  await expect(zone).not.toHaveAttribute("disabled", "");
+  await zone.click({ force: true });
+  await zone.focus();
+  await page.keyboard.press("Enter");
+  const transfer = await page.evaluateHandle(() => {
+    const data = new DataTransfer();
+    data.items.add(new File([new Uint8Array(64 * 1024)], "blocked.mp4", { type: "video/mp4" }));
+    return data;
+  });
+  await zone.dispatchEvent("dragenter", { dataTransfer: transfer });
+  await zone.dispatchEvent("dragover", { dataTransfer: transfer });
+  await expect(zone).not.toHaveAttribute("data-dragging", "true");
+  const dropped = await zone.evaluate((element, data) => {
+    const event = new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: data as DataTransfer });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  }, transfer);
+  expect(dropped).toBe(true);
+  await page.waitForTimeout(500);
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0);
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
+  await expect(page).toHaveURL(/hero-video-completion/);
+  expect(starts).toBe(0);
+  expect(choosers).toBe(0);
+});
+
 test("one bar runs from upload through processing to live, never backwards, with one success state", async ({ page }) => {
   await openEditor(page);
   const samples = await recordProgress(page);

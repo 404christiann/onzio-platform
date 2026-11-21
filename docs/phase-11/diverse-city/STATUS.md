@@ -12,6 +12,9 @@
   - Failed: a red row with CircleAlert and the unchanged error copy, plus "Try again" (opens the picker) and the existing Dismiss.
   - Revert: the same flow and confirmation, restyled as a secondary button with Undo2.
   - The only controller change is display-only: `fileSize` was added next to `fileName`, and both are kept at live for a replace. The progress formula, phases, polling, nav guard, cancel and revert are untouched.
+- **Review fixes (PR 215):**
+  - **Medium:** once a video was live, a second file rejected in the browser (too large, or not a video) showed the red row with the live file's name and size. A failed revert did the same. The two reject paths and the start of a revert now clear `fileName`/`fileSize`. Four contract tests cover too large, not a video, huge.mov then notes.pdf, and failed revert; all four fail on the old code. A Playwright test covers notes.pdf after live.
+  - **Low:** a Playwright test with the editor disabled (`?disabled` in the fixture) proves the aria-disabled zone starts nothing on click, Enter or drop, and still cancels the drop. Removing the zone's drop guard makes the test fail.
 - **Verification:** final table in the PR body at the pushed head. Screenshots: `test-results/hero-video-completion/uploader-{idle,uploading,processing,completed,failed}-{desktop,375}.png`.
   - Admin-facing messages no longer say "hero video" (Christian, 2026-11-21: "drop hero"). For example, "Your current video is unchanged." and "The previous video is live again on your site." Screen-reader labels ("Choose hero video", "Hero video progress", "Current hero video preview") and server/route copy (frozen) are unchanged.
 - **Exact next step:** Christian reviews and merges the PR. No production gate is needed (no migration).
