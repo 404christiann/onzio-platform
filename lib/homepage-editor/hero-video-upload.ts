@@ -1,5 +1,5 @@
 import {
-  HeroVideoApiError, fetchHomepageRevision, getHeroVideoStatus, markHeroVideoUploaded, revertHeroVideo, startHeroVideoUpload,
+  abandonHeroVideoUpload, HeroVideoApiError, fetchHomepageRevision, getHeroVideoStatus, markHeroVideoUploaded, revertHeroVideo, startHeroVideoUpload,
   type HeroVideoLive, type HeroVideoStart, type HeroVideoStatus, type HeroVideoUploadTicket,
 } from "./hero-video-client";
 import { readVideoDuration } from "./hero-video-duration";
@@ -41,6 +41,8 @@ export type HeroVideoDeps = {
   readDuration: (file: File) => Promise<number | undefined>;
   /** Records that the bytes arrived. Display polling never finalizes the swap. */
   markUploaded: (videoGuid: string) => Promise<void>;
+  /** Drops a canceled or failed upload that never stored bytes. */
+  abandon: (videoGuid: string) => Promise<void>;
   revert: (expectedLiveGuid: string, targetGuid: string) => Promise<HeroVideoLive>;
   startUpload: (file: File, ticket: HeroVideoUploadTicket, handlers: TusUploadHandlers) => TusUploadHandle;
   /**
@@ -53,7 +55,7 @@ export type HeroVideoDeps = {
 
 export function defaultHeroVideoDeps(refreshRevision: HeroVideoDeps["refreshRevision"]): HeroVideoDeps {
   return {
-    getStatus: getHeroVideoStatus, start: startHeroVideoUpload, readDuration: readVideoDuration, markUploaded: markHeroVideoUploaded, revert: revertHeroVideo,
+    getStatus: getHeroVideoStatus, start: startHeroVideoUpload, readDuration: readVideoDuration, markUploaded: markHeroVideoUploaded, abandon: abandonHeroVideoUpload, revert: revertHeroVideo,
     startUpload: startTusUpload, refreshRevision, sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
   };
 }
@@ -120,6 +122,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
   let run = 0;
   let handle: TusUploadHandle | null = null;
   let pendingGuid: string | null = null;
+  let uploadGuid: string | null = null;
   let disposed = false;
 
   const set = (patch: Partial<HeroVideoState>) => { state = { ...state, ...patch }; listeners.forEach(listener => listener()); };
@@ -259,21 +262,26 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       if (durationSeconds !== undefined && durationSeconds > maxSeconds) return failWith("VIDEO_TOO_LONG", heroVideoErrorMessage("VIDEO_TOO_LONG"));
       let ticket: HeroVideoStart;
       try { ticket = await deps.start({ name: file.name, size: file.size, type: file.type, ...(durationSeconds === undefined ? {} : { durationSeconds }) }); } catch (error) { if (alive(token)) fail(error); return; }
-      if (!alive(token)) return;
+      if (!alive(token)) { void deps.abandon(ticket.videoGuid).catch(() => undefined); return; }
+      uploadGuid = ticket.videoGuid;
+      const abandonUpload = () => { const guid = uploadGuid; uploadGuid = null; if (guid) void deps.abandon(guid).catch(() => undefined); };
       handle = deps.startUpload(file, ticket.upload, {
         onProgress: (sent, total) => { if (alive(token)) set({ progress: { sent, total } }); },
         onError: () => {
           if (!alive(token)) return;
           handle = null;
+          abandonUpload();
           set({ phase: "error", progress: null, error: { code: "UPLOAD_FAILED", message: "The upload was interrupted and could not continue. Your current hero video is unchanged. Choose the file to try again.", retry: null }, message: "The upload failed. Your current hero video is unchanged." });
         },
         onSuccess: () => {
           if (!alive(token)) return;
           handle = null;
+          // Bytes are stored. Cancel and a tus error must not abandon this row.
+          uploadGuid = null;
+          set({ phase: "uploaded", progress: null, error: null, message: "" });
           void (async () => {
             try { await deps.markUploaded(ticket.videoGuid); } catch { /* the webhook and the cron still finish a video whose bytes arrived */ }
             if (!alive(token)) return;
-            set({ phase: "uploaded", progress: null, error: null, message: "" });
             await deps.sleep(HERO_VIDEO_UPLOAD_DONE_MS);
             if (!alive(token)) return;
             await watch(ticket.videoGuid, token);
@@ -286,6 +294,9 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       if (state.phase !== "uploading") return;
       run++;
       handle?.abort(); handle = null;
+      const guid = uploadGuid;
+      uploadGuid = null;
+      if (guid) void deps.abandon(guid).catch(() => undefined);
       set({ ...idle(state.status), message: "Upload canceled. Your current hero video is unchanged." });
     },
 

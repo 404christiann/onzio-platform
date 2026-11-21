@@ -49,8 +49,8 @@ function statusBody() {
     replacesPerDay: 5,
     maxBytes: 500 * 1024 * 1024,
     maxSeconds: 600,
-    pending: (store.phase === "preparing" || store.phase === "uploading") && store.guid
-      ? { videoGuid: store.guid, encodeProgress: store.phase === "preparing" ? store.encode : null, phase: store.phase }
+    pending: store.phase === "preparing" && store.guid
+      ? { videoGuid: store.guid, encodeProgress: store.encode, phase: "preparing" as const }
       : null,
     failure: store.phase === "failed" && store.failure ? { code: store.failure } : null,
     completion: store.phase === "live" && store.guid ? { videoGuid: store.guid, revisionBefore: "7", revisionAfter: "8" } : null,
@@ -240,7 +240,9 @@ test("closing the tab during the upload leaves the current video live", async ({
   const next = await page.context().newPage();
   await installRoutes(next);
   await next.goto(`${origin}/tests/browser/fixtures/hero-video-completion/`);
-  await expect(next.getByRole("button", { name: "Replace video" })).toBeVisible();
+  await expect(next.getByRole("button", { name: "Replace video" })).toBeEnabled();
+  await expect(next.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
+  await expect(next.getByText("Preparing your video. This usually takes a few minutes. You can keep editing.")).toHaveCount(0);
   await expect(next.getByText("Your new video is live.")).toHaveCount(0);
   await expect(next.locator("video")).toHaveAttribute("src", new RegExp(LIVE));
   expect(store.live).toBe(LIVE);

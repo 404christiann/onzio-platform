@@ -98,7 +98,15 @@ type PendingRow = {
   failure_code: string | null;
   revision_before: string | null;
   revision_after: string | null;
+  updated_at?: string;
 };
+
+/** Bunny's video status: 1 is Uploaded. 6 is UploadFailed and has not received a usable file. */
+function videoHasBytes(video: { status: number }) {
+  return video.status >= 1 && video.status !== 6;
+}
+
+const UPLOADING_LOOKUP_GRACE_MS = 30 * 60 * 1000;
 
 function rowOf<T>(data: unknown): T | null {
   const row = Array.isArray(data) ? data[0] : data;
@@ -123,6 +131,7 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
   if (used.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not read today's video replacement count.");
   const pendingRow = await readPending(clubId);
   let encodeProgress: number | null = null;
+  let pending: HeroVideoPending | null = null;
   if (pendingRow?.phase === "preparing") {
     try {
       const video = await getVideo(pendingRow.video_guid);
@@ -130,6 +139,9 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
     } catch {
       encodeProgress = null;
     }
+    pending = { videoGuid: pendingRow.video_guid, encodeProgress, phase: "preparing" };
+  } else if (pendingRow?.phase === "uploading") {
+    pending = await resolveUploadingRow(clubId, pendingRow);
   }
   return {
     ...live,
@@ -137,9 +149,7 @@ export async function getHeroVideoState(clubId: string): Promise<HeroVideoState>
     replacesPerDay: HERO_VIDEO_REPLACES_PER_DAY,
     maxBytes: HERO_VIDEO_MAX_BYTES,
     maxSeconds: HERO_VIDEO_MAX_SECONDS,
-    pending: pendingRow?.phase === "preparing" || pendingRow?.phase === "uploading"
-      ? { videoGuid: pendingRow.video_guid, encodeProgress, phase: pendingRow.phase }
-      : null,
+    pending,
     failure: pendingRow?.phase === "failed" && pendingRow.failure_code ? { code: pendingRow.failure_code } : null,
     completion: pendingRow?.phase === "live" ? {
       videoGuid: pendingRow.video_guid,
@@ -185,12 +195,42 @@ export async function startHeroVideoUpload(
   return { videoGuid, upload: tusUploadAuthorization(videoGuid, expire), maxBytes: HERO_VIDEO_MAX_BYTES };
 }
 
+/**
+ * An `uploading` row is still this club's upload only when the file has bytes.
+ * Otherwise it was canceled or never finished: drop it so the editor is not locked.
+ * If the lookup fails, keep a young row and hide an old one. Do not delete on a lookup error.
+ */
+async function resolveUploadingRow(clubId: string, row: PendingRow): Promise<HeroVideoPending | null> {
+  let video;
+  try {
+    video = await getVideo(row.video_guid);
+  } catch {
+    const updated = Date.parse(row.updated_at ?? "");
+    if (!Number.isNaN(updated) && Date.now() - updated < UPLOADING_LOOKUP_GRACE_MS) {
+      return { videoGuid: row.video_guid, encodeProgress: null, phase: "uploading" };
+    }
+    return null;
+  }
+  if (video && videoHasBytes(video)) return { videoGuid: row.video_guid, encodeProgress: null, phase: "uploading" };
+  if (video) await safeDeleteHeroVideo(clubId, row.collection_id, row.video_guid);
+  await settlePending(clubId, row.video_guid, "clear", null, null, null);
+  return null;
+}
+
 /** The bytes are on the host. GET can now say preparing even if this tab closes. */
 export async function markHeroVideoUploaded(clubId: string, videoGuid: string): Promise<void> {
   const outcome = await scalarRpc("record_hero_video_pending", {
     p_club_id: clubId, p_video_guid: videoGuid, p_collection_id: "", p_phase: "preparing",
   });
   if (outcome === "missing") throw new HeroVideoError(404, "NOT_CLUB_VIDEO", "We could not find that upload. Start the upload again.");
+}
+
+/** Drop an upload that was canceled or failed before any bytes were stored. A preparing row is left for the webhook. */
+export async function abandonHeroVideoUpload(clubId: string, videoGuid: string): Promise<void> {
+  const row = await readPending(clubId);
+  if (!row || row.video_guid !== videoGuid || row.phase !== "uploading") return;
+  await safeDeleteHeroVideo(clubId, row.collection_id, videoGuid);
+  await settlePending(clubId, videoGuid, "clear", null, null, null);
 }
 
 /**
@@ -226,7 +266,7 @@ export async function safeDeleteHeroVideo(clubId: string, collectionId: string, 
  */
 function staleZeroByte(video: { storageSize: number; status: number; dateUploaded: string }) {
   if (video.storageSize !== 0) return false;
-  if (video.status !== 0 && video.status !== 6) return false;
+  if (videoHasBytes(video)) return false;
   const uploaded = Date.parse(video.dateUploaded);
   return !Number.isNaN(uploaded) && Date.now() - uploaded > UPLOAD_WINDOW_SECONDS * 1000;
 }

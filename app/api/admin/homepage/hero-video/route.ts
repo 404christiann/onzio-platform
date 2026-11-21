@@ -6,6 +6,7 @@ import { isBunnyStreamConfigured } from "@/lib/bunny-stream";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
 import {
+  abandonHeroVideoUpload,
   finalizeHeroVideo,
   getHeroVideoState,
   HeroVideoError,
@@ -27,6 +28,7 @@ const bodySchema = z.discriminatedUnion("action", [
   }).strict(),
   z.object({ action: z.literal("finalize"), videoGuid: guid }).strict(),
   z.object({ action: z.literal("uploaded"), videoGuid: guid }).strict(),
+  z.object({ action: z.literal("abandon"), videoGuid: guid }).strict(),
   z.object({ action: z.literal("revert"), expectedLiveGuid: z.union([guid, z.literal("")]), targetGuid: guid }).strict(),
 ]);
 
@@ -91,6 +93,10 @@ async function handle(request: Request, mutation: boolean) {
     if (!payload) return json(await getHeroVideoState(club.id));
     if (payload.action === "revert") {
       return json(await revertHeroVideo(club.id, { expectedLiveGuid: payload.expectedLiveGuid, targetGuid: payload.targetGuid }));
+    }
+    if (payload.action === "abandon") {
+      await abandonHeroVideoUpload(club.id, payload.videoGuid);
+      return json({ status: "idle" });
     }
     if (!isBunnyStreamConfigured()) return failure("VIDEO_NOT_CONFIGURED", 503);
     if (payload.action === "start") {

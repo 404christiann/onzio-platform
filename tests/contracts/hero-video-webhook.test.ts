@@ -219,11 +219,39 @@ describe("pending hero video state", () => {
       read_hero_video_pending: [{ video_guid: NEW, collection_id: COL, phase: "uploading", failure_code: null, revision_before: null, revision_after: null }],
     });
     expect((await getHeroVideoState(CLUB)).pending).toEqual({ videoGuid: NEW, encodeProgress: null, phase: "uploading" });
+    expect(m.deleteVideo).not.toHaveBeenCalled();
     rpcByName({
       hero_video_replaces_today: 1,
       read_hero_video_pending: [{ video_guid: NEW, collection_id: COL, phase: "failed", failure_code: "VIDEO_FAILED", revision_before: null, revision_after: null }],
     });
     expect((await getHeroVideoState(CLUB)).failure).toEqual({ code: "VIDEO_FAILED" });
+  });
+
+  it("abandons an uploading row when the video has no bytes, so GET is idle", async () => {
+    m.maybeSingle.mockResolvedValue({ data: { presentation_config: { heroVideoGuid: OLD, previousHeroVideoGuid: "" } }, error: null });
+    m.getVideo.mockResolvedValue({ guid: NEW, collectionId: COL, status: 0, storageSize: 0, dateUploaded: new Date().toISOString(), encodeProgress: null, availableResolutions: [], hasMP4Fallback: false, width: 0, height: 0, length: 0 });
+    rpcByName({
+      hero_video_replaces_today: 1,
+      read_hero_video_pending: [{ video_guid: NEW, collection_id: COL, phase: "uploading", failure_code: null, revision_before: null, revision_after: null, updated_at: new Date().toISOString() }],
+      settle_hero_video_pending: "ok",
+    });
+    expect((await getHeroVideoState(CLUB)).pending).toBeNull();
+    expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
+    expect(m.rpc).toHaveBeenCalledWith("settle_hero_video_pending", expect.objectContaining({ p_video_guid: NEW, p_phase: "clear" }));
+  });
+
+  it("keeps a young uploading row when the video lookup fails, and hides an old one without deleting it", async () => {
+    m.getVideo.mockRejectedValue(new Error("down"));
+    const young = { video_guid: NEW, collection_id: COL, phase: "uploading", failure_code: null, revision_before: null, revision_after: null, updated_at: new Date().toISOString() };
+    rpcByName({ hero_video_replaces_today: 0, read_hero_video_pending: [young] });
+    expect((await getHeroVideoState(CLUB)).pending).toEqual({ videoGuid: NEW, encodeProgress: null, phase: "uploading" });
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+    rpcByName({
+      hero_video_replaces_today: 0,
+      read_hero_video_pending: [{ ...young, updated_at: new Date(Date.now() - 31 * 60 * 1000).toISOString() }],
+    });
+    expect((await getHeroVideoState(CLUB)).pending).toBeNull();
+    expect(m.deleteVideo).not.toHaveBeenCalled();
   });
 });
 

@@ -33,6 +33,7 @@ function harness(overrides: Partial<HeroVideoDeps> = {}) {
     start: vi.fn(async () => TICKET),
     readDuration: vi.fn(async () => undefined),
     markUploaded: vi.fn(async () => undefined),
+    abandon: vi.fn(async () => undefined),
     revert: vi.fn(async () => ({ status: "live" as const, liveGuid: "prev-1", previousGuid: "live-1", ...RANGE })),
     startUpload: vi.fn((_file, _ticket, h) => { handlers.current = h; return { abort }; }),
     refreshRevision: vi.fn(async () => "applied" as const),
@@ -171,9 +172,10 @@ describe("hero video control: upload, processing and going live", () => {
   });
 
   it("cancel aborts the upload, keeps the current video and ignores late callbacks", async () => {
-    const { controller, handlers, abort } = await uploading();
+    const { controller, handlers, abort, deps } = await uploading();
     controller.cancel();
     expect(abort).toHaveBeenCalled();
+    expect(deps.abandon).toHaveBeenCalledWith("new-guid");
     expect(controller.getState()).toMatchObject({ phase: "idle", status: STATUS, error: null });
     handlers.current!.onError(new Error("aborted"));
     handlers.current!.onSuccess();
@@ -247,19 +249,41 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY });
   });
 
-  it("stays preparing when the upload-finished call fails and GET still has this upload", async () => {
+  it("stays preparing when the finish call fails after the bytes landed, then goes live", async () => {
     const uploadingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "uploading" as const } };
-    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(uploadingRow);
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValueOnce(uploadingRow).mockResolvedValue(liveStatus);
     const markUploaded = vi.fn(async () => { throw new HeroVideoApiError("NETWORK", "offline", 0); });
-    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise<void>(() => undefined); });
-    const { controller, handlers } = harness({ getStatus, markUploaded, sleep });
+    const phases: string[] = [];
+    const { controller, handlers } = harness({ getStatus, markUploaded });
+    controller.subscribe(() => phases.push(controller.getState().phase));
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
     expect(markUploaded).toHaveBeenCalledWith("new-guid");
-    expect(controller.getState().phase).toBe("preparing");
-    expect(controller.getState().message).toBe(HERO_VIDEO_PREPARING_COPY);
+    expect(phases).toContain("preparing");
+    expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY });
     expect(controller.getState().message).not.toMatch(/bunny|video service/i);
+  });
+
+  it("does not go idle before this tab has seen the row as preparing", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, pending: null });
+    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise<void>(() => undefined); });
+    const { controller, handlers } = harness({ getStatus, sleep });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState().phase).toBe("preparing");
     controller.dispose();
+  });
+
+  it("an abandoned upload with no bytes leaves Replace and Revert enabled", async () => {
+    const { controller, deps } = harness({ getStatus: vi.fn(async () => ({ ...STATUS, pending: null })) });
+    await controller.load();
+    expect(controller.getState().phase).toBe("idle");
+    await controller.revert();
+    expect(deps.revert).toHaveBeenCalled();
+    const again = harness({ getStatus: vi.fn(async () => ({ ...STATUS, pending: null })) });
+    await again.controller.load();
+    await again.controller.replace(video());
+    expect(again.deps.start).toHaveBeenCalled();
   });
 
   it("returns to idle when the pending row is gone and this video did not go live", async () => {

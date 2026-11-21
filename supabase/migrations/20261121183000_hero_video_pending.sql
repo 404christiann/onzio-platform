@@ -88,9 +88,9 @@ begin
 end $$;
 
 create function onzio_private.read_hero_video_pending_core(p_club_id uuid)
-returns table(video_guid text, collection_id text, phase text, failure_code text, revision_before text, revision_after text)
+returns table(video_guid text, collection_id text, phase text, failure_code text, revision_before text, revision_after text, updated_at timestamptz)
 language sql stable security definer set search_path = '' as $$
-  select p.video_guid, p.collection_id, p.phase, p.failure_code, p.revision_before, p.revision_after
+  select p.video_guid, p.collection_id, p.phase, p.failure_code, p.revision_before, p.revision_after, p.updated_at
     from onzio_private.hero_video_pending p
    where p.club_id = p_club_id;
 $$;
@@ -173,7 +173,7 @@ language sql security invoker set search_path = '' as $$
 $$;
 
 create function onzio.read_hero_video_pending(p_club_id uuid)
-returns table(video_guid text, collection_id text, phase text, failure_code text, revision_before text, revision_after text)
+returns table(video_guid text, collection_id text, phase text, failure_code text, revision_before text, revision_after text, updated_at timestamptz)
 language sql stable security invoker set search_path = '' as $$
   select * from onzio_private.read_hero_video_pending_core(p_club_id);
 $$;

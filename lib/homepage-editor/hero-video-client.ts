@@ -68,6 +68,11 @@ export async function markHeroVideoUploaded(videoGuid: string): Promise<void> {
   await post({ action: "uploaded", videoGuid });
 }
 
+/** Drops an upload that was canceled or failed before the bytes were stored. */
+export async function abandonHeroVideoUpload(videoGuid: string): Promise<void> {
+  await post({ action: "abandon", videoGuid });
+}
+
 /** 202 means the video is still being prepared; 200 means the swap is live. The browser does not need this to go live. */
 export async function finalizeHeroVideo(videoGuid: string): Promise<HeroVideoFinalize> {
   const { body, status } = await post({ action: "finalize", videoGuid });
