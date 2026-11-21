@@ -1,3 +1,7 @@
+## 2026-11-21 - RC-HERO-VIDEO-READINESS
+
+- Readiness from Bunny's Stream API instead of an anonymous CDN HEAD (prod 403 root cause), one progress bar from upload to live, daily cap 10, no migration. Branch `claude/rc-hero-video-readiness`, PR open, not merged. Record: `STATUS.md` (RC-HERO-VIDEO-READINESS).
+
 ## 2026-11-21 - RC-HERO-VIDEO-COMPLETION: hero video goes live without the admin tab
 
 - **Status:** `in_progress`, branch `claude/rc-hero-video-completion` from main `84de706`. No pull request from this session. Migration `20261121183000_hero_video_pending.sql` is local-file only. Record: `STATUS.md` (RC-HERO-VIDEO-COMPLETION).

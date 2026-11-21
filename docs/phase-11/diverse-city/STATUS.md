@@ -1,5 +1,20 @@
 # Diverse City FC Status
 
+## 2026-11-21 - RC-HERO-VIDEO-READINESS: hero readiness from Bunny's API, one progress bar, cap 10
+
+- **Agent / package:** Claude Code (Opus coordinating, Sonnet workers), `RC-HERO-VIDEO-READINESS`, branch `claude/rc-hero-video-readiness` from main `c31939d`.
+- **Status:** `in_progress`, committed and pushed, PR open. Not merged. No migration.
+- **Root cause (confirmed in prod 2026-11-21):** readiness ended with an anonymous `HEAD` on `https://vz-dab9684b-901.b-cdn.net/<guid>/play_720p.mp4`. Library 723074 has CDN security on, so it answered `HTTP/2 403` (pull zone 6293982). Every Finished webhook answered 503 (11:45:22, 11:45:54, 11:47:58 PT) and the cron used the same check, so uploads never went live. Bunny security settings are unchanged.
+- **Completed:**
+  - Readiness comes from Bunny's Stream API only (`GET /library/723074/videos/{guid}`, existing server key): ready = video `status` 4 (Finished; video status 3 is Transcoding) and `720p` in `availableResolutions` and `hasMP4Fallback`. Typed reasons: `encoding`, `mp4_missing`, `resolution_missing`, `failed`. The webhook and the cron share `checkReadiness`. 503 only while encoding, and for `mp4_missing` during a 15-minute grace after the bytes landed (`HERO_VIDEO_MP4_GRACE_MS`); after the grace `mp4_missing`, and at once `resolution_missing`/`failed`, reject the row (`MP4_MISSING`, `RESOLUTION_TOO_LOW`, `VIDEO_FAILED`) and delete the video through the existing guards. No CDN request remains.
+  - One progress bar from start to live: "Uploading..." fills 0-40% from upload bytes, "Processing..." fills 40-100% from `encodeProgress`, "Your new video is live." with a check is the only success state. After the upload, "You can leave this page; we'll finish in the background." Upload-phase nav guard kept. Any readiness failure or overdue upload shows "We couldn't finish this video. Try again or use a different file." with Replace enabled. The post-upload green check moment is removed.
+  - Daily cap 5 to 10 (`HERO_VIDEO_REPLACES_PER_DAY`). The SQL takes the cap as a parameter bounded 1..50, so no migration.
+- **Review Lows (fixed):** a failed row whose file is the problem (`VIDEO_TOO_LONG`, `RESOLUTION_TOO_LOW`, `STORED_SIZE_TOO_LARGE`) shows a specific message so the same bad file is not re-uploaded; `mp4_missing` gets the 15-minute grace above instead of an immediate reject.
+- **Open decisions:** `abandoned` rows show idle, not the failure copy; the cron leaves status 6 to the deadline expire.
+- **Risk to check:** the homepage and admin preview load these MP4s in the browser from the same CDN. If CDN security does not allow `onzio-platform.vercel.app`, visitors may get 403 on a newly swapped video.
+- **Verification:** final table in the PR body at the pushed head.
+- **Exact next step:** onzio-bot review; Christian merges. After deploy: show Rose City's replace counter row for today, then reset it on his "go".
+
 ## 2026-11-21 - RC-HERO-VIDEO-COMPLETION: hero video goes live without the admin tab
 
 - **Finish pass (2026-11-21, Claude Code: Opus coordinating, Sonnet workers), branch `claude/rc-hero-video-completion`:**

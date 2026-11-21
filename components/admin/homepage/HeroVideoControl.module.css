@@ -20,11 +20,11 @@
   display: grid;
   gap: 6px;
   min-width: 0;
-  max-width: 28rem;
 }
 
 .track {
   height: 8px;
+  max-width: 28rem;
   overflow: hidden;
   border-radius: 999px;
   background: hsl(var(--secondary));
@@ -38,30 +38,8 @@
   transition: width .2s ease-out;
 }
 
-.progressText {
-  color: hsl(var(--muted-foreground));
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .bar { transition: none; }
-}
-
-.working {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  height: 16px;
-  margin-top: 4px;
-}
-
-.working span {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: hsl(var(--primary));
-  opacity: 0.85;
 }
 
 .status {
@@ -89,13 +67,10 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .working span {
-    opacity: 0.35;
-    animation: heroWork 1.4s var(--admin-motion-ease-out, ease-out) infinite;
+  /* While processing, the filled part breathes so a bar that waits for the next percent still reads as working. */
+  .bar[data-working] {
+    animation: heroBarPulse 1.6s ease-in-out infinite;
   }
-
-  .working span:nth-child(2) { animation-delay: 160ms; }
-  .working span:nth-child(3) { animation-delay: 320ms; }
 
   .status:has(.check) {
     animation: heroPop var(--admin-motion-save-pop, 320ms) var(--admin-motion-ease-out, ease-out);
@@ -107,16 +82,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .working span,
   .status:has(.check),
   .check path {
     animation: none;
   }
 }
 
-@keyframes heroWork {
-  0%, 100% { transform: translateY(0); opacity: 0.35; }
-  40% { transform: translateY(-3px); opacity: 1; }
+@keyframes heroBarPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes heroPop {

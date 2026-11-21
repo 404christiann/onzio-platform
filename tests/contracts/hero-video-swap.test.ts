@@ -4,23 +4,25 @@ import { DIVERSE_CITY_HERO_VIDEO, DIVERSE_CITY_STORY_VIDEO } from "@/lib/bunny-v
 const m = vi.hoisted(() => ({
   rpc: vi.fn(), maybeSingle: vi.fn(),
   findOrCreateCollection: vi.fn(), createVideo: vi.fn(), getVideo: vi.fn(), listCollectionVideos: vi.fn(),
-  deleteVideo: vi.fn(), tusUploadAuthorization: vi.fn(), videoReadiness: vi.fn(),
+  deleteVideo: vi.fn(), tusUploadAuthorization: vi.fn(),
 }));
 vi.mock("@/lib/supabase-service-role", () => ({
   createServiceRoleClient: () => ({
     schema: () => ({ rpc: m.rpc, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: m.maybeSingle }) }) }) }),
   }),
 }));
-vi.mock("@/lib/bunny-stream", () => ({
-  BUNNY_STREAM_LIBRARY_ID: "723074",
+// The readiness classifier is the real one: only the Bunny HTTP calls are replaced.
+vi.mock("@/lib/bunny-stream", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/bunny-stream")>()),
   findOrCreateCollection: m.findOrCreateCollection, createVideo: m.createVideo, getVideo: m.getVideo,
   listCollectionVideos: m.listCollectionVideos, deleteVideo: m.deleteVideo,
-  tusUploadAuthorization: m.tusUploadAuthorization, videoReadiness: m.videoReadiness,
+  tusUploadAuthorization: m.tusUploadAuthorization,
 }));
 
-import { HERO_VIDEO_LIVE_NOTICE_MS } from "@/lib/hero-video-lifecycle";
+import { BunnyStreamError } from "@/lib/bunny-stream";
+import { HERO_VIDEO_LIVE_NOTICE_MS, HERO_VIDEO_MP4_GRACE_MS } from "@/lib/hero-video-lifecycle";
 import {
-  checkReadiness, getHeroVideoState, HERO_VIDEO_MAX_BYTES, HERO_VIDEO_MAX_SECONDS, HERO_VIDEO_MAX_STORED_BYTES, HeroVideoError, revertHeroVideo,
+  checkReadiness, getHeroVideoState, HERO_VIDEO_MAX_BYTES, HERO_VIDEO_MAX_SECONDS, HERO_VIDEO_MAX_STORED_BYTES, HERO_VIDEO_REPLACES_PER_DAY, HeroVideoError, revertHeroVideo,
   safeDeleteHeroVideo, startHeroVideoUpload,
 } from "@/lib/hero-video-swap";
 
@@ -40,7 +42,6 @@ beforeEach(() => {
   m.createVideo.mockResolvedValue("new-guid");
   m.tusUploadAuthorization.mockReturnValue({ endpoint: "e", libraryId: "723074", videoId: "new-guid", expire: 1, signature: "s" });
   m.getVideo.mockImplementation(async (guid: string) => ({ guid, collectionId: COL, status: 4, availableResolutions: ["720p"], hasMP4Fallback: true, width: 1, height: 1 }));
-  m.videoReadiness.mockResolvedValue("ready");
   m.listCollectionVideos.mockResolvedValue([]);
   m.deleteVideo.mockResolvedValue(true);
   state();
@@ -81,19 +82,21 @@ describe("startHeroVideoUpload", () => {
     expect(r.videoGuid).toBe("new-guid");
   });
   it("answers 429 at the daily cap and creates nothing", async () => {
-    rpcByName({ hero_video_replaces_today: 5 });
+    rpcByName({ hero_video_replaces_today: HERO_VIDEO_REPLACES_PER_DAY });
     const e = await err(startHeroVideoUpload(club, ok));
     expect([e.status, e.code]).toEqual([429, "DAILY_LIMIT"]);
+    expect(e.message).toBe(`You have reached today's limit of ${HERO_VIDEO_REPLACES_PER_DAY} video replacements. Try again tomorrow.`);
     expect(m.createVideo).not.toHaveBeenCalled();
     expect(m.rpc.mock.calls.filter((call) => call[0] === "consume_hero_video_replace")).toEqual([]);
   });
   it("answers 429 when the database says at_cap although the pre-check passed, and deletes only the unused guid", async () => {
     rpcByName({
-      hero_video_replaces_today: 4,
-      hero_video_event: [{ outcome: "at_cap", delete_guid: "new-guid", phase: null, replace_counted: false, revision_before: null, revision_after: null, used: 5, collection_id: COL }],
+      hero_video_replaces_today: HERO_VIDEO_REPLACES_PER_DAY - 1,
+      hero_video_event: [{ outcome: "at_cap", delete_guid: "new-guid", phase: null, replace_counted: false, revision_before: null, revision_after: null, used: HERO_VIDEO_REPLACES_PER_DAY, collection_id: COL }],
     });
     const e = await err(startHeroVideoUpload(club, ok));
     expect([e.status, e.code]).toEqual([429, "DAILY_LIMIT"]);
+    expect(e.message).toContain(`limit of ${HERO_VIDEO_REPLACES_PER_DAY} video replacements`);
     expect(m.deleteVideo).toHaveBeenCalledTimes(1);
     expect(m.deleteVideo).toHaveBeenCalledWith("new-guid");
     expect(m.tusUploadAuthorization).not.toHaveBeenCalled();
@@ -134,7 +137,7 @@ describe("getHeroVideoState", () => {
     state(OLD, PREV);
     rpcByName({ hero_video_replaces_today: 2 });
     expect(await getHeroVideoState(club)).toEqual({
-      liveGuid: OLD, previousGuid: PREV, replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 500 * 1024 * 1024, maxSeconds: 600,
+      liveGuid: OLD, previousGuid: PREV, replacesUsedToday: 2, replacesPerDay: HERO_VIDEO_REPLACES_PER_DAY, maxBytes: 500 * 1024 * 1024, maxSeconds: 600,
       pending: null, failure: null, completion: null,
     });
   });
@@ -195,7 +198,7 @@ describe("startHeroVideoUpload does not sweep", () => {
   });
   it("does not sweep when validation or the daily cap rejects the request", async () => {
     await err(startHeroVideoUpload(club, { ...ok, fileSize: 0 }));
-    rpcByName({ hero_video_replaces_today: 5 });
+    rpcByName({ hero_video_replaces_today: HERO_VIDEO_REPLACES_PER_DAY });
     await err(startHeroVideoUpload(club, ok));
     expect(m.listCollectionVideos).not.toHaveBeenCalled();
     expect(m.rpc.mock.calls.filter((call) => call[0] === "consume_hero_video_replace")).toEqual([]);
@@ -229,8 +232,15 @@ describe("safeDeleteHeroVideo", () => {
 
 describe("checkReadiness", () => {
   const bunny = (over: Record<string, unknown> = {}) => m.getVideo.mockImplementation(async (guid: string) => ({
-    guid, collectionId: COL, status: 4, availableResolutions: ["720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 1000, length: 30, ...over,
+    guid, collectionId: COL, status: 4, availableResolutions: ["240p", "360p", "480p", "720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 1000, length: 30, ...over,
   }));
+  // Readiness is decided from the video object the Stream API returned. Nothing here may reach a CDN host.
+  const fetchStub = vi.fn();
+  beforeEach(() => { fetchStub.mockReset(); vi.stubGlobal("fetch", fetchStub); });
+  afterEach(() => {
+    expect(fetchStub).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
   it("rejects a video that is not in the club collection and deletes nothing", async () => {
     m.getVideo.mockResolvedValue({ guid: NEW, collectionId: "other", length: 1, storageSize: 1 });
     expect(await checkReadiness(club, NEW)).toEqual({ status: "rejected", code: "NOT_CLUB_VIDEO" });
@@ -239,18 +249,97 @@ describe("checkReadiness", () => {
     expect(m.deleteVideo).not.toHaveBeenCalled();
     expect(m.rpc).not.toHaveBeenCalled();
   });
-  it("reports processing without writing or deleting", async () => {
+  it("is ready for a finished video with a 720p rendition and an MP4 fallback, from one Stream API read", async () => {
     bunny();
-    m.videoReadiness.mockResolvedValue("processing");
+    expect(await checkReadiness(club, NEW)).toEqual({ status: "ready" });
+    expect(m.getVideo).toHaveBeenCalledTimes(1);
+    expect(m.getVideo).toHaveBeenCalledWith(NEW);
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+    expect(m.rpc).not.toHaveBeenCalled();
+  });
+  it.each([[0], [1], [2], [3], [7], [8]])("reports processing at video status %s without writing or deleting", async (status) => {
+    bunny({ status });
     expect(await checkReadiness(club, NEW)).toEqual({ status: "processing" });
     expect(m.deleteVideo).not.toHaveBeenCalled();
     expect(m.rpc).not.toHaveBeenCalled();
   });
-  it.each([["failed", "VIDEO_FAILED"], ["resolution_too_low", "RESOLUTION_TOO_LOW"]])("%s rejects without deleting", async (readiness, code) => {
-    bunny();
-    m.videoReadiness.mockResolvedValue(readiness);
+  it("does not treat video status 3 (Transcoding) as finished, although the webhook's Finished is 3", async () => {
+    bunny({ status: 3 });
+    expect(await checkReadiness(club, NEW)).toEqual({ status: "processing" });
+  });
+  it.each([
+    ["Error (5)", { status: 5 }, "VIDEO_FAILED"],
+    ["UploadFailed (6)", { status: 6 }, "VIDEO_FAILED"],
+    ["Finished without a 720p rendition", { availableResolutions: ["240p", "360p", "480p"] }, "RESOLUTION_TOO_LOW"],
+    ["Finished with 720p but no MP4 fallback", { hasMP4Fallback: false }, "MP4_MISSING"],
+  ])("%s rejects with %s and deletes nothing itself", async (_label, over, code) => {
+    bunny(over);
     expect(await checkReadiness(club, NEW)).toEqual({ status: "rejected", code });
     expect(m.deleteVideo).not.toHaveBeenCalled();
+    expect(m.rpc).not.toHaveBeenCalled();
+  });
+  describe("MP4 grace: Finished before Bunny reports the MP4 copy", () => {
+    const NOW = Date.parse("2026-11-21T12:00:00.000Z");
+    const ago = (ms: number) => new Date(NOW - ms).toISOString();
+    const MIN = 60_000;
+    it("a video landed 1 minute ago with no MP4 fallback is still processing, and nothing is written or deleted", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "processing" });
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+      expect(m.rpc).not.toHaveBeenCalled();
+    });
+    it("one millisecond inside the grace is still processing, and exactly at 15 minutes it rejects with MP4_MISSING", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(HERO_VIDEO_MP4_GRACE_MS).toBe(15 * MIN);
+      expect(await checkReadiness(club, NEW, { landedAt: ago(HERO_VIDEO_MP4_GRACE_MS - 1) }, NOW)).toEqual({ status: "processing" });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(HERO_VIDEO_MP4_GRACE_MS) }, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+    });
+    it("a video landed 16 minutes ago with no MP4 fallback rejects with MP4_MISSING and deletes nothing itself", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(16 * MIN) }, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+      expect(m.deleteVideo).not.toHaveBeenCalled();
+      expect(m.rpc).not.toHaveBeenCalled();
+    });
+    it("uses started_at when landed_at is missing, and landed_at when both are there", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: null, startedAt: ago(MIN) }, NOW)).toEqual({ status: "processing" });
+      expect(await checkReadiness(club, NEW, { landedAt: undefined, startedAt: ago(16 * MIN) }, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN), startedAt: ago(3 * 60 * MIN) }, NOW)).toEqual({ status: "processing" });
+    });
+    it("rejects at once when neither time is known, so a row is never retried forever", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, {}, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+      expect(await checkReadiness(club, NEW, { landedAt: null, startedAt: null }, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+      expect(await checkReadiness(club, NEW, undefined, NOW)).toEqual({ status: "rejected", code: "MP4_MISSING" });
+    });
+    it("goes ready when the MP4 copy appears inside the grace", async () => {
+      bunny({ hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "processing" });
+      bunny({ hasMP4Fallback: true });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(2 * MIN) }, NOW)).toEqual({ status: "ready" });
+    });
+    it.each([
+      ["a missing 720p rendition", { availableResolutions: ["240p", "360p", "480p"] }, "RESOLUTION_TOO_LOW"],
+      ["Error (5)", { status: 5 }, "VIDEO_FAILED"],
+      ["UploadFailed (6)", { status: 6 }, "VIDEO_FAILED"],
+    ])("%s still rejects at once, grace or not", async (_label, over, code) => {
+      bunny({ ...over, hasMP4Fallback: false });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "rejected", code });
+    });
+    it("the grace does not soften the length or stored-size ceilings", async () => {
+      bunny({ hasMP4Fallback: false, length: 601 });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "rejected", code: "VIDEO_TOO_LONG" });
+      bunny({ hasMP4Fallback: false, storageSize: HERO_VIDEO_MAX_STORED_BYTES + 1 });
+      expect(await checkReadiness(club, NEW, { landedAt: ago(MIN) }, NOW)).toEqual({ status: "rejected", code: "STORED_SIZE_TOO_LARGE" });
+    });
+  });
+  it("lets a Stream API error through, so the caller answers 5xx or counts a failure", async () => {
+    m.getVideo.mockRejectedValue(new BunnyStreamError(500, "video lookup"));
+    const e = await err(checkReadiness(club, NEW));
+    expect(e).toBeInstanceOf(BunnyStreamError);
+    expect((e as unknown as BunnyStreamError).status).toBe(500);
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+    expect(m.rpc).not.toHaveBeenCalled();
   });
   describe("stored size ceiling", () => {
     const FILE_LIMIT = 500 * 1024 * 1024;

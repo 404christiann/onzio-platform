@@ -9,17 +9,26 @@ export const UPLOAD_GRACE_MS = 15 * 60 * 1000;
 export const PREPARE_DEADLINE_MS = 2 * 60 * 60 * 1000;
 export const ORPHAN_SWEEP_MS = 24 * 60 * 60 * 1000;
 export const HERO_VIDEO_POLL_MS = 5_000;
-export const HERO_VIDEO_UPLOAD_DONE_MS = 1_200;
 export const HERO_VIDEO_LIVE_NOTICE_MS = 10 * 60 * 1000;
+/**
+ * How long a video that Bunny reports Finished (with 720p) may still lack its MP4 copy before that
+ * counts as a failure. Bunny should set hasMP4Fallback with Finished, but if it flips a moment later,
+ * rejecting at once would delete a good video. Inside this window the webhook answers 503 so Bunny
+ * retries (30 s, 2 min, 10 min, 30 min), and the cron leaves the row alone. Counted from landed_at.
+ */
+export const HERO_VIDEO_MP4_GRACE_MS = 15 * 60 * 1000;
 
 export const HERO_VIDEO_MAX_BYTES = 500 * 1024 * 1024;
 export const HERO_VIDEO_MAX_SECONDS = 600;
 export const HERO_VIDEO_MAX_STORED_BYTES = 4 * HERO_VIDEO_MAX_BYTES;
-export const HERO_VIDEO_REPLACES_PER_DAY = 5;
+export const HERO_VIDEO_REPLACES_PER_DAY = 10;
 
-export const HERO_VIDEO_UPLOADING_COPY = "Uploading your video. Keep this page open until the upload finishes.";
-export const HERO_VIDEO_PREPARING_COPY = "Preparing your video. This usually takes a few minutes. You can keep editing.";
+export const HERO_VIDEO_UPLOADING_COPY = "Uploading…";
+export const HERO_VIDEO_KEEP_OPEN_COPY = "Keep this page open until the upload finishes.";
+export const HERO_VIDEO_PROCESSING_COPY = "Processing…";
+export const HERO_VIDEO_LEAVE_COPY = "You can leave this page; we'll finish in the background.";
 export const HERO_VIDEO_LIVE_COPY = "Your new video is live.";
+export const HERO_VIDEO_FAILED_COPY = "We couldn't finish this video. Try again or use a different file.";
 export const HERO_VIDEO_OTHER_UPLOAD_NOTE = "An upload is in progress in another window, or it was interrupted. Choosing a new video replaces it.";
 export const HERO_VIDEO_SUPERSEDED_COPY = "A newer upload replaced this one.";
 
@@ -43,6 +52,17 @@ export function uploadDeadlineMs() {
 export function isHeroLiveNoticeFresh(updatedAt: string | null | undefined, now: number) {
   const updated = Date.parse(updatedAt ?? "");
   return !Number.isNaN(updated) && now - updated < HERO_VIDEO_LIVE_NOTICE_MS;
+}
+
+/**
+ * True while a missing MP4 copy may still be on its way: less than HERO_VIDEO_MP4_GRACE_MS since the
+ * bytes landed, so the 15th minute itself is already past it. Counted from landed_at, then from
+ * started_at when landed_at is missing or unreadable. With neither time the grace is closed, so a
+ * row can never be retried forever.
+ */
+export function isHeroMp4GraceOpen(times: { landedAt?: string | null; startedAt?: string | null }, now: number) {
+  const since = [times.landedAt, times.startedAt].map((value) => Date.parse(value ?? "")).find((time) => !Number.isNaN(time));
+  return since !== undefined && now - since < HERO_VIDEO_MP4_GRACE_MS;
 }
 
 /**

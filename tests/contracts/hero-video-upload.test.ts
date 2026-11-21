@@ -6,9 +6,11 @@ import { createHomepageEditorState, reduceHomepageEditor, type HomepageEditorSta
 import { defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { HeroVideoApiError, abandonHeroVideoUpload, fetchHomepageRevision, markHeroVideoUploaded, startHeroVideoUpload, type HeroVideoStatus } from "@/lib/homepage-editor/hero-video-client";
 import { readVideoDuration } from "@/lib/homepage-editor/hero-video-duration";
+import { HERO_VIDEO_REPLACES_PER_DAY } from "@/lib/hero-video-lifecycle";
 import {
-  HERO_VIDEO_LIVE_COPY, HERO_VIDEO_OTHER_UPLOAD_NOTE, HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_SUPERSEDED_COPY, HERO_VIDEO_UPLOAD_DONE_MS, HERO_VIDEO_UPLOADING_COPY,
-  applySwapRevision, megabytes, createHeroVideoController, heroVideoErrorMessage, viewFor, type HeroVideoDeps, type HeroVideoView,
+  HERO_VIDEO_FAILED_COPY, HERO_VIDEO_KEEP_OPEN_COPY, HERO_VIDEO_LEAVE_COPY, HERO_VIDEO_LIVE_COPY, HERO_VIDEO_OTHER_UPLOAD_NOTE, HERO_VIDEO_PROCESSING_COPY,
+  HERO_VIDEO_SUPERSEDED_COPY, HERO_VIDEO_UPLOADING_COPY,
+  applySwapRevision, megabytes, createHeroVideoController, heroVideoErrorMessage, heroVideoHint, viewFor, type HeroVideoDeps, type HeroVideoView,
 } from "@/lib/homepage-editor/hero-video-upload";
 
 const tus = vi.hoisted(() => ({ instances: [] as { file: unknown; options: Record<string, (...a: unknown[]) => void> & { headers: Record<string, string>; metadata: Record<string, string>; retryDelays: number[]; endpoint: string }; start: ReturnType<typeof vi.fn>; abort: ReturnType<typeof vi.fn> }[] }));
@@ -19,7 +21,7 @@ vi.mock("tus-js-client", () => ({
   },
 }));
 
-const STATUS = { liveGuid: "live-1", previousGuid: "prev-1", replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 524_288_000, maxSeconds: 600 };
+const STATUS = { liveGuid: "live-1", previousGuid: "prev-1", replacesUsedToday: 2, replacesPerDay: 10, maxBytes: 524_288_000, maxSeconds: 600 };
 const RANGE = { revisionBefore: "rev-1", revisionAfter: "rev-2" };
 const TICKET = { videoGuid: "new-guid", upload: { endpoint: "https://video.bunnycdn.com/tusupload", libraryId: 723074, videoId: "new-guid", expire: 1_900_000_000, signature: "sig", enabledResolutions: "240p,360p,480p,720p" }, maxBytes: STATUS.maxBytes };
 const video = (size = 10_000_000, type = "video/mp4") => ({ name: "hero.mp4", size, type }) as unknown as File;
@@ -185,7 +187,7 @@ describe("hero video control: upload, processing and going live", () => {
   const preparing = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: 40 as number | null, effective: "preparing" as const } };
   const liveStatus = { ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", replacesUsedToday: 3, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "live" as const }, completion: { videoGuid: "new-guid", ...RANGE } };
 
-  it("shows the upload check, then polls GET for display only, and goes live when the swap is already done", async () => {
+  it("goes straight from the upload to processing, polls GET for display only, and goes live when the swap is already done", async () => {
     const getStatus = vi.fn()
       .mockResolvedValueOnce(STATUS)
       .mockResolvedValueOnce(preparing)
@@ -197,7 +199,7 @@ describe("hero video control: upload, processing and going live", () => {
     handlers.current!.onSuccess();
     await settle();
     expect(deps.markUploaded).toHaveBeenCalledWith("new-guid");
-    expect(deps.sleep).toHaveBeenCalledWith(HERO_VIDEO_UPLOAD_DONE_MS);
+    expect(vi.mocked(deps.sleep).mock.calls.every(([ms]) => ms === 5000)).toBe(true);
     expect(deps.sleep).toHaveBeenCalledWith(5000);
     expect(deps.refreshRevision).toHaveBeenCalledTimes(1);
     expect(deps.refreshRevision).toHaveBeenCalledWith({ before: "rev-1", after: "rev-2" });
@@ -207,18 +209,18 @@ describe("hero video control: upload, processing and going live", () => {
 
   it("shows a processing percent only while GET reports one", async () => {
     const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValueOnce(preparing);
-    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise(() => undefined); });
+    const sleep = vi.fn(() => new Promise<void>(() => undefined));
     const { controller, handlers } = harness({ getStatus, sleep });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess();
     await settle();
-    expect(controller.getState()).toMatchObject({ phase: "preparing", encodeProgress: 40, message: HERO_VIDEO_PREPARING_COPY });
+    expect(controller.getState()).toMatchObject({ phase: "preparing", encodeProgress: 40, message: HERO_VIDEO_PROCESSING_COPY });
   });
 
   it("a returning visit during preparing shows preparing, not an empty form", async () => {
     const { controller } = harness({ getStatus: vi.fn(async () => preparing), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
     await controller.load();
-    expect(controller.getState()).toMatchObject({ phase: "preparing", message: HERO_VIDEO_PREPARING_COPY, status: { pending: { videoGuid: "new-guid" } } });
+    expect(controller.getState()).toMatchObject({ phase: "preparing", message: HERO_VIDEO_PROCESSING_COPY, status: { pending: { videoGuid: "new-guid" } } });
     controller.dispose();
   });
 
@@ -282,7 +284,7 @@ describe("hero video control: upload, processing and going live", () => {
     const preparingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "preparing" as const, effective: "preparing" as const } };
     const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(preparingRow);
     const abandon = vi.fn(async () => ({ outcome: "stale" }));
-    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise<void>(() => undefined); });
+    const sleep = vi.fn(() => new Promise<void>(() => undefined));
     const { controller } = harness({ getStatus, abandon, sleep });
     await controller.load();
     await controller.replace(video());
@@ -336,8 +338,7 @@ describe("hero video control: upload, processing and going live", () => {
     const { controller, handlers } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
-    expect(controller.getState()).toMatchObject({ phase: "error", error: { code: "VIDEO_FAILED" } });
-    expect(controller.getState().error?.message).toMatch(/could not be processed/);
+    expect(controller.getState()).toMatchObject({ phase: "error", error: { code: "VIDEO_FAILED", message: HERO_VIDEO_FAILED_COPY }, barPercent: null });
   });
 
   it("an interrupted upload explains that nothing changed and lets the person choose a file again", async () => {
@@ -363,40 +364,101 @@ describe("hero video control: upload, processing and going live", () => {
   });
 
   it.each([
-    ["start", "DAILY_LIMIT", /all 5 video replacements/],
-    ["start", "FILE_TOO_LARGE", /too large/],
-    ["start", "UNSUPPORTED_TYPE", /not a video/],
-    ["start", "VIDEO_NOT_CONFIGURED", /not set up/],
-    ["start", "VIDEO_TOO_LONG", /longer than 10 minutes.*shorter clip/],
-    ["finalize", "VIDEO_TOO_LONG", /longer than 10 minutes.*shorter clip/],
-    ["finalize", "STORED_SIZE_TOO_LARGE", /too long or too large once processed, so it was removed.*shorter clip \(up to 10 minutes\)/],
-    ["finalize", "VIDEO_FAILED", /could not be processed/],
-    ["finalize", "RESOLUTION_TOO_LOW", /at least 720p/],
-    ["finalize", "NOT_CLUB_VIDEO", /does not belong/],
-    ["finalize", "HERO_VIDEO_CHANGED", /changed somewhere else/],
-    ["finalize", "HOMEPAGE_NOT_READY", /isn't set up/],
-  ])("maps %s error %s to plain English", async (where, code, pattern) => {
-    const rejection = vi.fn().mockRejectedValue(apiError(code));
-    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "failed" as const }, failure: { code } });
-    const { controller, handlers } = harness(where === "start" ? { start: rejection } : { getStatus });
+    ["DAILY_LIMIT", /all 10 video replacements/],
+    ["FILE_TOO_LARGE", /too large/],
+    ["UNSUPPORTED_TYPE", /not a video/],
+    ["VIDEO_NOT_CONFIGURED", /not set up/],
+    ["VIDEO_TOO_LONG", /longer than 10 minutes.*shorter clip/],
+    ["HERO_VIDEO_CHANGED", /changed somewhere else/],
+  ])("the start request's %s keeps its own plain-English message", async (code, pattern) => {
+    const { controller } = harness({ start: vi.fn().mockRejectedValue(apiError(code)) });
     await controller.load(); await controller.replace(video());
-    if (where === "finalize") { handlers.current!.onSuccess(); await settle(); }
     const state = controller.getState();
     expect(state.phase).toBe("error");
     expect(state.error?.message).toMatch(pattern);
     expect(state.error?.message).not.toMatch(code);
     expect(state.error?.retry).toBeNull();
     expect(state.status).toBeTruthy();
-    if (where === "finalize") expect(state.error?.message).not.toMatch(/larger than 500 MB/);
-    if (code === "STORED_SIZE_TOO_LARGE") expect(state.error?.message).not.toContain("under 500 MB");
+  });
+
+  it("the daily-limit message uses the server's number, and the shared cap of 10 when the status is not loaded", () => {
+    expect(HERO_VIDEO_REPLACES_PER_DAY).toBe(10);
+    expect(heroVideoErrorMessage("DAILY_LIMIT", { replacesPerDay: 12 })).toBe("You have used all 12 video replacements for today. Try again tomorrow.");
+    expect(heroVideoErrorMessage("DAILY_LIMIT")).toBe("You have used all 10 video replacements for today. Try again tomorrow.");
+  });
+
+  const TOO_LONG = "This video is longer than 10 minutes. Use a shorter clip.";
+  const TOO_LOW = "This video is below 720p. Use a video that is at least 720p.";
+  const TOO_BIG = "This video is too large once processed. Use a shorter clip (up to 10 minutes).";
+  const failedStatus = (code: string) => ({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "failed" as const }, failure: { code } });
+
+  it.each(["MP4_MISSING", "RESOLUTION_MISSING", "VIDEO_FAILED", "NOT_CLUB_VIDEO", "PREPARE_TIMEOUT", "A_CODE_ADDED_LATER"])(
+    "a failed row with code %s shows the one generic failure copy and Replace still starts an upload", async code => {
+      const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(failedStatus(code));
+      const { controller, handlers, deps } = harness({ getStatus });
+      await controller.load(); await controller.replace(video());
+      handlers.current!.onSuccess(); await settle();
+      expect(controller.getState()).toMatchObject({ phase: "error", error: { code, message: HERO_VIDEO_FAILED_COPY, retry: null }, barPercent: null, status: { previousGuid: "prev-1" } });
+      expect(controller.getState().error?.message).toBe("We couldn't finish this video. Try again or use a different file.");
+      await controller.replace(video());
+      expect(deps.start).toHaveBeenCalledTimes(2);
+    });
+
+  it.each([
+    ["VIDEO_TOO_LONG", TOO_LONG],
+    ["RESOLUTION_TOO_LOW", TOO_LOW],
+    ["STORED_SIZE_TOO_LARGE", TOO_BIG],
+  ])("a failed row with code %s tells the person what to change, and Replace still starts an upload", async (code, message) => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(failedStatus(code));
+    const { controller, handlers, deps } = harness({ getStatus });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState()).toMatchObject({ phase: "error", error: { code, message, retry: null }, message, barPercent: null, status: { previousGuid: "prev-1" } });
+    expect(controller.getState().error?.message).not.toBe(HERO_VIDEO_FAILED_COPY);
+    expect(controller.getState().error?.message).not.toMatch(/bunny|video service|_/i);
+    await controller.replace(video());
+    expect(deps.start).toHaveBeenCalledTimes(2);
+  });
+
+  it("a failed row read on load shows the specific copy too, not only one the tab was watching", async () => {
+    const { controller } = harness({ getStatus: vi.fn(async () => failedStatus("RESOLUTION_TOO_LOW")) });
+    await controller.load();
+    expect(controller.getState()).toMatchObject({ phase: "error", error: { code: "RESOLUTION_TOO_LOW", message: TOO_LOW } });
+  });
+
+  it("the minutes in the length and processed-size copy come from the status the server sent, falling back to the shared 10-minute cap", () => {
+    expect(heroVideoErrorMessage("VIDEO_TOO_LONG")).toBe(TOO_LONG);
+    expect(heroVideoErrorMessage("STORED_SIZE_TOO_LARGE")).toBe(TOO_BIG);
+    expect(heroVideoErrorMessage("VIDEO_TOO_LONG", { maxSeconds: 300 })).toBe("This video is longer than 5 minutes. Use a shorter clip.");
+    expect(heroVideoErrorMessage("STORED_SIZE_TOO_LARGE", { maxSeconds: 300 })).toBe("This video is too large once processed. Use a shorter clip (up to 5 minutes).");
+    expect(heroVideoErrorMessage("RESOLUTION_TOO_LOW")).toBe(TOO_LOW);
+  });
+
+  it("the pre-upload length check and a failed row's length failure read the same", async () => {
+    const pre = harness({ readDuration: vi.fn(async () => 601) });
+    await pre.controller.load(); await pre.controller.replace(video());
+    const server = harness({ getStatus: vi.fn(async () => failedStatus("VIDEO_TOO_LONG")) });
+    await server.controller.load();
+    expect(pre.controller.getState().error?.message).toBe(TOO_LONG);
+    expect(server.controller.getState().error?.message).toBe(pre.controller.getState().error?.message);
+  });
+
+  it("after a failed video, Revert to previous still works", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "failed" as const }, failure: { code: "MP4_MISSING" } });
+    const { controller, handlers, deps } = harness({ getStatus });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState().phase).toBe("error");
+    await controller.revert();
+    expect(deps.revert).toHaveBeenCalledWith("live-1", "prev-1");
   });
 
   it("every documented code has its own message and none of them name the video host", () => {
-    for (const code of ["FILE_TOO_LARGE", "UNSUPPORTED_TYPE", "DAILY_LIMIT", "VIDEO_NOT_CONFIGURED", "HERO_VIDEO_NOT_AVAILABLE", "VIDEO_TOO_LONG", "STORED_SIZE_TOO_LARGE", "VIDEO_FAILED", "RESOLUTION_TOO_LOW", "NOT_CLUB_VIDEO", "HERO_VIDEO_CHANGED", "HOMEPAGE_NOT_READY", "NO_PREVIOUS_VIDEO"]) {
+    for (const code of ["FILE_TOO_LARGE", "UNSUPPORTED_TYPE", "DAILY_LIMIT", "VIDEO_NOT_CONFIGURED", "HERO_VIDEO_NOT_AVAILABLE", "VIDEO_TOO_LONG", "HERO_VIDEO_CHANGED", "HOMEPAGE_NOT_READY", "NO_PREVIOUS_VIDEO"]) {
       expect(heroVideoErrorMessage(code)).not.toBe(heroVideoErrorMessage("SOMETHING_ELSE"));
       expect(heroVideoErrorMessage(code)).not.toMatch(/bunny|video service/i);
     }
-    for (const copy of [HERO_VIDEO_UPLOADING_COPY, HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_LIVE_COPY]) {
+    for (const copy of [HERO_VIDEO_UPLOADING_COPY, HERO_VIDEO_KEEP_OPEN_COPY, HERO_VIDEO_PROCESSING_COPY, HERO_VIDEO_LEAVE_COPY, HERO_VIDEO_LIVE_COPY, HERO_VIDEO_FAILED_COPY]) {
       expect(copy).not.toMatch(/bunny|video service/i);
     }
   });
@@ -407,6 +469,139 @@ describe("hero video control: upload, processing and going live", () => {
     await controller.revert();
     expect(deps.start).toHaveBeenCalledTimes(1);
     expect(deps.revert).not.toHaveBeenCalled();
+  });
+});
+
+describe("hero video control: one progress bar from start to live", () => {
+  const encoding = (encodeProgress: number | null) => ({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress, effective: "preparing" as const } });
+  const live = { ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", replacesUsedToday: 3, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "live" as const }, completion: { videoGuid: "new-guid", ...RANGE } };
+
+  /** Uploads one file, then lets each processing poll return the next status (the last one repeats). Records every bar value and label. */
+  async function run(polls: HeroVideoStatus[]) {
+    let release: () => void = () => undefined;
+    let served = 0;
+    const getStatus = vi.fn(async () => (served++ === 0 ? STATUS : polls[Math.min(served - 2, polls.length - 1)]));
+    const sleep = vi.fn(() => new Promise<void>(resolve => { release = resolve; }));
+    const h = harness({ getStatus, sleep });
+    const seen: Array<{ phase: string; bar: number | null; message: string }> = [];
+    h.controller.subscribe(() => { const s = h.controller.getState(); seen.push({ phase: s.phase, bar: s.barPercent, message: s.message }); });
+    await h.controller.load();
+    await h.controller.replace(video());
+    return { ...h, seen, next: async () => { release(); await settle(); } };
+  }
+
+  it("maps upload bytes to 0-40 percent of the bar", async () => {
+    const { controller, handlers } = await run([encoding(null)]);
+    expect(controller.getState()).toMatchObject({ phase: "uploading", barPercent: 0, message: HERO_VIDEO_UPLOADING_COPY });
+    handlers.current!.onProgress(5_000_000, 10_000_000);
+    expect(controller.getState().barPercent).toBe(20);
+    handlers.current!.onProgress(10_000_000, 10_000_000);
+    expect(controller.getState().barPercent).toBe(40);
+  });
+
+  it("goes straight to Processing at 40 percent when the bytes land, with no separate upload-done phase", async () => {
+    const { controller, handlers, seen } = await run([encoding(null)]);
+    handlers.current!.onProgress(10_000_000, 10_000_000);
+    handlers.current!.onSuccess();
+    expect(controller.getState()).toMatchObject({ phase: "preparing", barPercent: 40, message: HERO_VIDEO_PROCESSING_COPY });
+    await settle();
+    expect(seen.map(entry => entry.phase)).not.toContain("uploaded");
+    expect(controller.getState()).toMatchObject({ phase: "preparing", barPercent: 40, message: HERO_VIDEO_PROCESSING_COPY });
+  });
+
+  it("maps the processing percent to 40-100: 50 is 70, null holds at 40, 100 is the end of the bar", async () => {
+    const { controller, handlers, next } = await run([encoding(50), encoding(null), encoding(100)]);
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState()).toMatchObject({ phase: "preparing", barPercent: 70, encodeProgress: 50 });
+    await next();
+    expect(controller.getState()).toMatchObject({ barPercent: 70, encodeProgress: null });
+    await next();
+    expect(controller.getState()).toMatchObject({ phase: "preparing", barPercent: 100, encodeProgress: 100 });
+  });
+
+  it("with no processing percent the bar holds at 40", async () => {
+    const { controller, handlers } = await run([encoding(null)]);
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState()).toMatchObject({ phase: "preparing", barPercent: 40, encodeProgress: null });
+  });
+
+  it("never moves backwards: a smaller upload offset, a lower encode percent or a missing one keep the highest value shown", async () => {
+    const { controller, handlers, seen, next } = await run([encoding(80), encoding(20), encoding(null), live]);
+    handlers.current!.onProgress(8_000_000, 10_000_000);
+    handlers.current!.onProgress(3_000_000, 10_000_000);
+    expect(controller.getState().barPercent).toBe(32);
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState().barPercent).toBe(88);
+    await next();
+    await next();
+    expect(controller.getState().barPercent).toBe(88);
+    await next();
+    expect(controller.getState()).toMatchObject({ phase: "live", barPercent: 100 });
+    const bars = seen.map(entry => entry.bar).filter((bar): bar is number => bar !== null);
+    expect(bars).toEqual([...bars].sort((a, b) => a - b));
+  });
+
+  it("the label reads Uploading, then Processing, then the live message, and live is the only success state", async () => {
+    const { controller, handlers, seen, next } = await run([encoding(null), live]);
+    handlers.current!.onSuccess(); await settle();
+    await next();
+    const labels = seen.map(entry => entry.message).filter((message, index, all) => message && message !== all[index - 1]);
+    expect(labels.slice(0, 3)).toEqual([HERO_VIDEO_UPLOADING_COPY, HERO_VIDEO_PROCESSING_COPY, HERO_VIDEO_LIVE_COPY]);
+    expect(HERO_VIDEO_UPLOADING_COPY).toBe("Uploading…");
+    expect(HERO_VIDEO_PROCESSING_COPY).toBe("Processing…");
+    expect(HERO_VIDEO_LIVE_COPY).toBe("Your new video is live.");
+    expect(controller.getState()).toMatchObject({ phase: "live", barPercent: 100, message: HERO_VIDEO_LIVE_COPY });
+    expect(seen.filter(entry => entry.phase === "live")).not.toHaveLength(0);
+    expect(seen.filter(entry => entry.bar === 100 && entry.phase !== "live" && entry.phase !== "preparing")).toEqual([]);
+  });
+
+  it("a returning visit during processing resumes the bar from the server's percent", async () => {
+    const { controller } = harness({ getStatus: vi.fn(async () => encoding(50)), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
+    await controller.load();
+    expect(controller.getState()).toMatchObject({ phase: "preparing", barPercent: 70, message: HERO_VIDEO_PROCESSING_COPY });
+    controller.dispose();
+  });
+
+  it("a returning visit inside the live window shows the full bar and the live message", async () => {
+    const { controller } = harness({ getStatus: vi.fn(async () => live) });
+    await controller.load();
+    expect(controller.getState()).toMatchObject({ phase: "live", barPercent: 100, message: HERO_VIDEO_LIVE_COPY });
+  });
+
+  it("a revert going live has no bar, and a canceled, failed or idle upload has none either", async () => {
+    const reverted = harness();
+    await reverted.controller.load(); await reverted.controller.revert();
+    expect(reverted.controller.getState()).toMatchObject({ phase: "live", barPercent: null });
+    const canceled = await run([encoding(null)]);
+    canceled.controller.cancel();
+    expect(canceled.controller.getState()).toMatchObject({ phase: "idle", barPercent: null });
+    const failed = await run([encoding(null)]);
+    failed.handlers.current!.onError(new Error("network"));
+    expect(failed.controller.getState()).toMatchObject({ phase: "error", barPercent: null });
+    expect(harness().controller.getState().barPercent).toBeNull();
+  });
+
+  it("a new upload after a live one starts again from zero", async () => {
+    const { controller, handlers, deps } = harness({ getStatus: vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(live) });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess(); await settle();
+    expect(controller.getState()).toMatchObject({ phase: "live", barPercent: 100 });
+    await controller.replace(video());
+    expect(deps.start).toHaveBeenCalledTimes(2);
+    expect(controller.getState()).toMatchObject({ phase: "uploading", barPercent: 0 });
+  });
+
+  it("the page hint is the keep-open line while uploading, the leave line while processing, and nothing else", () => {
+    expect(heroVideoHint("uploading")).toBe("Keep this page open until the upload finishes.");
+    expect(heroVideoHint("preparing")).toBe("You can leave this page; we'll finish in the background.");
+    for (const phase of ["loading", "idle", "reverting", "live", "error"] as const) expect(heroVideoHint(phase)).toBe("");
+  });
+
+  it("the navigation guard's trigger is unchanged: bytes moving is the uploading phase and nothing after it", async () => {
+    const { controller, handlers } = await run([encoding(null)]);
+    expect(controller.getState().phase).toBe("uploading");
+    handlers.current!.onSuccess();
+    expect(controller.getState().phase).toBe("preparing");
   });
 });
 
@@ -422,7 +617,7 @@ describe("viewFor: what one status read means", () => {
     ["load: preparing", at("preparing"), null, "preparing"],
     ["load: preparing past its deadline", at("preparing_overdue"), null, "timeout"],
     ["load: another window's upload", at("uploading"), null, "other_upload"],
-    ["load: an upload past its deadline", at("uploading_overdue"), null, "other_upload"],
+    ["load: an upload past its deadline", at("uploading_overdue"), null, "timeout"],
     ["load: failed", at("failed"), null, "failed"],
     ["load: abandoned", at("abandoned"), null, "idle"],
     ["watching: no row and the guid is not live", STATUS, NEW, "idle"],
@@ -433,7 +628,7 @@ describe("viewFor: what one status read means", () => {
     ["watching: preparing", at("preparing"), NEW, "preparing"],
     ["watching: still uploading keeps polling", at("uploading"), NEW, "preparing"],
     ["watching: preparing past its deadline", at("preparing_overdue"), NEW, "timeout"],
-    ["watching: uploading past its deadline", at("uploading_overdue"), NEW, "other_upload"],
+    ["watching: uploading past its deadline", at("uploading_overdue"), NEW, "timeout"],
     ["watching: failed", at("failed"), NEW, "failed"],
     ["watching: abandoned", at("abandoned"), NEW, "idle"],
     ["watching: a newer upload replaced it", { ...STATUS, pending: row("other-guid", "uploading") }, NEW, "superseded"],
@@ -451,18 +646,23 @@ describe("viewFor: what one status read means", () => {
 describe("hero video control: reload shows what the server says", () => {
   const GUID = "new-guid";
   const pending = (effective: NonNullable<HeroVideoStatus["pending"]>["effective"]) => ({ videoGuid: GUID, encodeProgress: null, effective });
-  // Row: the server's status on load, what the tab shows, and whether choosing a new file starts an upload.
-  const rows: Array<[string, HeroVideoStatus, string, string, boolean]> = [
-    ["reload mid-upload", { ...STATUS, pending: pending("uploading") }, "idle", HERO_VIDEO_OTHER_UPLOAD_NOTE, true],
-    ["reload mid-upload, past its deadline", { ...STATUS, pending: pending("uploading_overdue") }, "idle", HERO_VIDEO_OTHER_UPLOAD_NOTE, true],
-    ["reload during preparing", { ...STATUS, pending: pending("preparing") }, "preparing", HERO_VIDEO_PREPARING_COPY, false],
-    ["reload after preparing timed out", { ...STATUS, pending: pending("preparing_overdue") }, "idle", heroVideoErrorMessage("PREPARE_TIMEOUT"), true],
-    ["reload after an encode failure", { ...STATUS, pending: pending("failed"), failure: { code: "VIDEO_FAILED" } }, "error", heroVideoErrorMessage("VIDEO_FAILED"), true],
-    ["reload after an abandoned upload", { ...STATUS, pending: pending("abandoned") }, "idle", "", true],
-    ["reload inside the live notice window", { ...STATUS, liveGuid: GUID, pending: pending("live") }, "live", HERO_VIDEO_LIVE_COPY, true],
-    ["reload after the live notice window", { ...STATUS, liveGuid: GUID, pending: pending("idle") }, "idle", "", true],
+  // Row: the server's status on load, what the tab shows, the failure code it carries, and whether choosing a new file starts an upload.
+  const rows: Array<[string, HeroVideoStatus, string, string, string | null, boolean]> = [
+    ["reload mid-upload", { ...STATUS, pending: pending("uploading") }, "idle", HERO_VIDEO_OTHER_UPLOAD_NOTE, null, true],
+    ["reload mid-upload, past its deadline", { ...STATUS, pending: pending("uploading_overdue") }, "error", HERO_VIDEO_FAILED_COPY, "PREPARE_TIMEOUT", true],
+    ["reload during preparing", { ...STATUS, pending: pending("preparing") }, "preparing", HERO_VIDEO_PROCESSING_COPY, null, false],
+    ["reload after preparing timed out", { ...STATUS, pending: pending("preparing_overdue") }, "error", HERO_VIDEO_FAILED_COPY, "PREPARE_TIMEOUT", true],
+    ["reload after an encode failure", { ...STATUS, pending: pending("failed"), failure: { code: "VIDEO_FAILED" } }, "error", HERO_VIDEO_FAILED_COPY, "VIDEO_FAILED", true],
+    ["reload after a missing mp4", { ...STATUS, pending: pending("failed"), failure: { code: "MP4_MISSING" } }, "error", HERO_VIDEO_FAILED_COPY, "MP4_MISSING", true],
+    ["reload after a missing resolution code the editor does not word", { ...STATUS, pending: pending("failed"), failure: { code: "RESOLUTION_MISSING" } }, "error", HERO_VIDEO_FAILED_COPY, "RESOLUTION_MISSING", true],
+    ["reload after a video that is too long", { ...STATUS, pending: pending("failed"), failure: { code: "VIDEO_TOO_LONG" } }, "error", "This video is longer than 10 minutes. Use a shorter clip.", "VIDEO_TOO_LONG", true],
+    ["reload after a video below 720p", { ...STATUS, pending: pending("failed"), failure: { code: "RESOLUTION_TOO_LOW" } }, "error", "This video is below 720p. Use a video that is at least 720p.", "RESOLUTION_TOO_LOW", true],
+    ["reload after a video too large once processed", { ...STATUS, pending: pending("failed"), failure: { code: "STORED_SIZE_TOO_LARGE" } }, "error", "This video is too large once processed. Use a shorter clip (up to 10 minutes).", "STORED_SIZE_TOO_LARGE", true],
+    ["reload after an abandoned upload", { ...STATUS, pending: pending("abandoned") }, "idle", "", null, true],
+    ["reload inside the live notice window", { ...STATUS, liveGuid: GUID, pending: pending("live") }, "live", HERO_VIDEO_LIVE_COPY, null, true],
+    ["reload after the live notice window", { ...STATUS, liveGuid: GUID, pending: pending("idle") }, "idle", "", null, true],
   ];
-  it.each(rows)("%s", async (_label, status, phase, message, canReplace) => {
+  it.each(rows)("%s", async (_label, status, phase, message, code, canReplace) => {
     // A browser that still remembers this upload changes nothing: ownership is only ever the server's pending row.
     const remembered = { getItem: () => GUID, setItem() {}, removeItem() {}, key: () => GUID, length: 1, clear() {} };
     vi.stubGlobal("sessionStorage", remembered);
@@ -470,7 +670,7 @@ describe("hero video control: reload shows what the server says", () => {
     const { controller, deps } = harness({ getStatus: vi.fn(async () => status), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
     await controller.load();
     expect(controller.getState()).toMatchObject({ phase, message });
-    if (phase === "error") expect(controller.getState().error?.code).toBe("VIDEO_FAILED");
+    if (phase === "error") expect(controller.getState().error).toMatchObject({ code, message });
     await controller.replace(video());
     expect(deps.start).toHaveBeenCalledTimes(canReplace ? 1 : 0);
     // Loading is read-only: it never lands, cancels, reverts or refreshes the editor revision.
@@ -482,7 +682,7 @@ describe("hero video control: reload shows what the server says", () => {
     const server: { pending: { videoGuid: string; effective: "uploading" } | null } = { pending: null };
     const status = (): HeroVideoStatus => ({ ...STATUS, pending: server.pending && { ...server.pending, encodeProgress: null } });
     // The poll interval never returns, so a tab that wrongly keeps polling fails on the assertions instead of looping.
-    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise<void>(() => undefined); });
+    const sleep = vi.fn(() => new Promise<void>(() => undefined));
     const tab = (guid: string) => harness({
       sleep,
       getStatus: vi.fn(async () => status()),
@@ -572,7 +772,7 @@ describe("hero video control: the live notice follows the server's window", () =
   it("an in-tab watch that only sees the swap after the window closed still ends live, without a refresh it cannot make", async () => {
     const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(old);
     let polls = 0;
-    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS && ++polls > 25) await new Promise<void>(() => undefined); });
+    const sleep = vi.fn(async () => { if (++polls > 25) await new Promise<void>(() => undefined); });
     const { controller, handlers, deps } = harness({ getStatus, sleep });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();

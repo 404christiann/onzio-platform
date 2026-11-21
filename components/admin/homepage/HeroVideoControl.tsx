@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent }
 import { Undo2, Upload, X } from "lucide-react";
 import { EditorActionButton, EditorGroup, EditorNotice, EditorPrimaryButton, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { bunnyVideoMp4Url } from "@/lib/bunny-video";
-import { megabytes, type HeroVideoController } from "@/lib/homepage-editor/hero-video-upload";
+import { heroVideoHint, megabytes, type HeroVideoController } from "@/lib/homepage-editor/hero-video-upload";
 import styles from "./HeroVideoControl.module.css";
 
 /**
@@ -38,12 +38,12 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
     event.preventDefault(); event.stopPropagation(); event.nativeEvent.stopImmediatePropagation();
     cancelRevert();
   };
-  const { phase, status, progress, error, encodeProgress } = state;
-  const busy = phase === "loading" || phase === "uploading" || phase === "uploaded" || phase === "preparing" || phase === "reverting";
+  const { phase, status, error, barPercent } = state;
+  const busy = phase === "loading" || phase === "uploading" || phase === "preparing" || phase === "reverting";
   const locked = disabled || busy;
   useEffect(() => { if (locked) setConfirmRevert(false); }, [locked]);
   const left = status ? Math.max(0, status.replacesPerDay - status.replacesUsedToday) : null;
-  const percent = progress && progress.total > 0 ? Math.min(100, Math.floor(progress.sent / progress.total * 100)) : 0;
+  const hint = heroVideoHint(phase);
 
   return <EditorGroup legend="Hero video">
     <p className={kit.hint}>Replacing or reverting the video changes your live website right away. It is not part of the Save button.</p>
@@ -69,16 +69,12 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
           {phase === "uploading" && <button type="button" className={`admin-press ${kit.remove}`} onClick={() => controller.cancel()}><X size={14} aria-hidden="true" />Cancel upload</button>}
         </div>}
     </div>
-    <div data-hero-phase={phase}>
-    {phase === "uploading" && progress && <div className={styles.progress}>
-      <div className={styles.track} role="progressbar" aria-label="Video upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={`${percent}%`}>
-        <div className={styles.bar} style={{ width: `${percent}%` }} />
-      </div>
-      <span className={styles.progressText}>{percent}%</span>
-    </div>}
-    {phase === "preparing" && <div className={styles.working} data-hero-working aria-hidden="true"><span /><span /><span /></div>}
-    <p role="status" aria-live="polite" className={`${kit.hint} ${styles.status}`}>{(phase === "uploaded" || phase === "live") && <svg className={styles.check} viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true" data-hero-check=""><path d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} /></svg>}{phase === "error" ? "" : state.message}</p>
-    {phase === "preparing" && typeof encodeProgress === "number" && <p className={styles.progressText}>{encodeProgress}%</p>}
+    <div className={styles.progress} data-hero-phase={phase}>
+      {barPercent !== null && <div className={styles.track} role="progressbar" aria-label="Hero video progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={barPercent} aria-valuetext={state.message}>
+        <div className={styles.bar} data-working={phase === "preparing" || undefined} style={{ width: `${barPercent}%` }} />
+      </div>}
+      <p role="status" aria-live="polite" className={`${kit.hint} ${styles.status}`}>{phase === "live" && <svg className={styles.check} viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true" data-hero-check=""><path d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} /></svg>}{phase === "error" ? "" : state.message}</p>
+      {hint && <p className={kit.hint}>{hint}</p>}
     </div>
     {phase === "error" && error && <div role="alert" className={`${kit.notice} grid gap-2`} data-tone="error"><p>{error.message}</p>
       <div className="flex flex-wrap gap-2">
@@ -95,6 +91,7 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
 /** Keeps the page informed while an upload or processing runs and the edit dialog is closed. */
 export function HeroVideoNotice({ controller, className }: { controller: HeroVideoController; className?: string }) {
   const { phase, message } = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState);
-  if (phase !== "uploading" && phase !== "uploaded" && phase !== "preparing" && phase !== "reverting") return null;
-  return <div className={className} role="status"><p>{message || "Upload finished."}</p></div>;
+  if (phase !== "uploading" && phase !== "preparing" && phase !== "reverting") return null;
+  const hint = heroVideoHint(phase);
+  return <div className={className} role="status"><p>{hint ? `${message} ${hint}` : message}</p></div>;
 }

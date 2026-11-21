@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { bunnyVideoMp4Url } from "@/lib/bunny-video";
 
 /**
  * Server-side Bunny Stream management client. Server-only: it reads
@@ -51,7 +50,15 @@ export type BunnyUploadAuthorization = {
   enabledResolutions: string;
 };
 
-export type VideoReadiness = "ready" | "processing" | "failed" | "resolution_too_low";
+/**
+ * Whether a video can serve the hero, decided only from the Stream API's own
+ * video object. Never from the CDN: the pull zone has security on and answers
+ * an anonymous request with 403, so a probe there can never succeed.
+ */
+export type HeroVideoReadiness =
+  | { status: "ready" }
+  | { status: "not_ready"; reason: "encoding" }
+  | { status: "failed"; reason: "failed" | "mp4_missing" | "resolution_missing" };
 
 export function isBunnyStreamConfigured() {
   return Boolean(process.env.BUNNY_STREAM_API_KEY);
@@ -133,22 +140,25 @@ export function tusUploadAuthorization(videoGuid: string, expiresAtUnix: number)
 }
 
 /**
- * Finished (4) with MP4 fallback and a 720p rendition, and the 720p MP4 is
- * actually reachable on the pull zone. 5 and 6 are Bunny's failure states.
+ * Pure. Reads the video object the Stream API returned (GET /videos/{guid}), makes no request.
+ *
+ * Video API VideoModelStatus: 0 Created, 1 Uploaded, 2 Processing, 3 Transcoding,
+ * 4 Finished, 5 Error, 6 UploadFailed, 7 JitSegmenting, 8 JitPlaylistsCreated.
+ * The webhook's Status numbers differ (there, 3 is Finished), so 3 here is still encoding.
+ * Only 4 is final. A status this code does not know is treated as still encoding,
+ * never as a failure, because failing deletes the video.
+ *
+ * Once Finished, the hero needs the 720p rendition (availableResolutions lists the
+ * renditions that finished encoding) and the MP4 fallback (hasMP4Fallback) the
+ * renderer plays. A missing 720p will not fix itself, so that is a failure, not a wait.
+ * A missing MP4 copy is reported as failed here too, but Bunny may set it a moment after
+ * Finished, so checkReadiness (hero-video-swap) holds that one as still processing for
+ * HERO_VIDEO_MP4_GRACE_MS after the bytes landed. This function stays pure and clock-free.
  */
-export async function videoReadiness(video: BunnyVideo): Promise<VideoReadiness> {
-  if (video.status === 5 || video.status === 6) return "failed";
-  if (video.status !== 4) return "processing";
-  if (!video.availableResolutions.includes("720p")) return "resolution_too_low";
-  if (!video.hasMP4Fallback) return "processing";
-  try {
-    const head = await fetch(bunnyVideoMp4Url(video.guid, "720p"), { method: "HEAD" });
-    return head.ok ? "ready" : "processing";
-  } catch {
-    return "processing";
-  }
-}
-
-export async function isMp4FallbackReady(video: BunnyVideo): Promise<boolean> {
-  return (await videoReadiness(video)) === "ready";
+export function videoReadiness(video: BunnyVideo): HeroVideoReadiness {
+  if (video.status === 5 || video.status === 6) return { status: "failed", reason: "failed" };
+  if (video.status !== 4) return { status: "not_ready", reason: "encoding" };
+  if (!video.availableResolutions.includes("720p")) return { status: "failed", reason: "resolution_missing" };
+  if (!video.hasMP4Fallback) return { status: "failed", reason: "mp4_missing" };
+  return { status: "ready" };
 }
