@@ -4305,6 +4305,7 @@ export type Database = {
           p_video_guid: string
         }
         Returns: {
+          collection_id: string
           delete_guid: string
           outcome: string
           phase: string
