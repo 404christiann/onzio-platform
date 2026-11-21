@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
 // key, directly or through any module it imports.
 
 const ROOT = resolve(process.cwd());
-const ENTRY_POINTS = ["app/api/t/route.ts", "components/telemetry/PageBeacon.tsx"];
+const CLICK_ROUTE = "app/%5Fclubs/[slug]/r/[sponsor]/route.ts";
+const ENTRY_POINTS = ["app/api/t/route.ts", "components/telemetry/PageBeacon.tsx", CLICK_ROUTE];
 const FORBIDDEN = /supabase-service-role|SUPABASE_SERVICE_ROLE_KEY|createServiceRoleClient|service_role/;
 const EXTENSIONS = ["", ".ts", ".tsx", "/index.ts", "/index.tsx"];
 
@@ -89,13 +90,29 @@ describe("page telemetry beacon service-role boundary", () => {
     expect([...rpcs].sort()).toEqual(["club_has_addon", "record_page_event"]);
   });
 
-  it("keeps the migration narrow: four security-definer functions, no write grants, no grants by default", async () => {
+  it("keeps the migration narrow: five security-definer functions, no write grants, no grants by default", async () => {
     const sql = await readFile(resolve(ROOT, "supabase/migrations/20261121060000_page_telemetry.sql"), "utf8");
     const telemetry = sql.slice(0, sql.indexOf("create or replace function onzio_private.purge_archived_club"));
-    // Declarations only (comment lines mention the term too): the event writer, the add-on reader, the
-    // trigger that forgets a club's salts when its add-on is removed, and the daily retention sweep
-    // (service role only, see the next test).
-    expect(telemetry.match(/^security definer$/gm)).toHaveLength(4);
+    // TELEMETRY-02 added onzio_private.rollup_page_telemetry (service role only) and redefined, did not add,
+    // record_page_event. So the distinct security-definer names across both telemetry migrations are five:
+    // the event writer, the add-on reader, the trigger that forgets a club's salts when its add-on is removed,
+    // the daily retention sweep and the daily rollup. Declarations only (comment lines mention the term too).
+    const rollupSql = await readFile(resolve(ROOT, "supabase/migrations/20261121230000_page_telemetry_rollups.sql"), "utf8");
+    const definers = new Set<string>();
+    for (const text of [telemetry, rollupSql]) {
+      for (const match of text.matchAll(/create (?:or replace )?function onzio_private\.(\w+)\([^;]*?\n\s*security definer\b/g)) {
+        // purge_archived_club is the archived-club purge, not a telemetry function.
+        if (match[1] !== "purge_archived_club") definers.add(match[1]);
+      }
+    }
+    expect([...definers].sort()).toEqual([
+      "club_has_addon",
+      "forget_telemetry_when_addon_removed",
+      "record_page_event",
+      "rollup_page_telemetry",
+      "sweep_page_telemetry",
+    ]);
+    expect(definers.size).toBe(5);
     expect(telemetry).toMatch(/create function onzio_private\.record_page_event[\s\S]*?security definer\s+set search_path = ''/);
     expect(telemetry).toMatch(/create function onzio_private\.club_has_addon[\s\S]*?security definer\s+set search_path = ''/);
     expect(telemetry).toMatch(
@@ -264,5 +281,33 @@ describe("page telemetry beacon service-role boundary", () => {
     expect(files).toEqual(expect.arrayContaining(["lib/telemetry/retention.ts", "lib/supabase-service-role.ts"]));
     expect(files).not.toContain("app/api/t/route.ts");
     expect([...cron.values()].join("\n").match(/\.rpc\(\s*"([^"]+)"/g)).toEqual(['.rpc("sweep_page_telemetry"']);
+  });
+
+  it("keeps the rollup service-role client out of every public entry point, and the rollup cron to one rpc", async () => {
+    const rollup = await importGraph("app/api/cron/telemetry-rollup/route.ts");
+    const rollupFiles = [...rollup.keys()].map((file) => relative(ROOT, file).replaceAll("\\", "/"));
+    expect(rollupFiles).toEqual(expect.arrayContaining(["lib/telemetry/rollup.ts", "lib/supabase-service-role.ts"]));
+    expect([...rollup.values()].join("\n").match(/\.rpc\(\s*"([^"]+)"/g)).toEqual(['.rpc("rollup_page_telemetry"']);
+    for (const entry of ENTRY_POINTS) {
+      const files = [...(await importGraph(entry)).keys()].map((file) => relative(ROOT, file).replaceAll("\\", "/"));
+      expect(files, entry).not.toContain("lib/telemetry/rollup.ts");
+      expect(files, entry).not.toContain("lib/supabase-service-role.ts");
+      expect(files, entry).not.toContain("app/api/cron/telemetry-rollup/route.ts");
+    }
+  });
+
+  it("lets the sponsor click route reach the database only through club_has_addon, record_page_event and site_sponsor_logos", async () => {
+    const graph = await importGraph(CLICK_ROUTE);
+    const rpcs = new Set<string>();
+    const tables = new Set<string>();
+    for (const source of graph.values()) {
+      for (const match of source.matchAll(/\.rpc\(\s*"([^"]+)"/g)) rpcs.add(match[1]);
+      for (const match of source.matchAll(/\.from\(\s*"([^"]+)"/g)) tables.add(match[1]);
+    }
+    expect([...rpcs].sort()).toEqual(["club_has_addon", "record_page_event"]);
+    expect([...tables]).toEqual(["site_sponsor_logos"]);
+    const source = await readFile(resolve(ROOT, CLICK_ROUTE), "utf8");
+    expect(source).toContain("createPublicClient()");
+    expect(source).not.toMatch(/createClient\(/);
   });
 });
