@@ -4436,6 +4436,22 @@ export type Database = {
         }
         Returns: Json
       }
+      read_hero_video_pending: {
+        Args: { p_club_id: string }
+        Returns: {
+          collection_id: string
+          deadline_at: string
+          failure_code: string
+          landed_at: string
+          phase: string
+          replace_counted: boolean
+          revision_after: string
+          revision_before: string
+          started_at: string
+          updated_at: string
+          video_guid: string
+        }[]
+      }
       record_page_event: {
         Args: { p_club_id: string; p_payload: string; p_signature: string }
         Returns: string
