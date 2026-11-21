@@ -26,6 +26,9 @@ import {
 //            reader's own club filter keeps one club's page from showing the other's numbers.
 //
 // Charlie has no season, so only Alpha and Bravo have games.
+//
+// One more month, 2002-12, holds 1,240 Alpha sponsor rows (40 sponsors x 31 days), more than PostgREST
+// returns in one read. It is in 2002 so Alpha's 2003 month list above stays exactly what it asserts.
 
 const ALPHA = CLUB_IDS.alpha;
 const BRAVO = CLUB_IDS.bravo;
@@ -87,6 +90,10 @@ const GAMES: Array<[clubId: string, date: string, time: string, opponent: string
 
 const CLUBS = [ALPHA, BRAVO, CHARLIE];
 
+const BIG_MONTH = "2002-12";
+const BIG_SPONSORS = 40;
+const BIG_DAYS = 31;
+
 let db: Client | undefined;
 let alphaOwner: SupabaseClient<any, any, any>;
 let multiClub: SupabaseClient<any, any, any>;
@@ -100,6 +107,7 @@ async function clean(client: Client): Promise<void> {
   await client.query("delete from onzio.sponsor_daily_rollups where club_id = any($1::uuid[]) and local_date >= '2003-01-01' and local_date < '2004-01-01'", [CLUBS]);
   await client.query("delete from onzio.matches where club_id = any($1::uuid[]) and date >= '2003-01-01' and date < '2004-01-01'", [CLUBS]);
   await client.query("delete from onzio.site_sponsor_logos where id = any($1::uuid[])", [LISTED_SPONSORS]);
+  await client.query("delete from onzio.sponsor_daily_rollups where club_id = $1 and local_date >= '2002-12-01' and local_date < '2003-01-01'", [ALPHA]);
 }
 
 async function seed(client: Client): Promise<void> {
@@ -117,6 +125,13 @@ async function seed(client: Client): Promise<void> {
       [clubId, date, sponsorId, logoViews, logoViewers, clicks],
     );
   }
+  // Sponsor n logs n logo views and n logo viewers on each of the month's days (2002-12-01 to 2002-12-31).
+  await client.query(
+    `insert into onzio.sponsor_daily_rollups (club_id, local_date, sponsor_id, logo_views, logo_viewers, clicks)
+     select $1::uuid, $2::date + d, ('f0000003-0000-4000-8000-0001' || lpad(n::text, 8, '0'))::uuid, n, n, 0
+     from generate_series(1, $3::int) as n, generate_series(0, $4::int - 1) as d`,
+    [ALPHA, `${BIG_MONTH}-01`, BIG_SPONSORS, BIG_DAYS],
+  );
   for (const [id, [clubId, name]] of Object.entries(SPONSOR_NAMES)) {
     await client.query(
       "insert into onzio.site_sponsor_logos (id, club_id, name, logo_url, show_on_homepage) values ($1, $2, $3, $4, true)",
@@ -213,7 +228,15 @@ describe("the monthly report reader: the Alpha owner reading Alpha", () => {
     });
     expect(report.soFar).toBe(false);
     expect(report.monthLabel).toBe("April 2003");
-    expect(report.site).toEqual({ views: 150, visitorDays: 90, visits: 105, avgTimeOnPageMs: 30_000, dropped: 1 });
+    expect(report.site).toEqual({
+      views: 150,
+      visitorDays: 90,
+      visits: 105,
+      avgTimeOnPageMs: 30_000,
+      timeMeasuredDays: 2,
+      trafficDays: 2,
+      dropped: 1,
+    });
     expect(report.pages.map((page) => [page.name, page.removed, page.totals])).toEqual([
       ["Report Test Alpha Sponsor", false, { logoViews: 40, viewerDays: 28, clicks: 4, clickRate: 0.1 }],
       ["Removed sponsor", true, { logoViews: 10, viewerDays: 8, clicks: 0, clickRate: 0 }],
@@ -222,6 +245,29 @@ describe("the monthly report reader: the Alpha owner reading Alpha", () => {
       { date: "2003-04-05", siteViews: 100, logoViews: 30, matches: ["vs Report Test Alpha Morning", "at Report Test Alpha Evening"] },
       { date: "2003-04-12", siteViews: 50, logoViews: 10, matches: [] },
     ]);
+  });
+
+  it("reads every sponsor row of a month that runs past PostgREST's 1,000-row cap, in order", async () => {
+    const result = await readMonthlyReportRows(alphaOwner, ALPHA, BIG_MONTH);
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") return;
+    expect(result.sponsorRows).toHaveLength(BIG_SPONSORS * BIG_DAYS);
+    const keys = result.sponsorRows.map((row) => `${row.local_date} ${row.sponsor_id}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toEqual([...keys].sort());
+    // Nothing was cut off: every sponsor has its page and its whole month of logo views (n x 31 days).
+    const report = buildMonthlyReport({
+      month: BIG_MONTH,
+      sponsor: "all",
+      timeZone: "America/Los_Angeles",
+      now: new Date("2026-11-21T20:00:00Z"),
+      totals: result.totals,
+      sponsorRows: result.sponsorRows,
+      sponsors: result.sponsors,
+      matches: result.matches,
+    });
+    expect(report.pages).toHaveLength(BIG_SPONSORS);
+    expect(report.pages.reduce((sum, page) => sum + page.totals.logoViews, 0)).toBe(BIG_DAYS * ((BIG_SPONSORS * (BIG_SPONSORS + 1)) / 2));
   });
 
   it("reads the club's logo address as text, and never throws", async () => {

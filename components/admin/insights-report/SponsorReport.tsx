@@ -147,6 +147,10 @@ function Sheet({
   clubLogoUrl: string;
 }) {
   const { site } = report;
+  const timeNote =
+    site.avgTimeOnPageMs !== null && site.timeMeasuredDays < site.trafficDays
+      ? `measured on ${site.timeMeasuredDays} of ${site.trafficDays} days`
+      : undefined;
   const through = report.soFar && report.throughDate ? (formatClubDate(report.throughDate, "short") ?? report.throughDate) : null;
   return (
     <section className={styles.sheet} data-report-page aria-label={`${page.name} report`}>
@@ -180,7 +184,7 @@ function Sheet({
           <Stat id="views" label="Page views" value={formatCount(site.views)} star={site.dropped > 0} />
           <Stat id="visitor-days" label="Visitor-days" value={formatCount(site.visitorDays)} />
           <Stat id="visits" label="Visits" value={formatCount(site.visits)} />
-          <Stat id="avg-time" label="Avg. time on page" value={formatDuration(site.avgTimeOnPageMs)} />
+          <Stat id="avg-time" label="Avg. time on page" note={timeNote} value={formatDuration(site.avgTimeOnPageMs)} />
         </dl>
       </div>
 

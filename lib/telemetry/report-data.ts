@@ -93,7 +93,20 @@ export function reportHref(month: string, sponsor = "all"): string {
   return `/admin/insights/report?month=${encodeURIComponent(month)}&sponsor=${encodeURIComponent(sponsor)}`;
 }
 
-export type SiteTraffic = { views: number; visitorDays: number; visits: number; avgTimeOnPageMs: number | null; dropped: number };
+/**
+ * Time on page comes from heartbeats, so avgTimeOnPageMs averages only the days that have engaged time
+ * (a month that began before heartbeats shipped would otherwise read too low). timeMeasuredDays of
+ * trafficDays says how much of the month that is; the average is null when no day was measured.
+ */
+export type SiteTraffic = {
+  views: number;
+  visitorDays: number;
+  visits: number;
+  avgTimeOnPageMs: number | null;
+  timeMeasuredDays: number;
+  trafficDays: number;
+  dropped: number;
+};
 export type SponsorTotals = { logoViews: number; viewerDays: number; clicks: number; clickRate: number | null };
 export type BusyDay = { date: string; siteViews: number; logoViews: number; matches: string[] };
 export type SponsorPage = {
@@ -156,15 +169,29 @@ export function buildMonthlyReport(input: {
   let visitorDays = 0;
   let visits = 0;
   let dropped = 0;
-  let engagedMs = 0;
   const siteViewsByDate = new Map<string, number>();
+  const engagedMsByDate = new Map<string, number>();
   for (const row of totals) {
     views += count(row.views);
     visitorDays += count(row.visitors);
     visits += count(row.visits);
     dropped += count(row.dropped);
-    engagedMs += count(row.engaged_ms);
     siteViewsByDate.set(row.local_date, (siteViewsByDate.get(row.local_date) ?? 0) + count(row.views));
+    engagedMsByDate.set(row.local_date, (engagedMsByDate.get(row.local_date) ?? 0) + count(row.engaged_ms));
+  }
+
+  // A day is measured when it has engaged time. The average runs over those days only.
+  let trafficDays = 0;
+  let timeMeasuredDays = 0;
+  let measuredViews = 0;
+  let measuredEngagedMs = 0;
+  for (const [date, dayViews] of siteViewsByDate) {
+    if (dayViews > 0) trafficDays += 1;
+    const dayEngagedMs = engagedMsByDate.get(date) ?? 0;
+    if (dayEngagedMs <= 0) continue;
+    measuredViews += dayViews;
+    measuredEngagedMs += dayEngagedMs;
+    if (dayViews > 0) timeMeasuredDays += 1;
   }
 
   // The busiest days belong to the site, so they are the same dates on every sponsor's page.
@@ -236,8 +263,10 @@ export function buildMonthlyReport(input: {
       views,
       visitorDays,
       visits,
-      // Time on page is measured by heartbeats; a month with none was not measured, which is not zero seconds.
-      avgTimeOnPageMs: views > 0 && engagedMs > 0 ? Math.round(engagedMs / views) : null,
+      // A month with no heartbeats was not measured, which is not zero seconds.
+      avgTimeOnPageMs: measuredViews > 0 ? Math.round(measuredEngagedMs / measuredViews) : null,
+      timeMeasuredDays,
+      trafficDays,
       dropped,
     },
     pages,
@@ -272,6 +301,40 @@ export async function readReportMonths(
   }
 }
 
+// PostgREST stops a read at 1,000 rows, and a month has one row per sponsor per day, so the sponsor rows
+// are read a page at a time. The page limit is far above any real month (30 sponsors x 31 days is 930
+// rows); reaching it means something is wrong, so the report fails rather than showing partial numbers.
+const SPONSOR_ROWS_PAGE_SIZE = 1000;
+const SPONSOR_ROWS_MAX_PAGES = 31;
+
+/** All of one month's sponsor rows in a stable order, or null if any page fails or the page limit is hit. */
+async function readSponsorRollupRows(
+  supabase: ReaderClient,
+  clubId: string,
+  start: string,
+  next: string,
+): Promise<SponsorRow[] | null> {
+  const onzio = supabase.schema("onzio");
+  const rows: SponsorRow[] = [];
+  for (let page = 0; page < SPONSOR_ROWS_MAX_PAGES; page += 1) {
+    const from = page * SPONSOR_ROWS_PAGE_SIZE;
+    const { data, error } = await onzio
+      .from("sponsor_daily_rollups")
+      .select("local_date,sponsor_id,logo_views,logo_viewers,clicks")
+      .eq("club_id", clubId)
+      .gte("local_date", start)
+      .lt("local_date", next)
+      .order("local_date", { ascending: true })
+      .order("sponsor_id", { ascending: true })
+      .range(from, from + SPONSOR_ROWS_PAGE_SIZE - 1);
+    if (error) return null;
+    const batch = (data ?? []) as SponsorRow[];
+    rows.push(...batch);
+    if (batch.length < SPONSOR_ROWS_PAGE_SIZE) return rows;
+  }
+  return null;
+}
+
 /** Everything one month's report is built from: the daily rows, the sponsor list and that month's games. */
 export async function readMonthlyReportRows(
   supabase: ReaderClient,
@@ -289,13 +352,7 @@ export async function readMonthlyReportRows(
         .gte("local_date", start)
         .lt("local_date", next)
         .order("local_date", { ascending: true }),
-      onzio
-        .from("sponsor_daily_rollups")
-        .select("local_date,sponsor_id,logo_views,logo_viewers,clicks")
-        .eq("club_id", clubId)
-        .gte("local_date", start)
-        .lt("local_date", next)
-        .order("local_date", { ascending: true }),
+      readSponsorRollupRows(supabase, clubId, start, next),
       onzio.from("site_sponsor_logos").select("id,name,logo_url").eq("club_id", clubId),
       onzio
         .from("matches")
@@ -306,11 +363,11 @@ export async function readMonthlyReportRows(
         .order("date", { ascending: true })
         .order("time", { ascending: true }),
     ]);
-    if (totals.error || sponsorRows.error || sponsors.error || matches.error) return { status: "error" };
+    if (totals.error || !sponsorRows || sponsors.error || matches.error) return { status: "error" };
     return {
       status: "ready",
       totals: (totals.data ?? []) as TotalsRow[],
-      sponsorRows: (sponsorRows.data ?? []) as SponsorRow[],
+      sponsorRows,
       sponsors: (sponsors.data ?? []) as SponsorListing[],
       matches: (matches.data ?? []) as MatchRow[],
     };

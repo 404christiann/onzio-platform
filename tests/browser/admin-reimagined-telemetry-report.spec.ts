@@ -51,8 +51,9 @@ const SPONSOR_CAFE = { id: randomUUID(), name: "T05 Fixture Cafe", logo: logoDat
 const SPONSOR_IDLE = { id: randomUUID(), name: "T05 Fixture Idle", logo: logoDataUri("I", "#4b5563") };
 const REMOVED_ID = randomUUID();
 
-// 2004-03 for Alpha. Totals: 1,000 page views, 620 visitor-days, 725 visits, 12 dropped,
-// 65,000,000 ms engaged over 1,000 views = 1m 05s. Busiest days: Mar 14 (300), Mar 5 (250), Mar 21 (160).
+// 2004-03 for Alpha. Totals: 1,000 page views, 620 visitor-days, 725 visits, 12 dropped. Only Mar 14 has
+// engaged time (heartbeats), so time on page is 65,000,000 ms over that day's 300 views = 216,667 ms = 3m 37s,
+// measured on 1 of the 6 days with views. Busiest days: Mar 14 (300), Mar 5 (250), Mar 21 (160).
 const DAILY_TOTALS = [
   // local_date, views, visitors, visits, entries, engaged_ms, engaged_views, dropped
   ["2004-03-02", 100, 60, 70, 65, 0, 0, 0],
@@ -190,7 +191,8 @@ test("one sponsor: its sheet shows the seeded numbers, the match day, the footno
   await expect(sheet.locator('[data-stat="views"]')).toContainText("1,000");
   await expect(sheet.locator('[data-stat="visitor-days"]')).toContainText("620");
   await expect(sheet.locator('[data-stat="visits"]')).toContainText("725");
-  await expect(sheet.locator('[data-stat="avg-time"]')).toContainText("1m 05s");
+  await expect(sheet.locator('[data-stat="avg-time"]')).toContainText("3m 37s");
+  await expect(sheet.locator('[data-stat="avg-time"]')).toContainText("measured on 1 of 6 days");
 
   // This sponsor on the site.
   await expect(sheet.getByRole("heading", { level: 3, name: `${SPONSOR_BAKERY.name} on your site` })).toBeVisible();

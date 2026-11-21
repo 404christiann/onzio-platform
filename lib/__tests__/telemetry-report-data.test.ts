@@ -7,6 +7,7 @@ import {
   monthRange,
   parseReportMonth,
   parseReportSponsor,
+  readMonthlyReportRows,
   reportHref,
   type MatchRow,
   type SponsorListing,
@@ -212,7 +213,15 @@ describe("buildMonthlyReport: the month and the club's zone", () => {
         { date: "2026-12-01", opponent: "December FC", home: true },
       ],
     });
-    expect(result.site).toEqual({ views: 30, visitorDays: 23, visits: 18, avgTimeOnPageMs: 10_000, dropped: 3 });
+    expect(result.site).toEqual({
+      views: 30,
+      visitorDays: 23,
+      visits: 18,
+      avgTimeOnPageMs: 10_000,
+      timeMeasuredDays: 2,
+      trafficDays: 2,
+      dropped: 3,
+    });
     expect(result.pages[0].totals).toEqual({ logoViews: 4, viewerDays: 3, clicks: 1, clickRate: 0.25 });
     expect(result.pages[0].busiestDays.map((day) => day.date)).toEqual(["2026-11-30", "2026-11-01"]);
     expect(result.pages[0].busiestDays.find((day) => day.date === "2026-11-01")?.matches).toEqual(["vs Nov FC"]);
@@ -236,7 +245,15 @@ describe("buildMonthlyReport: site traffic", () => {
         totals("2026-11-03", { views: 50, visitors: 30, visits: 35, engaged_ms: 1_500_000, dropped: 0 }),
       ],
     });
-    expect(result.site).toEqual({ views: 150, visitorDays: 90, visits: 105, avgTimeOnPageMs: 30_000, dropped: 2 });
+    expect(result.site).toEqual({
+      views: 150,
+      visitorDays: 90,
+      visits: 105,
+      avgTimeOnPageMs: 30_000,
+      timeMeasuredDays: 2,
+      trafficDays: 2,
+      dropped: 2,
+    });
   });
 
   it("rounds the average to a whole millisecond", () => {
@@ -248,7 +265,73 @@ describe("buildMonthlyReport: site traffic", () => {
     expect(report({ totals: [] }).site.avgTimeOnPageMs).toBeNull();
     expect(report({ totals: [totals("2026-11-02", { views: 0, engaged_ms: 5000 })] }).site.avgTimeOnPageMs).toBeNull();
     expect(report({ totals: [totals("2026-11-02", { views: 40, engaged_ms: 0 })] }).site.avgTimeOnPageMs).toBeNull();
-    expect(report({ totals: [] }).site).toEqual({ views: 0, visitorDays: 0, visits: 0, avgTimeOnPageMs: null, dropped: 0 });
+    expect(report({ totals: [] }).site).toEqual({
+      views: 0,
+      visitorDays: 0,
+      visits: 0,
+      avgTimeOnPageMs: null,
+      timeMeasuredDays: 0,
+      trafficDays: 0,
+      dropped: 0,
+    });
+  });
+
+  describe("time on page when heartbeats cover only part of the month", () => {
+    const day = (dayOfMonth: number) => `2026-11-${String(dayOfMonth).padStart(2, "0")}`;
+
+    it("averages only the days that were measured, and reports how many of the traffic days those are", () => {
+      // Ten days of views from before heartbeats shipped, then five days that have both. Over the whole month
+      // this would read 6,000,000 / 1,200 = 5s; over the measured days it is 6,000,000 / 200 = 30s.
+      const unmeasured = Array.from({ length: 10 }, (_, index) => totals(day(1 + index), { views: 100 }));
+      const measured = Array.from({ length: 5 }, (_, index) => totals(day(11 + index), { views: 40, engaged_ms: 1_200_000 }));
+      const { site } = report({ totals: [...unmeasured, ...measured] });
+      expect(site.views).toBe(1200);
+      expect(site.avgTimeOnPageMs).toBe(30_000);
+      expect(site.timeMeasuredDays).toBe(5);
+      expect(site.trafficDays).toBe(15);
+    });
+
+    it("has no partial state when every day with views was measured", () => {
+      const { site } = report({
+        totals: [
+          totals(day(2), { views: 100, engaged_ms: 3_000_000 }),
+          totals(day(3), { views: 50, engaged_ms: 1_500_000 }),
+          totals(day(4), { views: 0 }),
+        ],
+      });
+      expect(site.avgTimeOnPageMs).toBe(30_000);
+      expect(site.timeMeasuredDays).toBe(2);
+      expect(site.trafficDays).toBe(2);
+    });
+
+    it("has no average and no measured days when there were no heartbeats at all", () => {
+      const { site } = report({ totals: [totals(day(2), { views: 40 }), totals(day(3), { views: 60 })] });
+      expect(site.avgTimeOnPageMs).toBeNull();
+      expect(site.timeMeasuredDays).toBe(0);
+      expect(site.trafficDays).toBe(2);
+    });
+
+    it("does not divide by zero for a day with engaged time and no views", () => {
+      const alone = report({ totals: [totals(day(2), { views: 0, engaged_ms: 5000 })] }).site;
+      expect(alone.avgTimeOnPageMs).toBeNull();
+      expect(alone.timeMeasuredDays).toBe(0);
+      expect(alone.trafficDays).toBe(0);
+
+      const beside = report({ totals: [totals(day(2), { views: 0, engaged_ms: 5000 }), totals(day(3), { views: 10, engaged_ms: 100_000 })] });
+      expect(Number.isFinite(beside.site.avgTimeOnPageMs)).toBe(true);
+      expect(beside.site.timeMeasuredDays).toBe(1);
+      expect(beside.site.trafficDays).toBe(1);
+      expect(JSON.stringify(beside)).not.toMatch(/NaN|Infinity/);
+    });
+
+    it("counts a day once when its row arrives twice", () => {
+      const { site } = report({
+        totals: [totals(day(2), { views: 10, engaged_ms: 100_000 }), totals(day(2), { views: 10, engaged_ms: 100_000 }), totals(day(3), { views: 30 })],
+      });
+      expect(site.avgTimeOnPageMs).toBe(10_000);
+      expect(site.timeMeasuredDays).toBe(1);
+      expect(site.trafficDays).toBe(2);
+    });
   });
 
   it("accepts numbers that arrive as strings", () => {
@@ -267,7 +350,15 @@ describe("buildMonthlyReport: site traffic", () => {
       sponsor: NIKE,
       sponsorRows: [{ local_date: "2026-11-02", sponsor_id: NIKE, logo_views: "8", logo_viewers: "6", clicks: "2" } as unknown as SponsorRow],
     });
-    expect(result.site).toEqual({ views: 100, visitorDays: 60, visits: 70, avgTimeOnPageMs: 30_000, dropped: 4 });
+    expect(result.site).toEqual({
+      views: 100,
+      visitorDays: 60,
+      visits: 70,
+      avgTimeOnPageMs: 30_000,
+      timeMeasuredDays: 1,
+      trafficDays: 1,
+      dropped: 4,
+    });
     expect(result.pages[0].totals).toEqual({ logoViews: 8, viewerDays: 6, clicks: 2, clickRate: 0.25 });
   });
 });
@@ -454,5 +545,146 @@ describe("buildMonthlyReport: busiest days and matches", () => {
   it("adds up a day's rows if one arrives twice", () => {
     const result = report({ sponsor: NIKE, totals: [totals("2026-11-05", { views: 4 }), totals("2026-11-05", { views: 6 })] });
     expect(result.pages[0].busiestDays).toEqual([{ date: "2026-11-05", siteViews: 10, logoViews: 0, matches: [] }]);
+  });
+});
+
+// A minimal chainable stand-in for the signed-in person's client: .schema().from().select().eq().gte().lt()
+// .order().order().range(). Every call is recorded, and the sponsor rollup reads are answered by `respond`.
+// The other three reads are awaited without .range(), so the query is also a thenable that answers empty.
+type StubCall = {
+  table: string;
+  filters: Array<[operator: string, column: string, value: unknown]>;
+  orders: Array<[column: string, ascending: boolean]>;
+  range: [from: number, to: number] | null;
+};
+type StubAnswer = { data: SponsorRow[] | null; error: { message: string } | null };
+
+function stubClient(respond: (call: StubCall) => StubAnswer) {
+  const calls: StubCall[] = [];
+  const from = (table: string) => {
+    const call: StubCall = { table, filters: [], orders: [], range: null };
+    calls.push(call);
+    const answer = () => (table === "sponsor_daily_rollups" ? respond(call) : { data: [], error: null });
+    const query = {
+      select: () => query,
+      eq: (column: string, value: unknown) => (call.filters.push(["eq", column, value]), query),
+      gte: (column: string, value: unknown) => (call.filters.push(["gte", column, value]), query),
+      lt: (column: string, value: unknown) => (call.filters.push(["lt", column, value]), query),
+      order: (column: string, options: { ascending: boolean }) => (call.orders.push([column, options.ascending]), query),
+      range: (rangeFrom: number, to: number) => {
+        call.range = [rangeFrom, to];
+        return Promise.resolve(answer());
+      },
+      then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve(answer()).then(resolve, reject),
+    };
+    return query;
+  };
+  const client = { schema: () => ({ from }) } as unknown as Parameters<typeof readMonthlyReportRows>[0];
+  return { client, rollupCalls: () => calls.filter((call) => call.table === "sponsor_daily_rollups") };
+}
+
+/** Rows in the order the reader asks for (date, then sponsor); a row's logo views is its position. */
+function rollupRows(total: number): SponsorRow[] {
+  return Array.from({ length: total }, (_, index) =>
+    logos(
+      `2026-10-${String(1 + Math.min(30, Math.floor(index / 80))).padStart(2, "0")}`,
+      `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      { logo_views: index },
+    ),
+  );
+}
+
+/** What PostgREST does: the slice of the rows that .range(from, to) covers. */
+function pageOf(all: SponsorRow[], call: StubCall): StubAnswer {
+  const [rangeFrom, to] = call.range ?? [0, -1];
+  return { data: all.slice(rangeFrom, to + 1), error: null };
+}
+
+describe("readMonthlyReportRows: the sponsor rows are read a page at a time", () => {
+  const CLUB = "22222222-bbbb-4bbb-8bbb-000000000001";
+  const read = (client: Parameters<typeof readMonthlyReportRows>[0]) => readMonthlyReportRows(client, CLUB, "2026-10");
+
+  it("returns every row, in order, when they run past PostgREST's 1,000-row cap", async () => {
+    const all = rollupRows(2350);
+    const { client, rollupCalls } = stubClient((call) => pageOf(all, call));
+    const result = await read(client);
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") return;
+    expect(result.sponsorRows).toHaveLength(2350);
+    expect(result.sponsorRows).toEqual(all);
+    expect(rollupCalls().map((call) => call.range)).toEqual([
+      [0, 999],
+      [1000, 1999],
+      [2000, 2999],
+    ]);
+  });
+
+  it("asks for the club, the month and a stable order on every page", async () => {
+    const all = rollupRows(2350);
+    const { client, rollupCalls } = stubClient((call) => pageOf(all, call));
+    await read(client);
+    expect(rollupCalls()).toHaveLength(3);
+    for (const call of rollupCalls()) {
+      expect(call.filters).toEqual([
+        ["eq", "club_id", CLUB],
+        ["gte", "local_date", "2026-10-01"],
+        ["lt", "local_date", "2026-11-01"],
+      ]);
+      expect(call.orders).toEqual([
+        ["local_date", true],
+        ["sponsor_id", true],
+      ]);
+    }
+  });
+
+  it("reads one page for a short month, and one more only when a page comes back exactly full", async () => {
+    const short = stubClient((call) => pageOf(rollupRows(930), call));
+    const shortResult = await read(short.client);
+    expect(shortResult.status === "ready" && shortResult.sponsorRows.length).toBe(930);
+    expect(short.rollupCalls()).toHaveLength(1);
+
+    const full = stubClient((call) => pageOf(rollupRows(1000), call));
+    const fullResult = await read(full.client);
+    expect(fullResult.status === "ready" && fullResult.sponsorRows.length).toBe(1000);
+    expect(full.rollupCalls().map((call) => call.range)).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
+
+    const none = stubClient((call) => pageOf([], call));
+    const noneResult = await read(none.client);
+    expect(noneResult.status === "ready" && noneResult.sponsorRows).toEqual([]);
+    expect(none.rollupCalls()).toHaveLength(1);
+  });
+
+  it("reports an error, not a partial month, when any page fails", async () => {
+    const all = rollupRows(2350);
+    const { client, rollupCalls } = stubClient((call) =>
+      call.range?.[0] === 1000 ? { data: null, error: { message: "boom" } } : pageOf(all, call),
+    );
+    expect(await read(client)).toEqual({ status: "error" });
+    // It stops at the failing page instead of reading on.
+    expect(rollupCalls()).toHaveLength(2);
+  });
+
+  it("reports an error when a read throws", async () => {
+    const { client } = stubClient(() => {
+      throw new Error("network down");
+    });
+    expect(await read(client)).toEqual({ status: "error" });
+  });
+
+  it("stops at the page limit with an error instead of reading without end", async () => {
+    const endless = stubClient((call) => pageOf(rollupRows(1000), { ...call, range: [0, 999] }));
+    expect(await read(endless.client)).toEqual({ status: "error" });
+    expect(endless.rollupCalls()).toHaveLength(31);
+    expect(endless.rollupCalls().at(-1)?.range).toEqual([30_000, 30_999]);
+
+    // One row short of the limit is still a whole month.
+    const all = rollupRows(30_999);
+    const justUnder = stubClient((call) => pageOf(all, call));
+    const result = await read(justUnder.client);
+    expect(result.status === "ready" && result.sponsorRows.length).toBe(30_999);
+    expect(justUnder.rollupCalls()).toHaveLength(31);
   });
 });
