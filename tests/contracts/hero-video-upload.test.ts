@@ -267,13 +267,15 @@ describe("hero video control: upload, processing and going live", () => {
   it("a reload during an upload stays idle with both buttons, even if sessionStorage still names the guid", async () => {
     vi.stubGlobal("sessionStorage", { getItem: () => "new-guid", setItem() {}, removeItem() {} });
     const uploadingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "uploading" as const, effective: "uploading" as const, deadlineAt: new Date(Date.now() + 3_600_000).toISOString() } };
-    const { controller, deps } = harness({ getStatus: vi.fn(async () => uploadingRow) });
+    // A sleep that never returns: if a tab ever treats the remembered guid as its own it would poll forever, and this fails on the assertions instead.
+    const { controller, deps } = harness({ getStatus: vi.fn(async () => uploadingRow), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
     await controller.load();
     expect(controller.getState()).toMatchObject({ phase: "idle", message: HERO_VIDEO_OTHER_UPLOAD_NOTE });
     await controller.revert();
     expect(deps.revert).toHaveBeenCalled();
     await controller.replace(video());
     expect(deps.start).toHaveBeenCalled();
+    controller.dispose();
   });
 
   it("cancel racing with land is a no-op and the tab stays preparing", async () => {
@@ -443,6 +445,72 @@ describe("viewFor: what one status read means", () => {
   });
   it("covers every view", () => {
     expect(new Set(cases.map(([, , , view]) => view))).toEqual(new Set(["idle", "other_upload", "timeout", "preparing", "live", "failed", "superseded"]));
+  });
+});
+
+describe("hero video control: reload shows what the server says", () => {
+  const GUID = "new-guid";
+  const pending = (effective: NonNullable<HeroVideoStatus["pending"]>["effective"]) => ({ videoGuid: GUID, encodeProgress: null, effective });
+  // Row: the server's status on load, what the tab shows, and whether choosing a new file starts an upload.
+  const rows: Array<[string, HeroVideoStatus, string, string, boolean]> = [
+    ["reload mid-upload", { ...STATUS, pending: pending("uploading") }, "idle", HERO_VIDEO_OTHER_UPLOAD_NOTE, true],
+    ["reload mid-upload, past its deadline", { ...STATUS, pending: pending("uploading_overdue") }, "idle", HERO_VIDEO_OTHER_UPLOAD_NOTE, true],
+    ["reload during preparing", { ...STATUS, pending: pending("preparing") }, "preparing", HERO_VIDEO_PREPARING_COPY, false],
+    ["reload after preparing timed out", { ...STATUS, pending: pending("preparing_overdue") }, "idle", heroVideoErrorMessage("PREPARE_TIMEOUT"), true],
+    ["reload after an encode failure", { ...STATUS, pending: pending("failed"), failure: { code: "VIDEO_FAILED" } }, "error", heroVideoErrorMessage("VIDEO_FAILED"), true],
+    ["reload after an abandoned upload", { ...STATUS, pending: pending("abandoned") }, "idle", "", true],
+    ["reload inside the live notice window", { ...STATUS, liveGuid: GUID, pending: pending("live") }, "live", HERO_VIDEO_LIVE_COPY, true],
+    ["reload after the live notice window", { ...STATUS, liveGuid: GUID, pending: pending("idle") }, "idle", "", true],
+  ];
+  it.each(rows)("%s", async (_label, status, phase, message, canReplace) => {
+    // A browser that still remembers this upload changes nothing: ownership is only ever the server's pending row.
+    const remembered = { getItem: () => GUID, setItem() {}, removeItem() {}, key: () => GUID, length: 1, clear() {} };
+    vi.stubGlobal("sessionStorage", remembered);
+    vi.stubGlobal("localStorage", remembered);
+    const { controller, deps } = harness({ getStatus: vi.fn(async () => status), sleep: vi.fn(() => new Promise<void>(() => undefined)) });
+    await controller.load();
+    expect(controller.getState()).toMatchObject({ phase, message });
+    if (phase === "error") expect(controller.getState().error?.code).toBe("VIDEO_FAILED");
+    await controller.replace(video());
+    expect(deps.start).toHaveBeenCalledTimes(canReplace ? 1 : 0);
+    // Loading is read-only: it never lands, cancels, reverts or refreshes the editor revision.
+    for (const quiet of [deps.markUploaded, deps.abandon, deps.revert, deps.refreshRevision]) expect(quiet).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
+  it("second tab: the other window's upload is shown without touching it, and its new file supersedes the first tab's", async () => {
+    const server: { pending: { videoGuid: string; effective: "uploading" } | null } = { pending: null };
+    const status = (): HeroVideoStatus => ({ ...STATUS, pending: server.pending && { ...server.pending, encodeProgress: null } });
+    // The poll interval never returns, so a tab that wrongly keeps polling fails on the assertions instead of looping.
+    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise<void>(() => undefined); });
+    const tab = (guid: string) => harness({
+      sleep,
+      getStatus: vi.fn(async () => status()),
+      start: vi.fn(async () => { server.pending = { videoGuid: guid, effective: "uploading" }; return { ...TICKET, videoGuid: guid }; }),
+    });
+    const a = tab("tab-a");
+    const b = tab("tab-b");
+    await a.controller.load();
+    await a.controller.replace(video());
+    expect(a.controller.getState().phase).toBe("uploading");
+
+    await b.controller.load();
+    expect(b.controller.getState()).toMatchObject({ phase: "idle", message: HERO_VIDEO_OTHER_UPLOAD_NOTE });
+    expect(b.deps.markUploaded).not.toHaveBeenCalled();
+    expect(b.deps.abandon).not.toHaveBeenCalled();
+    await b.controller.replace(video());
+    expect(b.controller.getState().phase).toBe("uploading");
+
+    // The first tab's bytes land late. The server answers stale, and the tab says a newer upload replaced it.
+    a.handlers.current!.onSuccess();
+    await settle();
+    expect(a.deps.markUploaded).toHaveBeenCalledWith("tab-a");
+    expect(a.controller.getState()).toMatchObject({ phase: "idle", message: HERO_VIDEO_SUPERSEDED_COPY });
+    expect(a.deps.abandon).not.toHaveBeenCalled();
+    expect(b.controller.getState().phase).toBe("uploading");
+    expect(server.pending?.videoGuid).toBe("tab-b");
+    a.controller.dispose();
+    b.controller.dispose();
   });
 });
 

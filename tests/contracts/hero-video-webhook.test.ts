@@ -220,6 +220,34 @@ describe("hero video webhook route", () => {
     expect(m.rpc.mock.calls.some((call) => call[0] === "swap_hero_video")).toBe(false);
     expect(m.deleteVideo).not.toHaveBeenCalled();
   });
+
+  it.each([[0], [3], [5], [7], [8]])("a webhook with status %s for a superseded guid finds no pending upload: no event, no host call, no delete", async (status) => {
+    rpcByName({ lookup_hero_video_pending: [] });
+    const response = await post(event(status));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ received: true, outcome: "ignored" });
+    expect(m.rpc.mock.calls.map((call) => call[0])).toEqual(["lookup_hero_video_pending"]);
+    expect(m.getVideo).not.toHaveBeenCalled();
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+  });
+
+  // Row: Bunny status, the phase the lookup saw, what the database answers once another delivery has already moved the row, the body.
+  it.each([
+    [3, "preparing", "already_live"],
+    [5, "preparing", "ignored"],
+    [8, "uploading", "ignored"],
+  ])("a duplicate webhook %s that the database answers stale changes nothing and deletes nothing", async (status, phase, body) => {
+    rpcByName({
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase }],
+      hero_video_event: [{ outcome: "stale", delete_guid: null, phase: null, replace_counted: false, revision_before: null, revision_after: null, used: null, collection_id: null }],
+    });
+    const response = await post(event(status));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ received: true, outcome: body });
+    expect(m.rpc.mock.calls.filter((call) => call[0] === "hero_video_event")).toHaveLength(1);
+    expect(m.rpc.mock.calls.some((call) => call[0] === "swap_hero_video")).toBe(false);
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+  });
 });
 
 describe("pending hero video state", () => {
@@ -374,6 +402,21 @@ describe("hero video cron backstop", () => {
     expect(events("ready")).toHaveLength(0);
     expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
     expect(result).toMatchObject({ swept: 1, finalized: 0, failed: 0 });
+  });
+
+  it("cron after the webhook: a row the cron listed but the webhook finished meanwhile answers stale, so nothing is swapped, expired or deleted", async () => {
+    const deadline = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    eventRows(() => ({ outcome: "stale" }), {
+      list_hero_video_pending: [{ club_id: CLUB, video_guid: NEW, collection_id: COL, phase: "preparing", deadline_at: deadline }],
+    });
+    const result = await runHeroVideoBackstop();
+    expect(events("ready")).toHaveLength(1);
+    expect(events("expire")).toHaveLength(0);
+    expect(events("land")).toHaveLength(0);
+    expect(events("reject")).toHaveLength(0);
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+    expect(m.rpc.mock.calls.some((call) => call[0] === "swap_hero_video")).toBe(false);
+    expect(result).toMatchObject({ inspected: 1, finalized: 0, failed: 0 });
   });
 
   it("skips the run when the video host is not configured", async () => {

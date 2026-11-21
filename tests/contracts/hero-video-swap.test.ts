@@ -87,6 +87,17 @@ describe("startHeroVideoUpload", () => {
     expect(m.createVideo).not.toHaveBeenCalled();
     expect(m.rpc.mock.calls.filter((call) => call[0] === "consume_hero_video_replace")).toEqual([]);
   });
+  it("answers 429 when the database says at_cap although the pre-check passed, and deletes only the unused guid", async () => {
+    rpcByName({
+      hero_video_replaces_today: 4,
+      hero_video_event: [{ outcome: "at_cap", delete_guid: "new-guid", phase: null, replace_counted: false, revision_before: null, revision_after: null, used: 5, collection_id: COL }],
+    });
+    const e = await err(startHeroVideoUpload(club, ok));
+    expect([e.status, e.code]).toEqual([429, "DAILY_LIMIT"]);
+    expect(m.deleteVideo).toHaveBeenCalledTimes(1);
+    expect(m.deleteVideo).toHaveBeenCalledWith("new-guid");
+    expect(m.tusUploadAuthorization).not.toHaveBeenCalled();
+  });
   it("refuses a new file while a video is still preparing and deletes only the unused guid", async () => {
     rpcByName({
       hero_video_replaces_today: 1,
