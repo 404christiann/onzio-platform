@@ -1071,7 +1071,7 @@ describe("telemetry retention sweep", () => {
     expect(left[0].n).toBe(1);
     // The one row left is the newest of the batch (100 days and 1 second old), not the oldest.
     expect(left[0].newest_age).toBe(100 * 86400 + 1);
-  });
+  }, 60_000);
 
   it("deletes a club's salts and rate counters the moment its add-on is removed, but keeps other clubs'", async () => {
     expect(await record(CLUB_IDS.alpha, event())).toBe("recorded");

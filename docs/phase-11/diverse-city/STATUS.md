@@ -1,5 +1,33 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-01 P1: 60 s timeout on the slow retention-sweep test
+
+**Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
+`agent/telemetry-01` at `008355c3`. **Status:** `in_progress`, waiting on the prod gate. The change is local and
+unstaged (not committed or pushed). Production untouched.
+
+**Completed:** the retention-sweep test "catches up on a backlog…" in `tests/database/page-telemetry.test.ts` now has
+its own `60_000` ms timeout, in the same per-test style as `site-coordination-full-site.test.ts`. The global 15 s
+timeout and all other tests are unchanged.
+
+**Files changed:** `tests/database/page-telemetry.test.ts` (one line), this file.
+
+**Verification (Mac local Supabase, reset plus both runs in one DB-lock hold, no `ANALYZE`):**
+
+| Run | Slow test | File result |
+|---|---|---|
+| First run after reset | 226 ms | 88/88 |
+| Second run, no reset | 22,502 ms | 88/88 (would have failed at 15 s) |
+
+`tsc --noEmit` and ESLint on the test file are clean.
+
+The earlier "known flake" note below had the order backwards for these runs: the first run after a reset was fast and
+the second was slow. A repeat attempt showed the same order (213 ms, then 20,574 ms). After the second run,
+`onzio.page_events` had about 34,600 dead tuples and had never been analyzed. That suggests the 12,000-row inserts
+leave dead rows and stale statistics that slow the next run. It is not proven. The 60 s timeout covers both orders.
+
+**Next step:** Christian's word to commit and push this. Then the prod gate below, each step on his word.
+
 ## 2026-11-21 - TELEMETRY-01 P1: rebased onto #209, migration retimestamped to 20261121060000
 
 **Agent/package:** Claude Code (Opus 5.5 coordinator, Sonnet worker), TELEMETRY-01 P1, PR #158, branch
