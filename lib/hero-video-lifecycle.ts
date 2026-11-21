@@ -60,23 +60,3 @@ export function effectiveHeroUploadState(row: HeroLifecycleRow | null | undefine
   if (row.phase === "preparing") return overdue ? "preparing_overdue" : "preparing";
   return "idle";
 }
-
-/** Bunny video status: 0 is still being uploaded, 6 is UploadFailed. Either one has no usable file. */
-export function videoHasBytes(video: { status: number } | null | undefined) {
-  return !!video && video.status >= 1 && video.status !== 6;
-}
-
-/**
- * The cron may abandon an upload only once its deadline has passed and Bunny
- * still has no bytes. A slow upload inside the window stays.
- */
-export function shouldExpireUpload(row: HeroLifecycleRow, now: number, hasBytes: boolean) {
-  if (hasBytes || row.phase !== "uploading") return false;
-  return effectiveHeroUploadState(row, now) === "uploading_overdue";
-}
-
-/** The cron may fail a prepare only once its deadline has passed and the file is still not ready. */
-export function shouldExpirePrepare(row: HeroLifecycleRow, now: number) {
-  if (row.phase !== "preparing") return false;
-  return effectiveHeroUploadState(row, now) === "preparing_overdue";
-}

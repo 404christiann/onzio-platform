@@ -34,13 +34,9 @@ export function verifyBunnyStreamSignature(input: {
 }
 
 /** Webhook status list from Bunny's Stream webhook docs. 8 is an abandoned upload, not a failed encode. */
-export function classifyBunnyStreamStatus(status: number): BunnyStreamWebhookAction {
-  if (status === 3) return "ready";
-  if (status === 5) return "reject";
-  if (status === 8) return "upload_failed";
-  if (status === 0 || status === 1 || status === 2 || status === 4 || status === 7) return "land";
-  return "ignore";
-}
+const ACTIONS: Record<number, BunnyStreamWebhookAction> = { 0: "land", 1: "land", 2: "land", 3: "ready", 4: "land", 5: "reject", 7: "land", 8: "upload_failed" };
+
+export const classifyBunnyStreamStatus = (status: number): BunnyStreamWebhookAction => ACTIONS[status] ?? "ignore";
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 

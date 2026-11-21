@@ -22,10 +22,7 @@ import {
   PREPARE_DEADLINE_MS,
   UPLOAD_WINDOW_MS,
   effectiveHeroUploadState,
-  shouldExpirePrepare,
-  shouldExpireUpload,
   uploadDeadlineMs,
-  videoHasBytes,
   type HeroEffective,
   type HeroStoredPhase,
   type HeroVideoEventName,
@@ -113,6 +110,7 @@ type EventRow = {
   revision_before: string | null;
   revision_after: string | null;
   used: number | null;
+  collection_id: string | null;
 };
 
 const onzio = () => createServiceRoleClient().schema("onzio");
@@ -167,7 +165,7 @@ export async function safeDeleteHeroVideo(clubId: string, collectionId: string, 
   }
 }
 
-/** The only writer. The database commits the transition, then this deletes delete_guid once. */
+/** The only writer. The database commits the transition, then this deletes delete_guid once, from the collection the same row names. */
 export async function applyHeroVideoEvent(input: {
   clubId: string;
   videoGuid: string;
@@ -202,10 +200,7 @@ export async function applyHeroVideoEvent(input: {
     revisionAfter: row.revision_after ?? null,
     used: row.used ?? null,
   };
-  if (mapped.deleteGuid) {
-    const collection = input.collectionId || (await lookupPending(input.videoGuid))?.collection_id || (await lookupPending(mapped.deleteGuid))?.collection_id || "";
-    await safeDeleteHeroVideo(input.clubId, collection, mapped.deleteGuid);
-  }
+  if (mapped.deleteGuid) await safeDeleteHeroVideo(input.clubId, row.collection_id ?? "", mapped.deleteGuid);
   return mapped;
 }
 
@@ -288,20 +283,13 @@ export async function startHeroVideoUpload(
 }
 
 /** Bytes arrived. A row that is no longer uploading is left alone. */
-export async function markHeroVideoUploaded(clubId: string, videoGuid: string): Promise<HeroVideoEventResult> {
-  const row = await lookupPending(videoGuid);
-  return applyHeroVideoEvent({
-    clubId, videoGuid, event: "land", expected: ["uploading"],
-    collectionId: row?.collection_id ?? "", deadlineMs: PREPARE_DEADLINE_MS,
-  });
+export function markHeroVideoUploaded(clubId: string, videoGuid: string) {
+  return applyHeroVideoEvent({ clubId, videoGuid, event: "land", expected: ["uploading"], deadlineMs: PREPARE_DEADLINE_MS });
 }
 
 /** Cancel, a tus error, or a presigned upload failure. A land that already won is a no-op. */
-export async function abandonHeroVideoUpload(clubId: string, videoGuid: string): Promise<HeroVideoEventResult> {
-  const row = await lookupPending(videoGuid);
-  return applyHeroVideoEvent({
-    clubId, videoGuid, event: "abandon", expected: ["uploading"], collectionId: row?.collection_id ?? "",
-  });
+export function abandonHeroVideoUpload(clubId: string, videoGuid: string) {
+  return applyHeroVideoEvent({ clubId, videoGuid, event: "abandon", expected: ["uploading"] });
 }
 
 export async function revertHeroVideo(clubId: string, input: { expectedLiveGuid: string; targetGuid: string }): Promise<HeroVideoLive> {
@@ -336,75 +324,62 @@ export async function checkReadiness(clubId: string, videoGuid: string): Promise
   return { status: "ready" };
 }
 
-const REJECT_FROM: HeroStoredPhase[] = ["uploading", "preparing"];
-const READY_FROM: HeroStoredPhase[] = ["uploading", "preparing"];
+const OPEN_PHASES: HeroStoredPhase[] = ["uploading", "preparing"];
 
-async function applyReady(clubId: string, videoGuid: string, collectionId: string) {
-  return applyHeroVideoEvent({
-    clubId, videoGuid, event: "ready", expected: READY_FROM, collectionId, libraryId: BUNNY_STREAM_LIBRARY_ID,
-  });
-}
+const applyReady = (clubId: string, videoGuid: string) =>
+  applyHeroVideoEvent({ clubId, videoGuid, event: "ready", expected: OPEN_PHASES, libraryId: BUNNY_STREAM_LIBRARY_ID });
+const applyReject = (clubId: string, videoGuid: string, failureCode: string) =>
+  applyHeroVideoEvent({ clubId, videoGuid, event: "reject", expected: OPEN_PHASES, failureCode });
 
-async function applyReject(clubId: string, videoGuid: string, collectionId: string, code: string) {
-  return applyHeroVideoEvent({
-    clubId, videoGuid, event: "reject", expected: REJECT_FROM, collectionId, failureCode: code,
-  });
-}
+const REFUSED = new Map([["INVALID_SIGNATURE", 401], ["INVALID_EVENT", 400], ["UNKNOWN_LIBRARY", 404]]);
 
 /**
- * Bunny Stream encode callback. Signature first, then one event.
+ * One outcome per delivery. Signature first, then one event.
  * Status 8 abandons. Status 3 goes live only while the row is still uploading or preparing.
  */
+async function webhookOutcome(input: { rawBody: string; signature: string | null; version: string | null; algorithm: string | null }): Promise<string> {
+  if (!verifyBunnyStreamSignature({ ...input, secret: process.env.BUNNY_STREAM_WEBHOOK_SECRET })) return "INVALID_SIGNATURE";
+  const event = parseBunnyStreamWebhook(input.rawBody);
+  if (!event) return "INVALID_EVENT";
+  if (String(event.videoLibraryId) !== BUNNY_STREAM_LIBRARY_ID) return "UNKNOWN_LIBRARY";
+  const job = event.isLiveStream ? null : await lookupPending(event.videoGuid);
+  const action = classifyBunnyStreamStatus(event.status);
+  if (!job || action === "ignore") return "ignored";
+  const clubId = job.club_id;
+  const guid = event.videoGuid;
+
+  if (action === "upload_failed") return (await abandonHeroVideoUpload(clubId, guid)).outcome === "stale" ? "ignored" : "abandoned";
+  if (action === "land") {
+    await markHeroVideoUploaded(clubId, guid);
+    return "preparing";
+  }
+  if (action === "reject") return (await applyReject(clubId, guid, "VIDEO_FAILED")).outcome === "stale" ? "ignored" : "failed";
+
+  if (!OPEN_PHASES.includes(job.phase)) return job.phase === "live" ? "already_live" : "ignored";
+  const readiness = await checkReadiness(clubId, guid);
+  if (readiness.status === "processing") return "processing";
+  if (readiness.status === "rejected") {
+    if (readiness.code === "NOT_CLUB_VIDEO") return "ignored";
+    await applyReject(clubId, guid, readiness.code);
+    return "failed";
+  }
+  const { outcome } = await applyReady(clubId, guid);
+  return outcome === "swapped" ? "live" : outcome === "stale" ? "already_live" : outcome;
+}
+
+/** Bunny Stream encode callback. Every delivery is answered from one place. */
 export async function applyBunnyStreamWebhook(input: {
   rawBody: string;
   signature: string | null;
   version: string | null;
   algorithm: string | null;
 }): Promise<{ httpStatus: number; body: Record<string, unknown> }> {
-  const secret = process.env.BUNNY_STREAM_WEBHOOK_SECRET;
-  if (!verifyBunnyStreamSignature({ ...input, secret })) return { httpStatus: 401, body: { error: "INVALID_SIGNATURE" } };
-  const event = parseBunnyStreamWebhook(input.rawBody);
-  if (!event) return { httpStatus: 400, body: { error: "INVALID_EVENT" } };
-  if (String(event.videoLibraryId) !== BUNNY_STREAM_LIBRARY_ID) return { httpStatus: 404, body: { error: "UNKNOWN_LIBRARY" } };
-  if (event.isLiveStream) return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
-
-  const job = await lookupPending(event.videoGuid);
-  if (!job) return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
-  const action = classifyBunnyStreamStatus(event.status);
-  if (action === "ignore") return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
-
-  if (action === "upload_failed") {
-    const result = await abandonHeroVideoUpload(job.club_id, event.videoGuid);
-    return { httpStatus: 200, body: { received: true, outcome: result.outcome === "stale" ? "ignored" : "abandoned" } };
-  }
-  if (action === "land") {
-    await applyHeroVideoEvent({
-      clubId: job.club_id, videoGuid: event.videoGuid, event: "land", expected: ["uploading"],
-      collectionId: job.collection_id, deadlineMs: PREPARE_DEADLINE_MS,
-    });
-    return { httpStatus: 200, body: { received: true, outcome: "preparing" } };
-  }
-  if (action === "reject") {
-    const result = await applyReject(job.club_id, event.videoGuid, job.collection_id, "VIDEO_FAILED");
-    return { httpStatus: 200, body: { received: true, outcome: result.outcome === "stale" ? "ignored" : "failed" } };
-  }
-
-  if (job.phase !== "uploading" && job.phase !== "preparing") {
-    return { httpStatus: 200, body: { received: true, outcome: job.phase === "live" ? "already_live" : "ignored" } };
-  }
-  const readiness = await checkReadiness(job.club_id, event.videoGuid);
-  if (readiness.status === "processing") return { httpStatus: 503, body: { received: false, outcome: "processing" } };
-  if (readiness.status === "rejected") {
-    if (readiness.code === "NOT_CLUB_VIDEO") return { httpStatus: 200, body: { received: true, outcome: "ignored" } };
-    await applyReject(job.club_id, event.videoGuid, job.collection_id, readiness.code);
-    return { httpStatus: 200, body: { received: true, outcome: "failed" } };
-  }
-  const ready = await applyReady(job.club_id, event.videoGuid, job.collection_id);
-  if (ready.outcome === "stale") return { httpStatus: 200, body: { received: true, outcome: "already_live" } };
-  if (ready.outcome !== "swapped" && ready.outcome !== "already_live") {
-    return { httpStatus: 200, body: { received: true, outcome: ready.outcome } };
-  }
-  return { httpStatus: 200, body: { received: true, outcome: ready.outcome === "already_live" ? "already_live" : "live" } };
+  const outcome = await webhookOutcome(input);
+  const refused = REFUSED.get(outcome);
+  return {
+    httpStatus: refused ?? (outcome === "processing" ? 503 : 200),
+    body: refused ? { error: outcome } : { received: outcome !== "processing", outcome },
+  };
 }
 
 export type HeroVideoBackstopResult = { configured: boolean; inspected: number; finalized: number; swept: number; failed: number };
@@ -424,29 +399,28 @@ async function sweepOrphans(clubId: string, collectionId: string, keepGuid?: str
   }
 }
 
+/**
+ * Lands, goes live, or rejects a video Bunny has bytes for. Anything else gets an
+ * expire event, and the database acts only once the row's deadline has passed.
+ */
 async function finishOpen(job: PendingRow & { club_id: string }, video: BunnyVideo | null) {
-  if (video && videoHasBytes(video)) {
-    if (job.phase === "uploading") {
-      await applyHeroVideoEvent({
-        clubId: job.club_id, videoGuid: job.video_guid, event: "land", expected: ["uploading"],
-        collectionId: job.collection_id, deadlineMs: PREPARE_DEADLINE_MS,
-      });
-    }
+  // Bunny status 0 is still uploading and 6 is UploadFailed. Neither has a usable file.
+  if (video && video.status >= 1 && video.status !== 6) {
+    if (job.phase === "uploading") await markHeroVideoUploaded(job.club_id, job.video_guid);
     const readiness = await checkReadiness(job.club_id, job.video_guid);
-    if (readiness.status === "ready") return applyReady(job.club_id, job.video_guid, job.collection_id);
-    if (readiness.status === "rejected" && readiness.code !== "NOT_CLUB_VIDEO") {
-      return applyReject(job.club_id, job.video_guid, job.collection_id, readiness.code);
-    }
+    if (readiness.status === "ready") return applyReady(job.club_id, job.video_guid);
+    if (readiness.status === "rejected" && readiness.code !== "NOT_CLUB_VIDEO") return applyReject(job.club_id, job.video_guid, readiness.code);
   }
-  return null;
+  const expired = await applyHeroVideoEvent({ clubId: job.club_id, videoGuid: job.video_guid, event: "expire", expected: [job.phase] });
+  return expired.outcome === "stale" ? null : expired;
 }
 
 /**
- * Daily backstop. Expires an uploading row only when its deadline has passed
- * and Bunny still has no bytes. Orphan videos older than a day are swept here,
- * not during start.
+ * Daily backstop for open rows. Each one is finished, or sent an expire event
+ * that the database refuses until the deadline has passed. Orphan videos older
+ * than a day are swept here, not during start.
  */
-export async function runHeroVideoBackstop(now = Date.now()): Promise<HeroVideoBackstopResult> {
+export async function runHeroVideoBackstop(): Promise<HeroVideoBackstopResult> {
   const result: HeroVideoBackstopResult = { configured: true, inspected: 0, finalized: 0, swept: 0, failed: 0 };
   if (!process.env.BUNNY_STREAM_API_KEY) return { ...result, configured: false };
   const listed = await onzio().rpc("list_hero_video_pending");
@@ -455,35 +429,13 @@ export async function runHeroVideoBackstop(now = Date.now()): Promise<HeroVideoB
   for (const job of jobs) {
     result.inspected += 1;
     try {
-      const video = await getVideo(job.video_guid);
-      const row = { phase: job.phase, deadlineAt: job.deadline_at };
-      if (job.phase === "uploading" && shouldExpireUpload(row, now, videoHasBytes(video))) {
-        await applyHeroVideoEvent({
-          clubId: job.club_id, videoGuid: job.video_guid, event: "expire", expected: ["uploading"], collectionId: job.collection_id,
-        });
-        await sweepOrphans(job.club_id, job.collection_id);
-        result.swept += 1;
+      const finished = await finishOpen(job, await getVideo(job.video_guid));
+      if (finished?.outcome === "swapped" || finished?.outcome === "already_live") {
+        result.finalized += 1;
         continue;
       }
-      if (shouldExpirePrepare(row, now) && !(video && videoHasBytes(video) && (await videoReadiness(video)) === "ready")) {
-        const readiness = video && videoHasBytes(video) ? await checkReadiness(job.club_id, job.video_guid) : null;
-        if (readiness?.status === "ready") {
-          const finished = await applyReady(job.club_id, job.video_guid, job.collection_id);
-          if (finished.outcome === "swapped" || finished.outcome === "already_live") result.finalized += 1;
-          else result.swept += 1;
-          continue;
-        }
-        await applyHeroVideoEvent({
-          clubId: job.club_id, videoGuid: job.video_guid, event: "expire", expected: ["preparing"],
-          collectionId: job.collection_id, failureCode: "PREPARE_TIMEOUT",
-        });
-        result.swept += 1;
-        continue;
-      }
-      const finished = await finishOpen(job, video);
-      if (finished && (finished.outcome === "swapped" || finished.outcome === "already_live")) result.finalized += 1;
-      else if (finished) result.swept += 1;
-      else await sweepOrphans(job.club_id, job.collection_id, job.video_guid);
+      if (finished) result.swept += 1;
+      await sweepOrphans(job.club_id, job.collection_id, job.video_guid);
     } catch (error) {
       console.error("hero video backstop failed", { clubId: job.club_id, error: error instanceof Error ? error.name : "unknown" });
       result.failed += 1;

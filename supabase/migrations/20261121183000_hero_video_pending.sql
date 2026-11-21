@@ -61,13 +61,13 @@ create function onzio_private.hero_video_event_core(
   replace_counted boolean,
   revision_before text,
   revision_after text,
-  used integer
+  used integer,
+  collection_id text
 )
 language plpgsql security definer set search_path = '' as $$
 #variable_conflict use_column
 declare
   v_row onzio_private.hero_video_pending%rowtype;
-  v_n integer;
   v_used integer;
   v_day date := (pg_catalog.now() at time zone 'utc')::date;
   v_delete text;
@@ -103,22 +103,15 @@ begin
       0) into v_used;
     select * into v_row from onzio_private.hero_video_pending where club_id = p_club_id for update;
     if found and v_row.phase = 'preparing' and v_row.deadline_at > pg_catalog.now() then
-      return query select 'preparing'::text, p_video_guid, v_row.phase, v_row.replace_counted, null::text, null::text, v_used;
+      return query select 'preparing'::text, p_video_guid, v_row.phase, v_row.replace_counted, null::text, null::text, v_used, p_collection_id;
       return;
     end if;
     if v_used >= p_cap then
-      return query select 'at_cap'::text, p_video_guid, null::text, false, null::text, null::text, v_used;
+      return query select 'at_cap'::text, p_video_guid, null::text, false, null::text, null::text, v_used, p_collection_id;
       return;
     end if;
-    v_delete := null;
-    if found then
-      if not (v_row.phase = any(p_expected)) then
-        return query select 'stale'::text, null::text, v_row.phase, v_row.replace_counted, null::text, null::text, v_used;
-        return;
-      end if;
-      if v_row.phase in ('uploading', 'preparing', 'failed', 'abandoned') then
-        v_delete := v_row.video_guid;
-      end if;
+    if v_row.phase in ('uploading', 'preparing') then
+      v_delete := v_row.video_guid;
     end if;
     insert into onzio_private.hero_video_pending as p (
       club_id, video_guid, collection_id, phase, failure_code, revision_before, revision_after,
@@ -139,7 +132,7 @@ begin
           deadline_at = excluded.deadline_at,
           replace_counted = false,
           updated_at = pg_catalog.now();
-    return query select 'ok'::text, v_delete, 'uploading'::text, false, null::text, null::text, v_used;
+    return query select 'ok'::text, v_delete, 'uploading'::text, false, null::text, null::text, v_used, coalesce(v_row.collection_id, p_collection_id);
     return;
   end if;
 
@@ -147,12 +140,12 @@ begin
    where club_id = p_club_id and video_guid = p_video_guid and phase = any(p_expected)
    for update;
   if not found then
-    return query select 'stale'::text, null::text, null::text, false, null::text, null::text, null::integer;
+    return query select 'stale'::text, null::text, null::text, false, null::text, null::text, null::integer, null::text;
     return;
   end if;
 
   if p_event = 'expire' and not (v_row.deadline_at <= pg_catalog.now()) then
-    return query select 'stale'::text, null::text, v_row.phase, v_row.replace_counted, null::text, null::text, null::integer;
+    return query select 'stale'::text, null::text, v_row.phase, v_row.replace_counted, null::text, null::text, null::integer, v_row.collection_id;
     return;
   end if;
 
@@ -170,7 +163,7 @@ begin
            replace_counted = true,
            updated_at = pg_catalog.now()
      where club_id = p_club_id and video_guid = p_video_guid;
-    return query select 'ok'::text, null::text, 'preparing'::text, true, null::text, null::text, null::integer;
+    return query select 'ok'::text, null::text, 'preparing'::text, true, null::text, null::text, null::integer, v_row.collection_id;
     return;
   end if;
 
@@ -178,7 +171,7 @@ begin
     update onzio_private.hero_video_pending
        set phase = 'abandoned', failure_code = null, deadline_at = null, updated_at = pg_catalog.now()
      where club_id = p_club_id and video_guid = p_video_guid;
-    return query select 'abandoned'::text, p_video_guid, 'abandoned'::text, v_row.replace_counted, null::text, null::text, null::integer;
+    return query select 'abandoned'::text, p_video_guid, 'abandoned'::text, v_row.replace_counted, null::text, null::text, null::integer, v_row.collection_id;
     return;
   end if;
 
@@ -187,13 +180,13 @@ begin
       update onzio_private.hero_video_pending
          set phase = 'abandoned', failure_code = null, deadline_at = null, updated_at = pg_catalog.now()
        where club_id = p_club_id and video_guid = p_video_guid;
-      return query select 'abandoned'::text, p_video_guid, 'abandoned'::text, v_row.replace_counted, null::text, null::text, null::integer;
+      return query select 'abandoned'::text, p_video_guid, 'abandoned'::text, v_row.replace_counted, null::text, null::text, null::integer, v_row.collection_id;
       return;
     end if;
     update onzio_private.hero_video_pending
        set phase = 'failed', failure_code = 'PREPARE_TIMEOUT', deadline_at = null, updated_at = pg_catalog.now()
      where club_id = p_club_id and video_guid = p_video_guid;
-    return query select 'failed'::text, p_video_guid, 'failed'::text, v_row.replace_counted, null::text, null::text, null::integer;
+    return query select 'failed'::text, p_video_guid, 'failed'::text, v_row.replace_counted, null::text, null::text, null::integer, v_row.collection_id;
     return;
   end if;
 
@@ -210,7 +203,7 @@ begin
        set phase = 'failed', failure_code = p_failure_code, revision_before = null, revision_after = null,
            deadline_at = null, replace_counted = true, updated_at = pg_catalog.now()
      where club_id = p_club_id and video_guid = p_video_guid;
-    return query select 'failed'::text, p_video_guid, 'failed'::text, true, null::text, null::text, null::integer;
+    return query select 'failed'::text, p_video_guid, 'failed'::text, true, null::text, null::text, null::integer, v_row.collection_id;
     return;
   end if;
 
@@ -229,7 +222,7 @@ begin
     into v_swap
     from onzio_private.swap_hero_video_core(p_club_id, p_video_guid, p_library_id, v_expected_live) s;
   if v_swap.outcome is null or v_swap.outcome not in ('swapped', 'already_live') then
-    return query select coalesce(v_swap.outcome, 'missing_row')::text, null::text, v_row.phase, v_row.replace_counted, null::text, null::text, null::integer;
+    return query select coalesce(v_swap.outcome, 'missing_row')::text, null::text, v_row.phase, v_row.replace_counted, null::text, null::text, null::integer, v_row.collection_id;
     return;
   end if;
   if not v_row.replace_counted then
@@ -247,12 +240,7 @@ begin
          revision_after = coalesce(v_swap.revision_after, revision_after),
          updated_at = pg_catalog.now()
    where club_id = p_club_id and video_guid = p_video_guid;
-  get diagnostics v_n = row_count;
-  if v_n = 0 then
-    return query select 'stale'::text, null::text, null::text, false, null::text, null::text, null::integer;
-    return;
-  end if;
-  return query select v_swap.outcome::text, v_swap.deletable_guid, 'live'::text, true, v_swap.revision_before, v_swap.revision_after, null::integer;
+  return query select v_swap.outcome::text, v_swap.deletable_guid, 'live'::text, true, v_swap.revision_before, v_swap.revision_after, null::integer, v_row.collection_id;
 end $$;
 
 create function onzio_private.read_hero_video_pending_core(p_club_id uuid)
@@ -305,7 +293,7 @@ create function onzio.hero_video_event(
   p_failure_code text, p_library_id text, p_expected_live text, p_cap integer, p_deadline_ms bigint
 ) returns table(
   outcome text, delete_guid text, phase text, replace_counted boolean,
-  revision_before text, revision_after text, used integer
+  revision_before text, revision_after text, used integer, collection_id text
 )
 language sql security invoker set search_path = '' as $$
   select * from onzio_private.hero_video_event_core(

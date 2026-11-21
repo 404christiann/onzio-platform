@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   HERO_VIDEO_LIVE_NOTICE_MS,
   effectiveHeroUploadState,
-  shouldExpireUpload,
   uploadDeadlineMs,
   type HeroEffective,
   type HeroStoredPhase,
@@ -52,15 +51,11 @@ describe("effective hero upload state", () => {
   it("a slow upload started at 01:00 is still uploading at the 02:15 cron and at 02:40", () => {
     const started = at("2026-11-21T09:00:00.000Z");
     const deadline = new Date(started + uploadDeadlineMs()).toISOString();
-    expect(shouldExpireUpload(row("uploading", deadline), at("2026-11-21T10:15:00.000Z"), false)).toBe(false);
-    expect(shouldExpireUpload(row("uploading", deadline), at("2026-11-21T10:40:00.000Z"), true)).toBe(false);
+    expect(effectiveHeroUploadState(row("uploading", deadline), at("2026-11-21T10:15:00.000Z"))).toBe("uploading");
     expect(effectiveHeroUploadState(row("uploading", deadline), at("2026-11-21T10:40:00.000Z"))).toBe("uploading");
   });
 
-  it("breaking the deadline filter would expire that slow upload", () => {
-    const started = at("2026-11-21T09:00:00.000Z");
-    const deadline = new Date(started + uploadDeadlineMs()).toISOString();
-    expect(shouldExpireUpload(row("uploading", deadline), at("2026-11-21T10:15:00.000Z"), false)).toBe(false);
+  it("the database, not the app, refuses to expire a row before its deadline", () => {
     expect(sql).toContain("deadline_at <= pg_catalog.now()");
     expect(sql).toContain("where club_id = p_club_id and video_guid = p_video_guid and phase = any(p_expected)");
     expect(sql).not.toContain("consume_hero_video_replace");

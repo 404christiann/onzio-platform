@@ -6,8 +6,6 @@ import {
   HERO_VIDEO_SUPERSEDED_COPY,
   HERO_VIDEO_UPLOAD_DONE_MS,
   HERO_VIDEO_UPLOADING_COPY,
-  effectiveHeroUploadState,
-  type HeroEffective,
 } from "@/lib/hero-video-lifecycle";
 import {
   abandonHeroVideoUpload, HeroVideoApiError, fetchHomepageRevision, getHeroVideoStatus, markHeroVideoUploaded, revertHeroVideo, startHeroVideoUpload,
@@ -94,16 +92,26 @@ const idle = (status: HeroVideoStatus | null, message = ""): HeroVideoState => (
 });
 const BLOCKS_REPLACE = new Set<HeroVideoPhase>(["loading", "uploading", "uploaded", "preparing", "reverting"]);
 
-function shownEffective(status: HeroVideoStatus): HeroEffective {
-  const pending = status.pending;
-  if (pending?.effective) return pending.effective;
-  if (!pending?.videoGuid) {
-    if (status.failure?.code) return "failed";
-    if (status.completion?.videoGuid && status.liveGuid === status.completion.videoGuid) return "live";
-    return "idle";
-  }
-  const phase = pending.phase ?? "preparing";
-  return effectiveHeroUploadState({ phase, deadlineAt: pending.deadlineAt ?? null }, Date.now());
+export type HeroVideoView = "idle" | "other_upload" | "timeout" | "preparing" | "live" | "failed" | "superseded";
+const IDLE_NOTES: Partial<Record<HeroVideoView, string>> = {
+  other_upload: HERO_VIDEO_OTHER_UPLOAD_NOTE, timeout: heroVideoErrorMessage("PREPARE_TIMEOUT"), superseded: HERO_VIDEO_SUPERSEDED_COPY,
+};
+
+/**
+ * What one status read means, from the server's pending.effective alone. ownGuid is the upload this tab is
+ * watching, null on load. A watching tab finishes live after the notice window and keeps polling an uploading row.
+ */
+export function viewFor(status: HeroVideoStatus, ownGuid: string | null): HeroVideoView {
+  const { pending, liveGuid } = status;
+  if (ownGuid && pending && pending.videoGuid !== ownGuid) return liveGuid === ownGuid ? "live" : "superseded";
+  const effective = pending?.effective;
+  if (ownGuid ? liveGuid === ownGuid : (effective === "live" && liveGuid === pending?.videoGuid)) return "live";
+  if (effective === "failed") return "failed";
+  if (effective === "preparing_overdue") return "timeout";
+  if (effective === "uploading_overdue") return "other_upload";
+  if (effective === "preparing") return "preparing";
+  if (effective === "uploading") return ownGuid ? "preparing" : "other_upload";
+  return "idle";
 }
 
 export type HeroVideoController = ReturnType<typeof createHeroVideoController>;
@@ -157,66 +165,47 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     };
   }
 
-  /** Display-only poll. It never finalizes. "Mine" is only a live tus handle, which a reload does not have. */
+  /** Shows what viewFor says. Resolves true while the tab should keep polling. */
+  async function show(status: HeroVideoStatus, guid: string | null) {
+    const view = viewFor(status, guid);
+    if (view === "preparing") {
+      const encode = status.pending?.encodeProgress;
+      set({ phase: "preparing", status, progress: null, encodeProgress: typeof encode === "number" ? encode : null, error: null, message: HERO_VIDEO_PREPARING_COPY });
+      return true;
+    }
+    if (view === "live" && guid) {
+      set({ status });
+      await complete(liveFromStatus(status, guid), "replace");
+    } else if (view === "live") set({ ...idle(status), phase: "live", message: HERO_VIDEO_LIVE_COPY });
+    else if (view === "failed") {
+      set({ ...idle(status) });
+      fail(new HeroVideoApiError(status.failure?.code ?? "VIDEO_FAILED", "", 422));
+    } else set({ ...idle(status, IDLE_NOTES[view]) });
+    return false;
+  }
+
+  /** Display-only poll. It never finalizes. */
   async function watch(guid: string, token: number) {
     set({ phase: "preparing", progress: null, encodeProgress: null, error: null, message: HERO_VIDEO_PREPARING_COPY });
     while (alive(token)) {
-      let status: HeroVideoStatus;
-      try { status = await deps.getStatus(); }
-      catch {
-        if (!alive(token)) return;
-        await deps.sleep(HERO_VIDEO_POLL_MS);
-        continue;
-      }
+      let status: HeroVideoStatus | null = null;
+      try { status = await deps.getStatus(); } catch { /* try again on the next poll */ }
       if (!alive(token)) return;
-      const effective = shownEffective(status);
-      const same = status.pending?.videoGuid === guid;
-      // effective is idle for a live row only after the notice window closed. This tab was watching it, so it still finishes live.
-      if (status.liveGuid === guid && (effective === "live" || effective === "idle" || !same)) {
-        set({ status });
-        return complete(liveFromStatus(status, guid), "replace");
-      }
-      if (same && effective === "failed") {
-        set({ status });
-        return fail(new HeroVideoApiError(status.failure?.code ?? status.pending?.phase ?? "VIDEO_FAILED", "", 422));
-      }
-      if (status.failure && (!status.pending || same)) {
-        set({ status });
-        return fail(new HeroVideoApiError(status.failure.code, "", 422));
-      }
-      if (status.pending?.videoGuid && status.pending.videoGuid !== guid) {
-        set({ ...idle(status, HERO_VIDEO_SUPERSEDED_COPY) });
-        return;
-      }
-      if (same && (effective === "preparing_overdue" || effective === "uploading_overdue")) {
-        set({ ...idle(status, effective === "uploading_overdue" ? HERO_VIDEO_OTHER_UPLOAD_NOTE : heroVideoErrorMessage("PREPARE_TIMEOUT")) });
-        return;
-      }
-      if (!same && (effective === "abandoned" || effective === "idle" || effective === "uploading_overdue" || effective === "preparing_overdue")) {
-        set({ ...idle(status) });
-        return;
-      }
-      const encodeProgress = same && typeof status.pending?.encodeProgress === "number" ? status.pending.encodeProgress : null;
-      set({ phase: "preparing", status, progress: null, encodeProgress, error: null, message: HERO_VIDEO_PREPARING_COPY });
+      if (status && !(await show(status, guid))) return;
       await deps.sleep(HERO_VIDEO_POLL_MS);
     }
   }
 
-  function renderLoaded(status: HeroVideoStatus) {
-    const effective = shownEffective(status);
-    if (effective === "preparing" && status.pending?.videoGuid) {
-      set({ ...idle(status), phase: "preparing", message: HERO_VIDEO_PREPARING_COPY, encodeProgress: typeof status.pending.encodeProgress === "number" ? status.pending.encodeProgress : null });
-      return status.pending.videoGuid;
-    }
-    if (effective === "preparing_overdue") {
-      set({ ...idle(status, heroVideoErrorMessage("PREPARE_TIMEOUT")) });
-      return null;
-    }
-    if (effective === "live" && status.completion?.videoGuid === status.liveGuid) return "live" as const;
-    if (effective === "failed" && status.failure?.code) return "failed" as const;
-    const note = effective === "uploading" || effective === "uploading_overdue" ? HERO_VIDEO_OTHER_UPLOAD_NOTE : "";
-    set({ ...idle(status, note) });
-    return null;
+  /** Cancel and a tus error share this. Stale means the bytes had already landed: read once, and keep watching if the row is still ours. */
+  function abandon(guid: string, token: number) {
+    void deps.abandon(guid).then(async (result) => {
+      if (!alive(token) || result?.outcome !== "stale") return;
+      const status = await deps.getStatus();
+      if (!alive(token)) return;
+      const view = viewFor(status, guid);
+      if (view === "superseded") set({ ...idle(status, HERO_VIDEO_SUPERSEDED_COPY) });
+      else if (view === "preparing") return watch(guid, token);
+    }).catch(() => undefined);
   }
 
   const onPageHide = () => {
@@ -245,14 +234,8 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       try {
         const status = await deps.getStatus();
         if (!alive(token)) return;
-        const next = renderLoaded(status);
-        if (next === "live") {
-          // A swap this tab did not watch. The status just read is already current: no revision refresh, no replace count change.
-          set({ ...idle(status), phase: "live", message: HERO_VIDEO_LIVE_COPY });
-        } else if (next === "failed" && status.failure) {
-          set({ ...idle(status) });
-          fail(new HeroVideoApiError(status.failure.code, "", 422));
-        } else if (typeof next === "string") void watch(next, token);
+        // A swap this tab did not watch shows live without a revision refresh or a replace count change: the status just read is current.
+        if (await show(status, null) && status.pending) void watch(status.pending.videoGuid, token);
       } catch (error) { if (alive(token)) fail(error, "load"); }
     },
 
@@ -279,19 +262,8 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
           handle = null;
           const guid = uploadGuid;
           uploadGuid = null;
-          const interrupted = { phase: "error" as const, progress: null, error: { code: "UPLOAD_FAILED", message: "The upload was interrupted and could not continue. Your current hero video is unchanged. Choose the file to try again.", retry: null }, message: "The upload failed. Your current hero video is unchanged." };
-          set(interrupted);
-          if (!guid) return;
-          void deps.abandon(guid).then(async (result) => {
-            if (!alive(token) || result?.outcome !== "stale") return;
-            const status = await deps.getStatus();
-            if (!alive(token)) return;
-            if (status.pending?.videoGuid && status.pending.videoGuid !== guid) {
-              set({ ...idle(status, HERO_VIDEO_SUPERSEDED_COPY) });
-              return;
-            }
-            if (shownEffective(status) === "preparing") return watch(guid, token);
-          }).catch(() => undefined);
+          set({ phase: "error", progress: null, error: { code: "UPLOAD_FAILED", message: "The upload was interrupted and could not continue. Your current hero video is unchanged. Choose the file to try again.", retry: null }, message: "The upload failed. Your current hero video is unchanged." });
+          if (guid) abandon(guid, token);
         },
         onSuccess: () => {
           if (!alive(token)) return;
@@ -317,12 +289,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       const guid = uploadGuid;
       uploadGuid = null;
       set({ ...idle(state.status), message: "Upload canceled. Your current hero video is unchanged." });
-      if (!guid) return;
-      void deps.abandon(guid).then(async (result) => {
-        if (!alive(token) || result?.outcome !== "stale") return;
-        const status = await deps.getStatus();
-        if (alive(token) && shownEffective(status) === "preparing") return watch(guid, token);
-      }).catch(() => undefined);
+      if (guid) abandon(guid, token);
     },
 
     async retryStatus() {

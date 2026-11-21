@@ -4,7 +4,7 @@
  * place. Errors come back as `{ code, message }`; they surface as HeroVideoApiError.
  */
 
-import type { HeroEffective, HeroStoredPhase } from "@/lib/hero-video-lifecycle";
+import type { HeroEffective } from "@/lib/hero-video-lifecycle";
 
 const ENDPOINT = "/api/admin/homepage/hero-video";
 
@@ -15,14 +15,8 @@ export type HeroVideoStatus = {
   replacesPerDay: number;
   maxBytes: number;
   maxSeconds: number;
-  /** The club's current row. GET is read-only; effective is computed on the server. */
-  pending?: {
-    videoGuid: string;
-    encodeProgress: number | null;
-    phase?: HeroStoredPhase;
-    effective?: HeroEffective;
-    deadlineAt?: string | null;
-  } | null;
+  /** The club's current row. GET is read-only; effective is computed on the server and is the only state the editor reads. */
+  pending?: { videoGuid: string; encodeProgress: number | null; effective: HeroEffective } | null;
   failure?: { code: string } | null;
   /** Set only for HERO_VIDEO_LIVE_NOTICE_MS after the swap, so the editor can announce it. A tab that watched the swap uses it to move the editor's base revision. */
   completion?: { videoGuid: string; revisionBefore: string | null; revisionAfter: string | null } | null;

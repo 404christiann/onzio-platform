@@ -4,11 +4,11 @@ import { buildHomepageSaveRequest } from "@/lib/homepage-editor/adapter";
 import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
 import { createHomepageEditorState, reduceHomepageEditor, type HomepageEditorState } from "@/lib/homepage-editor/model";
 import { defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
-import { HeroVideoApiError, abandonHeroVideoUpload, fetchHomepageRevision, markHeroVideoUploaded, startHeroVideoUpload } from "@/lib/homepage-editor/hero-video-client";
+import { HeroVideoApiError, abandonHeroVideoUpload, fetchHomepageRevision, markHeroVideoUploaded, startHeroVideoUpload, type HeroVideoStatus } from "@/lib/homepage-editor/hero-video-client";
 import { readVideoDuration } from "@/lib/homepage-editor/hero-video-duration";
 import {
   HERO_VIDEO_LIVE_COPY, HERO_VIDEO_OTHER_UPLOAD_NOTE, HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_SUPERSEDED_COPY, HERO_VIDEO_UPLOAD_DONE_MS, HERO_VIDEO_UPLOADING_COPY,
-  applySwapRevision, megabytes, createHeroVideoController, heroVideoErrorMessage, type HeroVideoDeps,
+  applySwapRevision, megabytes, createHeroVideoController, heroVideoErrorMessage, viewFor, type HeroVideoDeps, type HeroVideoView,
 } from "@/lib/homepage-editor/hero-video-upload";
 
 const tus = vi.hoisted(() => ({ instances: [] as { file: unknown; options: Record<string, (...a: unknown[]) => void> & { headers: Record<string, string>; metadata: Record<string, string>; retryDelays: number[]; endpoint: string }; start: ReturnType<typeof vi.fn>; abort: ReturnType<typeof vi.fn> }[] }));
@@ -182,14 +182,14 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState().phase).toBe("idle");
   });
 
-  const preparing = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: 40 as number | null } };
-  const liveStatus = { ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", replacesUsedToday: 3, pending: null, completion: { videoGuid: "new-guid", ...RANGE } };
+  const preparing = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: 40 as number | null, effective: "preparing" as const } };
+  const liveStatus = { ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", replacesUsedToday: 3, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "live" as const }, completion: { videoGuid: "new-guid", ...RANGE } };
 
   it("shows the upload check, then polls GET for display only, and goes live when the swap is already done", async () => {
     const getStatus = vi.fn()
       .mockResolvedValueOnce(STATUS)
       .mockResolvedValueOnce(preparing)
-      .mockResolvedValueOnce({ ...preparing, pending: { videoGuid: "new-guid", encodeProgress: 80 } })
+      .mockResolvedValueOnce({ ...preparing, pending: { videoGuid: "new-guid", encodeProgress: 80, effective: "preparing" as const } })
       .mockResolvedValue(liveStatus);
     const { controller, handlers, deps } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
@@ -250,7 +250,7 @@ describe("hero video control: upload, processing and going live", () => {
   });
 
   it("stays preparing when the finish call fails after the bytes landed, then goes live", async () => {
-    const uploadingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, phase: "uploading" as const } };
+    const uploadingRow = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "uploading" as const } };
     const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValueOnce(uploadingRow).mockResolvedValue(liveStatus);
     const markUploaded = vi.fn(async () => { throw new HeroVideoApiError("NETWORK", "offline", 0); });
     const phases: string[] = [];
@@ -330,7 +330,7 @@ describe("hero video control: upload, processing and going live", () => {
     const getStatus = vi.fn()
       .mockResolvedValueOnce(STATUS)
       .mockResolvedValueOnce(preparing)
-      .mockResolvedValue({ ...STATUS, pending: null, failure: { code: "VIDEO_FAILED" } });
+      .mockResolvedValue({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "failed" as const }, failure: { code: "VIDEO_FAILED" } });
     const { controller, handlers } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
@@ -375,7 +375,7 @@ describe("hero video control: upload, processing and going live", () => {
     ["finalize", "HOMEPAGE_NOT_READY", /isn't set up/],
   ])("maps %s error %s to plain English", async (where, code, pattern) => {
     const rejection = vi.fn().mockRejectedValue(apiError(code));
-    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, failure: { code } });
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: null, effective: "failed" as const }, failure: { code } });
     const { controller, handlers } = harness(where === "start" ? { start: rejection } : { getStatus });
     await controller.load(); await controller.replace(video());
     if (where === "finalize") { handlers.current!.onSuccess(); await settle(); }
@@ -405,6 +405,44 @@ describe("hero video control: upload, processing and going live", () => {
     await controller.revert();
     expect(deps.start).toHaveBeenCalledTimes(1);
     expect(deps.revert).not.toHaveBeenCalled();
+  });
+});
+
+describe("viewFor: what one status read means", () => {
+  const row = (videoGuid: string, effective: NonNullable<HeroVideoStatus["pending"]>["effective"]) => ({ videoGuid, encodeProgress: null, effective });
+  const NEW = "new-guid";
+  const at = (effective: NonNullable<HeroVideoStatus["pending"]>["effective"], over: Partial<HeroVideoStatus> = {}): HeroVideoStatus => ({ ...STATUS, pending: row(NEW, effective), ...over });
+  const cases: Array<[string, HeroVideoStatus, string | null, HeroVideoView]> = [
+    ["load: no row", STATUS, null, "idle"],
+    ["load: a live row inside the notice window", at("live", { liveGuid: NEW }), null, "live"],
+    ["load: a live row after the notice window", at("idle", { liveGuid: NEW }), null, "idle"],
+    ["load: a live row that was reverted since", at("live"), null, "idle"],
+    ["load: preparing", at("preparing"), null, "preparing"],
+    ["load: preparing past its deadline", at("preparing_overdue"), null, "timeout"],
+    ["load: another window's upload", at("uploading"), null, "other_upload"],
+    ["load: an upload past its deadline", at("uploading_overdue"), null, "other_upload"],
+    ["load: failed", at("failed"), null, "failed"],
+    ["load: abandoned", at("abandoned"), null, "idle"],
+    ["watching: no row and the guid is not live", STATUS, NEW, "idle"],
+    ["watching: no row and the guid is live", { ...STATUS, liveGuid: NEW }, NEW, "live"],
+    ["watching: live inside the notice window", at("live", { liveGuid: NEW }), NEW, "live"],
+    ["watching: live after the notice window still finishes live", at("idle", { liveGuid: NEW }), NEW, "live"],
+    ["watching: live but reverted since", at("live"), NEW, "idle"],
+    ["watching: preparing", at("preparing"), NEW, "preparing"],
+    ["watching: still uploading keeps polling", at("uploading"), NEW, "preparing"],
+    ["watching: preparing past its deadline", at("preparing_overdue"), NEW, "timeout"],
+    ["watching: uploading past its deadline", at("uploading_overdue"), NEW, "other_upload"],
+    ["watching: failed", at("failed"), NEW, "failed"],
+    ["watching: abandoned", at("abandoned"), NEW, "idle"],
+    ["watching: a newer upload replaced it", { ...STATUS, pending: row("other-guid", "uploading") }, NEW, "superseded"],
+    ["watching: a newer failed row replaced it", { ...STATUS, pending: row("other-guid", "failed") }, NEW, "superseded"],
+    ["watching: replaced, but this guid went live first", { ...STATUS, liveGuid: NEW, pending: row("other-guid", "uploading") }, NEW, "live"],
+  ];
+  it.each(cases)("%s", (_label, status, ownGuid, expected) => {
+    expect(viewFor(status, ownGuid)).toBe(expected);
+  });
+  it("covers every view", () => {
+    expect(new Set(cases.map(([, , , view]) => view))).toEqual(new Set(["idle", "other_upload", "timeout", "preparing", "live", "failed", "superseded"]));
   });
 });
 
@@ -568,7 +606,7 @@ describe("hero video control: the editor's base revision follows the swap and th
   };
   const swap = async (refreshRevision: HeroVideoDeps["refreshRevision"], live: Record<string, unknown>) => {
     const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({
-      ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", pending: null,
+      ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", pending: { videoGuid: "new-guid", encodeProgress: null, effective: "live" as const },
       completion: { videoGuid: "new-guid", revisionBefore: (live.revisionBefore ?? null) as string | null, revisionAfter: (live.revisionAfter ?? null) as string | null },
     });
     const { controller, handlers } = harness({ getStatus, refreshRevision });

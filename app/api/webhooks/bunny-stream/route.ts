@@ -11,16 +11,14 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: Request) {
   const rawBody = await request.text();
-  try {
-    const result = await applyBunnyStreamWebhook({
-      rawBody,
-      signature: request.headers.get("x-bunnystream-signature"),
-      version: request.headers.get("x-bunnystream-signature-version"),
-      algorithm: request.headers.get("x-bunnystream-signature-algorithm"),
-    });
-    return NextResponse.json(result.body, { status: result.httpStatus });
-  } catch (error) {
+  const result = await applyBunnyStreamWebhook({
+    rawBody,
+    signature: request.headers.get("x-bunnystream-signature"),
+    version: request.headers.get("x-bunnystream-signature-version"),
+    algorithm: request.headers.get("x-bunnystream-signature-algorithm"),
+  }).catch((error) => {
     console.error("hero video webhook failed", { error: error instanceof Error ? error.name : "unknown" });
-    return NextResponse.json({ error: "WEBHOOK_FAILED" }, { status: 500 });
-  }
+    return { httpStatus: 500, body: { error: "WEBHOOK_FAILED" } };
+  });
+  return NextResponse.json(result.body, { status: result.httpStatus });
 }

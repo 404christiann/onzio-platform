@@ -338,21 +338,31 @@ describe("pending hero video", () => {
 
   it("walks start, land, ready and a stale retry without counting until bytes land", async () => {
     expect((await event(WITH_ROW, GUID, "start", ["uploading", "preparing", "live", "failed", "abandoned"])).outcome).toBe("ok");
-    expect((await event(WITH_ROW, B, "start", ["uploading", "preparing", "live", "failed", "abandoned"], { collection: "col-b" })).delete_guid).toBe(GUID);
+    // The superseded upload's guid and the collection it lives in come back together, so the app deletes it from the right place.
+    expect(await event(WITH_ROW, B, "start", ["uploading", "preparing", "live", "failed", "abandoned"], { collection: "col-b" })).toMatchObject({ delete_guid: GUID, collection_id: "col-a" });
     expect(await read()).toMatchObject({ video_guid: B, collection_id: "col-b", phase: "uploading", replace_counted: false });
     expect(await used()).toBe(0);
-    expect((await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).outcome).toBe("ok");
+    expect(await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).toMatchObject({ outcome: "ok", collection_id: "col-b" });
     expect(await read()).toMatchObject({ phase: "preparing", replace_counted: true });
     expect(await used()).toBe(1);
     expect((await event(WITH_ROW, B, "land", ["uploading"], { deadline: PREPARE })).outcome).toBe("stale");
     expect(await used()).toBe(1);
     const ready = await event(WITH_ROW, B, "ready", ["uploading", "preparing"]);
-    expect(ready.outcome).toBe("swapped");
-    expect(ready.phase).toBe("live");
+    expect(ready).toMatchObject({ outcome: "swapped", phase: "live", collection_id: "col-b" });
     expect(await used()).toBe(1);
     expect((await event(WITH_ROW, B, "ready", ["uploading", "preparing"])).outcome).toBe("stale");
     expect(await used()).toBe(1);
     expect((await db.query("select count(*)::int as n from onzio.list_hero_video_pending() where club_id=$1", [WITH_ROW])).rows[0].n).toBe(0);
+  });
+
+  it("start over a failed or abandoned row deletes nothing, because that video was deleted when the row closed", async () => {
+    const all = ["uploading", "preparing", "live", "failed", "abandoned"];
+    expect((await event(WITH_ROW, GUID, "start", all)).delete_guid).toBeNull();
+    expect(await event(WITH_ROW, GUID, "abandon", ["uploading"])).toMatchObject({ outcome: "abandoned", delete_guid: GUID, collection_id: "col-a" });
+    expect(await event(WITH_ROW, B, "start", all)).toMatchObject({ outcome: "ok", delete_guid: null });
+    expect(await event(WITH_ROW, B, "reject", ["uploading", "preparing"], { failure: "VIDEO_FAILED" })).toMatchObject({ outcome: "failed", delete_guid: B, collection_id: "col-a" });
+    expect(await event(WITH_ROW, C, "start", all)).toMatchObject({ outcome: "ok", delete_guid: null });
+    expect(await event(WITH_ROW, D, "start", all)).toMatchObject({ outcome: "ok", delete_guid: C });
   });
 
   it("refuses start while preparing is inside its deadline and does not count an abandon", async () => {

@@ -72,7 +72,7 @@ describe("startHeroVideoUpload", () => {
     expect(m.listCollectionVideos).not.toHaveBeenCalled();
     expect(m.createVideo).not.toHaveBeenCalled();
   });
-  const started = { outcome: "ok", delete_guid: null, phase: "uploading", replace_counted: false, revision_before: null, revision_after: null, used: 0 };
+  const started = { outcome: "ok", delete_guid: null, phase: "uploading", replace_counted: false, revision_before: null, revision_after: null, used: 0, collection_id: COL };
   it.each([["exactly the cap", { durationSeconds: 600 }], ["a short clip", { durationSeconds: 90.25 }], ["no declared duration", {}]])("allows %s and does not count a replace until bytes land", async (_l, extra) => {
     rpcByName({ hero_video_replaces_today: 0, hero_video_event: [started] });
     const r = await startHeroVideoUpload(club, { ...ok, ...extra });
@@ -90,7 +90,7 @@ describe("startHeroVideoUpload", () => {
   it("refuses a new file while a video is still preparing and deletes only the unused guid", async () => {
     rpcByName({
       hero_video_replaces_today: 1,
-      hero_video_event: [{ outcome: "preparing", delete_guid: "new-guid", phase: "preparing", replace_counted: true, revision_before: null, revision_after: null, used: 1 }],
+      hero_video_event: [{ outcome: "preparing", delete_guid: "new-guid", phase: "preparing", replace_counted: true, revision_before: null, revision_after: null, used: 1, collection_id: COL }],
     });
     const e = await err(startHeroVideoUpload(club, ok));
     expect([e.status, e.code]).toEqual([409, "VIDEO_PREPARING"]);
@@ -101,7 +101,7 @@ describe("startHeroVideoUpload", () => {
   it("superseding an in-progress upload deletes the old guid once", async () => {
     rpcByName({
       hero_video_replaces_today: 0,
-      hero_video_event: [{ outcome: "ok", delete_guid: OLD, phase: "uploading", replace_counted: false, revision_before: null, revision_after: null, used: 0 }],
+      hero_video_event: [{ outcome: "ok", delete_guid: OLD, phase: "uploading", replace_counted: false, revision_before: null, revision_after: null, used: 0, collection_id: COL }],
     });
     await startHeroVideoUpload(club, ok);
     expect(m.deleteVideo).toHaveBeenCalledTimes(1);
@@ -173,7 +173,7 @@ describe("getHeroVideoState", () => {
 
 describe("startHeroVideoUpload does not sweep", () => {
   const ok = { fileName: "a.mp4", fileSize: 1000, mimeType: "video/mp4" };
-  const started = { outcome: "ok", delete_guid: null, phase: "uploading", replace_counted: false, revision_before: null, revision_after: null, used: 0 };
+  const started = { outcome: "ok", delete_guid: null, phase: "uploading", replace_counted: false, revision_before: null, revision_after: null, used: 0, collection_id: COL };
   beforeEach(() => rpcByName({ hero_video_replaces_today: 0, hero_video_event: [started] }));
 
   it("does not list or delete collection videos while starting", async () => {

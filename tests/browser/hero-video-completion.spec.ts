@@ -49,8 +49,8 @@ function statusBody() {
     replacesPerDay: 5,
     maxBytes: 500 * 1024 * 1024,
     maxSeconds: 600,
-    pending: store.guid && (store.phase === "preparing" || store.phase === "uploading")
-      ? { videoGuid: store.guid, encodeProgress: store.encode, phase: store.phase, effective: store.phase, deadlineAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() }
+    pending: store.guid && store.phase
+      ? { videoGuid: store.guid, encodeProgress: store.encode, effective: store.phase }
       : null,
     failure: store.phase === "failed" && store.failure ? { code: store.failure } : null,
     completion: store.phase === "live" && store.guid ? { videoGuid: store.guid, revisionBefore: "7", revisionAfter: "8" } : null,
