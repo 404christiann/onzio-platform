@@ -74,7 +74,8 @@ describe("startHeroVideoUpload", () => {
   it.each([["exactly the cap", { durationSeconds: 600 }], ["a short clip", { durationSeconds: 90.25 }], ["no declared duration", {}]])("allows %s and consumes the counter once", async (_l, extra) => {
     rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }] });
     const r = await startHeroVideoUpload(club, { ...ok, ...extra });
-    expect(m.rpc).toHaveBeenCalledExactlyOnceWith("consume_hero_video_replace", { p_club_id: club, p_cap: 5 });
+    expect(m.rpc).toHaveBeenCalledWith("consume_hero_video_replace", { p_club_id: club, p_cap: 5 });
+    expect(m.rpc).toHaveBeenCalledWith("record_hero_video_pending", expect.objectContaining({ p_club_id: club, p_phase: "uploading", p_video_guid: "new-guid" }));
     expect(r.videoGuid).toBe("new-guid");
   });
   it("answers 429 at the daily cap and creates nothing", async () => {
@@ -86,7 +87,8 @@ describe("startHeroVideoUpload", () => {
   it("consumes once then creates the video and returns the upload authorization", async () => {
     rpcByName({ consume_hero_video_replace: [{ allowed: true, used: 1, cap: 5 }] });
     const r = await startHeroVideoUpload(club, ok);
-    expect(m.rpc).toHaveBeenCalledExactlyOnceWith("consume_hero_video_replace", { p_club_id: club, p_cap: 5 });
+    expect(m.rpc).toHaveBeenCalledWith("consume_hero_video_replace", { p_club_id: club, p_cap: 5 });
+    expect(m.rpc).toHaveBeenCalledWith("record_hero_video_pending", expect.objectContaining({ p_club_id: club, p_phase: "uploading" }));
     expect(m.createVideo).toHaveBeenCalledWith({ title: expect.stringMatching(/^Hero video 20/), collectionId: COL });
     expect(r).toMatchObject({ videoGuid: "new-guid", maxBytes: 500 * 1024 * 1024, upload: { signature: "s" } });
   });
@@ -98,6 +100,7 @@ describe("getHeroVideoState", () => {
     rpcByName({ hero_video_replaces_today: 2 });
     expect(await getHeroVideoState(club)).toEqual({
       liveGuid: OLD, previousGuid: PREV, replacesUsedToday: 2, replacesPerDay: 5, maxBytes: 500 * 1024 * 1024, maxSeconds: 600,
+      pending: null, failure: null, completion: null,
     });
   });
 });
@@ -207,7 +210,7 @@ describe("finalizeHeroVideo", () => {
       m.videoReadiness.mockResolvedValue(status === 4 ? "ready" : "processing");
       const e = await err(finalizeHeroVideo(club, NEW));
       expect([e.status, e.code]).toEqual([413, "STORED_SIZE_TOO_LARGE"]);
-      expect(e.message).toBe("Once processed, this video takes more than 2,000 MB on the video service, so it was removed. Use a shorter clip (up to 10 minutes).");
+      expect(e.message).toBe("Once processed, this video takes more than 2,000 MB, so it was removed. Use a shorter clip (up to 10 minutes).");
       expect(m.deleteVideo).toHaveBeenCalledWith(NEW);
       expect(m.rpc.mock.calls.some((c) => c[0] === "swap_hero_video")).toBe(false);
     });

@@ -105,6 +105,7 @@ describe("the migration", () => {
       "20261119090000_staging_insert_requires_reservation.sql",
       "20261119120000_media_orphan_sweep.sql",
       "20261120230000_hero_video_swap.sql",
+      "20261121183000_hero_video_pending.sql",
     ]);
   });
 

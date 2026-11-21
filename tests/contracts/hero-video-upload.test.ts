@@ -7,7 +7,8 @@ import { defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-conten
 import { HeroVideoApiError, fetchHomepageRevision, finalizeHeroVideo, startHeroVideoUpload } from "@/lib/homepage-editor/hero-video-client";
 import { readVideoDuration } from "@/lib/homepage-editor/hero-video-duration";
 import {
-  HERO_VIDEO_MAX_POLLS, applySwapRevision, megabytes, createHeroVideoController, heroVideoErrorMessage, type HeroVideoDeps,
+  HERO_VIDEO_LIVE_COPY, HERO_VIDEO_MAX_POLLS, HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_UPLOAD_DONE_MS, HERO_VIDEO_UPLOADING_COPY,
+  applySwapRevision, megabytes, createHeroVideoController, heroVideoErrorMessage, type HeroVideoDeps,
 } from "@/lib/homepage-editor/hero-video-upload";
 
 const tus = vi.hoisted(() => ({ instances: [] as { file: unknown; options: Record<string, (...a: unknown[]) => void> & { headers: Record<string, string>; metadata: Record<string, string>; retryDelays: number[]; endpoint: string }; start: ReturnType<typeof vi.fn>; abort: ReturnType<typeof vi.fn> }[] }));
@@ -31,7 +32,7 @@ function harness(overrides: Partial<HeroVideoDeps> = {}) {
     getStatus: vi.fn(async () => STATUS),
     start: vi.fn(async () => TICKET),
     readDuration: vi.fn(async () => undefined),
-    finalize: vi.fn(async () => ({ status: "processing" as const })),
+    markUploaded: vi.fn(async () => undefined),
     revert: vi.fn(async () => ({ status: "live" as const, liveGuid: "prev-1", previousGuid: "live-1", ...RANGE })),
     startUpload: vi.fn((_file, _ticket, h) => { handlers.current = h; return { abort }; }),
     refreshRevision: vi.fn(async () => "applied" as const),
@@ -179,26 +180,48 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState().phase).toBe("idle");
   });
 
-  it("polls finalize every 5 seconds while processing, then refetches the revision and goes live", async () => {
-    const finalize = vi.fn()
-      .mockResolvedValueOnce({ status: "processing" }).mockResolvedValueOnce({ status: "processing" })
-      .mockResolvedValueOnce({ status: "live", liveGuid: "new-guid", previousGuid: "live-1", ...RANGE });
-    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", replacesUsedToday: 3 });
-    const { controller, handlers, deps } = harness({ finalize, getStatus });
+  const preparing = { ...STATUS, pending: { videoGuid: "new-guid", encodeProgress: 40 as number | null } };
+  const liveStatus = { ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", replacesUsedToday: 3, pending: null, completion: { videoGuid: "new-guid", ...RANGE } };
+
+  it("shows the upload check, then polls GET for display only, and goes live when the swap is already done", async () => {
+    const getStatus = vi.fn()
+      .mockResolvedValueOnce(STATUS)
+      .mockResolvedValueOnce(preparing)
+      .mockResolvedValueOnce({ ...preparing, pending: { videoGuid: "new-guid", encodeProgress: 80 } })
+      .mockResolvedValue(liveStatus);
+    const { controller, handlers, deps } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
+    expect(controller.getState().message).toBe(HERO_VIDEO_UPLOADING_COPY);
     handlers.current!.onSuccess();
     await settle();
-    expect(finalize).toHaveBeenCalledTimes(3);
+    expect(deps.markUploaded).toHaveBeenCalledWith("new-guid");
+    expect(deps.sleep).toHaveBeenCalledWith(HERO_VIDEO_UPLOAD_DONE_MS);
     expect(deps.sleep).toHaveBeenCalledWith(5000);
     expect(deps.refreshRevision).toHaveBeenCalledTimes(1);
     expect(deps.refreshRevision).toHaveBeenCalledWith({ before: "rev-1", after: "rev-2" });
     expect(controller.getState()).toMatchObject({ phase: "live", revisionWarning: false, revisionConflict: false, status: { liveGuid: "new-guid", previousGuid: "live-1", replacesUsedToday: 3 } });
-    expect(controller.getState().message).toMatch(/live on your site.*did not need Save/);
+    expect(controller.getState().message).toBe(HERO_VIDEO_LIVE_COPY);
   });
 
-  it("an already-live finalize still refetches the revision", async () => {
-    const finalize = vi.fn().mockResolvedValue({ status: "live", liveGuid: "new-guid", previousGuid: "live-1", ...RANGE });
-    const { controller, handlers, deps } = harness({ finalize });
+  it("shows a processing percent only while GET reports one", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValueOnce(preparing);
+    const sleep = vi.fn(async (ms: number) => { if (ms !== HERO_VIDEO_UPLOAD_DONE_MS) await new Promise(() => undefined); });
+    const { controller, handlers } = harness({ getStatus, sleep });
+    await controller.load(); await controller.replace(video());
+    handlers.current!.onSuccess();
+    await settle();
+    expect(controller.getState()).toMatchObject({ phase: "preparing", encodeProgress: 40, message: HERO_VIDEO_PREPARING_COPY });
+  });
+
+  it("a returning visit during preparing shows preparing, not an empty form", async () => {
+    const { controller } = harness({ getStatus: vi.fn(async () => preparing) });
+    await controller.load();
+    expect(controller.getState()).toMatchObject({ phase: "preparing", message: HERO_VIDEO_PREPARING_COPY, status: { pending: { videoGuid: "new-guid" } } });
+  });
+
+  it("a swap that is already live still refetches the revision", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(liveStatus);
+    const { controller, handlers, deps } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
     expect(controller.getState().phase).toBe("live");
@@ -206,24 +229,20 @@ describe("hero video control: upload, processing and going live", () => {
   });
 
   it("warns, rather than failing, when the revision cannot be refetched after going live", async () => {
-    const finalize = vi.fn().mockResolvedValue({ status: "live", liveGuid: "new-guid", previousGuid: "live-1", ...RANGE });
-    const { controller, handlers } = harness({ finalize, refreshRevision: vi.fn(async () => { throw new Error("offline"); }) });
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(liveStatus);
+    const { controller, handlers } = harness({ getStatus, refreshRevision: vi.fn(async () => { throw new Error("offline"); }) });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
     expect(controller.getState()).toMatchObject({ phase: "live", revisionWarning: true });
   });
 
-  it("gives up after about 30 minutes with a still-processing message and lets the person check again", async () => {
-    const finalize = vi.fn().mockResolvedValue({ status: "processing" });
-    const { controller, handlers } = harness({ finalize });
+  it("keeps showing preparing after the display poll ends, and never needs that poll to go live", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(preparing);
+    const { controller, handlers } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
-    expect(finalize).toHaveBeenCalledTimes(HERO_VIDEO_MAX_POLLS);
-    expect(controller.getState()).toMatchObject({ phase: "error", error: { code: "PROCESSING_TIMEOUT", retry: "finalize" } });
-    expect(controller.getState().error?.message).toMatch(/still processing/);
-    finalize.mockResolvedValueOnce({ status: "live", liveGuid: "new-guid", previousGuid: "live-1", ...RANGE });
-    await controller.retryFinalize();
-    expect(controller.getState().phase).toBe("live");
+    expect(getStatus).toHaveBeenCalledTimes(1 + HERO_VIDEO_MAX_POLLS);
+    expect(controller.getState()).toMatchObject({ phase: "preparing", error: null, message: HERO_VIDEO_PREPARING_COPY });
   });
 
   it("an interrupted upload explains that nothing changed and lets the person choose a file again", async () => {
@@ -235,14 +254,14 @@ describe("hero video control: upload, processing and going live", () => {
     expect(controller.getState().phase).toBe("uploading");
   });
 
-  it("repeated network failures while polling offer a finalize retry that re-polls", async () => {
-    const finalize = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
-    const { controller, handlers } = harness({ finalize });
+  it("a display poll that cannot reach the server stays on preparing, and checking again can see that it went live", async () => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockRejectedValue(new TypeError("fetch failed"));
+    const { controller, handlers } = harness({ getStatus });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
-    expect(controller.getState()).toMatchObject({ phase: "error", error: { code: "NETWORK", retry: "finalize" } });
-    finalize.mockResolvedValueOnce({ status: "live", liveGuid: "new-guid", previousGuid: "live-1", ...RANGE });
-    await controller.retryFinalize();
+    expect(controller.getState()).toMatchObject({ phase: "preparing", error: null, message: HERO_VIDEO_PREPARING_COPY });
+    getStatus.mockResolvedValue(liveStatus);
+    await controller.retryStatus();
     expect(controller.getState().phase).toBe("live");
   });
 
@@ -254,14 +273,15 @@ describe("hero video control: upload, processing and going live", () => {
     ["start", "VIDEO_TOO_LONG", /longer than 10 minutes.*shorter clip/],
     ["finalize", "VIDEO_TOO_LONG", /longer than 10 minutes.*shorter clip/],
     ["finalize", "STORED_SIZE_TOO_LARGE", /too long or too large once processed, so it was removed.*shorter clip \(up to 10 minutes\)/],
-    ["finalize", "VIDEO_FAILED", /could not process/],
+    ["finalize", "VIDEO_FAILED", /could not be processed/],
     ["finalize", "RESOLUTION_TOO_LOW", /at least 720p/],
     ["finalize", "NOT_CLUB_VIDEO", /does not belong/],
     ["finalize", "HERO_VIDEO_CHANGED", /changed somewhere else/],
     ["finalize", "HOMEPAGE_NOT_READY", /isn't set up/],
   ])("maps %s error %s to plain English", async (where, code, pattern) => {
     const rejection = vi.fn().mockRejectedValue(apiError(code));
-    const { controller, handlers } = harness(where === "start" ? { start: rejection } : { finalize: rejection });
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({ ...STATUS, failure: { code } });
+    const { controller, handlers } = harness(where === "start" ? { start: rejection } : { getStatus });
     await controller.load(); await controller.replace(video());
     if (where === "finalize") { handlers.current!.onSuccess(); await settle(); }
     const state = controller.getState();
@@ -274,9 +294,13 @@ describe("hero video control: upload, processing and going live", () => {
     if (code === "STORED_SIZE_TOO_LARGE") expect(state.error?.message).not.toContain("under 500 MB");
   });
 
-  it("every documented code has its own message", () => {
+  it("every documented code has its own message and none of them name the video host", () => {
     for (const code of ["FILE_TOO_LARGE", "UNSUPPORTED_TYPE", "DAILY_LIMIT", "VIDEO_NOT_CONFIGURED", "HERO_VIDEO_NOT_AVAILABLE", "VIDEO_TOO_LONG", "STORED_SIZE_TOO_LARGE", "VIDEO_FAILED", "RESOLUTION_TOO_LOW", "NOT_CLUB_VIDEO", "HERO_VIDEO_CHANGED", "HOMEPAGE_NOT_READY", "NO_PREVIOUS_VIDEO"]) {
       expect(heroVideoErrorMessage(code)).not.toBe(heroVideoErrorMessage("SOMETHING_ELSE"));
+      expect(heroVideoErrorMessage(code)).not.toMatch(/bunny|video service/i);
+    }
+    for (const copy of [HERO_VIDEO_UPLOADING_COPY, HERO_VIDEO_PREPARING_COPY, HERO_VIDEO_LIVE_COPY]) {
+      expect(copy).not.toMatch(/bunny|video service/i);
     }
   });
 
@@ -378,8 +402,11 @@ describe("hero video control: the editor's base revision follows the swap and th
     return { refreshRevision, fetchRevision };
   };
   const swap = async (refreshRevision: HeroVideoDeps["refreshRevision"], live: Record<string, unknown>) => {
-    const finalize = vi.fn().mockResolvedValue({ status: "live", liveGuid: "new-guid", previousGuid: "live-1", ...live });
-    const { controller, handlers } = harness({ finalize, refreshRevision });
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue({
+      ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", pending: null,
+      completion: { videoGuid: "new-guid", revisionBefore: (live.revisionBefore ?? null) as string | null, revisionAfter: (live.revisionAfter ?? null) as string | null },
+    });
+    const { controller, handlers } = harness({ getStatus, refreshRevision });
     await controller.load(); await controller.replace(video());
     handlers.current!.onSuccess(); await settle();
     return controller;

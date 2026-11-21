@@ -9,7 +9,7 @@ const KEY = "test-secret-key-123";
 const fetchStub = vi.fn();
 const res = (status: number, body: unknown = {}) => new Response(JSON.stringify(body), { status });
 const video = (over: Partial<BunnyVideo> = {}): BunnyVideo => ({
-  guid: "g1", collectionId: "c1", status: 4, availableResolutions: ["480p", "720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, length: 0, dateUploaded: "", ...over,
+  guid: "g1", collectionId: "c1", status: 4, availableResolutions: ["480p", "720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, length: 0, dateUploaded: "", encodeProgress: null, ...over,
 });
 
 beforeEach(() => { fetchStub.mockReset(); vi.stubGlobal("fetch", fetchStub); vi.stubEnv("BUNNY_STREAM_API_KEY", KEY); });

@@ -243,6 +243,10 @@ describe("tenant and privileged-boundary architecture contract", () => {
       /^lib\/media-orphan-sweep\.ts$/,
       // RC-HERO-VIDEO-SWAP: counter and swap RPCs for the hero video replace flow.
       /^lib\/hero-video-swap\.ts$/,
+      // RC-HERO-VIDEO-COMPLETION: Bunny encode webhook and the daily backstop.
+      // Both call lib/hero-video-swap.ts, which is the service-role boundary.
+      /^app\/api\/webhooks\/bunny-stream\//,
+      /^app\/api\/cron\/hero-video\//,
       /^lib\/billing-lifecycle\.ts$/,
       /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
