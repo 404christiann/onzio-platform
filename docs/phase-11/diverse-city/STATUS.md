@@ -2,8 +2,8 @@
 
 ## 2026-11-21 - UI-POLISH-INSIGHTS: sponsor insights + monthly report
 
-**Agent/package:** Claude Code (Opus 5.5), UI-POLISH-INSIGHTS. Branch `claude/ui-polish-insights` off
-`claude/telemetry-06-classic-insights` (PR #222, not merged yet). Not merged.
+**Agent/package:** Claude Code (Opus 5.5), UI-POLISH-INSIGHTS. Branch `claude/ui-polish-insights`, PR against main
+(main `c6f7f33d` merged in after TELEMETRY-06 #222 merged). Not merged.
 **Status:** `ready for review`. Visual, markup and copy only: no data query, gate (`lib/admin-tabs.ts`,
 `lib/admin-tab-page.ts`), `app/api/**` or `supabase/**` change; no new dependency.
 
@@ -28,7 +28,7 @@ no sponsors, unseen and 30 sponsors (1,234,567-view rows, 56-char unbroken name)
 no horizontal overflow, no tap target under 44px, table caption and row/column headers read correctly. PDFs:
 Letter and A4, 4 pages for 3 active sponsors + summary; 30 sponsors 33 (Letter) / 32 (A4) pages.
 
-**Next step:** Christian reviews the PR (stacked on #222). The Rose City flag script still waits for his "go".
+**Next step:** Christian reviews the PR. The Rose City flag script still waits for his "go".
 
 ## 2026-11-21 - TELEMETRY-06: Sponsor Insights on the classic admin portal
 
