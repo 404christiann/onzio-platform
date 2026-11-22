@@ -19,9 +19,20 @@ export {
   EditorDialogBody,
   EDITOR_DIALOG_PHONE_QUERY,
   useEditorDialog,
+  type EditorDialogFocusRequest,
   type EditorDialogProps,
   type EditorDialogSection,
 } from "./EditorDialog";
+export { editorDialogReducer, stepFocusRequest, FOCUS_GIVE_UP_MS, FOCUS_SETTLE_MS } from "./editorDialogFocus";
+export {
+  EDIT_TARGET_FLASH_ATTRIBUTE,
+  editTargetAt,
+  editTargetControl,
+  findEditTarget,
+  focusEditTarget,
+  pickEditTarget,
+  type EditTargetCandidate,
+} from "./editTargets";
 export { ValidationMessage, type ValidationMessageProps } from "./ValidationMessage";
 export {
   ImageFieldWithDescription,

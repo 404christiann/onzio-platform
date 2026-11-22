@@ -430,3 +430,22 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Click-to-field: the field opened from a preview click gets the classic focus ring for a moment, then it fades.
+   editTargets.ts sets data-edit-target-flash ("static" under reduced motion) and removes it after 1.2s. */
+.shell :global([data-edit-target-flash]) {
+  border-radius: 8px;
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shell :global([data-edit-target-flash=""]) {
+    animation: edit-target-flash 1200ms cubic-bezier(.23, 1, .32, 1) forwards;
+  }
+}
+
+@keyframes edit-target-flash {
+  0%, 55% { outline-color: hsl(var(--ring)); }
+  100% { outline-color: hsl(var(--ring) / 0); }
+}

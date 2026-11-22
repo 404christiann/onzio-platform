@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useReducer,
   useId,
   useRef,
   useState,
@@ -15,6 +16,18 @@ import {
 import { AdminModal } from "@/components/admin/AdminModal";
 import { IconCaretLeft, IconCaretRight, IconClose } from "@/components/admin/icons";
 import styles from "./EditorDialog.module.css";
+import { editTargetControl, findEditTarget, focusEditTarget } from "./editTargets";
+import {
+  createFocusInterruption,
+  editorDialogReducer,
+  initialEditorDialogState,
+  stepFocusRequest,
+  type EditorDialogFocusRequest,
+  type EditorDialogState,
+  type FocusStepState,
+} from "./editorDialogFocus";
+
+export type { EditorDialogFocusRequest } from "./editorDialogFocus";
 import { applyInertOutside, tabbablesIn, wrapTarget } from "./inertOutside";
 import { EditorDialogSkeletonBody } from "./skeletons";
 
@@ -41,28 +54,34 @@ export type EditorDialogSection = {
  * clicked, so the dialog cannot rely on the previously focused element).
  */
 export function useEditorDialog<Id extends string = string>() {
-  const [openId, setOpenId] = useState<Id | null>(null);
-  const [lastId, setLastId] = useState<Id | null>(null);
+  const [state, dispatch] = useReducer(editorDialogReducer<Id>, initialEditorDialogState as EditorDialogState<Id>);
   const opener = useRef<HTMLElement | null>(null);
 
   const open = useCallback((id: Id, event?: MouseEvent<HTMLElement>) => {
     opener.current = event?.currentTarget ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-    setLastId(id);
-    setOpenId(id);
+    dispatch({ type: "open", id });
   }, []);
-  const close = useCallback(() => setOpenId(null), []);
-  const switchTo = useCallback((id: Id) => {
-    setLastId(id);
-    setOpenId(id);
+  const close = useCallback(() => dispatch({ type: "close" }), []);
+  const switchTo = useCallback((id: Id) => dispatch({ type: "switch", id }), []);
+  /**
+   * Ask the dialog to focus one field of the section it shows. Call it after openSection or switchTo (they drop any
+   * earlier request). The dialog scrolls the field into view, focuses it and rings it briefly. A target that is not
+   * on the section is ignored, so the dialog opens exactly as it does without one.
+   */
+  const focusField = useCallback((target: string | null | undefined) => {
+    if (target) dispatch({ type: "focus", target });
   }, []);
 
   return {
-    open: openId !== null,
+    open: state.openId !== null,
     /** The section to show. It keeps its last value while the dialog fades out. */
-    activeId: openId ?? lastId,
+    activeId: state.openId ?? state.lastId,
     openSection: open,
     close,
     switchTo,
+    focusField,
+    /** Pass to EditorDialog's focusRequest. */
+    focusRequest: state.focusRequest,
     returnFocusRef: opener as RefObject<HTMLElement | null>,
   };
 }
@@ -97,6 +116,8 @@ export type EditorDialogProps = {
    * the right. Left out, the footer is unchanged.
    */
   footer?: ReactNode;
+  /** From useEditorDialog().focusRequest: the field to focus once its section is showing. Left out, nothing changes. */
+  focusRequest?: EditorDialogFocusRequest | null;
 };
 
 export function EditorDialog(props: EditorDialogProps) {
@@ -149,6 +170,7 @@ export function EditorDialogBody({
   renderPreview,
   previewHint = "How this section looks on the page",
   footer,
+  focusRequest,
   labelId,
 }: EditorDialogProps & { labelId: string }) {
   const phone = useSyncExternalStore(subscribePhone, isPhone, serverPhone);
@@ -181,6 +203,50 @@ export function EditorDialogBody({
     }
     if (phone) heading.current?.focus({ preventScroll: true });
   }, [view, phone]);
+
+  // Focus a requested field: phone goes to the section's fields first; then stepFocusRequest (editorDialogFocus.ts) runs
+  // once a frame: it retries until the field mounts, then holds focus for a moment against the modal's own initial
+  // focus, unless the person clicks or presses a key. The request counts as handled only when that loop ends.
+  const handledNonce = useRef(0);
+  const requestNonce = focusRequest?.nonce ?? 0;
+  const requestTarget = focusRequest?.target ?? null;
+  useEffect(() => {
+    if (!requestTarget || requestNonce === handledNonce.current || loading) return;
+    if (phone && (view !== "section" || (split && tab !== "fields"))) {
+      setView("section");
+      setTab("fields");
+      return;
+    }
+    const container = shell.current;
+    if (!container) return;
+    let step: FocusStepState = { startedAt: performance.now(), focusedAt: null };
+    let frame = 0;
+    const interruption = createFocusInterruption(() => step.focusedAt !== null);
+    document.addEventListener("pointerdown", interruption.onInput, true);
+    document.addEventListener("keydown", interruption.onInput, true);
+    const deps = {
+      now: () => performance.now(),
+      focus: () => focusEditTarget(container, requestTarget),
+      holds: () => Boolean(findEditTarget(container, requestTarget)?.contains(document.activeElement)),
+      refocus: () => {
+        const element = findEditTarget(container, requestTarget);
+        if (element) editTargetControl(element)?.focus({ preventScroll: true });
+      },
+      interrupted: interruption.interrupted,
+    };
+    const tick = () => {
+      const next = stepFocusRequest(step, deps);
+      step = next.state;
+      if (next.outcome === "continue") frame = window.requestAnimationFrame(tick);
+      else handledNonce.current = requestNonce;
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("pointerdown", interruption.onInput, true);
+      document.removeEventListener("keydown", interruption.onInput, true);
+    };
+  }, [requestNonce, requestTarget, loading, phone, view, tab, split, active?.id]);
 
   const panelHeadingId = `${labelId}-panel`;
 
