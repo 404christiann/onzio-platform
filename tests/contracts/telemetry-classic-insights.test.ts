@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   pathname: "/admin",
   loadInsightsData: vi.fn(),
   readReportMonths: vi.fn(),
+  readMonthlyReportRows: vi.fn(),
 }));
 
 class Redirect extends Error {
@@ -49,6 +50,8 @@ vi.mock("@/lib/telemetry/insights-data", () => ({ loadInsightsData: mocks.loadIn
 vi.mock("@/lib/telemetry/report-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/telemetry/report-data")>()),
   readReportMonths: mocks.readReportMonths,
+  readMonthlyReportRows: mocks.readMonthlyReportRows,
+  readReportClubLogo: async () => "",
 }));
 vi.mock("@/components/ClubBrandingProvider", () => ({ useClubBranding: () => ({ clubLogoUrl: null }) }));
 
@@ -136,7 +139,8 @@ function setClub(clubValue: ClubContext, portalValue: AdminPortalSettings) {
 beforeEach(() => {
   mocks.pathname = "/admin";
   mocks.loadInsightsData.mockReset().mockResolvedValue({ status: "no-rollups" });
-  mocks.readReportMonths.mockReset().mockResolvedValue({ status: "ok", months: [] });
+  mocks.readReportMonths.mockReset().mockResolvedValue({ status: "ready", months: [] });
+  mocks.readMonthlyReportRows.mockReset().mockResolvedValue({ status: "error" });
 });
 
 describe("the Sponsor Insights gate", () => {
@@ -246,12 +250,12 @@ describe("Insights on the classic admin", () => {
 
     const insights = await insightsPage();
     expect(insights).toContain('data-admin-insights-page="classic"');
-    expect(insights).toMatch(/<h1[^>]*>Sponsor Insights<\/h1>/);
+    expect(insights).toMatch(/<h1[^>]*>No visits yet<\/h1>/);
     expect(insights).toContain('data-testid="insights-waiting"');
     expect(insights).not.toContain("data-admin-tab-page");
 
     const report = await reportPage();
-    expect(report).toContain("No numbers yet");
+    expect(report).toContain("No visits yet");
     expect(report).not.toContain("data-admin-tab-page");
   });
 
@@ -283,5 +287,51 @@ describe("Insights on the classic admin", () => {
     expect(await redirectOf(() => loadAdminTabPage("club"))).toBe("/admin/branding");
     expect(await redirectOf(() => loadAdminTabPage("programs"))).toBe("/admin");
     expect(await redirectOf(() => loadAdminTabPage("home"))).toBe("/admin");
+  });
+
+  it("answers what each sponsor got in the month, most seen first, with no NaN or Infinity", async () => {
+    const month = "2026-10";
+    const [seen, few, unseen] = ["a", "b", "c"].map((letter) => `${letter.repeat(8)}-0000-4000-8000-000000000000`);
+    mocks.readReportMonths.mockResolvedValue({ status: "ready", months: [month] });
+    mocks.readMonthlyReportRows.mockResolvedValue({
+      status: "ready",
+      totals: [{ local_date: "2026-10-05", views: 500, visitors: 300, visits: 350, engaged_ms: 0, engaged_views: 0, dropped: 0 }],
+      sponsorRows: [
+        { local_date: "2026-10-05", sponsor_id: seen, logo_views: 1234567, logo_viewers: 900000, clicks: 0 },
+        { local_date: "2026-10-05", sponsor_id: few, logo_views: 50, logo_viewers: 40, clicks: 2 },
+      ],
+      sponsors: [
+        { id: unseen, name: "Rose Quarter Dental", logo_url: null },
+        { id: few, name: "Tepito Tacos", logo_url: null },
+        { id: seen, name: "PacificNorthwestOrthopedicSportsMedicineGroup", logo_url: null },
+      ],
+      matches: [],
+    });
+    setClub(club(), portal("classic"));
+
+    const insights = await insightsPage({ month });
+    expect(insights).toMatch(/<h1[^>]*>Your sponsors were seen 1,234,617 times in [A-Z][a-z]+/);
+    const order = ["PacificNorthwestOrthopedicSportsMedicineGroup", "Tepito Tacos", "Rose Quarter Dental"].map((name) =>
+      insights.indexOf(name),
+    );
+    expect(order.every((at, index) => at > 0 && (index === 0 || at > order[index - 1]))).toBe(true);
+    expect(insights).toContain("1,234,567");
+    expect(insights).toContain("4.0%");
+    expect(insights).toContain("No click rate: the logo was not seen");
+    expect(insights).toContain("All sponsors");
+    expect(insights).toContain('href="/admin/insights/report?month=2026-10&amp;sponsor=all"');
+    expect(insights).not.toMatch(/NaN|Infinity|undefined/);
+
+    const all = await reportPage({ month, sponsor: "all" });
+    expect(all).toContain("data-report-summary");
+    expect(all).toContain("1,234,617 logo views");
+
+    const one = await reportPage({ month, sponsor: few });
+    expect(one).not.toContain("data-report-summary");
+    expect(one).toContain("Tepito Tacos");
+    // Only the picked sponsor's page prints; the others are just picker options.
+    const pages = one.slice(one.indexOf("data-sponsor-report"));
+    expect(pages).toContain("Tepito Tacos");
+    expect(pages).not.toContain("PacificNorthwestOrthopedicSportsMedicineGroup");
   });
 });

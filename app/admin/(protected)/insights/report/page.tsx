@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ReportMessage, SponsorReport, type ReportOption } from "@/components/admin/insights-report/SponsorReport";
+import { sponsorSummary } from "@/components/admin/insights/classic/sponsor-lines";
 import { TopBarTitle } from "@/components/admin/reimagined/TopBar";
 import { loadAdminTabPage } from "@/lib/admin-tab-page";
 import { formatClubDate } from "@/lib/club-time";
@@ -78,7 +79,7 @@ export default async function MonthlySponsorReportPage({
     return (
       <>
         {title}
-        <ReportMessage tone="empty">No numbers yet. The report fills in once your website has visits.</ReportMessage>
+        <ReportMessage tone="empty">No visits yet. The first report is ready the day after your website&rsquo;s first counted visit.</ReportMessage>
       </>
     );
   }
@@ -116,9 +117,9 @@ export default async function MonthlySponsorReportPage({
       {title}
       <SponsorReport
         report={report}
+        summary={sponsorSummary(overview, rows.sponsors)}
         clubName={club.name}
         clubLogoUrl={clubLogoUrl}
-        accentColor={club.primaryColor}
         months={monthOptions(available.months, currentMonth)}
         month={month}
         sponsors={sponsorOptions(rows.sponsors, [...overview.pages, ...report.pages])}

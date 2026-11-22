@@ -100,7 +100,9 @@ test("the classic sidebar lists Insights and opens the page in the classic frame
   await expect(link).toBeVisible();
   await link.click();
   await expect(page).toHaveURL(/\/admin\/insights$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Sponsor Insights" })).toBeVisible();
+  // UI-POLISH-INSIGHTS: the heading is the month's answer (only 2004-03 has numbers here).
+  await expect(page.getByRole("heading", { level: 1, name: /^Your sponsors were seen 200 times in March 2004$/ })).toBeVisible();
+  await expect(page.locator("[data-sponsor-table]")).toContainText("T06 Fixture Bakery");
   await expect(page.locator('[data-admin-insights-page="classic"]')).toBeVisible();
   await expect(page.locator('[data-admin-shell="reimagined"]')).toHaveCount(0);
   await expect(link).toHaveAttribute("data-active", "true");
@@ -118,7 +120,7 @@ test("print: the classic frame and the pickers go, the sheet stays", async ({ pa
   const header = page.locator(".admin-portal > div > header");
   const navs = page.locator(".admin-portal nav");
   const controls = page.locator("[data-report-controls]");
-  const downloadPdf = page.getByRole("button", { name: "Download PDF" });
+  const downloadPdf = page.getByRole("button", { name: "Print or save as PDF" });
 
   expect(await visibleCount(sidebar)).toBe(1);
   expect(await visibleCount(header)).toBe(1);
