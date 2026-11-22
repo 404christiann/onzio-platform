@@ -106,6 +106,44 @@
   height: 18px;
 }
 
+/* Press feedback: the classic admin's ease-out, with the same curve as a fallback. */
+.button,
+.back {
+  transition:
+    transform 160ms var(--admin-motion-ease-out, cubic-bezier(0.23, 1, 0.32, 1)),
+    background-color 150ms ease,
+    filter 150ms ease;
+  touch-action: manipulation;
+}
+
+.button:active,
+.back:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .primary:hover {
+    filter: brightness(1.06);
+  }
+
+  .secondary:hover,
+  .back:hover {
+    background: hsl(var(--accent));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .back {
+    transition-property: background-color, filter;
+  }
+
+  .button:active,
+  .back:active {
+    transform: none;
+  }
+}
+
 .primary {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
@@ -136,6 +174,7 @@
   min-height: 44px;
   align-items: center;
   gap: 2px;
+  padding: 0 10px 0 6px;
   border-radius: 10px;
   font-size: 14.5px;
   font-weight: 600;
