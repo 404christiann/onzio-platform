@@ -41,7 +41,16 @@ dashboard, not from this change: `/admin/members` "Contact Onzio to transfer" (s
 **Blockers / decisions:** none. Left alone on purpose: the mix chart's categorical colours, the integer "0%" share
 rounding (`lib/admin-dashboard-mix.ts`, contract-tested), Title Case quick-action labels (from the route manifest).
 
-**Next step:** Christian reviews the PR.
+**Review follow-up (2026-11-22):** the PR review's one Low (no test covered the Rose City registrations gate on
+the dashboard) is fixed in `tests/contracts/admin-dashboard.test.ts`: a new test checks the `showRegistrations`
+predicate and that the Paid registrations number, the Registration forms panel and the Paid registrations by form
+panel each sit behind it, with no ungated copy in the dashboard body. The heading list now matches
+`label="Paid registrations"`, so it no longer passes on "Paid registrations by form". Break check: removing each of
+the three gates, or hard-coding `showRegistrations = true`, fails the new test (4 of 4); restored after each.
+`npx tsc --noEmit` clean; `npx vitest run tests/contracts tests/architecture` 335 files / 4,654 passed, 1 skipped. Not changed: the loading skeleton still shows registration
+placeholders, as on main; it renders before the club is known and shows no data.
+
+**Next step:** Christian checks the preview at 375 and 1280, then decides on merging.
 
 ## 2026-11-21 - UI-POLISH-INSIGHTS: sponsor insights + monthly report
 

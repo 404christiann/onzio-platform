@@ -16,7 +16,7 @@ describe("protected admin dashboard", () => {
       "Active players",
       "Active staff",
       "Matches this season",
-      "Paid registrations",
+      'label="Paid registrations"',
       "Registration forms",
       "Coming up",
       "Paid registrations by form",
@@ -25,6 +25,32 @@ describe("protected admin dashboard", () => {
     }
     expect(page).not.toContain("Recent Activity");
     expect(page).not.toContain("Activity Chart");
+  });
+
+  it("hides every registration surface when the club hides the Registrations route", () => {
+    expect(page).toContain(
+      'const showRegistrations = !isAdminRouteHiddenForClub(club.slug, "registrations");',
+    );
+    // The loading skeleton renders before the club is known and shows no data,
+    // so only the real dashboard body is checked.
+    const body = page.slice(
+      page.indexOf("async function AdminDashboardContent"),
+      page.indexOf("async function ReimaginedHomeContent"),
+    );
+    const gated = [
+      /\{showRegistrations \? <MetricCard label="Paid registrations"/,
+      /\{showRegistrations \? \(\s*<DashboardPanel title="Registration forms"/,
+      /\{showRegistrations \? \(\s*<DashboardPanel title="Paid registrations by form"/,
+    ];
+    for (const pattern of gated) expect(body).toMatch(pattern);
+    // No ungated second copy of any registration surface.
+    for (const marker of [
+      '<MetricCard label="Paid registrations"',
+      '<DashboardPanel title="Registration forms"',
+      '<DashboardPanel title="Paid registrations by form"',
+    ]) {
+      expect(body.split(marker)).toHaveLength(2);
+    }
   });
 
   it("derives actions from the same strict route capability manifest", () => {
