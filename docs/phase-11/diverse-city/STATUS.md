@@ -1,5 +1,37 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-02: review Medium fixed (heartbeats need an open visit with a view)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet worker), TELEMETRY-02, PR #216, branch
+`claude/telemetry-02-data`. **Status:** pushed, not merged; migration applied to no hosted database.
+
+**Completed:** onzio-bot's Medium on #216 is fixed. The problem: one IP rotating its user agent could send about 6,000
+fake heartbeats a minute, each one a new visitor, and real heartbeats were dropped with nothing recorded. The fix is in
+`20261121230000_page_telemetry_rollups.sql`, edited in place again (new sha256 `f08fb9f1…1435`):
+- A heartbeat never creates a salt. It is accepted only into the visitor's open visit, and only if that visit contains
+  a view; otherwise it returns `no_visit` and writes nothing.
+- Accepted heartbeats spend the visitor cap (60), then a per-network heartbeat cap `'hn:'` (1,200/min), then `'h:*'`
+  (6,000/min).
+- Every rate-limited heartbeat counts one drop under the new reason `'heartbeat'`.
+- In the rollup, `visitors` counts page-view visitors only. `dropped` excludes heartbeat drops, which go to the new
+  `page_daily_totals.dropped_heartbeats`.
+- The bucket and drop-reason checks are widened. Types are regenerated (`dropped_heartbeats`).
+- At GATE-MIGRATE, confirm `20261121230000` is not already in production before pushing. #218 carries the old copy
+  and needs a rebase after #216 lands.
+
+**Files:** the migration, `lib/database.generated.ts`, `tests/database/page-telemetry.test.ts`,
+`tests/database/page-telemetry-rollups.test.ts`, `docs/onzio-platform-plan.md`, this file.
+
+**Verification (local, `with-local-db-lock.sh`, CLI 2.109.1):**
+- `db reset --local`: ledger 97, max `20261121230000`. `db:types:check` passes.
+- Telemetry, rollup and purge DB tests: run 1 had 129/130, with P1's backlog-sweep test timing out on the cold first
+  run after reset. Run 2 had 130/130.
+- Full `test:db`: 82/82 files, 1,554/1,554.
+- Non-DB vitest: 5,253 passed, 1 skipped. `test:architecture`: 432 passed, 1 skipped.
+- `tsc`, lint and `build` are clean.
+
+**Next step:** onzio-bot re-review, then the production gate on Christian's "go".
+
 ## 2026-11-21 - TELEMETRY-02: review Low fixed (heartbeats no longer spend page views' budget)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet worker), TELEMETRY-02, PR #216, branch

@@ -1286,11 +1286,14 @@ every club by default, including right after the migration.
   database rate limit. Four kinds of bucket: `'*'` (the club), a salted
   visitor hash, a salted network hash under an `n:` prefix (an IPv4 address or
   an IPv6 /64), and, for IPv6 only, a salted wide network hash under a `w:`
-  prefix (the /48). A club's counters older than five minutes are pruned each
+  prefix (the /48). TELEMETRY-02 adds two heartbeat buckets: `h:*` (the club's
+  heartbeat budget) and a salted network hash under an `hn:` prefix (the /48
+  when present, else the address or /64). A club's counters older than five minutes are pruned each
   time its new minute opens.
 - `onzio_private.page_event_drop_counts (club_id, local_date, reason,
   dropped)`: how many events the abuse limits dropped, per club, club-local
-  day and reason (`network`, `visitor`, `club`). Every `rate_limited` answer
+  day and reason (`network`, `visitor`, `club`, and, from TELEMETRY-02,
+  `heartbeat`). Every `rate_limited` answer
   after the add-on gate adds one, so the P3 report can say how many views the
   limits dropped instead of undercounting silently. RLS on, no API grants,
   cascades with the club. It holds no visitor, network or event data, so
@@ -1308,13 +1311,19 @@ every club by default, including right after the migration.
 - TELEMETRY-02 adds three daily rollup tables, filled by a Vercel cron and
   kept indefinitely (they hold no visitor ids, visit ids or network data):
   `onzio.page_daily_totals` (views, visitors, visits, entries, engaged
-  milliseconds, engaged visits, dropped), `onzio.page_daily_breakdowns` (views,
+  milliseconds, engaged visits, dropped, dropped heartbeats),
+  `onzio.page_daily_breakdowns` (views,
   visitors and engaged milliseconds per path, source, device, country, city,
   referrer, `utm_campaign` and `utm_source`; a missing country or city is
   `unknown`) and `onzio.sponsor_daily_rollups` (logo views, logo viewers and
   clicks per sponsor). RLS and grants match `page_events`: a club's owners and
   admins with a fresh session read their own club's rows, and nobody has a
-  write grant. Staff events are excluded everywhere. `visitors` is per day by
+  write grant. Staff events are excluded everywhere. `visitors` counts distinct
+  visitor ids over page `view` rows only (a visitor with only heartbeats or
+  sponsor events is not counted). `dropped` sums the drop counts of the view
+  and sponsor reasons (`network`, `visitor`, `club`); `dropped_heartbeats` sums
+  the `heartbeat` reason, so lost time-on-page never reads as lost page views.
+  `visitors` is per day by
   design (salts rotate daily), so a report must never add days into "monthly
   unique visitors". Admin pages and the sponsor PDF read rollups only, never
   raw events.
@@ -1339,15 +1348,19 @@ types so the site package can import it):
   per kept sponsor, sharing one visit.
 - `{ "t": "heartbeat", "p", "e": <ms> }`, an integer from 1,000 to 60,000: the
   visible time since the last heartbeat (P4 sends one about every 15s while the
-  tab is visible).
+  tab is visible). A heartbeat is accepted only into an open visit that began
+  with a `view` from the same visitor (latest event within 30 minutes; accepted
+  heartbeats keep it fresh, so long reads stay open); otherwise the database
+  answers `no_visit` and writes nothing, not even a salt.
 
 `click` is never a beacon: `GET /r/<sponsor>` on the club host writes it (see
 P2). Views, `logo_seen` and `click` spend the network, wide network, visitor and
 club caps once each, however many rows they write. A heartbeat spends only the
-visitor cap and its own club-wide heartbeat budget (6,000 a minute), so
-time-on-page traffic can never use page views' budget.
-Only a `view` can start a visit as an entry; other types join the open visit or
-start one that is not an entry.
+visitor cap, its own per-network cap (1,200 a minute) and its own club-wide
+heartbeat budget (6,000 a minute), so time-on-page traffic can never use page
+views' budget.
+Only a `view` can start a visit as an entry; `logo_seen` and `click` join the
+open visit or start one that is not an entry; a heartbeat never starts one.
 
 ### Privacy and filtering
 
@@ -1399,14 +1412,24 @@ directly. The database therefore accepts only **signed** calls.
   returns `stale`, so a captured call stops working), then every field again,
   then the club must be publicly accessible (`active` and `live/grace`,
   else `not_public`) and hold the telemetry add-on (else `not_entitled`).
+- **Heartbeats need an open visit.** After the add-on gate and before any write,
+  a heartbeat never creates a salt: with no salt for the club's day, or with no
+  open visit (the visitor hash's latest event within 30 minutes) that holds at
+  least one `view`, it returns `no_visit` and writes nothing (no rate window, no
+  drop count, no event). `no_visit` is not a drop and is not counted. A visitor
+  whose user agent rotates gets a new visitor hash, so it has no open visit and
+  cannot heartbeat; every heartbeating visitor first sent a view, which passed
+  the network and club caps.
 - Rate caps, per minute, in this order: the **network** (the IPv4 address or
   IPv6 /64, then for IPv6 also its /48), **60 per visitor**, and **1,200 per
   club**. These apply to views, `logo_seen` and `click`. A `heartbeat` skips the
   network, wide network and club caps: it spends the 60-per-visitor cap (shared
-  with the other types) and then a separate club-wide **heartbeat budget of
-  6,000 a minute** (counter bucket `h:*`; 1,500 visible tabs at one heartbeat
-  per 15 s), so heartbeats can never starve page views at the club or network
-  level. A rejected event returns `rate_limited` and never spends the club
+  with the other types) and then a separate per-network **heartbeat cap of 1,200 a
+  minute** (bucket `hn:`, keyed on the IPv6 /48 when present, else the IPv4
+  address or IPv6 /64; 300 visible tabs behind one network at one heartbeat per
+  15 s) and a club-wide **heartbeat budget of 6,000 a minute** (bucket `h:*`;
+  1,500 visible tabs at one heartbeat per 15 s), so heartbeats can never
+  starve page views at the club or network level. A rejected event returns `rate_limited` and never spends the club
   budget: the club counter increments only for events that passed every other
   cap. A counter that says no is not written again, so a flood costs reads,
   not row versions. One machine rotating user agents is one network.
@@ -1433,8 +1456,8 @@ directly. The database therefore accepts only **signed** calls.
   The cap only drops events, it never blocks pages.
 - **Drops are counted.** Every `rate_limited` answer upserts +1 into
   `page_event_drop_counts` for the club's local day and the limit that said no
-  (`network`, `visitor`, or `club`). A dropped heartbeat is not counted: it only
-  undercounts engaged time, and `heartbeat` is not a drop reason. The write happens once, after the caps and
+  (`network`, `visitor`, or `club`; a rate-limited heartbeat, whichever of its
+  three caps said no, is counted under `heartbeat`). The write happens once, after the caps and
   only after the add-on gate, so a club without the add-on leaves no trace.
   Each drop rewrites one row per club, day and reason; the table keeps spare
   room on each page (`fillfactor = 50`) so those updates stay in place.
@@ -1527,8 +1550,10 @@ whose raw events may already be gone.
   (`20261121230000_page_telemetry_rollups.sql`: the event types and columns
   above, `record_page_event` redefined with the same signature, grants and
   order plus a sponsor filter between the add-on gate and the salt, heartbeats
-  on their own club-wide 6,000-a-minute budget (`h:*` rate window, not counted in
-  drop counts) instead of the network and club caps, the three
+  that need an open visit with a view (`no_visit` otherwise, nothing written)
+  and run on their own caps instead of the network and club caps: 1,200 a minute
+  per network (`hn:`) and 6,000 a minute per club (`h:*`), their drops counted
+  under the reason `heartbeat`, the three
   rollup tables, `onzio_private.rollup_page_telemetry` behind the
   service-role-only wrapper `onzio.rollup_page_telemetry`, and the purge list
   with the rollup tables first); the beacon union; the `/r/<sponsor>` redirect;
@@ -1537,7 +1562,8 @@ whose raw events may already be gone.
     `INVALID_ROLLUP_WINDOW`) deletes and rebuilds, for every club with events or
     drop counts in the window, each club-local day from today minus
     `p_days - 1` to today, from non-staff events. It is idempotent and returns
-    `{clubs, days, rowsWritten}`. A heartbeat's engaged time is filed under the
+    `{clubs, days, rowsWritten}`. `visitors` counts view rows only, `dropped`
+    excludes the `heartbeat` reason and `dropped_heartbeats` holds it. A heartbeat's engaged time is filed under the
     dimensions of its page view (the latest view in the same visit and path at
     or before it), because heartbeat beacons carry no referrer or UTM.
   - Cron: `/api/cron/telemetry-rollup` (`lib/telemetry/rollup.ts`, service-role

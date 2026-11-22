@@ -2392,6 +2392,7 @@ export type Database = {
           club_id: string
           computed_at: string
           dropped: number
+          dropped_heartbeats: number
           engaged_ms: number
           engaged_views: number
           entries: number
@@ -2404,6 +2405,7 @@ export type Database = {
           club_id: string
           computed_at?: string
           dropped?: number
+          dropped_heartbeats?: number
           engaged_ms?: number
           engaged_views?: number
           entries?: number
@@ -2416,6 +2418,7 @@ export type Database = {
           club_id?: string
           computed_at?: string
           dropped?: number
+          dropped_heartbeats?: number
           engaged_ms?: number
           engaged_views?: number
           entries?: number

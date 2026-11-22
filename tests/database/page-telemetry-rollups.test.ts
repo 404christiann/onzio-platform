@@ -110,7 +110,7 @@ async function totals(clubId: string) {
   await asOwner();
   return (
     await db.query(
-      `select local_date::text, views, visitors, visits, entries, engaged_ms::int as engaged_ms, engaged_views, dropped
+      `select local_date::text, views, visitors, visits, entries, engaged_ms::int as engaged_ms, engaged_views, dropped, dropped_heartbeats
        from onzio.page_daily_totals where club_id = $1 order by local_date`,
       [clubId],
     )
@@ -190,7 +190,9 @@ async function seedAll(): Promise<void> {
   await drops(a, b, 0, "network", 2);
   await drops(a, b, 0, "visitor", 1);
   await drops(a, b, 1, "club", 4);
-  await drops(a, b, 2, "club", 2);
+  // A day with only heartbeat drops still gets a totals row, and they never count as dropped views.
+  await drops(a, b, 2, "heartbeat", 3);
+  await drops(a, b, 0, "heartbeat", 5);
   // Charlie.
   const c = CLUB_IDS.charlie;
   const cb = await clubToday(c);
@@ -247,9 +249,10 @@ describe("onzio.rollup_page_telemetry", () => {
       (await db.query("select ($1::date - $2::int)::text as d", [today, ago])).rows[0].d as string;
 
     expect(await totals(CLUB_IDS.alpha)).toEqual([
-      { local_date: await dateOf(2), views: 0, visitors: 0, visits: 0, entries: 0, engaged_ms: 0, engaged_views: 0, dropped: 2 },
-      { local_date: await dateOf(1), views: 1, visitors: 1, visits: 1, entries: 1, engaged_ms: 0, engaged_views: 0, dropped: 4 },
-      { local_date: today, views: 3, visitors: 3, visits: 2, entries: 2, engaged_ms: 42000, engaged_views: 3, dropped: 3 },
+      { local_date: await dateOf(2), views: 0, visitors: 0, visits: 0, entries: 0, engaged_ms: 0, engaged_views: 0, dropped: 0, dropped_heartbeats: 3 },
+      { local_date: await dateOf(1), views: 1, visitors: 1, visits: 1, entries: 1, engaged_ms: 0, engaged_views: 0, dropped: 4, dropped_heartbeats: 0 },
+      // visitors counts view rows only: heartbeat-only visitor C is not counted.
+      { local_date: today, views: 3, visitors: 2, visits: 2, entries: 2, engaged_ms: 42000, engaged_views: 3, dropped: 3, dropped_heartbeats: 5 },
     ]);
 
     expect(await breakdowns(CLUB_IDS.alpha, today)).toEqual(ALPHA_D0_BREAKDOWNS);
@@ -275,7 +278,7 @@ describe("onzio.rollup_page_telemetry", () => {
     // Charlie.
     const cb = await clubToday(CLUB_IDS.charlie);
     expect(await totals(CLUB_IDS.charlie)).toEqual([
-      { local_date: cb, views: 1, visitors: 1, visits: 1, entries: 1, engaged_ms: 2000, engaged_views: 1, dropped: 0 },
+      { local_date: cb, views: 1, visitors: 1, visits: 1, entries: 1, engaged_ms: 2000, engaged_views: 1, dropped: 0, dropped_heartbeats: 0 },
     ]);
     expect(await breakdowns(CLUB_IDS.charlie, cb)).toEqual([
       { dimension: "city", value: "Salem", views: 1, visitors: 1, engaged_ms: 2000 },
@@ -286,6 +289,32 @@ describe("onzio.rollup_page_telemetry", () => {
       { dimension: "source", value: "referral", views: 1, visitors: 1, engaged_ms: 2000 },
     ]);
     expect(await sponsors(CLUB_IDS.charlie, cb)).toEqual([{ sponsor_id: SC, logo_views: 1, logo_viewers: 1, clicks: 0 }]);
+  });
+
+  it("counts visitors from view rows only, and keeps heartbeat drops apart from dropped", async () => {
+    const c = CLUB_IDS.charlie;
+    const cb = await clubToday(c);
+    await seed(c, cb, { type: "view", visitor: "X", visit: VX, entry: true, mins: 5, path: "/charlie" });
+    await seed(c, cb, { type: "heartbeat", visitor: "X", visit: VX, mins: 4, path: "/charlie", engaged: 2000 });
+    await seed(c, cb, { type: "heartbeat", visitor: "Y", visit: randomUUID(), mins: 4, path: "/charlie", engaged: 3000 });
+    await seed(c, cb, { type: "logo_seen", visitor: "W", visit: randomUUID(), mins: 3, sponsor: SC });
+    await seed(c, cb, { type: "click", visitor: "V", visit: randomUUID(), mins: 3, sponsor: SC });
+    await drops(c, cb, 0, "visitor", 2);
+    await drops(c, cb, 0, "heartbeat", 7);
+    await rollup();
+    expect(await totals(c)).toEqual([
+      { local_date: cb, views: 1, visitors: 1, visits: 1, entries: 1, engaged_ms: 5000, engaged_views: 2, dropped: 2, dropped_heartbeats: 7 },
+    ]);
+  });
+
+  it("gives a day with only heartbeat drops a totals row", async () => {
+    const c = CLUB_IDS.charlie;
+    const cb = await clubToday(c);
+    await drops(c, cb, 0, "heartbeat", 4);
+    await rollup();
+    expect(await totals(c)).toEqual([
+      { local_date: cb, views: 0, visitors: 0, visits: 0, entries: 0, engaged_ms: 0, engaged_views: 0, dropped: 0, dropped_heartbeats: 4 },
+    ]);
   });
 
   it("is idempotent: a second run gives identical rows and the same rowsWritten", async () => {

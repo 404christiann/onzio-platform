@@ -12,8 +12,9 @@
 -- * onzio_private.rollup_page_telemetry    recomputes the last p_days days of all three tables from the raw
 --                                           events (security definer); service role only
 -- * onzio.rollup_page_telemetry            exposed security-invoker wrapper for the service role
--- * onzio_private.page_event_rate_windows  bucket check widened to allow 'h:*', the club-wide heartbeat
---                                           counter
+-- * onzio_private.page_event_rate_windows  bucket check widened to allow 'h:*' (the club-wide heartbeat
+--                                           counter) and 'hn:' + 64 hex (the per-network heartbeat counter)
+-- * onzio_private.page_event_drop_counts   reason check widened to allow 'heartbeat'
 -- * onzio_private.purge_archived_club      redefined: the three rollup tables are purged first
 --
 -- sweep_page_telemetry is deliberately NOT changed. The rollup tables hold no visitor data (no
@@ -31,16 +32,24 @@
 --        add constraint page_events_type check (event_type in ('view'));
 --   5. alter table onzio.page_events drop constraint page_events_engaged,
 --        drop constraint page_events_sponsor, drop column engaged_ms, drop column sponsor_id;
---   6. delete from onzio_private.page_event_rate_windows where bucket = 'h:*';
+--   6. delete from onzio_private.page_event_rate_windows where bucket = 'h:*' or bucket like 'hn:%';
 --      alter table onzio_private.page_event_rate_windows drop constraint page_event_rate_windows_bucket,
 --        add constraint page_event_rate_windows_bucket
 --        check (bucket = '*' or bucket ~ '^([nw]:)?[0-9a-f]{64}$');
---   7. notify pgrst, 'reload schema';
+--   7. delete from onzio_private.page_event_drop_counts where reason = 'heartbeat';
+--      alter table onzio_private.page_event_drop_counts drop constraint page_event_drop_counts_reason,
+--        add constraint page_event_drop_counts_reason check (reason in ('network', 'visitor', 'club'));
+--   8. notify pgrst, 'reload schema';
 
--- 0. Rate windows: 'h:*' is the club-wide heartbeat counter (its own budget, see the writer).
+-- 0. Rate windows: 'h:*' is the club-wide heartbeat counter and 'hn:<hash>' the per-network heartbeat
+-- counter (their own budgets, see the writer). Drop counts gain the reason 'heartbeat'.
 alter table onzio_private.page_event_rate_windows drop constraint page_event_rate_windows_bucket;
 alter table onzio_private.page_event_rate_windows add constraint page_event_rate_windows_bucket
-  check (bucket in ('*', 'h:*') or bucket ~ '^([nw]:)?[0-9a-f]{64}$');
+  check (bucket in ('*', 'h:*') or bucket ~ '^(n:|w:|hn:)?[0-9a-f]{64}$');
+
+alter table onzio_private.page_event_drop_counts drop constraint page_event_drop_counts_reason;
+alter table onzio_private.page_event_drop_counts add constraint page_event_drop_counts_reason
+  check (reason in ('network', 'visitor', 'club', 'heartbeat'));
 
 -- 1. page_events: new event types and their columns.
 alter table onzio.page_events drop constraint page_events_type;
@@ -72,8 +81,10 @@ comment on column onzio.page_events.engaged_ms is
 -- and click keep only sponsors that belong to this club and return 'unknown_sponsor' with nothing
 -- written when none remain), then salt and the rate caps. Views, logo_seen and click spend the network,
 -- wide network, visitor and club caps once each, even when a logo_seen beacon writes several rows.
--- Heartbeats spend the visitor cap and their own club-wide heartbeat budget, so time-on-page traffic
--- can never use page views' budget. Other cap constants, the headroom rule and the in-writer retention are unchanged from P1.
+-- Heartbeats first need an open visit that began with a view (otherwise 'no_visit', nothing written, no
+-- salt created), then spend the visitor cap, their own per-network cap and their own club-wide heartbeat
+-- budget, so time-on-page traffic can never use page views' budget; their drops are counted under
+-- the reason 'heartbeat'. Other cap constants, the headroom rule and the in-writer retention are unchanged from P1.
 create or replace function onzio_private.record_page_event(
   p_club_id uuid,
   p_payload text,
@@ -89,6 +100,8 @@ declare
   c_club_limit constant integer := 1200;
   -- Club-wide heartbeat budget: 1,500 visible tabs at one heartbeat per 15 s.
   c_heartbeat_limit constant integer := 6000;
+  -- Per-network heartbeat budget: 300 visible tabs behind one network at one heartbeat per 15 s.
+  c_heartbeat_network_limit constant integer := 1200;
   c_max_payload_bytes constant integer := 8192;
   c_max_skew_ms constant numeric := 300000;
   c_visit_gap constant interval := interval '30 minutes';
@@ -279,6 +292,10 @@ begin
   select s.salt into v_salt
   from onzio_private.page_visitor_salts s
   where s.club_id = p_club_id and s.salt_day = v_day;
+  -- A heartbeat never creates a salt: with no salt there is no visit today, so nothing is written.
+  if not found and v_type = 'heartbeat' then
+    return 'no_visit';
+  end if;
   if not found then
     insert into onzio_private.page_visitor_salts (club_id, salt_day, salt)
     values (
@@ -318,6 +335,32 @@ begin
     v_wide_bucket := 'w:' || encode(sha256(v_salt || convert_to(v_wide, 'UTF8')), 'hex');
   end if;
 
+  -- Open-visit gate (heartbeats), before any rate window, drop count or event is written, so a rejected
+  -- heartbeat spends no budget. A heartbeat is accepted only into the visitor's open visit (latest
+  -- event of this visitor hash within c_visit_gap) and only when that visit began with a view, which
+  -- itself passed the network and club caps. A visitor whose user agent rotates gets a new visitor hash,
+  -- so has no open visit and cannot heartbeat. Accepted heartbeats keep the visit's latest event fresh,
+  -- so a long read stays open. 'no_visit' is not a drop and is not counted.
+  if v_type = 'heartbeat' then
+    select e.visit_id into v_visit
+    from onzio.page_events e
+    where e.club_id = p_club_id
+      and e.visitor_hash = v_hash
+      and e.occurred_at > v_now - c_visit_gap
+    order by e.occurred_at desc
+    limit 1;
+    if v_visit is null or not exists (
+      select 1
+      from onzio.page_events e
+      where e.club_id = p_club_id
+        and e.visitor_hash = v_hash
+        and e.visit_id = v_visit
+        and e.event_type = 'view'
+    ) then
+      return 'no_visit';
+    end if;
+  end if;
+
   -- What the club has already used of this minute's budget. It decides whether a network over its
   -- 120 floor is still accepted (its own count plus this must stay under 1,320). It is read once,
   -- so concurrent calls can overshoot that headroom share by the number of calls in flight; the
@@ -334,7 +377,9 @@ begin
   begin
     -- Heartbeats only undercount engaged time, so they never touch the network, wide network or club
     -- counters that views depend on: the per-visitor cap (shared with the other types), then their
-    -- own club-wide budget on 'h:*'.
+    -- own per-network cap ('hn:', keyed on the IPv6 /48 when present, else the IPv4 address or IPv6
+    -- /64, like the route limiter), then their own club-wide budget on 'h:*'. Every refusal counts
+    -- one drop under the reason 'heartbeat'.
     if v_type = 'heartbeat' then
       v_hits := null;
       insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
@@ -343,7 +388,23 @@ begin
         where w.hits < c_visitor_limit
       returning w.hits into v_hits;
       if v_hits is null then
-        v_drop := 'visitor';
+        v_drop := 'heartbeat';
+        exit limits;
+      end if;
+
+      v_hits := null;
+      insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
+      values (
+        p_club_id,
+        'hn:' || encode(sha256(v_salt || convert_to(coalesce(v_wide, v_network), 'UTF8')), 'hex'),
+        v_window,
+        1
+      )
+      on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+        where w.hits < c_heartbeat_network_limit
+      returning w.hits into v_hits;
+      if v_hits is null then
+        v_drop := 'heartbeat';
         exit limits;
       end if;
 
@@ -419,12 +480,10 @@ begin
 
   if v_drop is not null then
     -- Counted, not silent: the report can say how many views and sponsor events the abuse limits
-    -- dropped. A dropped heartbeat only undercounts engaged time and 'heartbeat' is not a drop reason.
-    if v_type <> 'heartbeat' then
-      insert into onzio_private.page_event_drop_counts as d (club_id, local_date, reason, dropped)
-      values (p_club_id, v_day, v_drop, 1)
-      on conflict (club_id, local_date, reason) do update set dropped = d.dropped + 1;
-    end if;
+    -- dropped; rate-limited heartbeats are counted apart, under the reason 'heartbeat'.
+    insert into onzio_private.page_event_drop_counts as d (club_id, local_date, reason, dropped)
+    values (p_club_id, v_day, v_drop, 1)
+    on conflict (club_id, local_date, reason) do update set dropped = d.dropped + 1;
     return 'rate_limited';
   end if;
   if v_hits = 1 then
@@ -448,13 +507,16 @@ begin
   end if;
 
   -- Any event type joins the visitor's open visit; only a view that opens a new visit is an entry.
-  select e.visit_id into v_visit
-  from onzio.page_events e
-  where e.club_id = p_club_id
-    and e.visitor_hash = v_hash
-    and e.occurred_at > v_now - c_visit_gap
-  order by e.occurred_at desc
-  limit 1;
+  -- A heartbeat already found its open visit in the gate above.
+  if v_type <> 'heartbeat' then
+    select e.visit_id into v_visit
+    from onzio.page_events e
+    where e.club_id = p_club_id
+      and e.visitor_hash = v_hash
+      and e.occurred_at > v_now - c_visit_gap
+    order by e.occurred_at desc
+    limit 1;
+  end if;
   v_entry := v_type = 'view' and v_visit is null;
   v_visit := coalesce(v_visit, gen_random_uuid());
 
@@ -501,6 +563,8 @@ create table onzio.page_daily_totals (
   engaged_views integer not null default 0
     constraint page_daily_totals_engaged_views check (engaged_views >= 0),
   dropped integer not null default 0 constraint page_daily_totals_dropped check (dropped >= 0),
+  dropped_heartbeats integer not null default 0
+    constraint page_daily_totals_dropped_heartbeats check (dropped_heartbeats >= 0),
   computed_at timestamptz not null default now(),
   primary key (club_id, local_date)
 );
@@ -539,7 +603,7 @@ create index sponsor_daily_rollups_sponsor_idx
 comment on table onzio.page_daily_totals is
   'TELEMETRY-02 daily page totals per club and club-local day, recomputed from raw events by '
   'onzio_private.rollup_page_telemetry. Staff events never count. visitors is a count of that '
-  'day''s visitor ids, which are daily by design: never add days up into monthly uniques. Holds '
+  'day''s distinct visitor ids over page views only (a heartbeat-only visitor is not counted), which are daily by design: never add days up into monthly uniques. Holds '
   'no visitor data, so it is kept indefinitely.';
 comment on table onzio.page_daily_breakdowns is
   'TELEMETRY-02 daily views, visitors and engaged time per club, dimension and value. Engaged time '
@@ -592,7 +656,8 @@ using (
 -- rewrite a date whose raw events the sweep may already have removed. Run daily by the cron route
 -- as the service role. Staff events (is_staff) never count anywhere.
 --
--- visitors counts distinct visitor ids over ALL of the day's non-staff events. Visitor ids are
+-- visitors counts distinct visitor ids over the day's non-staff VIEW rows only. dropped sums the drop
+-- counts of every reason except 'heartbeat'; dropped_heartbeats sums the 'heartbeat' ones. Visitor ids are
 -- daily by design (a new salt each club-local day), so days must never be summed into monthly uniques.
 create function onzio_private.rollup_page_telemetry(
   p_days integer default 3
@@ -644,13 +709,14 @@ begin
     where r.club_id = v_club.id and r.local_date between v_start and v_today;
 
     insert into onzio.page_daily_totals (
-      club_id, local_date, views, visitors, visits, entries, engaged_ms, engaged_views, dropped, computed_at
+      club_id, local_date, views, visitors, visits, entries, engaged_ms, engaged_views, dropped,
+      dropped_heartbeats, computed_at
     )
     with ev as (
       select
         e.local_date,
         count(*) filter (where e.event_type = 'view') as views,
-        count(distinct e.visitor_hash) as visitors,
+        count(distinct e.visitor_hash) filter (where e.event_type = 'view') as visitors,
         count(distinct e.visit_id) filter (where e.event_type = 'view') as visits,
         count(*) filter (where e.event_type = 'view' and e.is_entry) as entries,
         coalesce(sum(e.engaged_ms) filter (where e.event_type = 'heartbeat'), 0) as engaged_ms,
@@ -662,7 +728,9 @@ begin
       group by e.local_date
     ),
     dr as (
-      select d.local_date, sum(d.dropped) as dropped
+      select d.local_date,
+             coalesce(sum(d.dropped) filter (where d.reason <> 'heartbeat'), 0) as dropped,
+             coalesce(sum(d.dropped) filter (where d.reason = 'heartbeat'), 0) as dropped_heartbeats
       from onzio_private.page_event_drop_counts d
       where d.club_id = v_club.id
         and d.local_date between v_start and v_today
@@ -671,7 +739,8 @@ begin
     select
       v_club.id, local_date,
       coalesce(ev.views, 0), coalesce(ev.visitors, 0), coalesce(ev.visits, 0), coalesce(ev.entries, 0),
-      coalesce(ev.engaged_ms, 0), coalesce(ev.engaged_views, 0), coalesce(dr.dropped, 0), now()
+      coalesce(ev.engaged_ms, 0), coalesce(ev.engaged_views, 0), coalesce(dr.dropped, 0),
+      coalesce(dr.dropped_heartbeats, 0), now()
     from ev
     full join dr using (local_date);
     get diagnostics v_n = row_count;
