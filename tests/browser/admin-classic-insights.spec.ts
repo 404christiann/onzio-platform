@@ -16,6 +16,9 @@ const OUT = "test-results/admin-classic-insights";
 const MONTH = "2004-03";
 const DAY = "2004-03-14";
 const SPONSOR = { id: randomUUID(), name: "T06 Fixture Bakery" };
+// UI-POLISH-INSIGHTS: a sponsor whose logo file is missing. The server renders the
+// <img>, so its 404 lands before React is listening; ResilientNativeImage must still hide it.
+const BROKEN = { id: randomUUID(), name: "T06 Fixture Broken", logo: "/images/partners/t06-missing-logo.png" };
 const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
 
 test.describe.configure({ mode: "serial" });
@@ -74,6 +77,14 @@ test.beforeAll(async () => {
     [SPONSOR.id, ALPHA, SPONSOR.name, "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='48'/%3E"],
   );
   await sql(
+    "insert into onzio.site_sponsor_logos (id, club_id, name, logo_url, sort_order, show_on_homepage, show_in_footer) values ($1, $2, $3, $4, 991, false, false)",
+    [BROKEN.id, ALPHA, BROKEN.name, BROKEN.logo],
+  );
+  await sql(
+    "insert into onzio.sponsor_daily_rollups (club_id, local_date, sponsor_id, logo_views, logo_viewers, clicks) values ($1, $2::date, $3, 50, 40, 1)",
+    [ALPHA, DAY, BROKEN.id],
+  );
+  await sql(
     "insert into onzio.page_daily_totals (club_id, local_date, views, visitors, visits, entries, engaged_ms, engaged_views, dropped) values ($1, $2::date, 300, 190, 220, 200, 0, 0, 0)",
     [ALPHA, DAY],
   );
@@ -101,7 +112,7 @@ test("the classic sidebar lists Insights and opens the page in the classic frame
   await link.click();
   await expect(page).toHaveURL(/\/admin\/insights$/);
   // UI-POLISH-INSIGHTS: the heading is the month's answer (only 2004-03 has numbers here).
-  await expect(page.getByRole("heading", { level: 1, name: /^Your sponsors were seen 200 times in March 2004$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Your sponsors were seen 250 times in March 2004$/ })).toBeVisible();
   await expect(page.locator("[data-sponsor-table]")).toContainText("T06 Fixture Bakery");
   await expect(page.locator('[data-admin-insights-page="classic"]')).toBeVisible();
   await expect(page.locator('[data-admin-shell="reimagined"]')).toHaveCount(0);
@@ -146,6 +157,13 @@ test("print: the classic frame and the pickers go, the sheet stays", async ({ pa
   await page.emulateMedia({ media: "screen" });
   expect(await visibleCount(sidebar)).toBe(1);
   await expect(downloadPdf).toBeVisible();
+});
+
+test("a sponsor logo that does not load leaves no broken image on the report", async ({ page }) => {
+  await page.goto(`/admin/insights/report?month=${MONTH}&sponsor=${BROKEN.id.toLowerCase()}`);
+  await expect(page.locator("[data-report-page]")).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 2, name: BROKEN.name })).toBeVisible();
+  await expect(page.locator(`img[alt="${BROKEN.name} logo"]`)).toHaveCount(0);
 });
 
 test("without the flag the sidebar has no Insights and the page sends you to the dashboard", async ({ page }) => {

@@ -138,10 +138,35 @@ export function ClassicSponsorInsights({
 
       {visitors.status === "ready" ? (
         <VisitorBreakdown data={visitors} basePath={BASE_PATH} month={report.month} />
-      ) : null}
+      ) : (
+        <VisitorsUnavailable failed={visitors.status === "error"} />
+      )}
 
-      {visitors.status === "ready" ? <TrackedLinkBuilder host={host} paths={visitors.sitePaths} /> : null}
+      {/* The builder needs only the page list; without the visitor numbers it still offers the home page. */}
+      <TrackedLinkBuilder host={host} paths={visitors.status === "ready" ? visitors.sitePaths : ["/"]} />
     </AdminPage>
+  );
+}
+
+/** "Where visitors came from" when its numbers are missing: say so instead of leaving a gap. */
+function VisitorsUnavailable({ failed }: { failed: boolean }) {
+  return (
+    <section
+      aria-labelledby="insights-visitors-heading"
+      className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6"
+      data-insights-visitors={failed ? "error" : "empty"}
+    >
+      <h2 id="insights-visitors-heading" className="text-base font-semibold">
+        Where visitors came from
+      </h2>
+      {failed ? (
+        <p role="alert" className="text-base text-destructive">
+          These numbers could not be loaded. Refresh the page to try again.
+        </p>
+      ) : (
+        <p className="text-base text-muted-foreground">No page views counted yet.</p>
+      )}
+    </section>
   );
 }
 

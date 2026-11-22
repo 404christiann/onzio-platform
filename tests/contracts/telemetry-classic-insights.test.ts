@@ -289,9 +289,10 @@ describe("Insights on the classic admin", () => {
     expect(await redirectOf(() => loadAdminTabPage("home"))).toBe("/admin");
   });
 
-  it("answers what each sponsor got in the month, most seen first, with no NaN or Infinity", async () => {
-    const month = "2026-10";
-    const [seen, few, unseen] = ["a", "b", "c"].map((letter) => `${letter.repeat(8)}-0000-4000-8000-000000000000`);
+  const month = "2026-10";
+  const [seen, few, unseen] = ["a", "b", "c"].map((letter) => `${letter.repeat(8)}-0000-4000-8000-000000000000`);
+
+  function seedMonth() {
     mocks.readReportMonths.mockResolvedValue({ status: "ready", months: [month] });
     mocks.readMonthlyReportRows.mockResolvedValue({
       status: "ready",
@@ -308,7 +309,10 @@ describe("Insights on the classic admin", () => {
       matches: [],
     });
     setClub(club(), portal("classic"));
+  }
 
+  it("answers what each sponsor got in the month, most seen first, with no NaN or Infinity", async () => {
+    seedMonth();
     const insights = await insightsPage({ month });
     expect(insights).toMatch(/<h1[^>]*>Your sponsors were seen 1,234,617 times in [A-Z][a-z]+/);
     const order = ["PacificNorthwestOrthopedicSportsMedicineGroup", "Tepito Tacos", "Rose Quarter Dental"].map((name) =>
@@ -333,5 +337,15 @@ describe("Insights on the classic admin", () => {
     const pages = one.slice(one.indexOf("data-sponsor-report"));
     expect(pages).toContain("Tepito Tacos");
     expect(pages).not.toContain("PacificNorthwestOrthopedicSportsMedicineGroup");
+  });
+
+  it("says when the visitor numbers fail to load, and keeps the sponsor table and link builder", async () => {
+    seedMonth();
+    mocks.loadInsightsData.mockResolvedValue({ status: "error" });
+    const insights = await insightsPage({ month });
+    expect(insights).toContain('data-insights-visitors="error"');
+    expect(insights).toMatch(/role="alert"[^>]*>These numbers could not be loaded/);
+    expect(insights).toContain("data-sponsor-table");
+    expect(insights).toContain('data-testid="campaign-link-builder"');
   });
 });

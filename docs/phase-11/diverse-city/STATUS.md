@@ -28,6 +28,12 @@ no sponsors, unseen and 30 sponsors (1,234,567-view rows, 56-char unbroken name)
 no horizontal overflow, no tap target under 44px, table caption and row/column headers read correctly. PDFs:
 Letter and A4, 4 pages for 3 active sponsors + summary; 30 sponsors 33 (Letter) / 32 (A4) pages.
 
+**Review fixes (onzio-bot, 2 Lows):** (1) `ResilientNativeImage`'s mount check now has a browser test
+(`admin-classic-insights.spec.ts`, a sponsor logo that 404s leaves no `<img>`); it fails with the check removed
+(verified on a build with main's version) and passes with it. (2) When the visitor numbers fail to load, "Where
+visitors came from" shows an error instead of vanishing, and the tracked link builder stays (home page only);
+contract test added, red on the previous code. Unit 401 files / 5260 tests; browser 4/4 desktop.
+
 **Next step:** Christian reviews the PR. The Rose City flag script still waits for his "go".
 
 ## 2026-11-21 - TELEMETRY-06: Sponsor Insights on the classic admin portal
