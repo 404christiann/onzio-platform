@@ -8,6 +8,8 @@
  *                                artworks in the admin: sets the operator-owned homepage inputs. Those are the four
  *                                artwork asset columns and presentation_config on homepage_revamp_content, plus the
  *                                episode video (behind_the_rose_section.video_url), which no admin save writes.
+ *                                The hero poster is first-time setup only: once the row has a poster, the hero video
+ *                                flow owns it (RC-HERO-POSTER) and a rerun leaves it and its alt text alone.
  *
  * Each file is one transaction:
  * - guards first;
@@ -18,7 +20,7 @@
  * Usage:
  *   npx tsx scripts/rose-city-2027-operator-sql.ts --step publish --actor <auth user uuid> [--commit] [--out file.sql]
  *   npx tsx scripts/rose-city-2027-operator-sql.ts --step presentation-inputs \
- *     --header-partner <asset uuid> --hero-poster <asset uuid> --seats-background <asset uuid> --episode-poster <asset uuid> \
+ *     --header-partner <asset uuid> --seats-background <asset uuid> --episode-poster <asset uuid> [--hero-poster <asset uuid>] \
  *     [--hero-video-guid <guid>] [--hero-video-library-id <id>] [--sponsor-treatment <sponsor logo uuid>=invert|dark-lettering ...] \
  *     [--episode-video-url https://www.youtube.com/embed/<11-character id>?rel=0] \
  *     [--commit] [--out file.sql]
@@ -79,7 +81,7 @@ export function roseCityPresentationDocument(actorId: string): PresentationDocum
 }
 
 export type PresentationInputs = {
-  headerPartner: string; heroPoster: string; seatsBackground: string; episodePoster: string;
+  headerPartner: string; heroPoster?: string; seatsBackground: string; episodePoster: string;
   heroVideoGuid?: string; heroVideoLibraryId?: string;
   sponsorTreatments?: Record<string, "invert" | "dark-lettering">;
   episodeVideoUrl?: string;
@@ -106,6 +108,14 @@ export const PRESENTATION_ARTWORK = [
   { key: "episodePoster", column: "episode_poster_media_asset_id", kind: "photograph", alt: "Rose City players celebrating with their championship trophy" },
 ] as const;
 export const DEFAULT_HERO_VIDEO = { guid: "d17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91", libraryId: "723074" };
+const HERO_POSTER = PRESENTATION_ARTWORK.find(({ key }) => key === "heroPoster")!;
+
+// Artwork the operator passed. The hero poster is optional: once a video swap has replaced it (RC-HERO-POSTER), a rerun
+// must not put the hand-set one back, so the SQL writes it only while the row has no poster yet.
+function providedArtwork(inputs: PresentationInputs) {
+  return PRESENTATION_ARTWORK.filter(({ key }) => key !== "heroPoster" || inputs.heroPoster !== undefined)
+    .map((artwork) => ({ ...artwork, assetId: inputs[artwork.key]! }));
+}
 
 // The hero video keys are only part of the payload when the operator passes them: the admin can replace the video
 // afterwards (RC-HERO-VIDEO-SWAP), and a rerun of this step must not put the original back. The SQL falls back to
@@ -115,7 +125,8 @@ export function presentationConfig(inputs: PresentationInputs) {
     ...(inputs.heroVideoGuid === undefined ? {} : { heroVideoGuid: inputs.heroVideoGuid }),
     ...(inputs.heroVideoLibraryId === undefined ? {} : { heroVideoLibraryId: inputs.heroVideoLibraryId }),
     sponsorTreatments: inputs.sponsorTreatments ?? {},
-    artworkAlt: Object.fromEntries(PRESENTATION_ARTWORK.map(({ key, alt }) => [key, alt])),
+    // The hero poster's alt travels with the poster: the SQL adds it only when it writes the poster.
+    artworkAlt: Object.fromEntries(PRESENTATION_ARTWORK.filter(({ key }) => key !== "heroPoster").map(({ key, alt }) => [key, alt])),
   };
 }
 
@@ -255,9 +266,10 @@ ${options.commit ? "commit;" : "rollback;"}
 
 export function buildPresentationInputsSql(options: { inputs: PresentationInputs; commit: boolean }): string {
   const { inputs } = options;
-  for (const { key } of PRESENTATION_ARTWORK) assertUuid(inputs[key], `--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`);
-  const ids = PRESENTATION_ARTWORK.map(({ key }) => inputs[key]);
-  if (new Set(ids).size !== ids.length) throw new Error("The four artwork asset IDs must be different.");
+  const artwork = providedArtwork(inputs);
+  for (const { key, assetId } of artwork) assertUuid(assetId, `--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`);
+  const ids = artwork.map(({ assetId }) => assetId);
+  if (new Set(ids).size !== ids.length) throw new Error("The artwork asset IDs must be different.");
   for (const [sponsorId, treatment] of Object.entries(inputs.sponsorTreatments ?? {})) {
     assertUuid(sponsorId, "--sponsor-treatment");
     if (treatment !== "invert" && treatment !== "dark-lettering") throw new Error("--sponsor-treatment must be invert or dark-lettering.");
@@ -269,9 +281,11 @@ export function buildPresentationInputsSql(options: { inputs: PresentationInputs
   }
   const sponsorIds = Object.keys(config.sponsorTreatments);
   const videoUrl = episodeVideoUrl(inputs);
-  const artworkRows = PRESENTATION_ARTWORK.map(({ key, column, kind }) => `(${quote(column)}, ${quote(inputs[key])}::uuid, ${quote(kind)})`).join(", ");
+  const artworkRows = artwork.map(({ column, assetId, kind }) => `(${quote(column)}, ${quote(assetId)}::uuid, ${quote(kind)})`).join(", ");
+  const poster = inputs.heroPoster;
   return `${header("presentation-inputs", options.commit, [
-    ...PRESENTATION_ARTWORK.map(({ key, column }) => `${column} = ${inputs[key]} (${key})`),
+    ...artwork.map(({ key, column, assetId }) => `${column} = ${assetId} (${key})${key === "heroPoster" ? ", only if the row has no hero poster yet" : ""}`),
+    ...(poster === undefined ? [`${HERO_POSTER.column} is not written (no --hero-poster).`] : []),
     `behind_the_rose_section.video_url = ${videoUrl}`,
   ])}
 
@@ -280,6 +294,8 @@ declare
   v_club_id constant uuid := ${quote(ROSE_CITY_CLUB_ID)};
   v_config constant jsonb := ${jsonLiteral(config, "cfg")};
   v_merge jsonb;
+  v_hero_poster constant uuid := ${poster === undefined ? "null" : `${quote(poster)}::uuid`};
+  v_set_poster boolean;
   v_video_url constant text := ${quote(videoUrl)};
   v_club onzio.clubs;
   v_template text;
@@ -310,6 +326,11 @@ ${CLUB_GUARD}
   if not (v_merge ? 'heroVideoLibraryId') and not (v_row.presentation_config ? 'heroVideoLibraryId') then
     v_merge := v_merge || jsonb_build_object('heroVideoLibraryId', ${quote(DEFAULT_HERO_VIDEO.libraryId)});
   end if;
+  -- The hero poster (and its alt) is first-time setup only. After that the hero video flow owns it.
+  v_set_poster := v_hero_poster is not null and v_row.hero_poster_media_asset_id is null;
+  -- artworkAlt merges key by key, so the alt of an artwork this run does not set is kept.
+  v_merge := jsonb_set(v_merge, '{artworkAlt}', coalesce(v_row.presentation_config->'artworkAlt', '{}'::jsonb) || (v_config->'artworkAlt')
+    || case when v_set_poster then jsonb_build_object('heroPoster', ${quote(HERO_POSTER.alt)}) else '{}'::jsonb end);
   select * into v_video from onzio.behind_the_rose_section where club_id = v_club_id for update;
   if not found then
     raise exception 'SAVE_THE_HOMEPAGE_VIDEO_SECTION_FIRST: Rose City has no behind_the_rose_section row yet';
@@ -319,6 +340,7 @@ ${CLUB_GUARD}
   end if;
   -- Each artwork must be a published Rose City homepage asset of the kind its slot renders.
   for v_check in select * from (values ${artworkRows}) as t(column_name, asset_id, kind) loop
+    continue when v_check.column_name = ${quote(HERO_POSTER.column)} and not v_set_poster;
     select * into v_asset from onzio.media_assets where club_id = v_club_id and id = v_check.asset_id;
     if not found then
       raise exception 'ASSET_NOT_ROSE_CITY: % = % is not a Rose City media asset', v_check.column_name, v_check.asset_id;
@@ -337,7 +359,7 @@ ${sponsorIds.length ? `  select count(*) into v_count from onzio.site_sponsor_lo
   if v_count <> ${sponsorIds.length} then raise exception 'SPONSOR_NOT_ROSE_CITY: a --sponsor-treatment ID is not a Rose City sponsor logo'; end if;` : "  -- No sponsor treatments requested."}
 
   if v_row.header_partner_media_asset_id is not distinct from ${quote(inputs.headerPartner)}::uuid
-    and v_row.hero_poster_media_asset_id is not distinct from ${quote(inputs.heroPoster)}::uuid
+    and not v_set_poster
     and v_row.seats_background_media_asset_id is not distinct from ${quote(inputs.seatsBackground)}::uuid
     and v_row.episode_poster_media_asset_id is not distinct from ${quote(inputs.episodePoster)}::uuid
     and (v_row.presentation_config || v_merge) = v_row.presentation_config then
@@ -345,8 +367,7 @@ ${sponsorIds.length ? `  select count(*) into v_count from onzio.site_sponsor_lo
   else
     update onzio.homepage_revamp_content
       set header_partner_media_asset_id = ${quote(inputs.headerPartner)}::uuid,
-          hero_poster_media_asset_id = ${quote(inputs.heroPoster)}::uuid,
-          seats_background_media_asset_id = ${quote(inputs.seatsBackground)}::uuid,
+${poster === undefined ? "" : "          hero_poster_media_asset_id = case when v_set_poster then v_hero_poster else hero_poster_media_asset_id end,\n"}          seats_background_media_asset_id = ${quote(inputs.seatsBackground)}::uuid,
           episode_poster_media_asset_id = ${quote(inputs.episodePoster)}::uuid,
           presentation_config = presentation_config || v_merge
       where club_id = v_club_id;
@@ -370,7 +391,9 @@ $operator$;
 -- Read-back.
 select current_setting('onzio_operator.result', true) as result,
   r.header_partner_media_asset_id, r.hero_poster_media_asset_id, r.seats_background_media_asset_id, r.episode_poster_media_asset_id,
-  (r.presentation_config || ${jsonLiteral(config, "cfg")}) = r.presentation_config as config_matches,
+  (r.presentation_config || (${jsonLiteral(config, "cfg")} - 'artworkAlt')) = r.presentation_config
+    and (coalesce(r.presentation_config->'artworkAlt', '{}'::jsonb) || (${jsonLiteral(config, "cfg")}->'artworkAlt'))
+      = coalesce(r.presentation_config->'artworkAlt', '{}'::jsonb) as config_matches,
   r.presentation_config->>'heroVideoGuid' as hero_video_guid,
   v.video_url as episode_video_url,
   v.video_url = ${quote(videoUrl)} as episode_video_matches,
@@ -420,7 +443,7 @@ function main() {
     sql = buildPresentationInputsSql({
       commit,
       inputs: {
-        headerPartner: one("--header-partner")!, heroPoster: one("--hero-poster")!,
+        headerPartner: one("--header-partner")!, heroPoster: one("--hero-poster", false),
         seatsBackground: one("--seats-background")!, episodePoster: one("--episode-poster")!,
         heroVideoGuid: one("--hero-video-guid", false), heroVideoLibraryId: one("--hero-video-library-id", false),
         sponsorTreatments, episodeVideoUrl: one("--episode-video-url", false),

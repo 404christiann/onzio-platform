@@ -5,6 +5,12 @@
 - **Review follow-up (2026-11-22):** the review's Low is fixed: a contract test now fails if any of the three registration surfaces loses its `showRegistrations` gate (break-checked 4 of 4).
 - **Exact next step:** Christian checks the preview at 375 and 1280, then decides on merging.
 
+## 2026-11-21 - RC-HERO-POSTER-00/01: thumbnail facts; operator script cannot restore the old poster
+
+- **Status:** `ready for review`, branch `claude/rc-hero-poster-01-operator-script` from main `234e4cac`, PR open, not merged. No `supabase/**` change, no migration, env or production change. Record: `STATUS.md` (RC-HERO-POSTER-00 and -01), including Christian's decisions for the whole poster package.
+- **What:** read-only check: the live hero video's Bunny thumbnail is 1920x1080 and loads with any Referer (403 with none). Step B of `scripts/rose-city-2027-operator-sql.ts` now writes the hero poster and its alt only on first-time setup, merges `artworkAlt` key by key, and `--hero-poster` is optional.
+- **Exact next step:** Christian merges after onzio-bot review; then RC-HERO-POSTER-02 (migration and prod gate).
+
 ## 2026-11-21 - TELEMETRY-05: monthly sponsor report (print to PDF)
 
 - **Status:** `ready for review`, branch `claude/telemetry-05-report`, rebased onto main `9998fcc0` (after TELEMETRY-02/03/04), PR #218 open, not merged. No `supabase/**` change. No migration, env or production change. Record: `STATUS.md` (TELEMETRY-05).

@@ -165,7 +165,8 @@ describe("Rose City 2027 operator SQL", () => {
       const scan = withoutJson(run());
       expect(scan).not.toContain("@>");
       expect(scan).toMatch(/and \(v_row\.presentation_config \|\| v_merge\) = v_row\.presentation_config then/);
-      expect(scan).toMatch(/\(r\.presentation_config \|\| [^)]*\) = r\.presentation_config as config_matches/);
+      expect(scan).toMatch(/\(r\.presentation_config \|\| \(''::jsonb - 'artworkAlt'\)\) = r\.presentation_config\n/);
+      expect(scan).toMatch(/\|\| \(''::jsonb->'artworkAlt'\)\)\n\s+= coalesce\(r\.presentation_config->'artworkAlt', '\{\}'::jsonb\) as config_matches/);
     });
 
     it("leaves the hero video out of the payload unless the operator passes it", () => {
@@ -195,6 +196,59 @@ describe("Rose City 2027 operator SQL", () => {
         expect(sql).not.toContain("previousHeroVideoGuid");
         expect(sql).not.toMatch(/presentation_config[ \t]*(#-|-[ \t]*')/);
       }
+    });
+  });
+
+  describe("hero poster (RC-HERO-POSTER-01)", () => {
+    const run = (inputs: Partial<PresentationInputs> = {}) => buildPresentationInputsSql({ inputs: { ...INPUTS, ...inputs }, commit: false });
+    const cfgLiteral = (sql: string) => JSON.parse(/\$cfg\$([\s\S]*?)\$cfg\$/.exec(sql)![1]);
+    const { heroPoster: _omitted, ...withoutPoster } = INPUTS;
+    const noPoster = () => buildPresentationInputsSql({ inputs: withoutPoster, commit: false });
+
+    it("is optional: without --hero-poster the SQL never writes or validates the poster column", () => {
+      const sql = noPoster();
+      const expected = { ...EXPECTED_WRITES["presentation-inputs"] };
+      expected["onzio.homepage_revamp_content"] = expected["onzio.homepage_revamp_content"].filter((column) => column !== "hero_poster_media_asset_id");
+      expect(writes(sql)).toEqual(sorted(expected));
+      expect(sql).toContain("v_hero_poster constant uuid := null;");
+      expect(withoutJson(sql)).not.toContain("('hero_poster_media_asset_id', ");
+      expect(sql).toContain("-- hero_poster_media_asset_id is not written (no --hero-poster).");
+    });
+
+    it("writes a passed poster only while the row has none, in the same single update", () => {
+      const scan = withoutJson(run());
+      expect(scan).toContain(`v_hero_poster constant uuid := '${INPUTS.heroPoster}'::uuid;`);
+      expect(scan).toContain("v_set_poster := v_hero_poster is not null and v_row.hero_poster_media_asset_id is null;");
+      expect(scan).toContain("hero_poster_media_asset_id = case when v_set_poster then v_hero_poster else hero_poster_media_asset_id end,");
+      expect(scan.match(/update onzio\.homepage_revamp_content/g)).toHaveLength(1);
+      expect(scan).toMatch(/is not distinct from '[^']+'::uuid\n\s+and not v_set_poster\n/);
+      expect(scan).not.toMatch(/hero_poster_media_asset_id is not distinct from/);
+    });
+
+    it("skips validating a passed poster the row will not use", () => {
+      expect(withoutJson(run())).toContain("continue when v_check.column_name = 'hero_poster_media_asset_id' and not v_set_poster;");
+    });
+
+    it("merges artworkAlt key by key and adds the poster alt only with the poster", () => {
+      for (const sql of [run(), noPoster()]) {
+        expect(cfgLiteral(sql).artworkAlt).not.toHaveProperty("heroPoster");
+        expect(cfgLiteral(sql).artworkAlt).toHaveProperty("headerPartner");
+        const scan = withoutJson(sql);
+        expect(scan).toContain("v_merge := jsonb_set(v_merge, '{artworkAlt}', coalesce(v_row.presentation_config->'artworkAlt', '{}'::jsonb) || (v_config->'artworkAlt')");
+        expect(scan).toContain("|| case when v_set_poster then jsonb_build_object('heroPoster', 'Rose City players preparing their boots on the team bench') else '{}'::jsonb end);");
+      }
+    });
+
+    it("never writes the previous poster or its alt", () => {
+      for (const sql of [run(), noPoster()]) {
+        expect(sql).not.toContain("previous_hero_poster_media_asset_id");
+        expect(sql).not.toContain("previousHeroPosterAlt");
+      }
+    });
+
+    it("still requires distinct artwork among the IDs passed", () => {
+      expect(() => buildPresentationInputsSql({ inputs: { ...withoutPoster, seatsBackground: INPUTS.headerPartner }, commit: false })).toThrow(/different/);
+      expect(() => run({ heroPoster: "x" })).toThrow(/--hero-poster/);
     });
   });
 
