@@ -1,5 +1,45 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-06: Sponsor Insights on the classic admin portal
+
+**Agent/package:** Claude Code (Opus 5.5), TELEMETRY-06. Branch `claude/telemetry-06-classic-insights` off main
+`45d4b8bd`. Not merged.
+**Status:** `ready for review`. No migration, schema, env, Vercel, Stripe or production change; no `supabase/**` file in
+the diff. Decision (Christian, 2026-11-21, final): the reimagined admin is abandoned and every club stays
+`admin_portal = 'classic'`; nothing here changes `admin_portal`.
+
+**Completed:**
+- One gate, `canSeeSponsorInsights` in `lib/admin-route-manifest.ts`: owner or admin and
+  `admin_flags.sponsor_insights === true`, whatever the portal. The classic sidebar (manifest row), the reimagined
+  Insights tab (`getVisibleAdminTabs`) and the page loader (`canOpenAdminTab` in `loadAdminTabPage`) all ask it.
+- `loadAdminTabPage("insights")` no longer sends a classic club to `/admin`; every other tab keeps its classic redirect
+  (`tabOpensOnClassic`). Without the flag both Insights pages redirect to `/admin`, as any tab the club lacks.
+- New `classicOnly` manifest row "Insights" (`/admin/insights`) after Analytics in the classic sidebar and search; the
+  reimagined admin never lists it (it has the tab). The classic shell now passes `admin_flags` into its access context.
+- Classic Insights page uses the classic `AdminPage`/`AdminPageHeader` instead of the reimagined `TabPage`; the frame
+  colour/easing tokens moved to a shared `.frame, .tokens` rule so the insights cards render the same outside the frame.
+- Report print rules target `.admin-portal` (the root of both shells) and the classic `[data-slot="sidebar"]`, so the
+  classic sidebar, top bar, nav and notices drop out of the printed sheet. Data queries untouched.
+
+**Files changed:** `lib/admin-route-manifest.ts`, `lib/admin-tabs.ts`, `lib/admin-tab-page.ts`,
+`components/AdminShell.tsx`, `components/admin/adminRouteIcons.ts`, `components/admin/reimagined/{MoreList.tsx,
+frame.module.css,insights.module.css}`, `components/admin/insights-report/report.module.css`,
+`app/admin/(protected)/insights/page.tsx`, `tests/contracts/telemetry-classic-insights.test.ts` (new),
+`tests/browser/admin-classic-insights.spec.ts` (new), `tests/contracts/{admin-route-manifest,admin-sidebar-groups,
+admin-tabs,telemetry-insights-page}.test.ts` (pinned nav/route counts, loader lines, reimagined fixture), this file.
+
+**Verification:** `npx tsc --noEmit` clean; `npm run lint` 0 errors (2 existing warnings); `npm run test:unit` 401 files /
+5258 tests passed (new file 17 tests; 8 of them fail on main's source); `npm run build` passed (local placeholder public
+Supabase env). Browser, local Alpha (classic) under `scripts/with-local-db-lock.sh`, built app on :3110:
+`admin-classic-insights.spec.ts` desktop 3/3 passed (sidebar link and classic page; report print hides the classic frame
+and keeps the sheet; flag off hides the link and redirects to `/admin`). The first print run failed (the shell's
+child reset outranked the sidebar hide) and was fixed. The reimagined report browser spec was not rerun: it needs
+Alpha on the reimagined portal.
+
+**Next step:** Christian reviews and merges the PR. After merge, the Rose City flag operator script on
+`claude/telemetry-flag-rose-city` (`scripts/operator-sql/rose-city-sponsor-insights-enable.commit.sql`) runs only on his
+"go".
+
 ## 2026-11-21 - TELEMETRY-05: monthly sponsor report (print to PDF)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet 5.5 workers), TELEMETRY-05 (telemetry P5). Branch

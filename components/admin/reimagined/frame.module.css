@@ -5,10 +5,16 @@
    press = scale(0.97) at 160ms, hover only with a fine pointer, tab switches
    instant, menus grow from their trigger, 150ms in and 100ms out. */
 
-.frame {
+/* .tokens carries the frame's colors and easing to frame-styled content that
+   renders outside the frame (Insights under the classic admin, TELEMETRY-06). */
+.frame,
+.tokens {
   --frame-faint: hsl(var(--muted-foreground) / 0.78);
   --frame-soft: hsl(var(--primary) / 0.1);
   --frame-ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.frame {
   --frame-tabbar: calc(62px + var(--admin-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
   display: flex;
   min-height: 100dvh;

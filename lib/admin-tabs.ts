@@ -1,6 +1,7 @@
 import {
   ADMIN_MORE_ROWS,
   ADMIN_ROUTE_MANIFEST,
+  canSeeSponsorInsights,
   getVisibleAdminMoreRows,
   getVisibleAdminRoutes,
   type AdminMoreRow,
@@ -57,7 +58,17 @@ export function classicLandingForTab(tab: AdminTabId): `/admin${string}` {
 }
 
 /** The admin_flags key that turns on the Insights tab (the Sponsor Insights add-on). */
-export const SPONSOR_INSIGHTS_FLAG = "sponsor_insights";
+export { SPONSOR_INSIGHTS_FLAG } from "@/lib/admin-route-manifest";
+
+/**
+ * TELEMETRY-06: tabs whose page a classic club opens too, under the classic
+ * shell. Every other tab sends a classic club to classicLandingForTab.
+ */
+const CLASSIC_OPENABLE_TABS: ReadonlySet<AdminTabId> = new Set(["insights"]);
+
+export function tabOpensOnClassic(tab: AdminTabId): boolean {
+  return CLASSIC_OPENABLE_TABS.has(tab);
+}
 
 const TAB_BY_ID = new Map<AdminTabId, AdminTab>(ADMIN_TABS.map((tab) => [tab.id, tab]));
 
@@ -75,9 +86,19 @@ export function getVisibleAdminTabs(context: AdminRouteAccessContext): readonly 
   const visible = new Set(getVisibleAdminRoutes(context).map((route) => route.id));
   return ADMIN_TABS.filter((tab) => {
     if (tab.id === "programs") return hasProgramsTab(visible);
-    if (tab.id === "insights") return context.adminFlags?.[SPONSOR_INSIGHTS_FLAG] === true;
+    if (tab.id === "insights") return canSeeSponsorInsights(context);
     return true;
   });
+}
+
+/**
+ * Whether this person may open a tab's page. Insights asks its own gate, so a
+ * classic club with the add-on opens it too; every other tab must be one of
+ * the reimagined tabs this person sees.
+ */
+export function canOpenAdminTab(context: AdminRouteAccessContext, tab: AdminTabId): boolean {
+  if (tab === "insights") return canSeeSponsorInsights(context);
+  return getVisibleAdminTabs(context).some((candidate) => candidate.id === tab);
 }
 
 const TAB_BY_GROUP: Record<AdminRouteGroupId, AdminTabId> = {
@@ -110,6 +131,8 @@ export function tabForRoute(
     case "registrations":
     case "sign-ups":
       return programsTab ? "programs" : "club";
+    case "insights":
+      return "insights";
     default:
       return route.groupId ? TAB_BY_GROUP[route.groupId] : "club";
   }

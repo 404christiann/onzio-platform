@@ -106,6 +106,44 @@
   height: 18px;
 }
 
+/* Press feedback: the classic admin's ease-out, with the same curve as a fallback. */
+.button,
+.back {
+  transition:
+    transform 160ms var(--admin-motion-ease-out, cubic-bezier(0.23, 1, 0.32, 1)),
+    background-color 150ms ease,
+    filter 150ms ease;
+  touch-action: manipulation;
+}
+
+.button:active,
+.back:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .primary:hover {
+    filter: brightness(1.06);
+  }
+
+  .secondary:hover,
+  .back:hover {
+    background: hsl(var(--accent));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .back {
+    transition-property: background-color, filter;
+  }
+
+  .button:active,
+  .back:active {
+    transform: none;
+  }
+}
+
 .primary {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
@@ -136,6 +174,7 @@
   min-height: 44px;
   align-items: center;
   gap: 2px;
+  padding: 0 10px 0 6px;
   border-radius: 10px;
   font-size: 14.5px;
   font-weight: 600;
@@ -468,11 +507,15 @@
   }
 
   /* The frame: side nav, both top bars, the phone tab bar, every nav, billing
-     notices and the pickers. Nothing but the sheets prints. */
+     notices and the pickers. Nothing but the sheets prints. .admin-portal is the
+     shell's root in both admins (the reimagined one also carries
+     data-admin-shell); the classic sidebar is its [data-slot="sidebar"] child,
+     named that way so it outranks the shell's child reset below (TELEMETRY-06). */
   :global(body):has(.report) :global(aside),
   :global(body):has(.report) :global(nav),
-  :global(body):has(.report) :global([data-admin-shell]) > :global(div) > :global(header),
-  :global(body):has(.report) :global([data-admin-shell]) :global(main) > :not(.page):not(:has(.page)),
+  :global(body):has(.report) :global(.admin-portal) > :global([data-slot="sidebar"]),
+  :global(body):has(.report) :global(.admin-portal) > :global(div) > :global(header),
+  :global(body):has(.report) :global(.admin-portal) :global(main) > :not(.page):not(:has(.page)),
   :global(body):has(.report) :global([data-report-controls]),
   :global(body):has(.report) .controls {
     display: none !important;
@@ -480,9 +523,9 @@
 
   /* The frame's boxes become plain blocks on white. */
   :global(body):has(.report) :global(.admin-theme),
-  :global(body):has(.report) :global([data-admin-shell]),
-  :global(body):has(.report) :global([data-admin-shell]) > :global(div),
-  :global(body):has(.report) :global([data-admin-shell]) :global(main) {
+  :global(body):has(.report) :global(.admin-portal),
+  :global(body):has(.report) :global(.admin-portal) > :global(div),
+  :global(body):has(.report) :global(.admin-portal) :global(main) {
     display: block !important;
     min-height: 0 !important;
     margin: 0 !important;

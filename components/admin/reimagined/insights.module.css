@@ -7,6 +7,15 @@
    implicit auto column that would grow to fit the widest table. A
    minmax(0, 1fr) column keeps every card at the page width; wide tables
    scroll inside .tableWrap instead of the page. */
+/* TELEMETRY-06: the Insights body under the classic page header, spaced like
+   the tab page's own column. */
+.classicBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  min-width: 0;
+}
+
 .dashboard {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -223,6 +232,21 @@
   white-space: normal;
 }
 
+/* Phone: one-line headers, and the table scrolls sideways instead of stacking them. */
+@media (max-width: 639px) {
+  .table thead th {
+    white-space: nowrap;
+  }
+}
+
+/* On a phone the table scrolls sideways inside .tableWrap; the sponsor stays put. */
+.table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: hsl(var(--card));
+}
+
 .table th:first-child,
 .table td:first-child {
   text-align: left;
@@ -256,7 +280,8 @@ tr[data-removed] .sponsorName {
   gap: 12px;
 }
 
-.grid > .label {
+/* The section heading is a frame .label (another module), so match it as the h2. */
+.grid > h2 {
   margin-bottom: -4px;
 }
 
@@ -346,7 +371,7 @@ tr[data-removed] .sponsorName {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .grid > .label,
+  .grid > h2,
   .span2 {
     grid-column: 1 / -1;
   }

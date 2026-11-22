@@ -114,7 +114,7 @@ async function render(searchParams: Record<string, string> = {}): Promise<string
 }
 
 function club(slug: string) {
-  return { supabase: {}, club: { id: "club-1", slug, primaryDomain: "example.org" }, portal: { timeZone: "America/Los_Angeles" } };
+  return { supabase: {}, club: { id: "club-1", slug, primaryDomain: "example.org" }, portal: { portal: "reimagined", timeZone: "America/Los_Angeles" } };
 }
 
 describe("insights page", () => {
