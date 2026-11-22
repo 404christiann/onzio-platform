@@ -35,10 +35,26 @@ covers:
 - near-miss paths are not exempt.
 Removing the bypass, or the header stripping, each makes the test fail.
 
+**Review Low fixed (onzio-bot on #221):** a new contract test walks `app/api/cron/` itself, not `vercel.json`. It
+requires that:
+- every route directory is scheduled in `vercel.json`, every `vercel.json` cron has a route, and none has nested
+  routes;
+- each route exports only `GET`;
+- each route returns 401 with no `CRON_SECRET` (bearer empty or `undefined`), with no bearer, and with a wrong bearer.
+
+Dropping a route's `!cronSecret` guard (it answers 500), adding an unscheduled route, or adding a `POST` export each
+fails it.
+
+**Before merging #221:** `LIFECYCLE_SUSPENSION_ENABLED`, `LIFECYCLE_RECONCILIATION_ENABLED` and
+`LIFECYCLE_CRON_HEARTBEAT_URL` are not set in Vercel Production (`vercel env ls production`, names only). With them
+missing, the lifecycle cron fails closed: `requiredFlag` throws `LIFECYCLE_CONFIGURATION_INVALID` before the database
+call, so it answers 500 and suspends nothing. Christian decides the values. Setting suspension to `true` would let it
+suspend clubs.
+
 **Files:** `middleware.ts`, `tests/contracts/tenant-routing.test.ts`, this file.
 
-**Verification:** `tenant-routing` contract 32/32; `tsc --noEmit` and `npm run lint` clean; non-DB vitest 395 files,
-5,259 passed, 1 skipped; `test:architecture` 432 passed, 1 skipped; `npm run build` ok (with the local Supabase env).
+**Verification:** `tenant-routing` contract 33/33; `tsc --noEmit` and `npm run lint` clean; non-DB vitest 395 files,
+5,260 passed, 1 skipped; `test:architecture` 432 passed, 1 skipped; `npm run build` ok (with the local Supabase env).
 
 **Next step:** grokbot review and merge. After the deploy, use Vercel's Run for `/api/cron/telemetry-rollup` and
 expect 200 `{clubs: 0, days: 3, rowsWritten: 0}`. Then check the logs right after the next daily runs (10:00-11:00 UTC)

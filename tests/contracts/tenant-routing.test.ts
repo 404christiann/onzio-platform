@@ -147,6 +147,50 @@ describe("tenant route resolution contract", () => {
     }
   });
 
+  // Middleware lets ANY /api/cron/<name> through, so every route there must be a scheduled cron that
+  // authenticates itself. This walks the directory, not vercel.json, so a new route is caught even if
+  // nobody schedules it.
+  it("keeps every route under app/api/cron scheduled in vercel.json, GET-only and closed without CRON_SECRET", async () => {
+    const { readdirSync, readFileSync, existsSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const root = resolve(process.cwd(), "app/api/cron");
+    const names = readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+    const { crons } = JSON.parse(readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")) as {
+      crons: Array<{ path: string }>;
+    };
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.map((name) => `/api/cron/${name}`)).toEqual(crons.map((cron) => cron.path).sort());
+
+    const original = process.env.CRON_SECRET;
+    try {
+      for (const name of names) {
+        const file = resolve(root, name, "route.ts");
+        expect(existsSync(file), name).toBe(true);
+        // Nothing nested below a cron route: middleware's exemption covers exactly one segment.
+        expect(readdirSync(resolve(root, name), { withFileTypes: true }).filter((entry) => entry.isDirectory()), name).toEqual([]);
+        const route = (await import(file)) as Record<string, unknown>;
+        const methods = Object.keys(route).filter((key) => /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(key));
+        expect(methods, name).toEqual(["GET"]);
+        const get = route.GET as (request: Request) => Promise<Response>;
+        const url = `https://onzio-platform-9p3oxcj5d-team.vercel.app/api/cron/${name}`;
+
+        delete process.env.CRON_SECRET;
+        for (const authorization of ["Bearer ", "Bearer undefined"]) {
+          expect((await get(new Request(url, { headers: { authorization } }))).status, `${name} without CRON_SECRET`).toBe(401);
+        }
+        process.env.CRON_SECRET = "cron-inventory-test-secret";
+        expect((await get(new Request(url))).status, `${name} without a bearer`).toBe(401);
+        expect((await get(new Request(url, { headers: { authorization: "Bearer wrong" } }))).status, `${name} with a wrong bearer`).toBe(401);
+      }
+    } finally {
+      if (original === undefined) delete process.env.CRON_SECRET;
+      else process.env.CRON_SECRET = original;
+    }
+  });
+
   it("resolves a verified primary domain", async () => {
     const resolveTenantRoute = await loadContract<ResolveTenantRoute>(
       "@/lib/tenant-routing",
