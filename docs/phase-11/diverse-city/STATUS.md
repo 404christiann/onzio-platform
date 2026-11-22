@@ -3,10 +3,10 @@
 ## 2026-11-21 - TELEMETRY-05: monthly sponsor report (print to PDF)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet 5.5 workers), TELEMETRY-05 (telemetry P5). Branch
-`claude/telemetry-05-report` from `origin/claude/telemetry-02-data` at `dd4bfb85`; code commit `3c73d435` plus this
-record. PR open, not merged.
-**Status:** `ready for review`. Merge after TELEMETRY-02 and TELEMETRY-04. No migration, schema, env, Vercel, Stripe or
-production change.
+`claude/telemetry-05-report`, rebased onto main `9998fcc0` (TELEMETRY-02 #216, TELEMETRY-03 #217 and TELEMETRY-04 #220
+merged). PR #218, base `main`, not merged.
+**Status:** `ready for review`. No migration, schema, env, Vercel, Stripe or production change; no `supabase/**` file in
+the diff.
 
 **Completed:**
 - Route `app/admin/(protected)/insights/report/page.tsx` (`?month=YYYY-MM&sponsor=<uuid|all>`), same access as the
@@ -62,10 +62,20 @@ PrintButton.tsx,report.module.css}`, `lib/telemetry/report-data.ts`, `lib/__test
   paging case passes), `db:types:check` match, `npm run build` passed, report Playwright spec 5/5 (avg time now
   "3m 37s, measured on 1 of 6 days" for the seed).
 
+**Rebase onto main `9998fcc0` (2026-11-21):** TELEMETRY-02's commit `dd4bfb85` dropped (now on main as #216); the
+four TELEMETRY-05 commits replayed with only a STATUS/HANDOFF conflict (both entries kept). `git diff --name-only
+origin/main...HEAD -- supabase app/api middleware.ts components/cinematic components/telemetry package.json
+package-lock.json "app/admin/(protected)/insights/page.tsx"`: empty. Rechecked at the rebased code: tsc clean; lint 0
+errors; `npx vitest run --exclude "tests/database/**"` 407/407 files, 5521 passed, 1 skipped (the 3 migration-list
+failures are gone); `npm run test:architecture` 432 passed, 1 skipped. One lock hold: db reset (max `20261121230000`),
+`npm run test:db` 84/84 files, 1571/1571 (the 2 base failures are gone); `db:types:check` match; `npm run build`
+passed; Playwright 217 passed, 3 skipped, 4 failed: the same 4 classic-admin cases, which TELEMETRY-04 records as
+failing on the base too. All 5 report tests pass.
+
 **Blockers / decisions:** none for this package. The browser's default PDF file name is the page title for every
 sponsor. A white-on-transparent sponsor logo sits in a small white tile and may be faint on paper.
-**Next step:** rebase onto `origin/main` after TELEMETRY-02 (and TELEMETRY-04 if merged) land, rerun the checks, then
-onzio-bot review and Christian merges. TELEMETRY-04 can link its slot with `reportHref`.
+**Next step:** CI green on the rebased head, then Christian merges #218 on his word. Linking TELEMETRY-04's slot
+with `reportHref` is a separate follow-up.
 
 ## 2026-11-21 - TELEMETRY-04: Sponsor Insights dashboard (P3), time on page and campaign link builder (P4)
 
