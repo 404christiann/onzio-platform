@@ -17,6 +17,7 @@
 }
 
 .uploader {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   display: grid;
   gap: 2px;
   min-width: 0;
@@ -228,13 +229,76 @@
   overflow-wrap: anywhere;
 }
 
-.check {
-  flex: none;
-  color: #34C759;
+/* The success card has the drop zone's box, so the swap in either direction does not move anything below it. */
+.card {
+  --hero-success: #34C759;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  /* The drop zone's last measured height, so the swap in and out never moves what sits below. */
+  min-height: var(--hero-zone-height, auto);
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--hero-success) 45%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--hero-success) 6%, transparent);
+  text-align: center;
+  opacity: 1;
+  transition: opacity 150ms ease-out;
 }
 
-:global(.admin-theme[data-admin-theme="dark"]) .check {
-  color: #30D158;
+:global(.admin-theme[data-admin-theme="dark"]) .card {
+  --hero-success: #30D158;
+}
+
+.cardIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hero-success) 16%, transparent);
+  color: var(--hero-success);
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: hsl(var(--foreground));
+}
+
+.cardHint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+
+.card[data-leaving] {
+  opacity: 0;
+}
+
+@starting-style {
+  .card {
+    opacity: 0;
+  }
+}
+
+.zone[data-returning] {
+  transition: border-color .15s ease-out, background-color .15s ease-out, opacity 150ms ease-out;
+}
+
+@starting-style {
+  .zone[data-returning] {
+    opacity: 0;
+  }
+}
+
+.check {
+  flex: none;
+  color: var(--hero-success, #34C759);
 }
 
 .status {
@@ -264,7 +328,7 @@
   }
 
   .check {
-    animation: heroPop var(--admin-motion-save-pop, 320ms) var(--admin-motion-ease-out, ease-out);
+    animation: heroPop 320ms var(--ease-out) 60ms backwards;
   }
 }
 
@@ -282,6 +346,34 @@
 
 @keyframes heroPop {
   0% { transform: scale(.85); }
-  60% { transform: scale(1.1); }
-  100% { transform: none; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* Scale and blur belong to the motion-allowed case only; with reduced motion the card and the zone just fade. */
+@media (prefers-reduced-motion: no-preference) {
+  .card {
+    transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out), filter 240ms var(--ease-out);
+  }
+
+  .card[data-leaving] {
+    transform: scale(.98);
+    filter: blur(2px);
+    transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out), filter 200ms var(--ease-out);
+  }
+
+  .zone[data-returning] {
+    transition: border-color .15s ease-out, background-color .15s ease-out, opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+  }
+
+  @starting-style {
+    .card {
+      transform: scale(.98);
+      filter: blur(2px);
+    }
+
+    .zone[data-returning] {
+      transform: scale(.98);
+    }
+  }
 }

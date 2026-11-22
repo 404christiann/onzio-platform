@@ -32,6 +32,10 @@
 - **What:** shared `sendTelemetry`; `SiteTelemetry` context mounted only for add-on clubs; time-on-page heartbeats in `PageBeacon`; sponsor-logo `logo_seen` tracking and `/r/<id>` sponsored links in `CinematicSponsors` (not in the admin preview, uuid sponsors only).
 - **Exact next step:** TELEMETRY-02 merges, then Christian reviews this PR.
 
+## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX
+
+- After a hero video goes live, the uploader shows a green "Completed" card in the drop zone's spot. It holds 2.5s, then fades back to "Click to upload", once per video, with reduced motion handled. UI only, no migration. Branch `claude/rc-hero-video-success-ux`, PR open, not merged. Next, a separate package: refresh the preview's old video poster after a swap. Record: `STATUS.md` (RC-HERO-VIDEO-SUCCESS-UX).
+
 ## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI
 
 - The Rose City hero video control is now an Untitled-style uploader titled "Video". It has a drop zone with drag and drop, and a file row with name, size, bar, % and Trash2 cancel that takes the zone's place while a video uploads or processes. Live shows "Completed" and a check; failure shows a red row with Try again. UI only, no migration. Branch `claude/rc-hero-video-uploader-ui`, PR open, not merged. Record: `STATUS.md` (RC-HERO-VIDEO-UPLOADER-UI).

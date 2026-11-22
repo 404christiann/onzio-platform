@@ -1,12 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type DragEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type DragEvent, type KeyboardEvent } from "react";
 import { CheckCircle2, CircleAlert, CloudUpload, FileVideo, Trash2, Undo2 } from "lucide-react";
 import { EditorActionButton, EditorGroup, EditorNotice, EditorPrimaryButton, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { bunnyVideoMp4Url } from "@/lib/bunny-video";
 import { HERO_VIDEO_COMPLETED_COPY } from "@/lib/hero-video-lifecycle";
 import { heroVideoHint, megabytes, HERO_VIDEO_UPLOADING_COPY, HERO_VIDEO_PROCESSING_COPY, type HeroVideoController } from "@/lib/homepage-editor/hero-video-upload";
 import styles from "./HeroVideoControl.module.css";
+
+/** How long the "Completed" card holds before it fades, and how long the fade takes (keep in step with the CSS). */
+const HERO_SUCCESS_HOLD_MS = 2500;
+const HERO_SUCCESS_EXIT_MS = 200;
+/**
+ * The success card shows once per live video. The controller outlives the edit dialog, so what was already shown is
+ * remembered per controller: reopening the dialog after the card faded goes straight back to the drop zone.
+ */
+const acknowledgedSuccess = new WeakMap<HeroVideoController, string>();
 
 /**
  * Rose City hero video: replace or revert the background video. Both go live on the site by themselves through their
@@ -20,6 +29,21 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
   const confirmBox = useRef<HTMLDivElement>(null);
   const [confirmRevert, setConfirmRevert] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [exit, setExit] = useState<"leaving" | "returned" | null>(null);
+  // The success card borrows the drop zone's height (its limits line wraps at narrow widths), measured while the zone shows.
+  const [zoneHeight, setZoneHeight] = useState<number | null>(null);
+  const measureZone = useCallback((zone: HTMLButtonElement | null) => {
+    if (!zone) return;
+    const measure = () => {
+      const height = zone.getBoundingClientRect().height;
+      if (height > 0) setZoneHeight(previous => previous === height ? previous : height);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(zone);
+    return () => observer.disconnect();
+  }, []);
   const restoreFocus = useRef(false);
   // The confirmation is inline (a nested dialog would sit under the edit dialog): focus follows it in and out.
   useEffect(() => {
@@ -63,11 +87,24 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
     if (enabled && file) void controller.replace(file);
   };
   const inFlight = phase === "uploading" || phase === "preparing";
-  const showRow = phase === "uploading"|| phase === "preparing" || (phase === "live" && barPercent === 100) || (phase === "error" && !!error);
+  const showRow = phase === "uploading" || phase === "preparing" || (phase === "error" && !!error);
   const failed = phase === "error" && !!error;
-  const completed = phase === "live";
   const fileName = state.fileName || "Video";
-  const phaseLabel = completed ? HERO_VIDEO_COMPLETED_COPY : phase === "uploading" ? HERO_VIDEO_UPLOADING_COPY : HERO_VIDEO_PROCESSING_COPY;
+  const phaseLabel = phase === "uploading" ? HERO_VIDEO_UPLOADING_COPY : HERO_VIDEO_PROCESSING_COPY;
+  // A video that just went live (after a replace in this tab, or a swap that finished while away) shows a success card
+  // in the drop zone's place, holds, fades, and is then acknowledged so it never shows again for that video.
+  const successKey = phase === "live" && barPercent === 100 ? (status?.liveGuid ?? "live") : null;
+  const acknowledged = successKey !== null && acknowledgedSuccess.get(controller) === successKey;
+  const showCard = successKey !== null && !acknowledged;
+  useEffect(() => {
+    if (successKey === null || acknowledgedSuccess.get(controller) === successKey) return;
+    let done: ReturnType<typeof setTimeout> | undefined;
+    const hold = setTimeout(() => {
+      setExit("leaving");
+      done = setTimeout(() => { acknowledgedSuccess.set(controller, successKey); setExit("returned"); }, HERO_SUCCESS_EXIT_MS);
+    }, HERO_SUCCESS_HOLD_MS);
+    return () => { clearTimeout(hold); clearTimeout(done); setExit(null); };
+  }, [controller, successKey]);
 
   return <EditorGroup legend="Video">
     <p className={kit.hint}>Replacing or reverting the video changes your live website right away. It is not part of the Save button.</p>
@@ -93,14 +130,21 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
       onChange={event => { const file = event.target.files?.[0]; if (file) void controller.replace(file); event.target.value = ""; }} />
     {/* While a video uploads or processes, its file row takes the drop zone's place. */}
     {!inFlight && <div className={styles.uploader}>
-      <button type="button" className={`admin-press ${styles.zone}`} aria-disabled={!enabled || undefined} data-dragging={dragging || undefined}
+      {showCard
+        ? <div className={styles.card} data-hero-row="completed" data-leaving={exit === "leaving" || undefined} aria-hidden="true"
+          style={zoneHeight ? { "--hero-zone-height": `${zoneHeight}px` } as CSSProperties : undefined}>
+          <span className={styles.cardIcon}><CheckCircle2 className={styles.check} size={22} aria-hidden="true" data-hero-check="" /></span>
+          <span className={styles.cardTitle}>{HERO_VIDEO_COMPLETED_COPY}</span>
+          <span className={styles.cardHint}>Your new video is live on your website.</span>
+        </div>
+        : <button ref={measureZone} type="button" className={`admin-press ${styles.zone}`} aria-disabled={!enabled || undefined} data-dragging={dragging || undefined} data-returning={exit === "returned" || undefined}
         onClick={openPicker} onDragEnter={onDrag} onDragOver={onDrag} onDragLeave={onDrag} onDrop={onDrop}>
         <span className={styles.zoneIcon}><CloudUpload size={20} aria-hidden="true" /></span>
         <span className={styles.zoneTitle}><span className={styles.zoneLink}>Click to upload</span> or drag and drop</span>
         <span className={styles.zoneHint}>{status ? `MP4, MOV or WebM · up to ${megabytes(status.maxBytes)} · up to ${Math.round(status.maxSeconds / 60)} minutes · at least 720p` : "MP4, MOV or WebM"}</span>
-      </button>
+      </button>}
     </div>}
-    {showRow && <div className={styles.row} data-hero-row={failed ? "failed" : completed ? "completed" : phase} data-hero-phase={phase}>
+    {showRow && <div className={styles.row} data-hero-row={failed ? "failed" : phase} data-hero-phase={phase}>
       <span className={styles.rowIcon} data-tone={failed ? "error" : undefined}>{failed ? <CircleAlert size={18} aria-hidden="true" /> : <FileVideo size={18} aria-hidden="true" />}</span>
       <div className={styles.rowBody}>
         <div className={styles.rowHead}>
@@ -116,9 +160,7 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
           </div>
           <span aria-hidden="true" className={styles.percent}>{barPercent}%</span>
         </div>}
-        {!failed && <p className={styles.phaseLabel} aria-hidden="true">
-          {completed && <CheckCircle2 className={styles.check} size={16} aria-hidden="true" data-hero-check="" />}{phaseLabel}
-        </p>}
+        {!failed && <p className={styles.phaseLabel} aria-hidden="true">{phaseLabel}</p>}
         {!failed && hint && <p className={kit.hint}>{hint}</p>}
         {failed && error && <div role="alert" className={`${styles.alert} grid gap-2`}><p>{error.message}</p>
           <div className="flex flex-wrap gap-2">
@@ -130,7 +172,7 @@ export default function HeroVideoControl({ controller, disabled }: { controller:
       </div>
     </div>}
     {left !== null && <p className={kit.hint}>{left} of {status!.replacesPerDay} replaces left today.</p>}
-    <p role="status" aria-live="polite" className={`${kit.hint} ${styles.status}${showRow ? ` ${styles.srOnly}` : ""}`}>{phase === "error" ? "" : state.message}</p>
+    <p role="status" aria-live="polite" className={`${kit.hint} ${styles.status}${showRow || showCard ? ` ${styles.srOnly}` : ""}`}>{phase === "error" || acknowledged ? "" : state.message}</p>
     {state.revisionWarning && <EditorNotice failed>The video is live, but we couldn’t refresh this page’s version. Reload the page before you save other changes.</EditorNotice>}
     {state.revisionConflict && <EditorNotice failed>The homepage also changed somewhere else while your video was switching. Use “Load latest and keep my edits” before saving.</EditorNotice>}
   </EditorGroup>;

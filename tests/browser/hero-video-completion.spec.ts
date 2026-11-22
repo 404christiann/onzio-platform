@@ -359,7 +359,7 @@ test("after a video goes live, a rejected second file shows a red row without th
   await uploadToProcessing(page);
   await postReadyWebhook(page);
   await expect(page.getByText("Completed", { exact: true })).toBeVisible({ timeout: 12_000 });
-  await expect(page.getByText("hero.mp4", { exact: true })).toBeVisible();
+  await expect(page.getByText("hero.mp4", { exact: true })).toHaveCount(0);
   await page.getByLabel("Choose hero video").setInputFiles({ name: "notes.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(1024, 1) });
   const row = page.locator('[data-hero-row="failed"]');
   await expect(row).toBeVisible();
@@ -441,22 +441,120 @@ test("one bar runs from upload through processing to live, never backwards, with
   await expect(liveText(page)).toHaveText(LIVE_COPY);
   // Visually hidden (a 1px clipped box): it is for screen readers only.
   expect(await liveText(page).evaluate((element) => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
-  await expect(bar(page)).toHaveAttribute("aria-valuenow", "100");
+  // At live the bar is gone: the success card says Completed and nothing else.
+  await expect(bar(page)).toHaveCount(0);
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible();
   await expect(page.locator("[data-hero-check]")).toHaveCount(1);
   await expect(page.getByText(LEAVE)).toHaveCount(0);
-  await expect(page.locator('[aria-hidden="true"]', { hasText: "100%" })).toHaveCount(1);
+  await expect(page.getByText("100%")).toHaveCount(0);
+  await expect(zoneOf(page)).toHaveCount(0);
   await shot(page, "live");
   await uploaderShots(page, "completed");
 
   const all = await samples();
   const run = all.slice(all.findIndex((sample) => sample.bars > 0));
-  expect(run.every((sample) => sample.bars === 1)).toBe(true);
-  const values = run.map((sample) => sample.now as number);
+  const barRun = run.filter((sample) => sample.bars > 0);
+  expect(barRun.every((sample) => sample.bars === 1)).toBe(true);
+  const values = barRun.map((sample) => sample.now as number);
   expect(values).toEqual([...values].sort((a, b) => a - b));
-  expect(values.at(-1)).toBe(100);
-  expect([...new Set(run.map((sample) => sample.text))]).toEqual(["Uploading…", "Processing…", LIVE_COPY]);
-  expect(run.filter((sample) => sample.check > 0).every((sample) => sample.text === LIVE_COPY)).toBe(true);
+  expect(values.at(-1)).toBe(70);
+  expect([...new Set(barRun.map((sample) => sample.text))]).toEqual(["Uploading…", "Processing…"]);
+  expect(run.filter((sample) => sample.check > 0).every((sample) => sample.bars === 0 && sample.label === LIVE_COPY)).toBe(true);
   expect(run.some((sample) => sample.alert)).toBe(false);
+});
+
+/** Text that is on screen: sr-only (1px, clipped) and aria-hidden-free content only. */
+const visibleCopy = (page: Page, text: string) => page.evaluate((copy) => [...document.querySelectorAll("body *")].some((element) => {
+  if (element.children.length > 0 || element.textContent?.trim() !== copy) return false;
+  const box = element.getBoundingClientRect();
+  return box.width > 1 && box.height > 1;
+}), text);
+
+test("at live the success card replaces the zone in its box, holds, then fades back to the drop zone", async ({ page }) => {
+  await openEditor(page);
+  const zoneBox = (await zoneOf(page).boundingBox())!;
+  await uploadToProcessing(page);
+  await postReadyWebhook(page);
+  const card = page.locator('[data-hero-row="completed"]');
+  await expect(card).toBeVisible({ timeout: 12_000 });
+  await expect(card).toHaveText(/Completed/);
+  await expect(card).toHaveText(/Your new video is live on your website\./);
+  await expect(card.locator("[data-hero-check]")).toHaveCount(1);
+  await expect(bar(page)).toHaveCount(0);
+  await expect(page.getByText("100%")).toHaveCount(0);
+  await expect(zoneOf(page)).toHaveCount(0);
+  await expect(card).toHaveAttribute("aria-hidden", "true");
+  const cardBox = (await card.boundingBox())!;
+  expect(cardBox.width).toBeCloseTo(zoneBox.width, 0);
+  expect(Math.abs(cardBox.height - zoneBox.height)).toBeLessThanOrEqual(2);
+  expect(Math.abs(cardBox.y - zoneBox.y)).toBeLessThanOrEqual(2);
+  await expect(liveText(page)).toHaveText(LIVE_COPY);
+
+  // Hold, then fade; the zone returns in the same spot with the allowance line under it.
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0, { timeout: 5_000 });
+  await expect(zoneOf(page)).toBeVisible();
+  await expect(zoneOf(page)).toBeEnabled();
+  await expect(zoneOf(page)).toHaveAttribute("data-returning", "true");
+  await expect(page.getByText(CAP(9))).toBeVisible();
+  expect(await visibleCopy(page, LIVE_COPY)).toBe(false);
+  await expect(liveText(page)).toHaveText("");
+  await expect(page.locator("[data-hero-check]")).toHaveCount(0);
+  await expect(page.getByText("Completed", { exact: true })).toHaveCount(0);
+  await page.waitForTimeout(300);
+  const returnedBox = (await zoneOf(page).boundingBox())!;
+  expect(Math.abs(returnedBox.y - zoneBox.y)).toBeLessThanOrEqual(2);
+  expect(await zoneOf(page).evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+  await uploaderShots(page, "returned");
+});
+
+test("at 375px the success card keeps the zone's height (its limits line wraps), so nothing below moves", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openEditor(page);
+  const zoneBox = (await zoneOf(page).boundingBox())!;
+  const capBefore = (await page.getByText(CAP(10)).boundingBox())!;
+  await uploadToProcessing(page);
+  await postReadyWebhook(page);
+  const card = page.locator('[data-hero-row="completed"]');
+  await expect(card).toBeVisible({ timeout: 12_000 });
+  const cardBox = (await card.boundingBox())!;
+  expect(Math.abs(cardBox.height - zoneBox.height)).toBeLessThanOrEqual(1);
+  const capDuring = (await page.getByText(CAP(9)).boundingBox())!;
+  expect(Math.abs(capDuring.y - capBefore.y)).toBeLessThanOrEqual(1);
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0, { timeout: 5_000 });
+  await page.waitForTimeout(300);
+  const capAfter = (await page.getByText(CAP(9)).boundingBox())!;
+  expect(Math.abs(capAfter.y - capBefore.y)).toBeLessThanOrEqual(1);
+});
+
+test("closing and reopening the control after the card faded does not show Completed again", async ({ page }) => {
+  await openEditor(page);
+  await uploadToProcessing(page);
+  await postReadyWebhook(page);
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible({ timeout: 12_000 });
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0, { timeout: 5_000 });
+  await page.getByRole("button", { name: "Hide video control" }).click();
+  await expect(zoneOf(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "Show video control" }).click();
+  await expect(zoneOf(page)).toBeVisible();
+  await expect(zoneOf(page)).not.toHaveAttribute("data-returning", "true");
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0);
+  await expect(page.getByText("Completed", { exact: true })).toHaveCount(0);
+  expect(await visibleCopy(page, LIVE_COPY)).toBe(false);
+  await expect(liveText(page)).toHaveText("");
+  await page.waitForTimeout(400);
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0);
+});
+
+test("reopening the control while the card is still holding restarts the hold", async ({ page }) => {
+  await openEditor(page);
+  await uploadToProcessing(page);
+  await postReadyWebhook(page);
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible({ timeout: 12_000 });
+  await page.getByRole("button", { name: "Hide video control" }).click();
+  await page.getByRole("button", { name: "Show video control" }).click();
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible();
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0, { timeout: 5_000 });
+  await expect(zoneOf(page)).toBeVisible();
 });
 
 test("leaving mid-processing keeps going: the webhook lands while away and the next visit shows live", async ({ page }) => {
@@ -475,7 +573,7 @@ test("leaving mid-processing keeps going: the webhook lands while away and the n
   await page.goto(`${origin}/tests/browser/fixtures/hero-video-completion/`);
   await expect(liveText(page)).toHaveText(LIVE_COPY);
   await expect(page.getByText("Completed", { exact: true })).toBeVisible();
-  await expect(bar(page)).toHaveAttribute("aria-valuenow", "100");
+  await expect(bar(page)).toHaveCount(0);
   await expect(page.locator("[data-hero-check]")).toHaveCount(1);
   // A fresh page load shows the notice but never refreshes the revision: the editor just loaded the current one.
   await expect(page.locator("[data-refreshed]")).toHaveAttribute("data-refreshed", "");

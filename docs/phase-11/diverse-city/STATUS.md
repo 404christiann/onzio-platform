@@ -476,6 +476,20 @@ authenticated local session, a dev server, and Rose City's public page, which th
 **Exact next step:** review and merge this PR (Christian's call); the visitor-cap overlap is a separate main migration if wanted. A real-browser check on
 production waits for the Rose City hold to lift.
 
+## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX: clear "Completed" moment, then back to the drop zone
+
+- **Agent / package:** Claude Code (Opus coordinating, Sonnet worker, emil-design-eng review), `RC-HERO-VIDEO-SUCCESS-UX`, branch `claude/rc-hero-video-success-ux` from main `9129ee1` (#215).
+- **Status:** `in_progress`, committed and pushed, PR open. Not merged. UI only: `lib/**`, `app/api`, `supabase`, and package files unchanged; no migration.
+- **Why:** Christian, after verifying a live upload: "Not 100% clear that the upload worked." He asked for the progress to go away, a clear "Completed", then a fade back to only "Click to upload".
+- **Completed:**
+  - At live after a replace, the bar, % and small label are gone. A green success card (check in a soft circle, "Completed", "Your new video is live on your website.") sits in the drop zone's place with the zone's footprint. It borrows the zone's measured height, so nothing below moves, at 375px too.
+  - Motion: the card enters with a 240ms opacity/scale/2px-blur crossfade, and the check pops once. It holds 2.5s, exits in 200ms, and the dashed zone fades back in the same spot (220ms). Easing is `cubic-bezier(0.23, 1, 0.32, 1)`. Reduced motion uses opacity-only fades, with no scale, blur or pop.
+  - The card shows once per live video. A per-controller `WeakMap` of the acknowledged live GUID keeps "Completed" from returning when the edit dialog is closed and reopened; a new video going live shows it again.
+  - Screen readers still hear "Your new video is live." once, and the card is aria-hidden. After the fade the live region is empty.
+- **Verification:** final table in the PR body. Screenshots: `test-results/hero-video-completion/uploader-{completed,returned}-{desktop,375}.png`.
+- **Next (separate package, not started):** the homepage editor's preview still shows the old video poster image after a swap (the "2" section Christian pointed at). It needs a fresh poster or frame for the new video.
+- **Exact next step:** Christian reviews and merges. No production gate is needed (no migration).
+
 ## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI: Untitled-style uploader on the proven one-bar flow
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet worker), `RC-HERO-VIDEO-UPLOADER-UI`, branch `claude/rc-hero-video-uploader-ui` from main `df3e9a3`.

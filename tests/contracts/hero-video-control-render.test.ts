@@ -184,19 +184,42 @@ describe("hero video control rendering: one bar from upload to live", () => {
     none.dispose();
   });
 
-  it("live is the only success state: Completed with the check and a full bar, the live sentence for screen readers only, and no leave line", async () => {
+  it("live is the only success state: a Completed card replaces the row and the zone, with the live sentence for screen readers only and no leave line", async () => {
     const live = { ...STATUS, liveGuid: "new-guid", pending: row("live"), completion: { videoGuid: "new-guid", revisionBefore: null, revisionAfter: null } };
     const controller = createHeroVideoController({ getStatus: async () => live } as unknown as HeroVideoDeps);
     await controller.load();
     const markup = html(editor(controller));
     expect(markup.match(/data-hero-check/g)).toHaveLength(1);
-    expect(bar(markup)).toContain('aria-valuenow="100"');
-    expect(bar(markup)).toContain('aria-valuetext="Your new video is live."');
+    expect(markup).not.toContain("progressbar");
+    expect(markup).not.toMatch(/class="[^"]*percent[^"]*"/);
+    expect(markup).not.toContain("100%");
+    expect(markup).toMatch(/<div class="[^"]*card[^"]*" data-hero-row="completed" aria-hidden="true">/);
+    expect(markup).toMatch(/<span class="[^"]*cardTitle[^"]*">Completed<\/span>/);
+    expect(markup).toContain("Your new video is live on your website.");
+    expect(markup).toMatch(/<svg[^>]*aria-hidden="true"[^>]*data-hero-check/);
+    expect(markup).not.toContain("Click to upload");
+    expect(zone(markup)).toBe("");
     expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*srOnly[^"]*">Your new video is live\.<\/p>/);
-    expect(markup).toMatch(/<p class="[^"]*phaseLabel[^"]*" aria-hidden="true"><svg[^>]*data-hero-check[^>]*>.*<\/svg>Completed<\/p>/);
-    expect(markup).toContain('title="Video">Video<');
+    expect(markup).toContain("8 of 10 replaces left today.");
+    expect(markup).not.toContain('title="Video"');
     expect(cancelButton(markup)).toBe("");
     expect(markup).not.toContain(LEAVE);
+  });
+
+  it("the success card holds 2500 ms, fades in 200 ms, is acknowledged once per controller and video, and only fades (no scale or blur) with reduced motion", () => {
+    const source = readFileSync("components/admin/homepage/HeroVideoControl.tsx", "utf8");
+    const css = readFileSync("components/admin/homepage/HeroVideoControl.module.css", "utf8");
+    expect(source).toContain("const HERO_SUCCESS_HOLD_MS = 2500;");
+    expect(source).toContain("const HERO_SUCCESS_EXIT_MS = 200;");
+    expect(source).toContain("new WeakMap<HeroVideoController, string>()");
+    expect(source).toContain('status?.liveGuid ?? "live"');
+    expect(css).toContain("@starting-style");
+    expect(css).toContain("--hero-success");
+    const reduce = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g)].map(match => match[0]).join("\n");
+    expect(reduce).not.toMatch(/card|zone|transform:|filter:/);
+    // Outside the motion-allowed block the card and the returning zone use opacity only.
+    const outside = css.slice(0, css.lastIndexOf("@media (prefers-reduced-motion: no-preference)"));
+    for (const rule of outside.match(/[^{}]*\.(?:card|zone\[data-returning\])[^{}]*\{[^{}]*\}/g) ?? []) expect(rule).not.toMatch(/transform:|filter:/);
   });
 
   it("idle shows no bar and no hint", async () => {
@@ -313,8 +336,9 @@ describe("hero video control rendering: a later failure never shows the live fil
     for (let i = 0; i < 20 && controller.getState().phase !== "live"; i += 1) await settle();
     const markup = html(editor(controller));
     expect(markup).toContain(COMPLETED);
-    expect(markup).toContain('title="hero.mp4"');
-    expect(markup).toContain(">9.5 MB<");
+    // The success card carries no file name or size: it only says the video is live.
+    expect(markup).not.toContain("hero.mp4");
+    expect(markup).not.toContain("9.5 MB");
     return controller;
   }
 
