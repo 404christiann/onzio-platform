@@ -109,6 +109,89 @@ real rewrite + hold path is covered only by the `isPublicTenantPath` unit test.
 
 **Next step:** onzio-bot review of the PR, then the production gate on Christian's word.
 
+## 2026-11-21 - TELEMETRY-03: sponsor logo views, sponsor click-through links, time on page (public site)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet workers), TELEMETRY-03, branch `claude/telemetry-03-site`
+from main `aa5b45cb`, rebased onto main `ee21290d` (TELEMETRY-02 #216 merged; its `/r/<sponsorId>` route and the new
+`/api/t` bodies are on main and in production). **Status:** `ready for review`, PR #217 open, not merged. No migration,
+env, Vercel, app/api, lib/telemetry, middleware or supabase change (branch diff vs main has zero `supabase/**` files);
+package.json and lockfile unchanged.
+
+**Frozen contract coded against:** `{t:"view",p,r?,q?}` unchanged; `{t:"logo_seen",p,s}` with 1-10 distinct sponsor
+uuids; `{t:"heartbeat",p,e}` with integer visible ms 1000-60000; link target `/r/<sponsorId>`.
+
+**Completed:**
+- One send path, `components/telemetry/send.ts` (`sendTelemetry`, sendBeacon then keepalive fetch). No cookies, storage
+  or client ids.
+- `SiteTelemetry` / `useTelemetryEnabled` (`components/telemetry/TelemetryContext.tsx`). The club layout wraps each shell
+  in it only when `clubHasTelemetry` is true; clubs without the add-on render no provider and run no telemetry code.
+- Time on page in `PageBeacon` via `components/telemetry/heartbeat.ts`: visible time only, sent on hide, pagehide, route
+  change (old path) and every 60 s while visible; pieces under 1 s dropped, each capped at 60 s, 30 min per view.
+- Sponsor logo views (`components/telemetry/logo-seen.ts`, `useSponsorLogoSeen.ts`): >=50% visible for 1 s, once per
+  sponsor id per page view whichever marquee copy shows it, uuid ids only, one logo_seen per 2 s at most (<=10 ids), final
+  flush on hide/pagehide/route change. Off in the admin homepage preview.
+- `CinematicSponsors`: a uuid sponsor with a website is wrapped in `<a href="/r/<id>" target="_blank"
+  rel="sponsored noopener">`; the aria-hidden copy's links have tabIndex -1. No CSS change; the existing
+  `.cinematic-site a:focus-visible` ring shows for keyboard users only.
+- Updated the TELEMETRY-01 layout assertion in `tests/contracts/page-telemetry-beacon.test.ts` to the new shape.
+
+**Files changed:** `components/telemetry/{send.ts,TelemetryContext.tsx,heartbeat.ts,logo-seen.ts,useSponsorLogoSeen.ts}`
+(new), `components/telemetry/PageBeacon.tsx`, `components/cinematic/CinematicSponsors.tsx`,
+`app/%5Fclubs/[slug]/layout.tsx`, `tests/contracts/telemetry-{send,heartbeat,logo-seen,page-beacon,site-sponsors}.test.ts`
+(new), `tests/contracts/page-telemetry-beacon.test.ts`, `tests/browser/cinematic-homepage-editor.spec.ts`, this file,
+`HANDOFF.md`.
+
+**Verification (heavy runs inside `scripts/with-local-db-lock.sh`):** `npx tsc --noEmit -p .` exit 0; `npm run lint` 0
+errors (2 warnings in untouched files); `npx vitest run --exclude "tests/database/**"` 397 files, 5279 passed, 1 skipped;
+`npm run test:architecture` 18 files, 432 passed, 1 skipped; Playwright cinematic config `--grep "TELEMETRY-03"` 8/8
+(24/24 with `--repeat-each=3`); `npm run build` exit 0, club layout chunk 2,926 -> 4,556 B raw (1,330 -> 1,917 B gzip),
+layout route JS total +1,689 B raw / +178 B gzip; frozen-path diff (app/api, lib/telemetry, middleware.ts, supabase,
+package files) empty. test:db and db:types:check skipped (nothing under supabase/).
+
+**After rebase onto `9129ee13` (#215, doc-top conflicts only):** tsc exit 0; lint 0 errors; vitest 5284 passed, 1
+skipped; test:architecture 432 passed, 1 skipped; Playwright TELEMETRY-03 8/8; build exit 0, club layout chunk unchanged
+at 4,556 B raw / 1,917 B gzip; frozen-path diff empty.
+
+**After rebase onto `ee21290d` (#216 merged; only `STATUS.md` conflicted, main's entries kept with this one below them):**
+- `components/telemetry/send.ts` now takes its body type from main's `lib/telemetry/beacon-contract.ts` (type-only
+  import, so tsc enforces the wire contract and the client bundle is unchanged). New contract tests parse the sample
+  bodies, every heartbeat of a 40-minute read with a hide and a route change, and every logo_seen batch through main's
+  `beaconBodySchema`, and pin the shared limits (10 ids, 1000-60000 ms).
+- 3a view before heartbeat: `PageBeacon` sends the view in the same effect, right after `startView`, on first load and on
+  every client-side navigation; the first heartbeat of a view needs at least 1 s of visible time, so it always goes out
+  after that view. On navigation the old path's final piece goes out first into the visit its own view opened. A
+  StrictMode remount and a bfcache restore resume timing with no second view. Edge: a tab hidden for 30+ minutes
+  comes back to a closed server visit, and its later heartbeats on that page are refused as `no_visit` (undercount only, no
+  budget spent); re-sending a view there would add a page view, so it is left as is.
+- 3b rate: one heartbeat per visible tab per minute in steady state, plus one piece per hide or route change; hidden
+  tabs send none. Main's per-network heartbeat cap is 1,200/min (route limiter and database `hn:`), so a network reaches
+  it only with 1,200 tabs visible at once; 100 visible tabs on one venue network send about 100/min (8%).
+- 3c shapes: `{t:"view",p,r?,q?}`, `{t:"logo_seen",p,s}`, `{t:"heartbeat",p,e}` match `beaconBodySchema`; the server maps
+  `s` to sponsor ids and `e` to engaged ms. Clicks are recorded by main's `GET /r/<sponsorId>` route, never by a client body.
+- 3d `/r` links: `href` is `/r/${sponsor.id}`, rendered only when `isSponsorUuid(id)` and the sponsor has a website; the
+  website URL never appears in the page, and main's route looks it up by id and accepts only a uuid.
+- onzio-bot Low (heartbeats share the views' caps): main's #216 already moved heartbeats off the network, /48 and club
+  caps onto their own (1,200/min per network, 6,000/min per club). What is left is the per-visitor cap (60/min per IP + user
+  agent), which heartbeats still share with views in `record_page_event`. The client cannot lower that without losing
+  time: the contract caps a heartbeat at 60 s, so one per visible minute is the floor, and the client already sends at it.
+  Removing the overlap needs a migration on main (heartbeats skip the visitor cap or get their own bucket) with the
+  production gate, so it is out of scope here.
+- Verification: tsc exit 0; lint 0 errors; vitest (no DB) 400 files, 5362 passed, 1 skipped; test:architecture 18 files, 432 passed, 1 skipped;
+  build exit 0, club layout chunk unchanged at 4,556 B raw / 1,917 B gzip.
+
+**Playwright note:** Rose City's public site is held (404 on rose-city.localhost) and no local club has the telemetry
+add-on, so the browser cases run as a hermetic harness inside the existing spec: esbuild bundles the real
+`CinematicSponsors` + `SiteTelemetry` with the real `cinematic.css`, served by `page.route` on the config's host, with no
+server, no database and no hold bypass. `/api/t` is intercepted (sendBeacon arrives as a `ping` request). The marquee is
+paused in the harness so the seen set is deterministic. The two existing editor tests were not run (they need an
+authenticated local session, a dev server, and Rose City's public page, which the hold 404s).
+
+**Blockers / decisions:** none for review. The plan doc's P4 note says heartbeats every 15 s; this package follows the
+<=1 per minute brief.
+
+**Exact next step:** review and merge this PR (Christian's call); the visitor-cap overlap is a separate main migration if wanted. A real-browser check on
+production waits for the Rose City hold to lift.
+
 ## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI: Untitled-style uploader on the proven one-bar flow
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet worker), `RC-HERO-VIDEO-UPLOADER-UI`, branch `claude/rc-hero-video-uploader-ui` from main `df3e9a3`.
