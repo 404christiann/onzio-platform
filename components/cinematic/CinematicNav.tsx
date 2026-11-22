@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
+import { usePublicPageVisibility } from "@/components/PublicPageVisibilityProvider";
 import NativeImage from "@/components/ResilientNativeImage";
 import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { CINEMATIC_NAV_ITEMS } from "@/lib/cinematic-homepage-content";
@@ -38,6 +39,7 @@ function currentNavGroup(items: NavItem[], pathname: string): string | null {
 
 export default function CinematicNav({ editing = false }: { editing?: boolean }) {
   const club = useClubContext();
+  const visibility = usePublicPageVisibility();
   const navigationPiece = useHomepagePiece("revamp.navigation");
   const { clubLogoUrl } = useClubBranding();
   const { content } = useCinematicContent();
@@ -67,8 +69,8 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
   const partner = content?.presentation.headerPartner;
   const foothillPartner = club.slug === "rose-city" && partner?.alt.trim().toLowerCase() === "foothill transit";
   // The owner's "Visible to visitors" switch hides the partner mark with the Foothill Transit page it advertises.
-  const shownPartner = foothillPartner && !pageVisible(club, "foothill-transit") ? undefined : partner;
-  const items: NavItem[] = withoutHiddenPageLinks<NavItem>(CINEMATIC_NAV_ITEMS.filter(item => item.id !== "shop" || club.storeEnabled), club);
+  const shownPartner = foothillPartner && !pageVisible({ publicPageVisibility: visibility }, "foothill-transit") ? undefined : partner;
+  const items: NavItem[] = withoutHiddenPageLinks<NavItem>(CINEMATIC_NAV_ITEMS.filter(item => item.id !== "shop" || club.storeEnabled), { publicPageVisibility: visibility });
   const selectedGroup = items.find(item => item.id === mobileGroup);
   const isCurrent = (href?: string) => preview ? href === "/" : pathname === href;
   const currentGroup = preview ? null : currentNavGroup(items, pathname);

@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined
 vi.mock("next/link", () => ({ default: (props: Record<string, unknown>) => createElement("a", props) }));
 
 import { ClubContextProvider } from "@/components/ClubContextProvider";
+import { PublicPageVisibilityProvider } from "@/components/PublicPageVisibilityProvider";
 import { PageVisibilityControl } from "@/components/admin/stadium/PageVisibilityControl";
 import { changePageVisibility } from "@/components/admin/stadium/page-visibility-change";
 
@@ -27,9 +28,13 @@ const EDITORS = [
   { name: "Foothill Transit", key: "foothill-transit", file: "components/admin/stadium/StadiumEditor.tsx", route: "app/admin/(protected)/foothill-transit/page.tsx" },
 ] as const satisfies readonly { name: string; key: PublicPageKey; file: string; route: string }[];
 
-function render(pageKey: PublicPageKey, publicPageVisibility?: PublicPageVisibility | null, note?: string, slug = "any-club") {
-  const club = { id: "club-1", slug, presentationTemplateKey: "cinematic@2", publicPageVisibility } as unknown as ClubContext;
-  return renderToStaticMarkup(createElement(ClubContextProvider, { club, children: createElement(PageVisibilityControl, { pageKey, note }) }));
+// The map is not part of ClubContext (the 2026-08-14 outage): the admin layout reads it separately and provides it.
+// No map given means no provider, which is how an editor preview, or a failed read, looks: every page shown.
+function render(pageKey: PublicPageKey, visibility?: PublicPageVisibility, note?: string, slug = "any-club") {
+  const club = { id: "club-1", slug, presentationTemplateKey: "cinematic@2" } as unknown as ClubContext;
+  const control = createElement(PageVisibilityControl, { pageKey, note });
+  const children = visibility === undefined ? control : createElement(PublicPageVisibilityProvider, { visibility, children: control });
+  return renderToStaticMarkup(createElement(ClubContextProvider, { club, children }));
 }
 const switchTag = (markup: string) => markup.match(/<button[^>]*role="switch"[^>]*>/)?.[0] ?? "";
 
@@ -43,7 +48,7 @@ describe("the three pages the switch covers", () => {
 
 describe.each(EDITORS)("$name editor's Visible to visitors switch", ({ key }) => {
   it("renders one switch labelled Visible to visitors, on by default when there is no map", () => {
-    for (const map of [undefined, null, {}]) {
+    for (const map of [undefined, {}]) {
       const markup = render(key, map);
       expect(markup.match(/role="switch"/g)).toHaveLength(1);
       const tag = switchTag(markup);
@@ -154,7 +159,9 @@ describe("how each editor uses the switch", () => {
   it("saves on its own through the visibility endpoint helper and is disabled while a request is in flight", () => {
     expect(control).toContain("changePageVisibility(pageKey, next, previous)");
     expect(control).toContain("disabled={saving}");
-    expect(control).toContain("pageVisible(club, pageKey)");
+    expect(control).toContain("usePublicPageVisibility()");
+    expect(control).toContain("pageVisible({ publicPageVisibility: visibility }, pageKey)");
+    expect(control).not.toMatch(/pageVisible\(club,/);
     expect(control).toContain("VISIBLE_TO_VISITORS_LABEL");
     expect(control).toContain("PAGE_HIDDEN_BANNER");
     expect(control).toMatch(/failure && <EditorNotice failed>/);

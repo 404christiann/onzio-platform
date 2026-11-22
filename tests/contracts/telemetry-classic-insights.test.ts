@@ -88,7 +88,7 @@ function club(overrides: Partial<ClubContext> = {}): ClubContext {
     primaryColor: "#123456",
     secondaryColor: null,
     presentationTemplateKey: "clubhouse@1",
-    storeEnabled: false, publicPageVisibility: {},
+    storeEnabled: false,
     ...overrides,
   };
 }

@@ -3,13 +3,14 @@
 --
 -- onzio.clubs.public_page_visibility is a jsonb object of page key -> boolean. A missing key or true means
 -- the page is shown; only an explicit false hides it, so every existing club is unchanged by this migration.
--- The column is part of the tenant-resolution select (lib/club-context.ts), exactly like store_enabled:
--- apply this migration to a database BEFORE deploying code that reads it (the 2026-08-14 outage).
+-- The column is NOT part of the tenant-resolution select (lib/club-context.ts, the 2026-08-14 outage). The site
+-- reads it in a separate query (lib/public-page-visibility-query.ts) that fails open: if this migration has not
+-- reached a database yet, every page is simply shown. Still apply it before the owner switch is used.
 --
 -- Additive only: one column with a default, one validator, one write RPC. No row is changed.
 -- anon and authenticated already have table-level select on onzio.clubs and no insert/update/delete
--- (20260726000300_phase2_security.sql), so the new column is readable by tenant resolution and writable
--- only through onzio.set_public_page_visibility.
+-- (20260726000300_phase2_security.sql), so the new column is readable by the public site's separate query and
+-- writable only through onzio.set_public_page_visibility.
 
 -- The single list of allowed keys. A later page is added by replacing this function; the check constraint
 -- and the RPC both call it, so neither needs to change.

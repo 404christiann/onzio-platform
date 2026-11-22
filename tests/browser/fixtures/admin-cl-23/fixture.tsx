@@ -14,7 +14,7 @@ const club = {
   id: "11111111-1111-4111-8111-111111111111", name: "Alpha FC", slug: "alpha", primaryDomain: "alpha.localhost",
   lifecycle: "active", publicAccess: "live", kind: "test", tier: "pro", role: "owner", stripePriceId: null,
   primaryColor: null, secondaryColor: null, presentationTemplateKey: new URLSearchParams(location.search).has("academy") ? "academy@1" : null,
-  storeEnabled: false, publicPageVisibility: {},
+  storeEnabled: false,
 } as const;
 function Fixture() {
   const [destination, setDestination] = useState("Sponsors");

@@ -21,7 +21,7 @@ import CinematicMatchSummaryPage from "@/components/cinematic/CinematicMatchSumm
 
 const CLUB_ID = "11111111-1111-4111-8111-111111111111";
 const FIXTURE_ID = "baf199e2-bea4-5fc7-840f-e1dc59fefb4d";
-const club: ClubContext = { id: CLUB_ID, slug: "rose-city", name: "Rose City FC", primaryDomain: "rose-city.localhost", lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null, tier: "pro", role: null, primaryColor: "#E73C2E", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true, publicPageVisibility: {} };
+const club: ClubContext = { id: CLUB_ID, slug: "rose-city", name: "Rose City FC", primaryDomain: "rose-city.localhost", lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null, tier: "pro", role: null, primaryColor: "#E73C2E", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true };
 const fixture = { id: FIXTURE_ID, date: "2027-05-02", time: "19:45:00", opponent: "Ocelot FC", home: true, venue: "Robinson Stadium", city: "Pasadena", state: "CA", competition: "UPSL", roseCityScore: 2, opponentScore: 1 };
 
 function render(timeZone: string, props: Partial<React.ComponentProps<typeof CinematicMatchSummaryPage>> = {}) {

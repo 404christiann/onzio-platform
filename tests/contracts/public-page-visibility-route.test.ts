@@ -23,7 +23,6 @@ const club = (patch: Record<string, unknown> = {}) => ({
   role: "owner",
   lifecycle: "active",
   presentationTemplateKey: "cinematic@2",
-  publicPageVisibility: {},
   ...patch,
 });
 

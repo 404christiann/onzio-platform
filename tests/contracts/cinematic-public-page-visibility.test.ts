@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
+import { PublicPageVisibilityProvider } from "@/components/PublicPageVisibilityProvider";
 import type { ClubContext } from "@/lib/club-context";
 import { CINEMATIC_NAV_ITEMS, defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { hydrateRobinsonContent, type RobinsonContent } from "@/lib/cinematic-robinson-content";
@@ -12,8 +13,10 @@ import { PUBLIC_PAGE_KEYS, pageVisible, withoutHiddenPageLinks, type PublicPageK
 
 // RC-PAGE-VISIBILITY: a club owner can hide the Robinson Stadium, Chick-fil-A and Foothill Transit pages. Absent or true = shown;
 // only an explicit false hides a page, its menu and footer links and the blocks that repeat it on other pages.
+// The map is NOT part of ClubContext (tenant resolution must never select the column: the 2026-08-14 outage). Server pages read it with
+// fetchPublicPageVisibility (mocked here); the nav and footer read it from PublicPageVisibilityProvider.
 const fixture = vi.hoisted(() => ({ pathname: "/_clubs/rose-city/schedule", content: null as ReturnType<typeof defaultCinematicHomepageContent> | null }));
-const mocks = vi.hoisted(() => ({ club: vi.fn(), schema: vi.fn(), robinson: vi.fn(), chick: vi.fn(), transit: vi.fn(), tickets: vi.fn(), trusted: {} }));
+const mocks = vi.hoisted(() => ({ club: vi.fn(), visibility: vi.fn(), schema: vi.fn(), robinson: vi.fn(), chick: vi.fn(), transit: vi.fn(), tickets: vi.fn(), trusted: {} }));
 vi.mock("next/navigation", () => ({
   usePathname: () => fixture.pathname,
   notFound: () => { throw new Error("not found"); },
@@ -25,6 +28,7 @@ vi.mock("@/components/ResilientNativeImage", () => ({ default: (props: Record<st
 vi.mock("@/lib/queries", () => ({ fetchSchedule: vi.fn(), fetchSiteSocialLinks: () => Promise.resolve([]) }));
 vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: vi.fn() }));
 vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: mocks.club }));
+vi.mock("@/lib/public-page-visibility-query", () => ({ fetchPublicPageVisibility: mocks.visibility }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: async () => ({ schema: mocks.schema }) }));
 vi.mock("@/lib/cinematic-robinson-query", () => ({ fetchRobinsonContent: mocks.robinson }));
 vi.mock("@/lib/chick-fil-a-query", () => ({ fetchChickFilAContent: mocks.chick }));
@@ -44,18 +48,35 @@ import FoothillTransitPage from "@/app/%5Fclubs/[slug]/stadium/foothill-transit/
 import StadiumParkingPage from "@/app/%5Fclubs/[slug]/stadium/parking/page";
 import TicketsPage from "@/app/%5Fclubs/[slug]/tickets/page";
 
-const baseClub = (patch: Partial<ClubContext> = {}): ClubContext => ({
+/**
+ * A test scenario: a club plus the map the server would read for it. The map rides on the scenario object for convenience only;
+ * `ClubContext` has no such field, and `serve`/`inClub` hand it to the pages and the provider the way the layouts do.
+ * A scenario without the property means "no map" (no provider, or a failed read, which the query turns into {}).
+ */
+type Scenario = ClubContext & { publicPageVisibility?: PublicPageVisibility };
+const baseClub = (patch: Partial<Scenario> = {}): Scenario => ({
   id: "11111111-1111-4111-8111-111111111111", slug: "rose-city", name: "Rose City FC", primaryDomain: "rose-city.localhost", lifecycle: "active", publicAccess: "live", kind: "test",
   stripePriceId: null, tier: "pro", role: null, primaryColor: "#ff0018", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true, publicPageVisibility: {}, ...patch,
 });
-/** A context from before the map existed (or a test double): the field is simply not there. */
-const withoutMap = (patch: Partial<ClubContext> = {}) => { const { publicPageVisibility: _map, ...rest } = baseClub(patch); return rest as unknown as ClubContext; };
+/** A scenario with no map at all (an editor preview, or a surface that has no provider). */
+const withoutMap = (patch: Partial<Scenario> = {}): Scenario => { const { publicPageVisibility: _map, ...rest } = baseClub(patch); return rest; };
+const splitScenario = (scenario: Scenario) => { const { publicPageVisibility: map, ...club } = scenario; return { club: club as ClubContext, map }; };
 /** Another design's key; the routes only serve cinematic@2. */
 const notCinematic = "cinematic@1" as ClubContext["presentationTemplateKey"];
 const hiding = (...keys: PublicPageKey[]): PublicPageVisibility => Object.fromEntries(keys.map(key => [key, false]));
-const inClub = (club: ClubContext, child: ReactElement) => renderToStaticMarkup(createElement(ClubContextProvider, { club, children: child }));
-const nav = (club: ClubContext) => inClub(club, createElement(CinematicNav, { editing: false }));
-const footer = (club: ClubContext) => inClub(club, createElement(CinematicFooter));
+/** Renders under the club and, when the scenario has a map, the provider the public layout mounts around it. */
+const inClub = (scenario: Scenario, child: ReactElement) => {
+  const { club, map } = splitScenario(scenario);
+  return renderToStaticMarkup(createElement(ClubContextProvider, { club, children: map === undefined ? child : createElement(PublicPageVisibilityProvider, { visibility: map, children: child }) }));
+};
+/** Makes the public pages see this club and, through fetchPublicPageVisibility, its map ({} when it has none, like a failed read). */
+const serve = (scenario: Scenario) => {
+  const { club, map } = splitScenario(scenario);
+  mocks.club.mockResolvedValue(club);
+  mocks.visibility.mockResolvedValue(map ?? {});
+};
+const nav = (club: Scenario) => inClub(club, createElement(CinematicNav, { editing: false }));
+const footer = (club: Scenario) => inClub(club, createElement(CinematicFooter));
 const hrefs = (html: string) => [...html.matchAll(/href="([^"]*)"/g)].map(match => match[1]);
 const count = (html: string, needle: string) => html.split(needle).length - 1;
 
@@ -128,6 +149,15 @@ describe("navigation", () => {
     expect(nav(baseClub())).toBe(base);
     expect(nav(baseClub({ publicPageVisibility: { stadium: true, "chick-fil-a": true, "foothill-transit": true } }))).toBe(base);
     for (const href of [ROBINSON_HREF, PARKING_HREF, CHICK_HREF, FOOTHILL_HREF, ...STADIUM_LINKS_KEPT]) expect(base, href).toContain(href);
+  });
+
+  it("reads the map from the provider only, never from the club context", () => {
+    const stray = { ...baseClub(), publicPageVisibility: hiding(...PUBLIC_PAGE_KEYS) };
+    const html = renderToStaticMarkup(createElement(ClubContextProvider, { club: stray as ClubContext, children: createElement(CinematicNav, { editing: false }) }));
+    expect(html).toBe(nav(withoutMap()));
+    for (const href of [ROBINSON_HREF, PARKING_HREF, CHICK_HREF, FOOTHILL_HREF]) expect(html, href).toContain(href);
+    const footerHtml = renderToStaticMarkup(createElement(ClubContextProvider, { club: stray as ClubContext, children: createElement(CinematicFooter) }));
+    expect(footerHtml).toContain(ROBINSON_HREF);
   });
 
   it("omits only the hidden page's link", () => {
@@ -263,21 +293,28 @@ describe("public routes", () => {
     const others = PUBLIC_PAGE_KEYS.filter(other => other !== key);
     it("renders with the map absent, empty, true or only another page hidden", async () => {
       for (const map of [undefined, {}, { [key]: true }, hiding(...others)]) {
-        mocks.club.mockResolvedValue(map === undefined ? withoutMap() : baseClub({ publicPageVisibility: map }));
+        serve(map === undefined ? withoutMap() : baseClub({ publicPageVisibility: map }));
         expect(renderToStaticMarkup(await call("rose-city"))).not.toBe("");
       }
       expect(fetched()).toHaveBeenCalledTimes(4);
     });
     it("is a 404 once hidden, before any page content is read", async () => {
-      mocks.club.mockResolvedValue(baseClub({ publicPageVisibility: hiding(key) }));
+      serve(baseClub({ publicPageVisibility: hiding(key) }));
       await expect(call("rose-city")).rejects.toThrow("not found");
+      expect(mocks.visibility).toHaveBeenCalledWith(baseClub().id);
       expect(mocks.schema).not.toHaveBeenCalled();
       expect(fetched()).not.toHaveBeenCalled();
       expect(mocks.tickets).not.toHaveBeenCalled();
     });
+    it("renders when the visibility read failed open (it resolves {}), never 404s on a read error", async () => {
+      mocks.club.mockResolvedValue(withoutMap());
+      mocks.visibility.mockResolvedValue({});
+      expect(renderToStaticMarkup(await call("rose-city"))).not.toBe("");
+      expect(fetched()).toHaveBeenCalledTimes(1);
+    });
     it.each(["academy@1", "clubhouse@1", "editorial@1", "cinematic@1"] as const)("is still a 404 for %s, hidden or not", async template => {
       for (const map of [{}, hiding(key)]) {
-        mocks.club.mockResolvedValue(baseClub({ presentationTemplateKey: template as ClubContext["presentationTemplateKey"], publicPageVisibility: map }));
+        serve(baseClub({ presentationTemplateKey: template as ClubContext["presentationTemplateKey"], publicPageVisibility: map }));
         await expect(call("other")).rejects.toThrow("not found");
       }
       expect(fetched()).not.toHaveBeenCalled();
@@ -290,7 +327,7 @@ describe("public routes", () => {
   });
 
   it("renders the tenant's Foothill page from the trusted server schema while shown", async () => {
-    mocks.club.mockResolvedValue(baseClub({ publicPageVisibility: hiding("stadium", "chick-fil-a") }));
+    serve(baseClub({ publicPageVisibility: hiding("stadium", "chick-fil-a") }));
     const html = renderToStaticMarkup(await FoothillTransitPage({ params: Promise.resolve({ slug: "rose-city" }) }));
     expect(html).toContain("Road to the Match page");
     expect(mocks.transit).toHaveBeenCalledWith(baseClub().id, mocks.trusted);
@@ -299,12 +336,12 @@ describe("public routes", () => {
   it("forwards /stadium/parking to the Robinson page, and is a 404 while that page is hidden or the design is not cinematic@2", async () => {
     const parking = () => StadiumParkingPage({ params: Promise.resolve({ slug: "rose-city" }) });
     for (const map of [undefined, {}, { stadium: true }, hiding("chick-fil-a", "foothill-transit")]) {
-      mocks.club.mockResolvedValue(map === undefined ? withoutMap() : baseClub({ publicPageVisibility: map }));
+      serve(map === undefined ? withoutMap() : baseClub({ publicPageVisibility: map }));
       await expect(parking()).rejects.toThrow("redirect:/stadium#parking-lot-no-5");
     }
-    mocks.club.mockResolvedValue(baseClub({ publicPageVisibility: hiding("stadium") }));
+    serve(baseClub({ publicPageVisibility: hiding("stadium") }));
     await expect(parking()).rejects.toThrow("not found");
-    mocks.club.mockResolvedValue(baseClub({ presentationTemplateKey: notCinematic }));
+    serve(baseClub({ presentationTemplateKey: notCinematic }));
     await expect(parking()).rejects.toThrow("not found");
   });
 
@@ -367,7 +404,7 @@ describe("embedded blocks", () => {
       mocks.robinson.mockResolvedValue(robinsonContent());
       mocks.tickets.mockResolvedValue(ticketing);
       mocks.schema.mockReturnValue(mocks.trusted);
-      const render = async (club: ClubContext) => { mocks.club.mockResolvedValue(club); return renderToStaticMarkup(await StadiumPage({ params: Promise.resolve({ slug: club.slug }) })); };
+      const render = async (club: Scenario) => { serve(club); return renderToStaticMarkup(await StadiumPage({ params: Promise.resolve({ slug: club.slug }) })); };
       const shown = await render(baseClub());
       expect(shown).toContain(FOOD);
       expect(shown).toContain(ROUTE);
@@ -413,14 +450,14 @@ describe("embedded blocks", () => {
     it("gets the club's own map from the public page, and nothing from a club without one", async () => {
       mocks.schema.mockReturnValue(mocks.trusted);
       mocks.tickets.mockResolvedValue(hydrateTicketsContent(rose(), [], false));
-      const render = async (club: ClubContext) => { mocks.club.mockResolvedValue(club); return inClub(club, await TicketsPage({ params: Promise.resolve({ slug: club.slug }) })); };
+      const render = async (club: Scenario) => { serve(club); return inClub(club, await TicketsPage({ params: Promise.resolve({ slug: club.slug }) })); };
       const shown = await render(baseClub());
       expect(shown).toContain(TRANSIT);
       expect(shown).toBe(await render(withoutMap()));
       expect(await render(baseClub({ publicPageVisibility: hiding("foothill-transit") }))).not.toContain(TRANSIT);
       expect(await render(baseClub({ publicPageVisibility: hiding("stadium", "chick-fil-a") }))).toContain(TRANSIT);
       expect(await render(baseClub({ slug: "other-club" }))).toContain(TRANSIT);
-      mocks.club.mockResolvedValue(baseClub({ presentationTemplateKey: notCinematic, publicPageVisibility: {} }));
+      serve(baseClub({ presentationTemplateKey: notCinematic, publicPageVisibility: {} }));
       await expect(TicketsPage({ params: Promise.resolve({ slug: "rose-city" }) })).rejects.toThrow("not found");
     });
   });

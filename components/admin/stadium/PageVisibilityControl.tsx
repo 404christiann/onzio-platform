@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { usePublicPageVisibility } from "@/components/PublicPageVisibilityProvider";
 import { EditorNotice } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ValidationMessage } from "@/components/admin/ui/editor-kit";
 import { PAGE_HIDDEN_BANNER, VISIBLE_TO_VISITORS_LABEL, pageVisible, type PublicPageKey } from "@/lib/public-page-visibility";
@@ -18,8 +19,9 @@ import styles from "./PartnerPageParts.module.css";
  */
 export function PageVisibilityControl({ pageKey, note }: { pageKey: PublicPageKey; note?: string }) {
   const club = useClubContext();
+  const visibility = usePublicPageVisibility();
   const router = useRouter();
-  const clubVisible = pageVisible(club, pageKey);
+  const clubVisible = pageVisible({ publicPageVisibility: visibility }, pageKey);
   const [visible, setVisible] = useState(clubVisible);
   const [seen, setSeen] = useState({ clubId: club.id, clubVisible });
   const [saving, setSaving] = useState(false);
@@ -27,7 +29,7 @@ export function PageVisibilityControl({ pageKey, note }: { pageKey: PublicPageKe
   const noteId = useId();
   const clubId = useRef(club.id);
   clubId.current = club.id;
-  // A different club, or a refreshed club context, replaces what the switch shows.
+  // A different club, or a refreshed visibility map, replaces what the switch shows.
   if (seen.clubId !== club.id || seen.clubVisible !== clubVisible) {
     setSeen({ clubId: club.id, clubVisible });
     setVisible(clubVisible); setSaving(false); setFailure("");
@@ -41,7 +43,7 @@ export function PageVisibilityControl({ pageKey, note }: { pageKey: PublicPageKe
       const result = await changePageVisibility(pageKey, next, previous);
       if (clubId.current !== owner) return;
       setVisible(result.visible); setFailure(result.failure ?? "");
-      // The admin layout holds the club context; refresh it so this switch (and any later visit) reads the saved value.
+      // The admin layout holds the visibility map; refreshing re-renders it with a fresh read, so this switch (and any later visit) reads the saved value.
       if (!result.failure) router.refresh();
     } finally {
       if (clubId.current === owner) setSaving(false);

@@ -16,7 +16,7 @@ import CinematicRosterPage from "@/components/cinematic/CinematicRosterPage";
 import CinematicSchedulePage from "@/components/cinematic/CinematicSchedulePage";
 import CinematicShopPage from "@/components/cinematic/CinematicShopPage";
 
-const club: ClubContext = { id: "11111111-1111-4111-8111-111111111111", slug: "sample", name: "Sample Club", primaryDomain: "sample.localhost", lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null, tier: "pro", role: null, primaryColor: "#ff0018", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true, publicPageVisibility: {} };
+const club: ClubContext = { id: "11111111-1111-4111-8111-111111111111", slug: "sample", name: "Sample Club", primaryDomain: "sample.localhost", lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null, tier: "pro", role: null, primaryColor: "#ff0018", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true };
 const render = (child: React.ReactElement) => renderToStaticMarkup(createElement(ClubContextProvider, { club, children:
   createElement(ClubBrandingProvider, { initialBranding: { logoPath: "/logo.webp", inverseLogoPath: "/logo.webp", footerTagline: "Sample City" }, children: child }) }));
 const section: DBShopKitSection = { id: "kit-1", surface: "shop", kit_variant: "home", updated_at: "", eyebrow: "New kit", title: "Seeded kit title", description: "d", bullet_points: [], store_note: "", cta_label: "", cta_link: "" };

@@ -11,7 +11,7 @@ import type { Player, Staff } from "@/lib/data";
 // Avoid constructing the browser Supabase client in a pure renderer contract.
 vi.mock("@/lib/queries", () => ({ fetchClubBranding: vi.fn() }));
 
-const club: ClubContext = { id: "11111111-1111-4111-8111-111111111111", slug: "sample", name: "Sample Club", primaryDomain: "sample.localhost", lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null, tier: "pro", role: null, primaryColor: "#ff0018", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true, publicPageVisibility: {} };
+const club: ClubContext = { id: "11111111-1111-4111-8111-111111111111", slug: "sample", name: "Sample Club", primaryDomain: "sample.localhost", lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null, tier: "pro", role: null, primaryColor: "#ff0018", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true };
 const field: Player = { id: "22222222-2222-4222-8222-222222222222", number: 5, name: "Sample Defender", nationality: "American", position: "Defender", height: "6 ft", weight: "160 lbs", hometown: "Sample City", age: 25, image: "/defender.webp", stats: { goals: 7, assists: 2, tackles: 3, starts: 4, yellow: 0, red: 0, mins: 450, offsides: 0, fouls: 0, foulsSuffered: 0 } };
 const keeper: Player = { ...field, id: "33333333-3333-4333-8333-333333333333", number: 1, name: "Sample Keeper", position: "Goalkeeper", image: "/keeper.webp", stats: { saves: 11, goalsAgainst: 1, cleanSheets: 3, starts: 4, yellow: 0, red: 0, mins: 400 } };
 const empty: CinematicRosterData = { seasonId: "44444444-4444-4444-8444-444444444444", seasonLabel: "2027", defenders: [], midfielders: [], forwards: [], goalkeepers: [] };

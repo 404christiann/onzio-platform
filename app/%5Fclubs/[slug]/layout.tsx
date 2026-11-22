@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase-server";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
+import { PublicPageVisibilityProvider } from "@/components/PublicPageVisibilityProvider";
+import { fetchPublicPageVisibility } from "@/lib/public-page-visibility-query";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
 import { ClubTimeZoneProvider } from "@/components/ClubTimeZoneProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
@@ -103,8 +105,11 @@ export default async function TenantLayout({
   const withTelemetry = (content: React.ReactNode) => (telemetry ? <SiteTelemetry>{content}</SiteTelemetry> : content);
 
   if (club.presentationTemplateKey === "cinematic@2") {
+    // The "Visible to visitors" map is its own fail-open read (never part of tenant resolution).
+    const pageVisibilityRead = fetchPublicPageVisibility(club.id);
     const initialContent = await fetchCinematicHomepageContent(club.id, (await createClient()).schema("onzio")).catch(() => null);
-    return <ClubContextProvider club={club}>{withTelemetry(<><CinematicDisplayFont /><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></>)}</ClubContextProvider>;
+    const pageVisibility = await pageVisibilityRead;
+    return <ClubContextProvider club={club}><PublicPageVisibilityProvider visibility={pageVisibility}>{withTelemetry(<><CinematicDisplayFont /><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></>)}</PublicPageVisibilityProvider></ClubContextProvider>;
   }
 
   // The header remains usable while branding or page content is pending.

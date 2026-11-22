@@ -28,7 +28,7 @@ const club: ClubContext = {
   id: "11111111-1111-4111-8111-111111111111", slug: "alpha", name: "Alpha FC",
   primaryDomain: "alpha.localhost", lifecycle: "active", publicAccess: "live", kind: "test",
   stripePriceId: null, tier: "pro", role: "owner", primaryColor: null, secondaryColor: null,
-  presentationTemplateKey: "academy@1", storeEnabled: false, publicPageVisibility: {},
+  presentationTemplateKey: "academy@1", storeEnabled: false,
 };
 
 /** Renders like app/admin/(protected)/layout.tsx: the guard provider wraps the classic shell only. */
