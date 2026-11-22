@@ -118,6 +118,35 @@ describe("tenant route resolution contract", () => {
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
 
+  it("lets every Vercel cron route bypass tenant host routing on the deployment URL, without client tenant headers", async () => {
+    const middleware = await loadContract<Middleware>("@/middleware", "middleware");
+    const isCronPath = await loadContract<(pathname: string) => boolean>("@/middleware", "isCronPath");
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const { crons } = JSON.parse(readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")) as {
+      crons: Array<{ path: string }>;
+    };
+    expect(crons.length).toBeGreaterThan(0);
+    for (const { path } of crons) {
+      expect(isCronPath(path), path).toBe(true);
+      // The host Vercel uses for cron invocations: a deployment URL, not a club domain.
+      const response = await middleware(
+        new NextRequest(`https://onzio-platform-9p3oxcj5d-team.vercel.app${path}`, {
+          headers: { "x-onzio-club-id": clubs.alpha.id, "x-onzio-user-id": USER_IDS.ownerAal2 },
+        }),
+      );
+      expect(response.status, path).toBe(200);
+      expect(response.headers.get("x-middleware-next"), path).toBe("1");
+      const forwarded = response.headers.get("x-middleware-override-headers") ?? "";
+      expect(response.headers.get("x-middleware-request-x-onzio-club-id"), path).toBeNull();
+      expect(response.headers.get("x-middleware-request-x-onzio-user-id"), path).toBeNull();
+      expect(forwarded, path).not.toContain("x-onzio-");
+    }
+    for (const pathname of ["/api/cron", "/api/cron/", "/api/cronx/lifecycle", "/api/cron/a/b", "/api/cron/Lifecycle", "/admin/api/cron/lifecycle"]) {
+      expect(isCronPath(pathname), pathname).toBe(false);
+    }
+  });
+
   it("resolves a verified primary domain", async () => {
     const resolveTenantRoute = await loadContract<ResolveTenantRoute>(
       "@/lib/tenant-routing",
