@@ -1342,7 +1342,10 @@ types so the site package can import it):
   tab is visible).
 
 `click` is never a beacon: `GET /r/<sponsor>` on the club host writes it (see
-P2). Every accepted beacon, whatever its type, spends one hit of each rate cap.
+P2). Views, `logo_seen` and `click` spend the network, wide network, visitor and
+club caps once each, however many rows they write. A heartbeat spends only the
+visitor cap and its own club-wide heartbeat budget (6,000 a minute), so
+time-on-page traffic can never use page views' budget.
 Only a `view` can start a visit as an entry; other types join the open visit or
 start one that is not an entry.
 
@@ -1398,7 +1401,12 @@ directly. The database therefore accepts only **signed** calls.
   else `not_public`) and hold the telemetry add-on (else `not_entitled`).
 - Rate caps, per minute, in this order: the **network** (the IPv4 address or
   IPv6 /64, then for IPv6 also its /48), **60 per visitor**, and **1,200 per
-  club**. A rejected event returns `rate_limited` and never spends the club
+  club**. These apply to views, `logo_seen` and `click`. A `heartbeat` skips the
+  network, wide network and club caps: it spends the 60-per-visitor cap (shared
+  with the other types) and then a separate club-wide **heartbeat budget of
+  6,000 a minute** (counter bucket `h:*`; 1,500 visible tabs at one heartbeat
+  per 15 s), so heartbeats can never starve page views at the club or network
+  level. A rejected event returns `rate_limited` and never spends the club
   budget: the club counter increments only for events that passed every other
   cap. A counter that says no is not written again, so a flood costs reads,
   not row versions. One machine rotating user agents is one network.
@@ -1425,14 +1433,18 @@ directly. The database therefore accepts only **signed** calls.
   The cap only drops events, it never blocks pages.
 - **Drops are counted.** Every `rate_limited` answer upserts +1 into
   `page_event_drop_counts` for the club's local day and the limit that said no
-  (`network`, `visitor`, or `club`). The write happens once, after the caps and
+  (`network`, `visitor`, or `club`). A dropped heartbeat is not counted: it only
+  undercounts engaged time, and `heartbeat` is not a drop reason. The write happens once, after the caps and
   only after the add-on gate, so a club without the add-on leaves no trace.
   Each drop rewrites one row per club, day and reason; the table keeps spare
   room on each page (`fillfactor = 50`) so those updates stay in place.
 - The route keeps a best-effort per-instance limit keyed on the network key (on
   the /48 for IPv6, on the address for IPv4) at 600 a minute, just under the 660
   one network can record alone on a quiet club, so floods are shed before the
-  database without cutting a busy shared network short. Events it sheds are not
+  database without cutting a busy shared network short. Heartbeats use a
+  separate per-instance limiter at 1,200 a minute per network (300 visible tabs
+  behind one network at one heartbeat per 15 s), so they never spend the 600
+  views budget. Events it sheds are not
   counted as drops.
 - Beacon data is forgeable by anyone who can run a real browser. The per-network
   and per-club caps bound what a forger can add, and the report calls its
@@ -1514,7 +1526,9 @@ whose raw events may already be gone.
 - **TELEMETRY-02 data layer for P2-P5** (no UI): one migration
   (`20261121230000_page_telemetry_rollups.sql`: the event types and columns
   above, `record_page_event` redefined with the same signature, grants and
-  order plus a sponsor filter between the add-on gate and the salt, the three
+  order plus a sponsor filter between the add-on gate and the salt, heartbeats
+  on their own club-wide 6,000-a-minute budget (`h:*` rate window, not counted in
+  drop counts) instead of the network and club caps, the three
   rollup tables, `onzio_private.rollup_page_telemetry` behind the
   service-role-only wrapper `onzio.rollup_page_telemetry`, and the purge list
   with the rollup tables first); the beacon union; the `/r/<sponsor>` redirect;

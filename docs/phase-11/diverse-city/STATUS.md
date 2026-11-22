@@ -1,5 +1,32 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-02: review Low fixed (heartbeats no longer spend page views' budget)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet worker), TELEMETRY-02, PR #216, branch
+`claude/telemetry-02-data`. **Status:** pushed, not merged; migration applied to no hosted database.
+
+**Completed:** onzio-bot's one Low on #216 (heartbeats counted against the club's 1,200/min cap, so ~300 concurrent
+visitors would crowd out page views on a matchday) is fixed in `20261121230000_page_telemetry_rollups.sql`, edited in
+place (not applied anywhere; new sha256 `07442398…0fce`). Heartbeats skip the network, /48 and club `'*'` caps. They
+spend the shared visitor cap and their own club-wide `'h:*'` budget (6,000/min). Dropped heartbeats are not drop
+counts. The rate-window bucket check allows `'h:*'`. `/api/t` gives heartbeats their own per-instance limiter
+(1,200/min per network); views keep the 600/min one. Other cap constants and the headroom rule are unchanged. Plan
+section updated. `claude/telemetry-05-report` was cut from `dd4bfb85` and carries the old migration text; it picks
+up the new text when it rebases onto main after #216 merges, as long as it doesn't edit the file.
+
+**Files:** the migration, `app/api/t/route.ts`, `tests/database/page-telemetry.test.ts` (heartbeat budget tests),
+`tests/contracts/page-telemetry-beacon.test.ts` (route limiter test), `docs/onzio-platform-plan.md`, this file.
+
+**Verification (local, `with-local-db-lock.sh`, CLI 2.109.1):**
+- `db reset --local`: ledger 97, max `20261121230000`. `db:types:check` passes.
+- `test:db`: 1,544 passed, 1 failed. The failure is P1's backlog-sweep test hitting its 15 s timeout while the Mac's
+  load average was 15-18 from other sessions. That test passed on its own 2 of 2 times (about 0.3 s), and the
+  worker's two runs of the telemetry, rollup and purge files passed 121/121.
+- Non-DB vitest: 5,253 passed, 1 skipped. `test:architecture`: 432 passed, 1 skipped.
+- `tsc`, lint and `build` are clean.
+
+**Next step:** onzio-bot re-review, then the production gate on Christian's "go".
+
 ## 2026-11-21 - TELEMETRY-02: data layer for telemetry P2-P5 (sponsor events, time on page, daily rollups)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet workers), TELEMETRY-02, branch

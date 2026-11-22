@@ -489,6 +489,20 @@ describe("POST /api/t", () => {
     expect(calls("record_page_event")).toHaveLength(600);
   });
 
+  it("keeps a heartbeat flood from one network from stopping that network's views, and sheds heartbeats at 1,200 a minute", async () => {
+    const network = "203.0.113.120";
+    const beat = body({ t: "heartbeat", p: "/", e: 15000 });
+    for (let i = 0; i < 650; i += 1) await post(headers({ "x-real-ip": network }), beat);
+    expect(calls("record_page_event")).toHaveLength(650);
+    await post(headers({ "x-real-ip": network }), body({ t: "view", p: "/schedule" }));
+    expect(calls("record_page_event")).toHaveLength(651);
+    for (let i = 0; i < 600; i += 1) await post(headers({ "x-real-ip": network }), beat);
+    // 1,200 heartbeats got through in all; the rest were shed before the database.
+    expect(calls("record_page_event")).toHaveLength(1201);
+    await post(headers({ "x-real-ip": network }), body({ t: "view", p: "/tickets" }));
+    expect(calls("record_page_event")).toHaveLength(1202);
+  });
+
   it("lets a busy shared network (stadium Wi-Fi) past the 120-a-minute database share", async () => {
     for (let i = 0; i < 400; i += 1) {
       const agent = `Mozilla/5.0 (Linux; Android 14; Pixel ${i}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36`;

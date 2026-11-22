@@ -12,6 +12,8 @@
 -- * onzio_private.rollup_page_telemetry    recomputes the last p_days days of all three tables from the raw
 --                                           events (security definer); service role only
 -- * onzio.rollup_page_telemetry            exposed security-invoker wrapper for the service role
+-- * onzio_private.page_event_rate_windows  bucket check widened to allow 'h:*', the club-wide heartbeat
+--                                           counter
 -- * onzio_private.purge_archived_club      redefined: the three rollup tables are purged first
 --
 -- sweep_page_telemetry is deliberately NOT changed. The rollup tables hold no visitor data (no
@@ -29,7 +31,16 @@
 --        add constraint page_events_type check (event_type in ('view'));
 --   5. alter table onzio.page_events drop constraint page_events_engaged,
 --        drop constraint page_events_sponsor, drop column engaged_ms, drop column sponsor_id;
---   6. notify pgrst, 'reload schema';
+--   6. delete from onzio_private.page_event_rate_windows where bucket = 'h:*';
+--      alter table onzio_private.page_event_rate_windows drop constraint page_event_rate_windows_bucket,
+--        add constraint page_event_rate_windows_bucket
+--        check (bucket = '*' or bucket ~ '^([nw]:)?[0-9a-f]{64}$');
+--   7. notify pgrst, 'reload schema';
+
+-- 0. Rate windows: 'h:*' is the club-wide heartbeat counter (its own budget, see the writer).
+alter table onzio_private.page_event_rate_windows drop constraint page_event_rate_windows_bucket;
+alter table onzio_private.page_event_rate_windows add constraint page_event_rate_windows_bucket
+  check (bucket in ('*', 'h:*') or bucket ~ '^([nw]:)?[0-9a-f]{64}$');
 
 -- 1. page_events: new event types and their columns.
 alter table onzio.page_events drop constraint page_events_type;
@@ -59,9 +70,10 @@ comment on column onzio.page_events.engaged_ms is
 -- 2. The writer. Same order as before, with one new step: signature, JSON, freshness, field
 -- validation (including the per-type keys), public club, add-on, then the sponsor filter (logo_seen
 -- and click keep only sponsors that belong to this club and return 'unknown_sponsor' with nothing
--- written when none remain), then salt and the rate caps. One accepted beacon spends exactly one hit
--- of each applicable cap whatever its type, even when a logo_seen beacon writes several rows.
--- Cap constants, the headroom rule and the in-writer retention are unchanged from P1.
+-- written when none remain), then salt and the rate caps. Views, logo_seen and click spend the network,
+-- wide network, visitor and club caps once each, even when a logo_seen beacon writes several rows.
+-- Heartbeats spend the visitor cap and their own club-wide heartbeat budget, so time-on-page traffic
+-- can never use page views' budget. Other cap constants, the headroom rule and the in-writer retention are unchanged from P1.
 create or replace function onzio_private.record_page_event(
   p_club_id uuid,
   p_payload text,
@@ -75,6 +87,8 @@ declare
   c_network_limit constant integer := 120;
   c_visitor_limit constant integer := 60;
   c_club_limit constant integer := 1200;
+  -- Club-wide heartbeat budget: 1,500 visible tabs at one heartbeat per 15 s.
+  c_heartbeat_limit constant integer := 6000;
   c_max_payload_bytes constant integer := 8192;
   c_max_skew_ms constant numeric := 300000;
   c_visit_gap constant interval := interval '30 minutes';
@@ -318,6 +332,33 @@ begin
   -- after the block. The block has no exception clause, so it costs no subtransaction.
   <<limits>>
   begin
+    -- Heartbeats only undercount engaged time, so they never touch the network, wide network or club
+    -- counters that views depend on: the per-visitor cap (shared with the other types), then their
+    -- own club-wide budget on 'h:*'.
+    if v_type = 'heartbeat' then
+      v_hits := null;
+      insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
+      values (p_club_id, v_hash, v_window, 1)
+      on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+        where w.hits < c_visitor_limit
+      returning w.hits into v_hits;
+      if v_hits is null then
+        v_drop := 'visitor';
+        exit limits;
+      end if;
+
+      v_hits := null;
+      insert into onzio_private.page_event_rate_windows as w (club_id, bucket, window_start, hits)
+      values (p_club_id, 'h:*', v_window, 1)
+      on conflict (club_id, bucket, window_start) do update set hits = w.hits + 1
+        where w.hits < c_heartbeat_limit
+      returning w.hits into v_hits;
+      if v_hits is null then
+        v_drop := 'heartbeat';
+      end if;
+      exit limits;
+    end if;
+
     -- Cap 1, per network (IPv4 address or IPv6 /64): one machine rotating user agents is still one
     -- network. Headroom share: over c_network_limit it is accepted only while its own count plus the
     -- club's count is under c_club_limit + c_network_limit, so it takes at most half of the club's
@@ -377,14 +418,18 @@ begin
   end limits;
 
   if v_drop is not null then
-    -- Counted, not silent: the report can say how many views the abuse limits dropped.
-    insert into onzio_private.page_event_drop_counts as d (club_id, local_date, reason, dropped)
-    values (p_club_id, v_day, v_drop, 1)
-    on conflict (club_id, local_date, reason) do update set dropped = d.dropped + 1;
+    -- Counted, not silent: the report can say how many views and sponsor events the abuse limits
+    -- dropped. A dropped heartbeat only undercounts engaged time and 'heartbeat' is not a drop reason.
+    if v_type <> 'heartbeat' then
+      insert into onzio_private.page_event_drop_counts as d (club_id, local_date, reason, dropped)
+      values (p_club_id, v_day, v_drop, 1)
+      on conflict (club_id, local_date, reason) do update set dropped = d.dropped + 1;
+    end if;
     return 'rate_limited';
   end if;
   if v_hits = 1 then
-    -- A new minute for this club, on accepted traffic: prune its old counters, then run the
+    -- A new minute for this club, on accepted traffic (this also fires when a club's heartbeat minute
+    -- opens, still at most once per club per bucket per minute): prune its old counters, then run the
     -- bounded global sweep, so clubs that lost the add-on or went quiet are cleaned too.
     delete from onzio_private.page_event_rate_windows old
     where old.club_id = p_club_id and old.window_start < v_window - interval '5 minutes';

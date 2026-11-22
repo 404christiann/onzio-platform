@@ -1591,7 +1591,7 @@ describe("telemetry sponsor and engagement events", () => {
     expect(used.map((row) => row.bucket).filter((bucket) => bucket === "*" || bucket.startsWith("n:"))).toHaveLength(2);
   });
 
-  it("spends exactly one hit of the visitor, network and club windows for a click and for a heartbeat", async () => {
+  it("spends one hit of the visitor, network and club windows for a click, and only the visitor and 'h:*' windows for a heartbeat", async () => {
     const [sponsor] = await seedSponsors(CLUB_IDS.alpha, 1);
     expect(await record(CLUB_IDS.alpha, event({ type: "click", sponsorId: sponsor }))).toBe("recorded");
     let used = await windows(CLUB_IDS.alpha);
@@ -1601,8 +1601,67 @@ describe("telemetry sponsor and engagement events", () => {
     await nextMinute(CLUB_IDS.alpha);
     expect(await record(CLUB_IDS.alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("recorded");
     used = await windows(CLUB_IDS.alpha);
-    expect(used).toHaveLength(3);
+    expect(used).toHaveLength(2);
     expect(used.every((row) => row.hits === 1)).toBe(true);
+    expect(used.some((row) => row.bucket === "h:*")).toBe(true);
+    expect(used.some((row) => row.bucket === "*" || row.bucket.startsWith("n:") || row.bucket.startsWith("w:"))).toBe(false);
+  });
+
+  describe("heartbeat budget", () => {
+    const alpha = CLUB_IDS.alpha;
+
+    async function setCounter(bucket: string, hits: number): Promise<void> {
+      await asOwner();
+      await db.query(
+        `insert into onzio_private.page_event_rate_windows (club_id, bucket, window_start, hits)
+         values ($1, $2, date_trunc('minute', now()), $3)
+         on conflict (club_id, bucket, window_start) do update set hits = excluded.hits`,
+        [alpha, bucket, hits],
+      );
+    }
+
+    it("records a heartbeat while the club's view counter is full, and still drops a view", async () => {
+      await setClubCounter(alpha, 1200);
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("recorded");
+      expect(await record(alpha, event({ visitorMaterial: material("late-viewer") }))).toBe("rate_limited");
+      expect((await windows(alpha)).find((row) => row.bucket === "*")?.hits).toBe(1200);
+    });
+
+    it("drops a heartbeat at 6,000 without an event or a drop count, and still records a view", async () => {
+      await setCounter("h:*", 6000);
+      const before = (await rows(alpha)).length;
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("rate_limited");
+      expect(await rows(alpha)).toHaveLength(before);
+      expect(await dropCounts(alpha)).toEqual([]);
+      expect((await windows(alpha)).find((row) => row.bucket === "h:*")?.hits).toBe(6000);
+      expect(await record(alpha, event({ visitorMaterial: material("viewer-after") }))).toBe("recorded");
+    });
+
+    it("records a heartbeat from a network whose view budget is used up", async () => {
+      const crowded = material("network-crowded");
+      await setClubCounter(alpha, 1080);
+      const statuses = await recordMany(alpha, manyVisitors("crowd", 130, { networkMaterial: crowded }));
+      expect(statuses.filter((status) => status === "recorded")).toHaveLength(120);
+      expect(statuses[129]).toBe("rate_limited");
+      expect(
+        await record(alpha, event({ type: "heartbeat", engagedMs: 5000, visitorMaterial: material("crowd-0"), networkMaterial: crowded })),
+      ).toBe("recorded");
+      expect(
+        await record(alpha, event({ type: "heartbeat", engagedMs: 5000, visitorMaterial: material("crowd-new"), networkMaterial: crowded })),
+      ).toBe("recorded");
+    });
+
+    it("still respects the shared per-visitor cap, without a drop count", async () => {
+      const visitor = material("busy-reader");
+      const statuses = await recordMany(
+        alpha,
+        Array.from({ length: 61 }, () => event({ type: "heartbeat", engagedMs: 5000, visitorMaterial: visitor })),
+      );
+      expect(statuses.filter((status) => status === "recorded")).toHaveLength(60);
+      expect(statuses[60]).toBe("rate_limited");
+      expect(await dropCounts(alpha)).toEqual([]);
+      expect((await windows(alpha)).find((row) => row.bucket === "h:*")?.hits).toBe(60);
+    });
   });
 
   it("drops unknown and other-club sponsor ids from a logo_seen write", async () => {
