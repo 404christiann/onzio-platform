@@ -28,9 +28,11 @@ export {
   EDIT_TARGET_FLASH_ATTRIBUTE,
   editTargetAt,
   editTargetControl,
+  editTargetHasFocus,
   findEditTarget,
   focusEditTarget,
   pickEditTarget,
+  refocusEditTarget,
   type EditTargetCandidate,
 } from "./editTargets";
 export { ValidationMessage, type ValidationMessageProps } from "./ValidationMessage";

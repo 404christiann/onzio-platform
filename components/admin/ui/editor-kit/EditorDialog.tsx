@@ -16,7 +16,7 @@ import {
 import { AdminModal } from "@/components/admin/AdminModal";
 import { IconCaretLeft, IconCaretRight, IconClose } from "@/components/admin/icons";
 import styles from "./EditorDialog.module.css";
-import { editTargetControl, findEditTarget, focusEditTarget } from "./editTargets";
+import { editTargetHasFocus, focusEditTarget, refocusEditTarget } from "./editTargets";
 import {
   createFocusInterruption,
   editorDialogReducer,
@@ -227,11 +227,8 @@ export function EditorDialogBody({
     const deps = {
       now: () => performance.now(),
       focus: () => focusEditTarget(container, requestTarget),
-      holds: () => Boolean(findEditTarget(container, requestTarget)?.contains(document.activeElement)),
-      refocus: () => {
-        const element = findEditTarget(container, requestTarget);
-        if (element) editTargetControl(element)?.focus({ preventScroll: true });
-      },
+      holds: () => editTargetHasFocus(container, requestTarget, document.activeElement),
+      refocus: () => { refocusEditTarget(container, requestTarget); },
       interrupted: interruption.interrupted,
     };
     const tick = () => {

@@ -98,3 +98,20 @@ export function focusEditTarget(container: ParentNode, id: string, options: { re
   flashTimers.set(element, setTimeout(() => element.removeAttribute(EDIT_TARGET_FLASH_ATTRIBUTE), EDIT_TARGET_FLASH_MS));
   return true;
 }
+
+/**
+ * Puts focus back on the target's control without scrolling or ringing again (the focus hold uses it when the modal's
+ * own initial focus takes focus away). Returns false when the field or its control is not there.
+ */
+export function refocusEditTarget(container: ParentNode, id: string): boolean {
+  const element = findEditTarget(container, id);
+  const control = element && editTargetControl(element);
+  if (!control) return false;
+  control.focus({ preventScroll: true });
+  return true;
+}
+
+/** Whether `active` (normally document.activeElement) is the target's field or inside it. */
+export function editTargetHasFocus(container: ParentNode, id: string, active: Element | null): boolean {
+  return Boolean(active && findEditTarget(container, id)?.contains(active));
+}

@@ -2,7 +2,7 @@
 
 - **Status:** `ready for review`, branch `claude/ui-preview-targets` rebased onto main `7946d711` (after #228), PR open, not merged. Infrastructure only (no editor wired yet); no payload, query, gate, `app/api/**` or `supabase/**` change. Record: `STATUS.md` (UI-PREVIEW-TARGETS).
 - **What:** `lib/admin-edit-targets.ts` registry (undeclared targets throw), `editTargetAt` / `focusEditTarget` DOM helpers, `useEditorDialog().focusField` + `EditorDialog focusRequest` with a short `--ring` highlight and reduced-motion handling.
-- **Review follow-ups (2026-11-22):** stale-focus Medium and the Low fixed at `3abf98f` (requests cleared on open/switch/close; a click or key ends the focus hold). The test Medium needed a second pass: DOM helpers and the cancel handler are now tested against a fake DOM; 20 breaks each turn the tests red.
+- **Review follow-ups (2026-11-22):** stale-focus Medium and the Low fixed at `3abf98f` (requests cleared on open/switch/close; a click or key ends the focus hold). The test Medium needed a second pass: DOM helpers and the cancel handler are now tested against a fake DOM; 20 breaks each turn the tests red. The re-review's Low (three untested guards) is fixed too: 7 more breaks each caught.
 - **Exact next step:** merge, then PR C (Homepage Overview click-to-field) and the rest of the rollout.
 
 ## 2026-11-22 - UI-PREVIEW-AUDIT: classic-admin preview audit + five preview fixes

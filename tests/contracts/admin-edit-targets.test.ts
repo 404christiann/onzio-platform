@@ -13,7 +13,7 @@ import {
   resolveEditTarget,
   type EditTargetRegistry,
 } from "@/lib/admin-edit-targets";
-import { EDIT_TARGET_FLASH_ATTRIBUTE, EDIT_TARGET_FLASH_MS, editTargetAt, findEditTarget, focusEditTarget, pickEditTarget } from "@/components/admin/ui/editor-kit/editTargets";
+import { EDIT_TARGET_FLASH_ATTRIBUTE, EDIT_TARGET_FLASH_MS, editTargetAt, editTargetHasFocus, findEditTarget, focusEditTarget, pickEditTarget, refocusEditTarget } from "@/components/admin/ui/editor-kit/editTargets";
 import { EditorDialogBody, useEditorDialog } from "@/components/admin/ui/editor-kit/EditorDialog";
 import {
   createFocusInterruption,
@@ -173,6 +173,10 @@ describe("EditorDialog field focus", () => {
     expect(source).toMatch(/const interruption = createFocusInterruption\(\(\) => step\.focusedAt !== null\);/);
     expect(source).toMatch(/document\.addEventListener\("pointerdown", interruption\.onInput, true\);\s*document\.addEventListener\("keydown", interruption\.onInput, true\);/);
     expect(source).toMatch(/interrupted: interruption\.interrupted,/);
+    expect(source).toMatch(/holds: \(\) => editTargetHasFocus\(container, requestTarget, document\.activeElement\),/);
+    expect(source).toMatch(/refocus: \(\) => \{ refocusEditTarget\(container, requestTarget\); \},/);
+    // An unmounted dialog (or a newer request) must stop the running loop.
+    expect(source).toMatch(/return \(\) => \{\s*window\.cancelAnimationFrame\(frame\);/);
     expect(source).toMatch(/document\.removeEventListener\("pointerdown", interruption\.onInput, true\);\s*document\.removeEventListener\("keydown", interruption\.onInput, true\);/);
     expect(source).toMatch(/setView\("section"\);\s*setTab\("fields"\);/);
     expect(source).toMatch(/onKeyDown=\{trapTab\}/);
@@ -309,6 +313,7 @@ class FakeNode {
   setAttribute(name: string, value: string) { this.attrs.set(name, value); }
   removeAttribute(name: string) { this.attrs.delete(name); }
   getBoundingClientRect() { return this.rect; }
+  contains(node: unknown) { return node === this || [...this.all()].includes(node as FakeNode); }
   querySelectorAll(selector: string) {
     const nodes = [...this.all()];
     if (selector === `[${EDIT_TARGET_ATTRIBUTE}]`) return nodes.filter(node => node.attrs.has(EDIT_TARGET_ATTRIBUTE));
@@ -361,6 +366,33 @@ describe("focusEditTarget on a stamped field", () => {
     expect(focusEditTarget(container as unknown as ParentNode, "homepage.hero.intro", { reducedMotion: true })).toBe(true);
     expect(input.focusCalls).toHaveLength(1);
     expect(focusEditTarget(container as unknown as ParentNode, "homepage.hero.lineOne", { reducedMotion: true })).toBe(false);
+  });
+
+  it("reports false, without scrolling or ringing, for a stamped field with no focusable control (so the request retries)", () => {
+    const wrapper = new FakeNode("div", { target: "homepage.hero.lineOne", children: [new FakeNode("label")] });
+    const container = new FakeNode("div", { children: [wrapper] });
+    expect(focusEditTarget(container as unknown as ParentNode, "homepage.hero.lineOne", { reducedMotion: false })).toBe(false);
+    expect(wrapper.scrolled).toBeNull();
+    expect(wrapper.getAttribute(EDIT_TARGET_FLASH_ATTRIBUTE)).toBeNull();
+  });
+
+  it("refocuses the control without scrolling or ringing again, and reports a missing field or control", () => {
+    const { input, wrapper, container } = field();
+    expect(refocusEditTarget(container as unknown as ParentNode, "homepage.hero.lineOne")).toBe(true);
+    expect(input.focusCalls).toEqual([{ preventScroll: true }]);
+    expect(wrapper.scrolled).toBeNull();
+    expect(wrapper.getAttribute(EDIT_TARGET_FLASH_ATTRIBUTE)).toBeNull();
+    expect(refocusEditTarget(container as unknown as ParentNode, "homepage.hero.intro")).toBe(false);
+    const bare = new FakeNode("div", { children: [new FakeNode("div", { target: "homepage.hero.intro" })] });
+    expect(refocusEditTarget(bare as unknown as ParentNode, "homepage.hero.intro")).toBe(false);
+  });
+
+  it("knows whether focus is on the field", () => {
+    const { input, container } = field();
+    const elsewhere = new FakeNode("button");
+    expect(editTargetHasFocus(container as unknown as ParentNode, "homepage.hero.lineOne", input as unknown as Element)).toBe(true);
+    expect(editTargetHasFocus(container as unknown as ParentNode, "homepage.hero.lineOne", elsewhere as unknown as Element)).toBe(false);
+    expect(editTargetHasFocus(container as unknown as ParentNode, "homepage.hero.lineOne", null)).toBe(false);
   });
 
   it("picks the first matching field in document order", () => {
