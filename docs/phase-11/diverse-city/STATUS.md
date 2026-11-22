@@ -1,5 +1,48 @@
 # Diverse City FC Status
 
+## 2026-11-21 - UI-POLISH-DASHBOARD: classic admin dashboard
+
+**Agent/package:** Claude Code (Opus 5.5), UI-POLISH-DASHBOARD. Branch `claude/ui-polish-dashboard` off main
+`234e4cac` (after #222 and #223). Not merged.
+**Status:** `ready for review`. Visual, markup and copy only: no data loading, query, server action, gate
+(`lib/admin-tabs.ts`, `lib/admin-tab-page.ts`, `lib/admin-route-manifest.ts`), `app/api/**` or `supabase/**` change;
+no new dependency. The reimagined branch of `/admin` is untouched.
+
+**Completed:**
+- Classic `/admin` leads with what needs the owner today: h1 is the club name with the season under it; a "Next game"
+  card (the first upcoming game or tryout, with "In 4 days" in the accent) is the one heavy element; the four
+  numbers sit beside it on wide screens as one hairline strip (`dl`, number first, real labels such as
+  "24 Active players"). The "Coming up" panel lists the events after the next one.
+- Quick actions kept (same manifest, same gates) but moved below the numbers and compacted to 48px rows, plain
+  icons, 2x2 on desktop. Hierarchy reason: they repeat the sidebar; the next game and numbers answer the question.
+- One radius (`rounded-lg`), hairline borders, no shadows; three type sizes (12/14/24px); one accent (primary);
+  `toLocaleString("en-US")` and `tabular-nums` on every count; year shown only when it is not the club's year.
+- Empty states say what to do: "Nothing scheduled" with one "Open Schedule" link; forms and paid-registration
+  panels say how they fill. No dashed boxes or centred filler.
+- Copy: headings in sentence case ("Registration forms", "Coming up", "Paid registrations by form"); dropped
+  "What would you like to do?" and "A few simple ways to keep ... moving.". Dead dashboard-only rules removed
+  from `AdminGuided.module.css`.
+
+**Files changed:** `app/admin/(protected)/page.tsx`, `components/admin/AdminGuided.module.css`,
+`tests/contracts/admin-dashboard.test.ts`, `tests/contracts/admin-reimagined-home.test.ts`,
+`tests/browser/admin-guided-ui.spec.ts`, `tests/browser/admin-guided-release-states.spec.ts`,
+`tests/browser/admin-reimagined-tabs.spec.ts` (copy and selector updates), this file, `HANDOFF.md`.
+
+**Verification:** `npx tsc --noEmit` clean; `npm run lint` 0 errors; `npm run test:unit` 401 files / 5261 tests;
+`npm run build` passed. Screenshot harness (untracked, local Alpha with temporary fixture rows removed afterwards;
+empty club = local Charlie with a temporary owner seat and domain, removed afterwards) at 375 and 1280 for data,
+empty, worst case (80-character club name, 12,345 players, 2,345 paid on one form, 80-character opponent and
+venue) and dark: no horizontal overflow, no tap target under 44px, exactly 12/14/24px text. Keyboard walk at 375:
+every link reachable in order with a visible ring. Guided browser specs on the worktree server: 1024/1440 theme +
+route search pass; the dashboard parts of the 200% text and grace/suspended specs pass. Failures outside the
+dashboard, not from this change: `/admin/members` "Contact Onzio to transfer" (string no longer in the app),
+`/admin/payments` "Payment overdue" strict-mode duplicate, 320px route search Enter not navigating.
+
+**Blockers / decisions:** none. Left alone on purpose: the mix chart's categorical colours, the integer "0%" share
+rounding (`lib/admin-dashboard-mix.ts`, contract-tested), Title Case quick-action labels (from the route manifest).
+
+**Next step:** Christian reviews the PR.
+
 ## 2026-11-21 - UI-POLISH-INSIGHTS: sponsor insights + monthly report
 
 **Agent/package:** Claude Code (Opus 5.5), UI-POLISH-INSIGHTS. Branch `claude/ui-polish-insights`, PR against main

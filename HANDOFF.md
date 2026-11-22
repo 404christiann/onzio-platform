@@ -1,3 +1,9 @@
+## 2026-11-21 - UI-POLISH-DASHBOARD: classic admin dashboard
+
+- **Status:** `ready for review`, branch `claude/ui-polish-dashboard` off main `234e4cac`, PR open, not merged. Visual, markup and copy only; no query, gate, `app/api/**` or `supabase/**` change. Record: `STATUS.md` (UI-POLISH-DASHBOARD).
+- **What:** classic `/admin` leads with the club name, a "Next game" card and the season numbers (one hairline strip); quick actions compacted below; one radius, hairlines, 12/14/24px type, formatted counts; specific empty states.
+- **Exact next step:** Christian reviews the PR.
+
 ## 2026-11-21 - TELEMETRY-05: monthly sponsor report (print to PDF)
 
 - **Status:** `ready for review`, branch `claude/telemetry-05-report`, rebased onto main `9998fcc0` (after TELEMETRY-02/03/04), PR #218 open, not merged. No `supabase/**` change. No migration, env or production change. Record: `STATUS.md` (TELEMETRY-05).

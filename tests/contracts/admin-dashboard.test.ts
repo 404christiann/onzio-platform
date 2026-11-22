@@ -12,14 +12,14 @@ const mix = source("lib/admin-dashboard-mix.ts");
 describe("protected admin dashboard", () => {
   it("renders only the approved dashboard modules", () => {
     for (const heading of [
-      "Quick Actions",
-      "Active Players",
-      "Active Staff",
-      "Season Matches",
-      "Paid Registrations",
-      "Registration Forms",
-      "Upcoming Fixtures & Events",
-      "Registration Mix",
+      "Quick actions",
+      "Active players",
+      "Active staff",
+      "Matches this season",
+      "Paid registrations",
+      "Registration forms",
+      "Coming up",
+      "Paid registrations by form",
     ]) {
       expect(page).toContain(heading);
     }
@@ -101,5 +101,21 @@ describe("protected admin dashboard", () => {
     const end = page.indexOf("// ADMIN-RE-05: the reimagined home");
     const classic = page.slice(start, end);
     expect((classic.match(/<DashboardPanel title=/g) ?? []).length).toBe(3);
+  });
+
+  // UI-POLISH-DASHBOARD: the next game or event leads, numbers are formatted,
+  // and the dashboard keeps one radius, hairlines and no shadows.
+  it("leads with the next game and keeps the polished visual rules", () => {
+    const start = page.indexOf("const PANEL =");
+    const end = page.indexOf("// ADMIN-RE-05: the reimagined home");
+    const classic = page.slice(start, end) + page.slice(page.indexOf("function MetricCard"));
+    const content = page.slice(page.indexOf("async function AdminDashboardContent"), end);
+    expect(content.indexOf("<NextUp")).toBeLessThan(content.indexOf('aria-label="Season numbers"'));
+    expect(content.indexOf('aria-label="Season numbers"')).toBeLessThan(content.indexOf("quick-actions-heading"));
+    expect(classic).toContain("data.events.data.slice(1)");
+    expect(page).toContain('toLocaleString("en-US")');
+    expect(classic).toContain("tabular-nums");
+    expect(classic).not.toMatch(/shadow-|rounded-(xl|2xl|3xl)|bg-gradient|What would you like to do/);
+    expect(page).not.toContain("AdminGuided.module.css");
   });
 });
