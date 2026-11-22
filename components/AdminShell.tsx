@@ -20,6 +20,7 @@ import Image from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import {
   AdminRouteSearch,
   type AdminSearchRoute,
@@ -63,6 +64,7 @@ function isPathActive(pathname: string, href: string) {
  */
 export function useAdminRouteAccess(isBillingAuthorized = false): AdminRouteAccessContext {
   const club = useClubContext();
+  const { flags: adminFlags } = useAdminPortal();
   const canMutateContent =
     club.lifecycle === "onboarding" ||
     (club.lifecycle === "active" &&
@@ -78,8 +80,9 @@ export function useAdminRouteAccess(isBillingAuthorized = false): AdminRouteAcce
       isBillingAuthorized,
       canMutateContent,
       storeEnabled: club.storeEnabled,
+      adminFlags,
     }),
-    [canMutateContent, club.presentationTemplateKey, club.role, club.slug, club.storeEnabled, isBillingAuthorized],
+    [adminFlags, canMutateContent, club.presentationTemplateKey, club.role, club.slug, club.storeEnabled, isBillingAuthorized],
   );
 }
 

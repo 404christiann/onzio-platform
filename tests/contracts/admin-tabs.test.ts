@@ -86,8 +86,13 @@ describe("tabs follow the club", () => {
       if (tab.id === "home") continue;
       const segment = tab.href.slice("/admin/".length);
       expect(existsSync(resolve(process.cwd(), `app/admin/(protected)/${segment}/page.tsx`)), tab.href).toBe(true);
-      // A tab address never takes over an existing page's address.
-      expect(ADMIN_ROUTE_MANIFEST.some((route) => (route.href as string) === tab.href), tab.href).toBe(false);
+      // A tab address never takes over an existing page's address. A classic-only
+      // row (Insights, TELEMETRY-06) is the classic sidebar's way to the same
+      // page; the reimagined admin never lists it.
+      expect(
+        ADMIN_ROUTE_MANIFEST.some((route) => (route.href as string) === tab.href && !("classicOnly" in route)),
+        tab.href,
+      ).toBe(false);
     }
   });
 });
@@ -224,8 +229,8 @@ describe("tab pages", () => {
   it("sends a classic club to its classic page and a club without the tab to /admin", () => {
     const loader = read("lib/admin-tab-page.ts");
     expect(loader).toContain("requireFreshClubSession(supabase)");
-    expect(loader).toContain('if (portal.portal !== "reimagined") redirect(classicLandingForTab(tab));');
-    expect(loader).toContain('if (!getVisibleAdminTabs(access).some((candidate) => candidate.id === tab)) redirect("/admin");');
+    expect(loader).toContain('if (portal.portal !== "reimagined" && !tabOpensOnClassic(tab)) redirect(classicLandingForTab(tab));');
+    expect(loader).toContain('if (!canOpenAdminTab(access, tab)) redirect("/admin");');
     expect(loader).not.toMatch(/service-role|SERVICE_ROLE/);
   });
 

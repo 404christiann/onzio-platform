@@ -64,6 +64,7 @@ export const ROUTE_ICONS: Record<AdminRouteIconKey, AdminIconComponent> = {
   "partners": IconBriefcase,
   "injury-report": IconWarning,
   "website-pages": IconGroupWebsite,
+  "insights": IconMatchStats,
 };
 
 export const GROUP_ICONS: Record<AdminGroupIconKey, AdminIconComponent> = {

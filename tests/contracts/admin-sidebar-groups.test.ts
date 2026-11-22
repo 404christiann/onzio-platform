@@ -48,7 +48,7 @@ describe("admin sidebar grouped navigation", () => {
     ]);
   });
 
-  it("orders Dashboard, Website, Competition, Registrations, Analytics, Club Settings, Payments", () => {
+  it("orders Dashboard, Website, Competition, Registrations, Analytics, Insights, Club Settings, Payments", () => {
     const labelsByRouteId = new Map(
       ADMIN_ROUTE_MANIFEST.map((route) => [route.id, route.label]),
     );
@@ -64,6 +64,7 @@ describe("admin sidebar grouped navigation", () => {
       "Competition",
       "Registrations",
       "Analytics",
+      "Insights",
       "Club Settings",
       "Payments",
     ]);

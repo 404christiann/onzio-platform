@@ -64,13 +64,14 @@ describe("strict admin route manifest", () => {
     // ADMIN-RE-12c (deliberate): Programs and tryouts is the 23rd; the
     // cinematic@2-only News editor (RC2027-NEWS) is the 24th; the nine other
     // Rose City editors (CLASSIC-RC-FIX) are the 25th to 33rd; All website pages
-    // (the Website hub, RC-ADMIN-01) is the 34th.
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(34);
+    // (the Website hub, RC-ADMIN-01) is the 34th; Sponsor Insights in the
+    // classic sidebar (TELEMETRY-06) is the 35th.
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(35);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      34,
+      35,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      34,
+      35,
     );
   });
 
@@ -123,6 +124,7 @@ describe("strict admin route manifest", () => {
       },
       { type: "link", routeId: "registrations" },
       { type: "link", routeId: "analytics" },
+      { type: "link", routeId: "insights" },
       {
         type: "group",
         id: "club-settings",

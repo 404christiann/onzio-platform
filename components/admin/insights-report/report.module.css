@@ -468,11 +468,15 @@
   }
 
   /* The frame: side nav, both top bars, the phone tab bar, every nav, billing
-     notices and the pickers. Nothing but the sheets prints. */
+     notices and the pickers. Nothing but the sheets prints. .admin-portal is the
+     shell's root in both admins (the reimagined one also carries
+     data-admin-shell); the classic sidebar is its [data-slot="sidebar"] child,
+     named that way so it outranks the shell's child reset below (TELEMETRY-06). */
   :global(body):has(.report) :global(aside),
   :global(body):has(.report) :global(nav),
-  :global(body):has(.report) :global([data-admin-shell]) > :global(div) > :global(header),
-  :global(body):has(.report) :global([data-admin-shell]) :global(main) > :not(.page):not(:has(.page)),
+  :global(body):has(.report) :global(.admin-portal) > :global([data-slot="sidebar"]),
+  :global(body):has(.report) :global(.admin-portal) > :global(div) > :global(header),
+  :global(body):has(.report) :global(.admin-portal) :global(main) > :not(.page):not(:has(.page)),
   :global(body):has(.report) :global([data-report-controls]),
   :global(body):has(.report) .controls {
     display: none !important;
@@ -480,9 +484,9 @@
 
   /* The frame's boxes become plain blocks on white. */
   :global(body):has(.report) :global(.admin-theme),
-  :global(body):has(.report) :global([data-admin-shell]),
-  :global(body):has(.report) :global([data-admin-shell]) > :global(div),
-  :global(body):has(.report) :global([data-admin-shell]) :global(main) {
+  :global(body):has(.report) :global(.admin-portal),
+  :global(body):has(.report) :global(.admin-portal) > :global(div),
+  :global(body):has(.report) :global(.admin-portal) :global(main) {
     display: block !important;
     min-height: 0 !important;
     margin: 0 !important;

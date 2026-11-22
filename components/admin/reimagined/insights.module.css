@@ -7,6 +7,15 @@
    implicit auto column that would grow to fit the widest table. A
    minmax(0, 1fr) column keeps every card at the page width; wide tables
    scroll inside .tableWrap instead of the page. */
+/* TELEMETRY-06: the Insights body under the classic page header, spaced like
+   the tab page's own column. */
+.classicBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  min-width: 0;
+}
+
 .dashboard {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -74,7 +74,8 @@ export type AdminRouteId =
   | "policies"
   | "partners"
   | "injury-report"
-  | "website-pages";
+  | "website-pages"
+  | "insights";
 
 export type AdminRouteIconKey =
   | "dashboard"
@@ -106,7 +107,8 @@ export type AdminRouteIconKey =
   | "policies"
   | "partners"
   | "injury-report"
-  | "website-pages";
+  | "website-pages"
+  | "insights";
 
 export type AdminGroupIconKey = "website" | "competition" | "club-settings";
 
@@ -125,6 +127,11 @@ export type AdminRouteDefinition = Readonly<{
    * classic club to the old one.
    */
   reimaginedOnly?: true;
+  /**
+   * A page the classic sidebar and search list but the reimagined admin does
+   * not, because it reaches the same page through its own tab (Insights).
+   */
+  classicOnly?: true;
   /**
    * A page whose editor exists only on the Rose City site design (News and the
    * nine other site editors). Every other design never sees the row.
@@ -493,6 +500,17 @@ export const ADMIN_ROUTE_MANIFEST = [
     groupId: null,
     reimaginedOnly: true,
   },
+  // TELEMETRY-06: the Sponsor Insights add-on in the classic sidebar. The
+  // reimagined admin has its Insights tab for the same page.
+  {
+    id: "insights",
+    label: "Insights",
+    href: "/admin/insights",
+    iconKey: "insights",
+    groupId: null,
+    classicOnly: true,
+    pageTitle: "Sponsor Insights",
+  },
 ] as const satisfies readonly AdminRouteDefinition[];
 
 export const ADMIN_NAVIGATION_MANIFEST = [
@@ -567,6 +585,7 @@ export const ADMIN_NAVIGATION_MANIFEST = [
   },
   { type: "link", routeId: "registrations" },
   { type: "link", routeId: "analytics" },
+  { type: "link", routeId: "insights" },
   {
     type: "group",
     id: "club-settings",
@@ -649,6 +668,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   "add-game": ["schedule", "fixtures", "add a game", "new match"],
   "your-club": ["club settings", "logo", "social pages", "footer", "email", "phone", "hours", "contact details"],
   "programs-and-tryouts": ["programs", "tryouts", "sign-ups", "camps", "evaluations", "registration"],
+  insights: ["sponsor insights", "sponsors", "visits", "visitors", "page views", "traffic", "monthly report"],
 } as const satisfies Record<AdminRouteId, readonly string[]>;
 
 /**
@@ -680,12 +700,29 @@ function isProtectedAdminRole(
   return role === "owner" || role === "admin";
 }
 
+/** The admin_flags key that turns on the Sponsor Insights add-on. */
+export const SPONSOR_INSIGHTS_FLAG = "sponsor_insights";
+
+/**
+ * TELEMETRY-06: the one gate for Sponsor Insights (/admin/insights and its
+ * monthly report), on either admin: an owner or admin of a club whose
+ * admin_flags.sponsor_insights is true. The classic sidebar, the reimagined
+ * Insights tab and the page loader all ask this.
+ */
+export function canSeeSponsorInsights(
+  context: Pick<AdminRouteAccessContext, "role" | "adminFlags">,
+): boolean {
+  return isProtectedAdminRole(context.role) && context.adminFlags?.[SPONSOR_INSIGHTS_FLAG] === true;
+}
+
 export function isAdminRouteVisible(
   route: AdminRouteDefinition,
   context: AdminRouteAccessContext,
 ): boolean {
   if (!isProtectedAdminRole(context.role)) return false;
   if (route.reimaginedOnly && context.adminPortal !== "reimagined") return false;
+  if (route.classicOnly && context.adminPortal === "reimagined") return false;
+  if (route.id === "insights" && !canSeeSponsorInsights(context)) return false;
   if (isAdminRouteHiddenForClub(context.clubSlug, route.id)) return false;
   const siteAdmin = codeSiteAdminFor(context);
   if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
