@@ -1,5 +1,26 @@
 # Diverse City FC Status
 
+## 2026-11-22 - TELEMETRY-FLAG: Rose City sponsor_insights on in production
+
+**Agent/package:** Claude Code (Opus 5.5), TELEMETRY-FLAG. Branch `claude/telemetry-flag-rose-city`. Docs and operator
+SQL only; not merged.
+**Status:** `done in production`. Rose City sponsor_insights on, 2026-11-22 (06:11 UTC), audit id 1245.
+
+**Completed:** on Christian's "go", after TELEMETRY-06 (#222, `c6f7f33d`) merged and deployed, ran
+`scripts/operator-sql/rose-city-sponsor-insights-enable.commit.sql` once against production (unchanged since the
+2026-11-21 rehearsal, which ended in ROLLBACK). Rose City (`32ceba0b-4e25-52c2-bb6b-d82fb87637a7`) `admin_flags`
+`{}` -> `{"sponsor_insights": true}`; `admin_portal` stays `classic` (never changed: the reimagined admin is
+abandoned). No migration, schema, code, other club or other flag touched.
+
+**Verification:** read-only pre-check (flags `{}`, portal `classic`, other club's flags hash `89fbedd5…`, 0
+`manual.club_admin_flag_set` rows) matched the rehearsal. Script read-back: `all_ok` true, row count 1, other clubs
+unchanged. Read-only check after: flags `{"sponsor_insights": true}`, portal `classic`, other club's hash unchanged
+(`89fbedd5…`), exactly one `manual.club_admin_flag_set` row (id 1245, previous `{}`, new
+`{"sponsor_insights": true}`). Local prod link files removed afterwards.
+
+**Next step:** none for the flag. Rose City sees the Insights tab with the "No visits yet" state until its site
+relaunches (public-site hold).
+
 ## 2026-11-21 - UI-POLISH-DASHBOARD: classic admin dashboard
 
 **Agent/package:** Claude Code (Opus 5.5), UI-POLISH-DASHBOARD. Branch `claude/ui-polish-dashboard` off main
