@@ -1,3 +1,18 @@
+## 2026-11-21 - TELEMETRY-04: Sponsor Insights dashboard, time on page, campaign link builder
+
+- **Status:** `ready for review`. Branch `claude/telemetry-04-insights`, rebased onto main `235eff36` (after
+  TELEMETRY-02 #216 and TELEMETRY-03 #217), PR #220 open, not merged. No `supabase/**` change. No migration, env,
+  Vercel or production change.
+  Record: `STATUS.md` (TELEMETRY-04).
+- **What:** the Insights tab reads the daily rollups with the signed-in client (RLS only): 7/30/90-day ranges ending
+  yesterday in the club's zone, totals with visitor-days and average time on page, a views-per-day chart with match
+  days, top pages/sources/devices/places/campaigns, a sponsor table, the dropped-views line, "updated daily". Held
+  clubs and clubs without rollups keep the waiting card. A client-only campaign link builder; a marked slot for the
+  TELEMETRY-05 monthly report.
+- **Open:** time on page fills in once TELEMETRY-03's heartbeats (now on main) reach the rollups; until then it reads
+  "Not measured yet". 4 classic-admin reimagined browser tests fail on the base too.
+- **Exact next step:** onzio-bot re-review of the rebased head, then Christian reviews #220.
+
 ## 2026-11-21 - TELEMETRY-03: sponsor logo views, click-through links, time on page
 
 - **Status:** `ready for review`, branch `claude/telemetry-03-site` (rebased onto main `ee21290d`, after TELEMETRY-02 #216), PR #217 open, not merged. No `supabase/**` change. No migration, env, API or middleware change. Record: `STATUS.md` (TELEMETRY-03).
