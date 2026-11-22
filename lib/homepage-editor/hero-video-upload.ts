@@ -33,6 +33,8 @@ export type HeroVideoState = {
   /** One bar for the whole replace: bytes fill 0-40, processing fills 40-100, live is 100. It never moves back. Null shows no bar. */
   barPercent: number | null;
   fileName: string | null;
+  /** Display only: the chosen file's size in bytes, kept with fileName for the file row. */
+  fileSize: number | null;
   error: HeroVideoError | null;
   message: string;
   revisionWarning: boolean;
@@ -71,13 +73,13 @@ export function heroVideoErrorMessage(code: string, context: { maxBytes?: number
     case "UNSUPPORTED_TYPE": return "That file is not a video we can use. Choose an MP4 or MOV video.";
     case "DAILY_LIMIT": return `You have used all ${context.replacesPerDay ?? HERO_VIDEO_REPLACES_PER_DAY} video replacements for today. Try again tomorrow.`;
     case "VIDEO_NOT_CONFIGURED": return "Video uploads are not set up for this site yet. Contact Onzio.";
-    case "HERO_VIDEO_NOT_AVAILABLE": return "The hero video can't be changed for this site.";
+    case "HERO_VIDEO_NOT_AVAILABLE": return "The video can't be changed for this site.";
     case "VIDEO_PREPARING": return "A video is still being prepared. You can choose a new one when that finishes.";
-    case "HERO_VIDEO_CHANGED": return "The hero video was changed somewhere else while you were working. We loaded the latest one. Try again if you still want to change it.";
+    case "HERO_VIDEO_CHANGED": return "The video was changed somewhere else while you were working. We loaded the latest one. Try again if you still want to change it.";
     case "HOMEPAGE_NOT_READY": return "Your homepage isn't set up yet, so the video can't go live. Save the homepage once, then try again.";
-    case "NO_PREVIOUS_VIDEO": return "There is no previous hero video to go back to.";
-    case "UNAUTHORIZED": case "FORBIDDEN": case "UNAUTHENTICATED": return "You don't have permission to change the hero video. Sign in again or ask an owner.";
-    default: return "Something went wrong with the hero video. Your current video is unchanged. Try again in a moment.";
+    case "NO_PREVIOUS_VIDEO": return "There is no previous video to go back to.";
+    case "UNAUTHORIZED": case "FORBIDDEN": case "UNAUTHENTICATED": return "You don't have permission to change the video. Sign in again or ask an owner.";
+    default: return "Something went wrong with the video. Your current video is unchanged. Try again in a moment.";
   }
 }
 
@@ -96,7 +98,7 @@ export async function applySwapRevision(
 const FILE_FAULT_CODES = new Set(["VIDEO_TOO_LONG", "RESOLUTION_TOO_LOW", "STORED_SIZE_TOO_LARGE"]);
 
 const idle = (status: HeroVideoStatus | null, message = ""): HeroVideoState => ({
-  phase: "idle", status, progress: null, encodeProgress: null, barPercent: null, fileName: null, error: null, message, revisionWarning: false, revisionConflict: false,
+  phase: "idle", status, progress: null, encodeProgress: null, barPercent: null, fileName: null, fileSize: null, error: null, message, revisionWarning: false, revisionConflict: false,
 });
 const BLOCKS_REPLACE = new Set<HeroVideoPhase>(["loading", "uploading", "preparing", "reverting"]);
 /** The phases where the bar is moving. The bytes take the first UPLOAD_SHARE percent of it and processing takes the rest. */
@@ -174,8 +176,8 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     set({ status: before ? { ...before, liveGuid: live.liveGuid, previousGuid: live.previousGuid, replacesUsedToday: before.replacesUsedToday + (kind === "replace" ? 1 : 0) } : before });
     await reloadStatus();
     set({
-      phase: "live", progress: null, encodeProgress: null, barPercent: kind === "replace" ? 100 : null, error: null, fileName: null, revisionWarning, revisionConflict,
-      message: kind === "replace" ? HERO_VIDEO_LIVE_COPY : "The previous hero video is live again on your site. It went live by itself and did not need Save.",
+      phase: "live", progress: null, encodeProgress: null, barPercent: kind === "replace" ? 100 : null, error: null, fileName: kind === "replace" ? state.fileName : null, fileSize: kind === "replace" ? state.fileSize : null, revisionWarning, revisionConflict,
+      message: kind === "replace" ? HERO_VIDEO_LIVE_COPY : "The previous video is live again on your site. It went live by itself and did not need Save.",
     });
   }
 
@@ -269,10 +271,10 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     async replace(file: File) {
       if (BLOCKS_REPLACE.has(state.phase) || !state.status) return;
       const { maxBytes, maxSeconds } = state.status;
-      if (!file.type.startsWith("video/")) return set({ phase: "error", error: { code: "UNSUPPORTED_TYPE", message: heroVideoErrorMessage("UNSUPPORTED_TYPE"), retry: null }, message: heroVideoErrorMessage("UNSUPPORTED_TYPE") });
-      if (file.size > maxBytes) return set({ phase: "error", error: { code: "FILE_TOO_LARGE", message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()), retry: null }, message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()) });
+      if (!file.type.startsWith("video/")) return set({ phase: "error", fileName: null, fileSize: null, error: { code: "UNSUPPORTED_TYPE", message: heroVideoErrorMessage("UNSUPPORTED_TYPE"), retry: null }, message: heroVideoErrorMessage("UNSUPPORTED_TYPE") });
+      if (file.size > maxBytes) return set({ phase: "error", fileName: null, fileSize: null, error: { code: "FILE_TOO_LARGE", message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()), retry: null }, message: heroVideoErrorMessage("FILE_TOO_LARGE", ctx()) });
       const token = ++run;
-      set({ phase: "uploading", fileName: file.name, progress: { sent: 0, total: file.size }, encodeProgress: null, error: null, revisionWarning: false, revisionConflict: false, message: HERO_VIDEO_UPLOADING_COPY });
+      set({ phase: "uploading", fileName: file.name, fileSize: file.size, progress: { sent: 0, total: file.size }, encodeProgress: null, error: null, revisionWarning: false, revisionConflict: false, message: HERO_VIDEO_UPLOADING_COPY });
       let durationSeconds: number | undefined;
       try { durationSeconds = await deps.readDuration(file); } catch { durationSeconds = undefined; }
       if (!alive(token)) return;
@@ -289,7 +291,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
           handle = null;
           const guid = uploadGuid;
           uploadGuid = null;
-          set({ phase: "error", progress: null, error: { code: "UPLOAD_FAILED", message: "The upload was interrupted and could not continue. Your current hero video is unchanged. Choose the file to try again.", retry: null }, message: "The upload failed. Your current hero video is unchanged." });
+          set({ phase: "error", progress: null, error: { code: "UPLOAD_FAILED", message: "The upload was interrupted and could not continue. Your current video is unchanged. Choose the file to try again.", retry: null }, message: "The upload failed. Your current video is unchanged." });
           if (guid) abandon(guid, token);
         },
         onSuccess: () => {
@@ -313,7 +315,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       handle = null;
       const guid = uploadGuid;
       uploadGuid = null;
-      set({ ...idle(state.status), message: "Upload canceled. Your current hero video is unchanged." });
+      set({ ...idle(state.status), message: "Upload canceled. Your current video is unchanged." });
       if (guid) abandon(guid, token);
     },
 
@@ -327,7 +329,7 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       const status = state.status;
       if (BLOCKS_REPLACE.has(state.phase) || !status?.previousGuid) return;
       const token = ++run;
-      set({ phase: "reverting", error: null, revisionWarning: false, revisionConflict: false, message: "Going back to the previous hero video…" });
+      set({ phase: "reverting", fileName: null, fileSize: null, error: null, revisionWarning: false, revisionConflict: false, message: "Going back to the previous video…" });
       try {
         const live = await deps.revert(status.liveGuid, status.previousGuid);
         if (alive(token)) await complete(live, "revert");

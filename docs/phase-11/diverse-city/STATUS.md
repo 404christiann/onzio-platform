@@ -109,6 +109,25 @@ real rewrite + hold path is covered only by the `isPublicTenantPath` unit test.
 
 **Next step:** onzio-bot review of the PR, then the production gate on Christian's word.
 
+## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI: Untitled-style uploader on the proven one-bar flow
+
+- **Agent / package:** Claude Code (Opus coordinating, Sonnet worker), `RC-HERO-VIDEO-UPLOADER-UI`, branch `claude/rc-hero-video-uploader-ui` from main `df3e9a3`.
+- **Status:** `in_progress`, committed and pushed, PR open. Not merged. UI only: no migration, no server, route, SQL, or dependency change.
+- **Completed:**
+  - `HeroVideoControl` restyled as an Untitled-UI-style uploader with the admin's own tokens (Tailwind v3, lucide icons). The group is titled "Video" (Christian, 2026-11-21: "just call it Video").
+  - Idle: a dashed drop zone (CloudUpload, "Click to upload or drag and drop", "MP4, MOV or WebM · up to 500 MB · up to 10 minutes · at least 720p"), with the "{n} of 10 replaces left today." line under it. The zone is one native button using `aria-disabled`, not `disabled`, so a drop is always cancelled and never opens the file. Click, Enter and Space open the picker. Drag and drop is new.
+  - While a video uploads or processes, the drop zone is hidden and the file row takes its place (Christian, 2026-11-21). The row shows a FileVideo icon, the file name (truncated, with a `title`), the size, the same bar with an aria-hidden % beside it, and "Uploading…"/"Processing…" with the existing hint line. A Trash2 cancel button shows only while uploading.
+  - Live: full bar, CheckCircle2, and the visible label "Completed". The live region still says "Your new video is live." for screen readers.
+  - Failed: a red row with CircleAlert and the unchanged error copy, plus "Try again" (opens the picker) and the existing Dismiss.
+  - Revert: the same flow and confirmation, restyled as a secondary button with Undo2.
+  - The only controller change is display-only: `fileSize` was added next to `fileName`, and both are kept at live for a replace. The progress formula, phases, polling, nav guard, cancel and revert are untouched.
+- **Review fixes (PR 215):**
+  - **Medium:** once a video was live, a second file rejected in the browser (too large, or not a video) showed the red row with the live file's name and size. A failed revert did the same. The two reject paths and the start of a revert now clear `fileName`/`fileSize`. Four contract tests cover too large, not a video, huge.mov then notes.pdf, and failed revert; all four fail on the old code. A Playwright test covers notes.pdf after live.
+  - **Low:** a Playwright test with the editor disabled (`?disabled` in the fixture) proves the aria-disabled zone starts nothing on click, Enter or drop, and still cancels the drop. Removing the zone's drop guard makes the test fail.
+- **Verification:** final table in the PR body at the pushed head. Screenshots: `test-results/hero-video-completion/uploader-{idle,uploading,processing,completed,failed}-{desktop,375}.png`.
+  - Admin-facing messages no longer say "hero video" (Christian, 2026-11-21: "drop hero"). For example, "Your current video is unchanged." and "The previous video is live again on your site." Screen-reader labels ("Choose hero video", "Hero video progress", "Current hero video preview") and server/route copy (frozen) are unchanged.
+- **Exact next step:** Christian reviews and merges the PR. No production gate is needed (no migration).
+
 ## 2026-11-21 - TELEMETRY-01 P1: in production, Rose City add-on on
 
 **Agent/package:** Claude Code (Opus 5.5), TELEMETRY-01 P1, PR #158 (merged as `d6adb080` from head `c33c6251`).
