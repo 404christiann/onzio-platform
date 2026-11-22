@@ -3,6 +3,8 @@
 import {
   type ImgHTMLAttributes,
   type ReactNode,
+  useEffect,
+  useRef,
   useState,
 } from "react";
 import ImageFallback, {
@@ -38,6 +40,14 @@ function ResilientNativeImageAttempt({
   ...props
 }: Props) {
   const [failed, setFailed] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  // A server-rendered image can fail before React attaches onError; catch that
+  // case on mount so it still falls back instead of showing a broken icon.
+  useEffect(() => {
+    const image = imageRef.current;
+    if (image && image.complete && image.naturalWidth === 0 && image.getAttribute("src")) setFailed(true);
+  }, []);
 
   if (failed) {
     if (hideOnError || !alt) return null;
@@ -56,6 +66,7 @@ function ResilientNativeImageAttempt({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       {...props}
+      ref={imageRef}
       src={src}
       alt={alt}
       data-critical-image={alt ? "true" : undefined}

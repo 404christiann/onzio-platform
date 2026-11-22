@@ -1,5 +1,41 @@
 # Diverse City FC Status
 
+## 2026-11-21 - UI-POLISH-INSIGHTS: sponsor insights + monthly report
+
+**Agent/package:** Claude Code (Opus 5.5), UI-POLISH-INSIGHTS. Branch `claude/ui-polish-insights`, PR against main
+(main `c6f7f33d` merged in after TELEMETRY-06 #222 merged). Not merged.
+**Status:** `ready for review`. Visual, markup and copy only: no data query, gate (`lib/admin-tabs.ts`,
+`lib/admin-tab-page.ts`), `app/api/**` or `supabase/**` change; no new dependency.
+
+**Completed:**
+- Classic Insights tab rebuilt around one question, "what did my sponsors get this month?": the month's answer as
+  the page heading ("Your sponsors were seen 4,210 times in November"), the per-sponsor table (logo views, clicks,
+  click rate, most seen first, total row, listed-but-unseen sponsors included), the month's site traffic with CSS
+  daily bars, where visitors came from (last 7/30/90 days), and the tracked link builder in classic form controls.
+  One primary action: "Printable report". Month picker + "Updated daily". Reads the existing month report
+  (`readReportMonths`, `readMonthlyReportRows`, `buildMonthlyReport`) and `loadInsightsData`; no query changed.
+- Empty states: Rose City (held) and live-without-visits both say "No visits yet" with when numbers appear.
+- Report made print-first: classic header and pickers on screen; "All sponsors" prints a summary page (the same
+  sponsor table) then one page per sponsor; black on white, rows never split, table head repeats, total prints once.
+- Phone: the sponsor table reflows into a list below 640px; tap targets 44px; 16px controls (no iOS zoom).
+- `ResilientNativeImage` now also falls back for an image that failed before hydration (broken logos printed).
+- Prototype of three sponsor-section layouts kept on `prototype/ui-polish-insights-sponsor-layouts` (not for merge).
+
+**Verification:** `npx tsc --noEmit` clean; `npm run lint` 0 errors; `npm run test:unit` 401 files / 5259 tests;
+`npm run build` passed. Browser on local Alpha (classic) under `scripts/with-local-db-lock.sh`:
+`admin-classic-insights.spec.ts` desktop 3/3. Screenshot harness at 375/1280 for data, empty, held, 1 sponsor,
+no sponsors, unseen and 30 sponsors (1,234,567-view rows, 56-char unbroken name), plus 320px, 200% zoom and dark:
+no horizontal overflow, no tap target under 44px, table caption and row/column headers read correctly. PDFs:
+Letter and A4, 4 pages for 3 active sponsors + summary; 30 sponsors 33 (Letter) / 32 (A4) pages.
+
+**Review fixes (onzio-bot, 2 Lows):** (1) `ResilientNativeImage`'s mount check now has a browser test
+(`admin-classic-insights.spec.ts`, a sponsor logo that 404s leaves no `<img>`); it fails with the check removed
+(verified on a build with main's version) and passes with it. (2) When the visitor numbers fail to load, "Where
+visitors came from" shows an error instead of vanishing, and the tracked link builder stays (home page only);
+contract test added, red on the previous code. Unit 401 files / 5260 tests; browser 4/4 desktop.
+
+**Next step:** Christian reviews the PR. The Rose City flag script still waits for his "go".
+
 ## 2026-11-21 - TELEMETRY-06: Sponsor Insights on the classic admin portal
 
 **Agent/package:** Claude Code (Opus 5.5), TELEMETRY-06. Branch `claude/telemetry-06-classic-insights` off main

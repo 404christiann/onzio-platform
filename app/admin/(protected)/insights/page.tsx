@@ -1,4 +1,9 @@
-import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
+import {
+  ClassicInsightsEmpty,
+  ClassicInsightsError,
+  ClassicSponsorInsights,
+} from "@/components/admin/insights/classic/ClassicSponsorInsights";
+import { monthDays, sponsorSummary } from "@/components/admin/insights/classic/sponsor-lines";
 import { CampaignLinkBuilder } from "@/components/admin/reimagined/CampaignLinkBuilder";
 import { InsightsDashboard } from "@/components/admin/reimagined/InsightsDashboard";
 import { InsightsWaiting } from "@/components/admin/reimagined/InsightsWaiting";
@@ -8,6 +13,15 @@ import { getAdminTab } from "@/lib/admin-tabs";
 import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 import { loadInsightsData } from "@/lib/telemetry/insights-data";
 import { parseInsightsRange } from "@/lib/telemetry/insights-math";
+import { formatClubDate } from "@/lib/club-time";
+import {
+  buildMonthlyReport,
+  chooseReportMonth,
+  currentClubMonth,
+  parseReportMonth,
+  readMonthlyReportRows,
+  readReportMonths,
+} from "@/lib/telemetry/report-data";
 import frame from "@/components/admin/reimagined/frame.module.css";
 import styles from "@/components/admin/reimagined/insights.module.css";
 
@@ -20,7 +34,9 @@ import styles from "@/components/admin/reimagined/insights.module.css";
 // builder sits under the numbers; the monthly sponsor report fills its slot in
 // TELEMETRY-05. TELEMETRY-06: a classic club with the add-on opens the same
 // page under the classic shell, with the classic page header in place of the
-// reimagined tab heading.
+// reimagined tab heading. UI-POLISH-INSIGHTS: the classic page is organized
+// around one month (components/admin/insights/classic/), reading the same month
+// report the printable report reads, plus the visitor breakdown below it.
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +47,51 @@ export default async function InsightsTabPage({
 }) {
   const { supabase, club, portal } = await loadAdminTabPage("insights");
   const held = PUBLIC_SITE_HOLD_SLUGS.has(club.slug);
+  const query = await searchParams;
+
+  if (portal.portal !== "reimagined") {
+    if (held) return <ClassicInsightsEmpty held />;
+    const available = await readReportMonths(supabase, club.id);
+    if (available.status === "error") return <ClassicInsightsError />;
+    if (available.months.length === 0) return <ClassicInsightsEmpty held={false} />;
+    const currentMonth = currentClubMonth(portal.timeZone);
+    const month =
+      chooseReportMonth(parseReportMonth(query.month), available.months, currentMonth) ?? available.months[0];
+    const range = parseInsightsRange(query.range);
+    const [rows, visitors] = await Promise.all([
+      readMonthlyReportRows(supabase, club.id, month),
+      loadInsightsData(supabase, { clubId: club.id, timeZone: portal.timeZone, range }),
+    ]);
+    if (rows.status === "error") return <ClassicInsightsError />;
+    const report = buildMonthlyReport({ month, sponsor: "all", timeZone: portal.timeZone, ...rows });
+    const matchDates = new Set(rows.matches.map((match) => String(match.date).slice(0, 10)));
+    const counted = rows.totals
+      .map((row) => String(row.local_date).slice(0, 10))
+      .filter((date) => date.startsWith(month));
+    return (
+      <ClassicSponsorInsights
+        report={report}
+        summary={sponsorSummary(report, rows.sponsors)}
+        days={monthDays(report, rows.totals, matchDates)}
+        latestDay={counted.length ? counted.sort().at(-1)! : null}
+        months={available.months.map((value) => ({
+          value,
+          label: formatClubDate(`${value}-01`, "month-year") ?? value,
+        }))}
+        currentMonth={currentMonth}
+        range={range}
+        visitors={visitors}
+        host={club.primaryDomain}
+      />
+    );
+  }
+
   const result = held
     ? null
     : await loadInsightsData(supabase, {
         clubId: club.id,
         timeZone: portal.timeZone,
-        range: parseInsightsRange((await searchParams).range),
+        range: parseInsightsRange(query.range),
       });
 
   const title = getAdminTab("insights").title;
@@ -67,15 +122,6 @@ export default async function InsightsTabPage({
         </section>
       </div>
     );
-
-  if (portal.portal !== "reimagined") {
-    return (
-      <AdminPage data-admin-insights-page="classic">
-        <AdminPageHeader title={title} description={subtitle} />
-        <div className={`${frame.tokens} ${styles.classicBody}`}>{body}</div>
-      </AdminPage>
-    );
-  }
 
   return (
     <TabPage tab="insights" title={title} subtitle={subtitle}>

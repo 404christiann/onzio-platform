@@ -20,7 +20,7 @@ const MONTH_START = "2004-03-01";
 const MONTH_NEXT = "2004-04-01";
 const MATCH_DAY = "2004-03-14";
 const FIXTURE_OPPONENT = "TELEMETRY-05 fixture";
-const FOOTER = "Measured first-party site traffic. No cookies; visitors counted per day.";
+const FOOTER = "Counted by the club's own website, without cookies. Each visitor is counted once per day.";
 const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
 
 test.describe.configure({ mode: "serial" });
@@ -229,8 +229,8 @@ test("one sponsor: its sheet shows the seeded numbers, the match day, the footno
   expect(monthValues.every((value) => /^\d{4}-\d{2}$/.test(value))).toBe(true);
   expect(monthValues).toEqual([...monthValues].sort().reverse());
   await expect(controls.getByRole("button", { name: "Show" })).toBeVisible();
-  await expect(controls.getByRole("button", { name: "Download PDF" })).toBeVisible();
-  await expect(controls.getByRole("link", { name: "Back to Insights" })).toHaveAttribute("href", "/admin/insights");
+  await expect(controls.getByRole("button", { name: "Print or save as PDF" })).toBeVisible();
+  await expect(controls.getByRole("link", { name: "Sponsor insights" })).toHaveAttribute("href", "/admin/insights");
 
   await page.screenshot({ path: `${OUT}/one-sponsor.png`, fullPage: true });
 
@@ -288,7 +288,7 @@ test("print: the admin frame and the pickers go, the sheet stays", async ({ page
   const headers = page.locator("[data-admin-shell] > div > header");
   const navs = page.locator("[data-admin-shell] nav");
   const controls = page.locator("[data-report-controls]");
-  const downloadPdf = page.getByRole("button", { name: "Download PDF" });
+  const downloadPdf = page.getByRole("button", { name: "Print or save as PDF" });
 
   // On screen they all show; that is what makes the print checks below mean something.
   expect(await visibleCount(aside)).toBe(1);
@@ -322,7 +322,7 @@ test("print: other admin pages keep their frame after the report was open", asyn
   await page.goto(reportUrl(SPONSOR_BAKERY.id));
   await expect(page.locator("[data-report-page]")).toHaveCount(1);
   // Client-side navigation: the report's stylesheet may stay loaded, but its print rules must not apply.
-  await page.getByRole("link", { name: "Back to Insights" }).click();
+  await page.getByRole("link", { name: "Sponsor insights" }).click();
   await expect(page).toHaveURL(/\/admin\/insights$/);
   await expect(page.locator("[data-sponsor-report]")).toHaveCount(0);
   await page.emulateMedia({ media: "print" });
@@ -346,7 +346,9 @@ test("PDF: Letter and A4 files for one sponsor are one page, all sponsors one pa
   }
 
   await page.goto(reportUrl("all"));
-  await expect(page.locator("[data-report-page]")).toHaveCount(3);
+  // UI-POLISH-INSIGHTS: the summary page, then one page per sponsor with numbers.
+  await expect(page.locator("[data-report-page]")).toHaveCount(4);
+  await expect(page.locator("[data-report-summary]")).toHaveCount(1);
   const all = `${OUT}/sponsor-report-all.pdf`;
   await page.pdf({ path: all, format: "Letter", printBackground: true, margin });
   expect((await stat(all)).size).toBeGreaterThan(1024);
