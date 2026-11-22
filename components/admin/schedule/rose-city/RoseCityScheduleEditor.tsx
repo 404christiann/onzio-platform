@@ -35,6 +35,7 @@ import {
 import { RoseCityMatchFields } from "./RoseCityMatchFields";
 import { anchorAfterQuick, anchorStamps, rebaseForm, saveMatches, type Anchor, type MatchesApi, type PendingWrite, type SavedMatchRow } from "./rose-city-schedule-save";
 import { MatchLive, MatchThumb, fixturesSignature, THUMB_SIZE } from "./MatchPreview";
+import { matchPreviewFixtures } from "./match-preview-fixtures";
 import styles from "./RoseCityScheduleEditor.module.css";
 
 const COLUMNS = "id, date, time, opponent, opponent_short_name, opponent_logo_url, opponent_logo_asset_id, competition, league_logo_url, league_logo_asset_id, sponsor_name, sponsor_logo_url, sponsor_logo_asset_id, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, replay_video_url, attendance, summary, season_id, updated_at";
@@ -399,9 +400,8 @@ export default function RoseCityScheduleEditor() {
   const active = editingKey ? formOf(editingKey) : undefined;
   const activeFixtures = useMemo(() => {
     if (!editingKey || !active) return [];
-    const own = fixtureFromForm(editingKey, active);
-    return nextFixture && nextFixture.id !== editingKey ? [nextFixture, own] : [own];
-  }, [editingKey, active, nextFixture]);
+    return matchPreviewFixtures(fixtureFromForm(editingKey, active), nextFixture, timeZone).fixtures;
+  }, [editingKey, active, nextFixture, timeZone]);
   const dialogFixtures = useDeferredValue(activeFixtures);
 
   if (loadError && !ready) return <PageFrame title="Schedule" breadcrumb={CRUMBS} description={DESCRIPTION}>
@@ -466,8 +466,7 @@ export default function RoseCityScheduleEditor() {
                 <header className={styles.monthHead}><h2>{month}</h2><span>{items.length} {items.length === 1 ? "match" : "matches"}</span></header>
                 <ul className={styles.grid} data-match-cards="">
                   {items.map(({ key, form, isNew }) => {
-                    const fixtures = fixtureFromForm(key, form);
-                    const row = nextFixture && nextFixture.id !== key ? [nextFixture, fixtures] : [fixtures];
+                    const { fixtures: row, listed } = matchPreviewFixtures(fixtureFromForm(key, form), nextFixture, timeZone);
                     const changed = dirtyKeys.includes(key);
                     const label = `Edit match against ${form.opponent.trim() || "Opponent"}`;
                     const needs = needsResult(form) && !isNew;
@@ -491,7 +490,7 @@ export default function RoseCityScheduleEditor() {
                                 {isNew ? <span className={`${styles.tag} ${styles.tagNew}`}>New match</span>
                                   : needs ? <span className={styles.tag}>Needs result</span>
                                   : outcome ? <span className={styles.score} data-outcome={outcome}><b>{outcome}</b>{form.rose_city_score} – {form.opponent_score}{summaryLine(form) ? ` · ${summaryLine(form)}` : ""}</span>
-                                  : "Upcoming"}
+                                  : listed ? "Upcoming" : "Upcoming · on the site once it is next"}
                               </span>
                             </div>
                             <div className={styles.actions}>

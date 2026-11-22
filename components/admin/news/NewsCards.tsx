@@ -14,6 +14,7 @@ import { newsCategory } from "@/lib/cinematic-news";
 import type { NewsPublicArticle } from "@/lib/cinematic-news-query";
 import { draftFingerprint, previewArticle, type NewsCardItem } from "./news-page";
 import styles from "./NewsCards.module.css";
+import { useFitPreviewScale } from "@/components/admin/ui/editor-kit/fitPreviewScale";
 
 const PREVIEW_WIDTH = 860;
 const PREVIEW_SCALE = 0.4;
@@ -43,6 +44,7 @@ type ThumbProps = { card: NewsCardItem; shared: CinematicHomepageContent | null;
 /** The real public News card (CinematicNewsList with one article), fed the draft. Re-renders only when its own draft changes. */
 const Thumb = memo(function Thumb({ card, shared, lazy }: ThumbProps) {
   const { ref, near } = useNearViewport(lazy);
+  const scale = useFitPreviewScale(ref, PREVIEW_WIDTH, PREVIEW_SCALE);
   const scope = `nv${useId().replace(/[^a-zA-Z0-9]/g, "")}-`;
   useEffect(() => {
     const node = ref.current;
@@ -58,7 +60,7 @@ const Thumb = memo(function Thumb({ card, shared, lazy }: ThumbProps) {
     [card.key, draftFingerprint(card.draft), card.publishedAt, card.slug]);
   return <div ref={ref} className={styles.box} aria-hidden="true" inert data-news-thumb="" data-preview-mounted={near}>
     <Shimmer className={styles.placeholder} data-preview-placeholder="" />
-    {near && <div className={styles.scaled} style={{ "--preview-width": `${PREVIEW_WIDTH}px`, "--preview-scale": PREVIEW_SCALE } as CSSProperties}>
+    {near && <div className={styles.scaled} style={{ "--preview-width": `${PREVIEW_WIDTH}px`, "--preview-scale": scale } as CSSProperties}>
       <SettledPreview urls={article.cover ? [article.cover.url] : []}>
         <CinematicShell contentOnly initialContent={shared}><CinematicNewsList articles={[article]} /></CinematicShell>
       </SettledPreview>

@@ -34,6 +34,9 @@
 .table { display: grid; gap: 14px; min-inline-size: 0; }
 
 /* One card's part of the page. The public components own their markup, so what has no flag is hidden here, never in the components. */
+/* Card previews are not in an iframe, so the public page's desktop media queries see the admin window. Its
+   `.tickets-top:has(...):has(...)` grid rule (0,4,0) beat this list (0,3,0) and every Tickets card showed the page top.
+   Hiding the other sections here is absolute by intent. */
 .only { min-inline-size: 0; }
 .only[data-only="page"] :global(.tickets-perks),
 .only[data-only="page"] :global(.tickets-includes),
@@ -52,4 +55,4 @@
 .only[data-only="match"] :global(.tp-heading),
 .only[data-only="facts"] :global(.tp-heading),
 .only[data-only="raffle"] :global(.tp-heading),
-.only[data-only="donor"] :global(.tp-heading) { display: none; }
+.only[data-only="donor"] :global(.tp-heading) { display: none !important; }
