@@ -1,3 +1,9 @@
+## 2026-11-21 - TELEMETRY-05: monthly sponsor report (print to PDF)
+
+- **Status:** `ready for review`, branch `claude/telemetry-05-report`, rebased onto main `9998fcc0` (after TELEMETRY-02/03/04), PR #218 open, not merged. No `supabase/**` change. No migration, env or production change. Record: `STATUS.md` (TELEMETRY-05).
+- **What:** `/admin/insights/report?month=&sponsor=` prints one sheet per sponsor-month from the daily rollups only (signed-in client, Insights-tab access); "Download PDF" is the browser print dialog, no new dependency. `reportHref()` in `lib/telemetry/report-data.ts` is for TELEMETRY-04's slot.
+- **Exact next step:** Christian merges #218 once CI is green on the rebased head (local checks all pass; the 4 classic-admin browser failures are on the base too).
+
 ## 2026-11-21 - TELEMETRY-04: Sponsor Insights dashboard, time on page, campaign link builder
 
 - **Status:** `ready for review`. Branch `claude/telemetry-04-insights`, rebased onto main `235eff36` (after
