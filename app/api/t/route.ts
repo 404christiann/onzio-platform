@@ -22,6 +22,16 @@ export const dynamic = "force-dynamic";
 // the database stays the real limit.
 const NETWORK_MAX_PER_MINUTE = 600;
 const limiter = createFixedWindowLimiter({ limit: NETWORK_MAX_PER_MINUTE, windowMs: 60_000, maxKeys: 10_000 });
+// Heartbeats (time on page) have their own per-network limiter and never spend the one above, because
+// the database gives them their own club-wide budget and keeps them off the network caps: otherwise
+// the heartbeats of a stadium's fans (one network) would starve that network's page views. 1,200 a
+// minute is 300 visible tabs behind one network at one heartbeat per 15 s.
+const HEARTBEAT_NETWORK_MAX_PER_MINUTE = 1200;
+const heartbeatLimiter = createFixedWindowLimiter({
+  limit: HEARTBEAT_NETWORK_MAX_PER_MINUTE,
+  windowMs: 60_000,
+  maxKeys: 10_000,
+});
 
 function noContent(): Response {
   return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
@@ -51,7 +61,9 @@ export async function POST(request: Request): Promise<Response> {
   // An IPv6 caller is keyed on its /48, so rotating /64 addresses inside one block shares one too;
   // an IPv4 caller on its address.
   const networkKey = decision.event.wideNetworkMaterial ?? decision.event.networkMaterial;
-  if (!limiter.allow(`${decision.clubId}:${networkKey}`)) return noContent();
+  // Heartbeats use only the heartbeat limiter; every other type uses the 600 limiter.
+  const routeLimiter = decision.event.type === "heartbeat" ? heartbeatLimiter : limiter;
+  if (!routeLimiter.allow(`${decision.clubId}:${networkKey}`)) return noContent();
 
   // Serialise once and sign exactly that text; the database verifies the same bytes.
   const payload = JSON.stringify(decision.event);

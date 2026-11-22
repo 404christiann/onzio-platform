@@ -2349,12 +2349,101 @@ export type Database = {
           },
         ]
       }
+      page_daily_breakdowns: {
+        Row: {
+          club_id: string
+          dimension: string
+          engaged_ms: number
+          local_date: string
+          value: string
+          views: number
+          visitors: number
+        }
+        Insert: {
+          club_id: string
+          dimension: string
+          engaged_ms?: number
+          local_date: string
+          value: string
+          views?: number
+          visitors?: number
+        }
+        Update: {
+          club_id?: string
+          dimension?: string
+          engaged_ms?: number
+          local_date?: string
+          value?: string
+          views?: number
+          visitors?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_daily_breakdowns_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_daily_totals: {
+        Row: {
+          club_id: string
+          computed_at: string
+          dropped: number
+          dropped_heartbeats: number
+          engaged_ms: number
+          engaged_views: number
+          entries: number
+          local_date: string
+          views: number
+          visitors: number
+          visits: number
+        }
+        Insert: {
+          club_id: string
+          computed_at?: string
+          dropped?: number
+          dropped_heartbeats?: number
+          engaged_ms?: number
+          engaged_views?: number
+          entries?: number
+          local_date: string
+          views?: number
+          visitors?: number
+          visits?: number
+        }
+        Update: {
+          club_id?: string
+          computed_at?: string
+          dropped?: number
+          dropped_heartbeats?: number
+          engaged_ms?: number
+          engaged_views?: number
+          entries?: number
+          local_date?: string
+          views?: number
+          visitors?: number
+          visits?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_daily_totals_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       page_events: {
         Row: {
           city: string | null
           club_id: string
           country: string | null
           device: string
+          engaged_ms: number | null
           event_type: string
           id: number
           is_entry: boolean
@@ -2364,6 +2453,7 @@ export type Database = {
           path: string
           referrer_host: string | null
           source_type: string
+          sponsor_id: string | null
           utm_campaign: string | null
           utm_content: string | null
           utm_medium: string | null
@@ -2377,6 +2467,7 @@ export type Database = {
           club_id: string
           country?: string | null
           device: string
+          engaged_ms?: number | null
           event_type: string
           id?: never
           is_entry: boolean
@@ -2386,6 +2477,7 @@ export type Database = {
           path: string
           referrer_host?: string | null
           source_type: string
+          sponsor_id?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
           utm_medium?: string | null
@@ -2399,6 +2491,7 @@ export type Database = {
           club_id?: string
           country?: string | null
           device?: string
+          engaged_ms?: number | null
           event_type?: string
           id?: never
           is_entry?: boolean
@@ -2408,6 +2501,7 @@ export type Database = {
           path?: string
           referrer_host?: string | null
           source_type?: string
+          sponsor_id?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
           utm_medium?: string | null
@@ -3834,6 +3928,41 @@ export type Database = {
           },
         ]
       }
+      sponsor_daily_rollups: {
+        Row: {
+          clicks: number
+          club_id: string
+          local_date: string
+          logo_viewers: number
+          logo_views: number
+          sponsor_id: string
+        }
+        Insert: {
+          clicks?: number
+          club_id: string
+          local_date: string
+          logo_viewers?: number
+          logo_views?: number
+          sponsor_id: string
+        }
+        Update: {
+          clicks?: number
+          club_id?: string
+          local_date?: string
+          logo_viewers?: number
+          logo_views?: number
+          sponsor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_daily_rollups_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           active: boolean
@@ -4515,6 +4644,7 @@ export type Database = {
           revision_before: string
         }[]
       }
+      rollup_page_telemetry: { Args: { p_days?: number }; Returns: Json }
       run_billing_lifecycle: {
         Args: {
           p_now: string

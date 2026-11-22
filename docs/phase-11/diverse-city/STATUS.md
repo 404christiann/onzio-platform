@@ -1,5 +1,114 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-02: review Medium fixed (heartbeats need an open visit with a view)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet worker), TELEMETRY-02, PR #216, branch
+`claude/telemetry-02-data`. **Status:** pushed, not merged; migration applied to no hosted database.
+
+**Completed:** onzio-bot's Medium on #216 is fixed. The problem: one IP rotating its user agent could send about 6,000
+fake heartbeats a minute, each one a new visitor, and real heartbeats were dropped with nothing recorded. The fix is in
+`20261121230000_page_telemetry_rollups.sql`, edited in place again (new sha256 `f08fb9f1…1435`):
+- A heartbeat never creates a salt. It is accepted only into the visitor's open visit, and only if that visit contains
+  a view; otherwise it returns `no_visit` and writes nothing.
+- Accepted heartbeats spend the visitor cap (60), then a per-network heartbeat cap `'hn:'` (1,200/min), then `'h:*'`
+  (6,000/min).
+- Every rate-limited heartbeat counts one drop under the new reason `'heartbeat'`.
+- In the rollup, `visitors` counts page-view visitors only. `dropped` excludes heartbeat drops, which go to the new
+  `page_daily_totals.dropped_heartbeats`.
+- The bucket and drop-reason checks are widened. Types are regenerated (`dropped_heartbeats`).
+- At GATE-MIGRATE, confirm `20261121230000` is not already in production before pushing. #218 carries the old copy
+  and needs a rebase after #216 lands.
+
+**Files:** the migration, `lib/database.generated.ts`, `tests/database/page-telemetry.test.ts`,
+`tests/database/page-telemetry-rollups.test.ts`, `docs/onzio-platform-plan.md`, this file.
+
+**Verification (local, `with-local-db-lock.sh`, CLI 2.109.1):**
+- `db reset --local`: ledger 97, max `20261121230000`. `db:types:check` passes.
+- Telemetry, rollup and purge DB tests: run 1 had 129/130, with P1's backlog-sweep test timing out on the cold first
+  run after reset. Run 2 had 130/130.
+- Full `test:db`: 82/82 files, 1,554/1,554.
+- Non-DB vitest: 5,253 passed, 1 skipped. `test:architecture`: 432 passed, 1 skipped.
+- `tsc`, lint and `build` are clean.
+
+**Next step:** onzio-bot re-review, then the production gate on Christian's "go".
+
+## 2026-11-21 - TELEMETRY-02: review Low fixed (heartbeats no longer spend page views' budget)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet worker), TELEMETRY-02, PR #216, branch
+`claude/telemetry-02-data`. **Status:** pushed, not merged; migration applied to no hosted database.
+
+**Completed:** onzio-bot's one Low on #216 (heartbeats counted against the club's 1,200/min cap, so ~300 concurrent
+visitors would crowd out page views on a matchday) is fixed in `20261121230000_page_telemetry_rollups.sql`, edited in
+place (not applied anywhere; new sha256 `07442398…0fce`). Heartbeats skip the network, /48 and club `'*'` caps. They
+spend the shared visitor cap and their own club-wide `'h:*'` budget (6,000/min). Dropped heartbeats are not drop
+counts. The rate-window bucket check allows `'h:*'`. `/api/t` gives heartbeats their own per-instance limiter
+(1,200/min per network); views keep the 600/min one. Other cap constants and the headroom rule are unchanged. Plan
+section updated. `claude/telemetry-05-report` was cut from `dd4bfb85` and carries the old migration text; it picks
+up the new text when it rebases onto main after #216 merges, as long as it doesn't edit the file.
+
+**Files:** the migration, `app/api/t/route.ts`, `tests/database/page-telemetry.test.ts` (heartbeat budget tests),
+`tests/contracts/page-telemetry-beacon.test.ts` (route limiter test), `docs/onzio-platform-plan.md`, this file.
+
+**Verification (local, `with-local-db-lock.sh`, CLI 2.109.1):**
+- `db reset --local`: ledger 97, max `20261121230000`. `db:types:check` passes.
+- `test:db`: 1,544 passed, 1 failed. The failure is P1's backlog-sweep test hitting its 15 s timeout while the Mac's
+  load average was 15-18 from other sessions. That test passed on its own 2 of 2 times (about 0.3 s), and the
+  worker's two runs of the telemetry, rollup and purge files passed 121/121.
+- Non-DB vitest: 5,253 passed, 1 skipped. `test:architecture`: 432 passed, 1 skipped.
+- `tsc`, lint and `build` are clean.
+
+**Next step:** onzio-bot re-review, then the production gate on Christian's "go".
+
+## 2026-11-21 - TELEMETRY-02: data layer for telemetry P2-P5 (sponsor events, time on page, daily rollups)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet workers), TELEMETRY-02, branch
+`claude/telemetry-02-data` from main `aa5b45cb` (worktree `../onzio-telemetry-02`). **Status:** committed, pushed, PR
+open, not merged. Migration `20261121230000_page_telemetry_rollups.sql` is applied to no hosted database. The first
+commit `dd4bfb85` (migration + regenerated types) is the base the two follow-on sessions branch from.
+
+**Completed:**
+- Migration (one, additive): `page_events` takes `logo_seen`, `click` and `heartbeat` with `sponsor_id` (no FK) and
+  `engaged_ms` (1,000-60,000) and their checks; `onzio_private.record_page_event` redefined with the same signature,
+  grants and order, per-type keys (`sponsorIds`, `sponsorId`, `engagedMs`) and a sponsor filter between the add-on gate
+  and the salt (`unknown_sponsor` writes nothing); one cap hit per beacon; `logo_seen` writes one row per kept sponsor.
+  Three rollup tables (`page_daily_totals`, `page_daily_breakdowns`, `sponsor_daily_rollups`) with the
+  `page_events` staff-read RLS and no write grants; `onzio_private.rollup_page_telemetry(p_days 1-7)` behind the
+  service-role-only `onzio.rollup_page_telemetry`; `purge_archived_club` lists the rollup tables first.
+  `sweep_page_telemetry` is unchanged.
+- `/api/t`: strict zod union on `t` (`lib/telemetry/beacon-contract.ts`, zod only); shared request derivation
+  (`deriveEventContext`) for the beacon and the click.
+- `GET /r/<sponsor>` (`app/%5Fclubs/[slug]/r/[sponsor]/route.ts`, public tenant path in middleware so the hold 404s
+  it): club from the verified header only, 404 unless the club's sponsor has an http(s) `website_url`, 302 no-store;
+  the click is recorded in `after()`, never on the RC-PREVIEW host, for bots, prefetch or clubs without the add-on.
+- Rollup cron `/api/cron/telemetry-rollup` (`lib/telemetry/rollup.ts`, cron graph only), `vercel.json`
+  `35 10 * * *`: Christian confirmed the Vercel plan is Hobby, so it runs daily before the 10:45 retention run, and the
+  plan now says the P3 dashboard and P5 PDF must read "updated daily".
+- Security-definer contract count 4 → 5 (adds `rollup_page_telemetry`).
+
+**Files:** the migration, `lib/database.generated.ts`, `lib/telemetry/{beacon,beacon-contract,click-policy,rollup}.ts`,
+`middleware.ts`, the `/r` route, the rollup cron route, `vercel.json`, `docs/onzio-platform-plan.md` (telemetry
+section), this file; tests: `tests/database/{page-telemetry,page-telemetry-rollups,purge-archived-club}.test.ts`,
+`tests/contracts/page-telemetry-{beacon-union,sponsor-redirect,rollup-cron,service-role-boundary}.test.ts`,
+`tests/architecture/platform-architecture.test.ts` (rollup.ts on the service-role allowlist), and the three
+migration-order lists (`admin-reimagined-league`, `admin-reimagined-sponsors`, `cinematic-shop-jersey-options-migration`).
+Two existing DB tests changed because the schema did: the `page_events` column list gains `sponsor_id`, `engaged_ms`;
+the purge test applies the new purge definition and seeds rollup rows.
+
+**Verification (local, one `with-local-db-lock.sh` hold, pinned CLI 2.109.1, 22 GB free):** `db reset --local` ok,
+ledger 97 / max `20261121230000` (97 files); `db:types:check` ok; telemetry + rollups + purge DB tests 117/117 twice;
+full `test:db` 1,540 passed, 1 failed (P1's existing backlog-sweep test hit its 15 s timeout under full-suite load
+after ANALYZE; it passed in both isolated runs; left unchanged); non-DB vitest 395 files, 5,252 passed, 1 skipped;
+`test:architecture` 18 files, 432 passed, 1 skipped; `tsc --noEmit` clean; `npm run lint` clean (two warnings that
+were already on main); `npm run build` ok; diff against origin/main of `components`, `package*.json` and the P1
+migration is empty.
+
+**Blockers / open:** production gate needs Christian's "go" (backup, `migration list --linked` shows only
+`20261121230000` missing, dry run, push, read-only checks, merge pinned to sha, deploy, one manual cron run). Nothing is
+provable on prod while Rose City's public site is held. The `/r` route is tested through its handler with mocks; the
+real rewrite + hold path is covered only by the `isPublicTenantPath` unit test.
+
+**Next step:** onzio-bot review of the PR, then the production gate on Christian's word.
+
 ## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI: Untitled-style uploader on the proven one-bar flow
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet worker), `RC-HERO-VIDEO-UPLOADER-UI`, branch `claude/rc-hero-video-uploader-ui` from main `df3e9a3`.

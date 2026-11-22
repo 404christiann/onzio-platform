@@ -335,6 +335,8 @@ describe("onzio.record_page_event", () => {
       "id", "club_id", "occurred_at", "local_date", "event_type", "visitor_hash", "visit_id", "is_entry",
       "path", "referrer_host", "source_type", "utm_source", "utm_medium", "utm_campaign", "utm_content",
       "utm_term", "device", "country", "city", "is_staff",
+      // TELEMETRY-02: sponsor and engagement columns.
+      "sponsor_id", "engaged_ms",
     ]);
   });
 
@@ -1540,5 +1542,345 @@ describe("onzio.record_page_event through PostgREST", () => {
       }
       await cleanup.end();
     }
+  });
+});
+
+// TELEMETRY-02: logo_seen, click and heartbeat events.
+async function seedSponsors(clubId: string, n: number): Promise<string[]> {
+  await asOwner();
+  const ids: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const { rows: inserted } = await db.query(
+      "insert into onzio.site_sponsor_logos (club_id, name, logo_url) values ($1, $2, '/s.png') returning id::text",
+      [clubId, `Sponsor ${i}-${randomUUID().slice(0, 6)}`],
+    );
+    ids.push(inserted[0].id);
+  }
+  return ids;
+}
+
+async function sponsorRows(clubId: string) {
+  await asOwner();
+  return (
+    await db.query(
+      `select event_type, sponsor_id::text, engaged_ms, visit_id::text, is_entry, occurred_at::text, local_date::text, path, device
+       from onzio.page_events where club_id = $1 order by id`,
+      [clubId],
+    )
+  ).rows;
+}
+
+const INVALID = { code: "22023", message: "INVALID_PAGE_EVENT" };
+
+describe("telemetry sponsor and engagement events", () => {
+  it("writes one logo_seen row per sponsor sharing the visit, and spends one hit of each cap", async () => {
+    const ids = await seedSponsors(CLUB_IDS.alpha, 3);
+    expect(await record(CLUB_IDS.alpha, event({ type: "logo_seen", sponsorIds: ids }))).toBe("recorded");
+
+    const written = await sponsorRows(CLUB_IDS.alpha);
+    expect(written).toHaveLength(3);
+    expect(new Set(written.map((row) => row.sponsor_id))).toEqual(new Set(ids));
+    expect(new Set(written.map((row) => row.visit_id)).size).toBe(1);
+    expect(new Set(written.map((row) => row.occurred_at)).size).toBe(1);
+    expect(new Set(written.map((row) => row.local_date)).size).toBe(1);
+    expect(written.every((row) => row.event_type === "logo_seen" && row.is_entry === false && row.engaged_ms === null)).toBe(true);
+
+    const used = await windows(CLUB_IDS.alpha);
+    expect(used).toHaveLength(3); // visitor, network, club-wide
+    expect(used.every((row) => row.hits === 1)).toBe(true);
+    expect(used.map((row) => row.bucket).filter((bucket) => bucket === "*" || bucket.startsWith("n:"))).toHaveLength(2);
+  });
+
+  it("spends one hit of the visitor, network and club windows for a click, and only the visitor, 'hn:' and 'h:*' windows for a heartbeat", async () => {
+    const [sponsor] = await seedSponsors(CLUB_IDS.alpha, 1);
+    expect(await record(CLUB_IDS.alpha, event({ type: "click", sponsorId: sponsor }))).toBe("recorded");
+    let used = await windows(CLUB_IDS.alpha);
+    expect(used).toHaveLength(3);
+    expect(used.every((row) => row.hits === 1)).toBe(true);
+
+    // A heartbeat needs an open visit that began with a view.
+    await nextMinute(CLUB_IDS.alpha);
+    expect(await record(CLUB_IDS.alpha, event())).toBe("recorded");
+    await nextMinute(CLUB_IDS.alpha);
+    expect(await record(CLUB_IDS.alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("recorded");
+    used = await windows(CLUB_IDS.alpha);
+    expect(used).toHaveLength(3); // visitor, heartbeat network, club-wide heartbeat
+    expect(used.every((row) => row.hits === 1)).toBe(true);
+    expect(used.some((row) => row.bucket === "h:*")).toBe(true);
+    expect(used.some((row) => row.bucket.startsWith("hn:"))).toBe(true);
+    expect(used.some((row) => row.bucket === "*" || row.bucket.startsWith("n:") || row.bucket.startsWith("w:"))).toBe(false);
+  });
+
+  describe("heartbeat budget", () => {
+    const alpha = CLUB_IDS.alpha;
+
+    async function setCounter(bucket: string, hits: number): Promise<void> {
+      await asOwner();
+      await db.query(
+        `insert into onzio_private.page_event_rate_windows (club_id, bucket, window_start, hits)
+         values ($1, $2, date_trunc('minute', now()), $3)
+         on conflict (club_id, bucket, window_start) do update set hits = excluded.hits`,
+        [alpha, bucket, hits],
+      );
+    }
+
+    it("records a heartbeat while the club's view counter is full, and still drops a view", async () => {
+      expect(await record(alpha, event())).toBe("recorded");
+      await setClubCounter(alpha, 1200);
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("recorded");
+      expect(await record(alpha, event({ visitorMaterial: material("late-viewer") }))).toBe("rate_limited");
+      expect((await windows(alpha)).find((row) => row.bucket === "*")?.hits).toBe(1200);
+    });
+
+    it("drops a heartbeat at 6,000 without an event, counts it under 'heartbeat', and still records a view", async () => {
+      expect(await record(alpha, event())).toBe("recorded");
+      await setCounter("h:*", 6000);
+      const before = (await rows(alpha)).length;
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("rate_limited");
+      expect(await rows(alpha)).toHaveLength(before);
+      expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "heartbeat", dropped: 1 }]);
+      expect((await windows(alpha)).find((row) => row.bucket === "h:*")?.hits).toBe(6000);
+      expect(await record(alpha, event({ visitorMaterial: material("viewer-after") }))).toBe("recorded");
+    });
+
+    it("records a heartbeat from a network whose view budget is used up", async () => {
+      const crowded = material("network-crowded");
+      await setClubCounter(alpha, 1080);
+      const statuses = await recordMany(alpha, manyVisitors("crowd", 130, { networkMaterial: crowded }));
+      expect(statuses.filter((status) => status === "recorded")).toHaveLength(120);
+      expect(statuses[129]).toBe("rate_limited");
+      expect(
+        await record(alpha, event({ type: "heartbeat", engagedMs: 5000, visitorMaterial: material("crowd-0"), networkMaterial: crowded })),
+      ).toBe("recorded");
+      expect(
+        await record(alpha, event({ type: "heartbeat", engagedMs: 5000, visitorMaterial: material("crowd-1"), networkMaterial: crowded })),
+      ).toBe("recorded");
+    });
+
+    it("still respects the shared per-visitor cap, counting the drop under 'heartbeat'", async () => {
+      const visitor = material("busy-reader");
+      expect(await record(alpha, event({ visitorMaterial: visitor }))).toBe("recorded");
+      await nextMinute(alpha);
+      const statuses = await recordMany(
+        alpha,
+        Array.from({ length: 61 }, () => event({ type: "heartbeat", engagedMs: 5000, visitorMaterial: visitor })),
+      );
+      expect(statuses.filter((status) => status === "recorded")).toHaveLength(60);
+      expect(statuses[60]).toBe("rate_limited");
+      expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "heartbeat", dropped: 1 }]);
+      expect((await windows(alpha)).find((row) => row.bucket === "h:*")?.hits).toBe(60);
+    });
+
+    /** The 'hn:' bucket the writer uses for a network (salted, so read the day's salt). */
+    async function hnBucket(networkMaterial: string): Promise<string> {
+      await asOwner();
+      const { rows: found } = await db.query(
+        `select 'hn:' || encode(sha256(salt || convert_to($2, 'UTF8')), 'hex') as bucket
+         from onzio_private.page_visitor_salts where club_id = $1`,
+        [alpha, networkMaterial],
+      );
+      expect(found).toHaveLength(1);
+      return found[0].bucket;
+    }
+
+    it("drops a heartbeat when its network is at 1,200, counts it, and still records a view from that network", async () => {
+      expect(await record(alpha, event())).toBe("recorded");
+      await setCounter(await hnBucket(material("network-a")), 1200);
+      const before = (await rows(alpha)).length;
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("rate_limited");
+      expect(await rows(alpha)).toHaveLength(before);
+      expect(await dropCounts(alpha)).toEqual([{ local_date: await clubDay(alpha), reason: "heartbeat", dropped: 1 }]);
+      expect(await record(alpha, event({ visitorMaterial: material("other-viewer") }))).toBe("recorded");
+    });
+
+    it("keys the heartbeat network cap on the IPv6 /48 when there is one", async () => {
+      const wide = material("wide-a");
+      expect(await record(alpha, event({ wideNetworkMaterial: wide }))).toBe("recorded");
+      await setCounter(await hnBucket(wide), 1200);
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000, wideNetworkMaterial: wide }))).toBe("rate_limited");
+      expect((await dropCounts(alpha)).map((row) => [row.reason, row.dropped])).toEqual([["heartbeat", 1]]);
+    });
+  });
+
+  describe("heartbeat open-visit gate", () => {
+    const alpha = CLUB_IDS.alpha;
+
+    async function shiftEvents(minutes: number): Promise<void> {
+      await asOwner();
+      await db.query("update onzio.page_events set occurred_at = occurred_at - make_interval(mins => $2) where club_id = $1", [alpha, minutes]);
+    }
+
+    it("answers no_visit and writes nothing when the club has no salt today", async () => {
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("no_visit");
+      expect(await traces(alpha)).toEqual({ events: 0, salts: 0, windows: 0 });
+      expect(await dropCounts(alpha)).toEqual([]);
+    });
+
+    it("answers no_visit and writes nothing for a visitor without an open visit (a rotated user agent)", async () => {
+      expect(await record(alpha, event())).toBe("recorded");
+      const before = await traces(alpha);
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000, visitorMaterial: material("rotated-agent") }))).toBe("no_visit");
+      expect(await traces(alpha)).toEqual(before);
+      expect(await dropCounts(alpha)).toEqual([]);
+    });
+
+    it("answers no_visit when the open visit holds only logo_seen or click rows", async () => {
+      const [sponsor] = await seedSponsors(alpha, 1);
+      expect(await record(alpha, event({ type: "click", sponsorId: sponsor }))).toBe("recorded");
+      expect(await record(alpha, event({ type: "logo_seen", sponsorIds: [sponsor] }))).toBe("recorded");
+      const before = await traces(alpha);
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("no_visit");
+      expect(await traces(alpha)).toEqual(before);
+      expect(await dropCounts(alpha)).toEqual([]);
+    });
+
+    it("records no fake visitors from one network rotating its user agent, and the totals do not move", async () => {
+      expect(await record(alpha, event())).toBe("recorded");
+      const before = await traces(alpha);
+      const statuses = await recordMany(
+        alpha,
+        Array.from({ length: 1300 }, (_, i) => event({ type: "heartbeat", engagedMs: 5000, visitorMaterial: material(`fake-${i}`) })),
+      );
+      expect(statuses.filter((status) => status !== "no_visit")).toHaveLength(0);
+      expect(await traces(alpha)).toEqual(before);
+      expect(new Set((await rows(alpha)).map((row) => row.visitor_hash)).size).toBe(1);
+      expect(await dropCounts(alpha)).toEqual([]);
+    });
+
+    it("keeps a visit open for 29 minutes and closes it after 31 with no other event", async () => {
+      expect(await record(alpha, event())).toBe("recorded");
+      await shiftEvents(29);
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("recorded");
+      await shiftEvents(31);
+      const before = await traces(alpha);
+      expect(await record(alpha, event({ type: "heartbeat", engagedMs: 5000 }))).toBe("no_visit");
+      expect(await traces(alpha)).toEqual(before);
+    });
+  });
+
+  it("drops unknown and other-club sponsor ids from a logo_seen write", async () => {
+    const own = await seedSponsors(CLUB_IDS.alpha, 2);
+    const [foreign] = await seedSponsors(CLUB_IDS.charlie, 1);
+    const status = await record(CLUB_IDS.alpha, event({ type: "logo_seen", sponsorIds: [own[0], randomUUID(), foreign, own[1]] }));
+    expect(status).toBe("recorded");
+    const written = await sponsorRows(CLUB_IDS.alpha);
+    expect(written.map((row) => row.sponsor_id).sort()).toEqual([...own].sort());
+    expect((await windows(CLUB_IDS.alpha)).every((row) => row.hits === 1)).toBe(true);
+  });
+
+  it("returns unknown_sponsor and writes nothing when no sponsor belongs to the club", async () => {
+    const [foreign] = await seedSponsors(CLUB_IDS.charlie, 1);
+    const before = await traces(CLUB_IDS.alpha);
+    expect(await record(CLUB_IDS.alpha, event({ type: "logo_seen", sponsorIds: [randomUUID(), foreign] }))).toBe("unknown_sponsor");
+    expect(await record(CLUB_IDS.alpha, event({ type: "click", sponsorId: foreign }))).toBe("unknown_sponsor");
+    expect(await traces(CLUB_IDS.alpha)).toEqual(before);
+    expect(before).toEqual({ events: 0, salts: 0, windows: 0 });
+    expect(await dropCounts(CLUB_IDS.alpha)).toEqual([]);
+  });
+
+  it("writes a click with its sponsor id and no entry flag when there is no open visit", async () => {
+    const [sponsor] = await seedSponsors(CLUB_IDS.alpha, 1);
+    expect(await record(CLUB_IDS.alpha, event({ type: "click", sponsorId: sponsor.toUpperCase() }))).toBe("recorded");
+    const written = await sponsorRows(CLUB_IDS.alpha);
+    expect(written).toHaveLength(1);
+    expect(written[0]).toMatchObject({ event_type: "click", sponsor_id: sponsor, is_entry: false, engaged_ms: null });
+  });
+
+  it("accepts heartbeats of 1000 and 60000 ms and rejects the rest", async () => {
+    expect(await record(CLUB_IDS.alpha, event())).toBe("recorded");
+    expect(await record(CLUB_IDS.alpha, event({ type: "heartbeat", engagedMs: 1000 }))).toBe("recorded");
+    expect(await record(CLUB_IDS.alpha, event({ type: "heartbeat", engagedMs: 60000 }))).toBe("recorded");
+    const written = await sponsorRows(CLUB_IDS.alpha);
+    expect(written.map((row) => row.engaged_ms)).toEqual([null, 1000, 60000]);
+    expect(written.every((row) => row.sponsor_id === null)).toBe(true);
+    expect(written.map((row) => row.is_entry)).toEqual([true, false, false]);
+    expect(new Set(written.map((row) => row.visit_id)).size).toBe(1);
+    for (const engagedMs of [999, 60001, 1500.5, 0, -1000, "5000", null, true]) {
+      await rejects(() => record(CLUB_IDS.alpha, event({ type: "heartbeat", engagedMs })), INVALID);
+    }
+    await rejects(() => record(CLUB_IDS.alpha, event({ type: "heartbeat" })), INVALID);
+  });
+
+  it("rejects key and type mismatches as INVALID_PAGE_EVENT", async () => {
+    const [sponsor] = await seedSponsors(CLUB_IDS.alpha, 1);
+    const eleven = Array.from({ length: 11 }, () => randomUUID());
+    const cases: Event[] = [
+      event({ type: "view", sponsorIds: [sponsor] }),
+      event({ type: "view", sponsorId: sponsor }),
+      event({ type: "view", engagedMs: 5000 }),
+      event({ type: "view", sponsorIds: null }),
+      event({ type: "click", sponsorId: sponsor, engagedMs: 5000 }),
+      event({ type: "click", sponsorId: sponsor, sponsorIds: [sponsor] }),
+      event({ type: "click" }),
+      event({ type: "click", sponsorId: null }),
+      event({ type: "click", sponsorId: "not-a-uuid" }),
+      event({ type: "click", sponsorId: 5 }),
+      event({ type: "logo_seen", sponsorId: sponsor, sponsorIds: [sponsor] }),
+      event({ type: "logo_seen", sponsorId: sponsor }),
+      event({ type: "logo_seen", sponsorIds: [sponsor], engagedMs: 5000 }),
+      event({ type: "logo_seen" }),
+      event({ type: "logo_seen", sponsorIds: [] }),
+      event({ type: "logo_seen", sponsorIds: eleven }),
+      event({ type: "logo_seen", sponsorIds: [sponsor, sponsor] }),
+      event({ type: "logo_seen", sponsorIds: [sponsor, sponsor.toUpperCase()] }),
+      event({ type: "logo_seen", sponsorIds: ["not-a-uuid"] }),
+      event({ type: "logo_seen", sponsorIds: [sponsor, 5] }),
+      event({ type: "logo_seen", sponsorIds: [null] }),
+      event({ type: "logo_seen", sponsorIds: sponsor }),
+      event({ type: "logo_seen", sponsorIds: { id: sponsor } }),
+      event({ type: "logo_seen", sponsorIds: 5 }),
+      event({ type: "logo_seen", sponsorIds: null }),
+      event({ type: "heartbeat", engagedMs: 5000, sponsorId: sponsor }),
+      event({ type: "heartbeat", engagedMs: 5000, sponsorIds: [sponsor] }),
+      event({ type: "heartbeat", engagedMs: "5000" }),
+      event({ type: "view", sponsorIds: "x" }),
+    ];
+    for (const payload of cases) {
+      await rejects(() => record(CLUB_IDS.alpha, payload), INVALID);
+    }
+    expect(await traces(CLUB_IDS.alpha)).toEqual({ events: 0, salts: 0, windows: 0 });
+    // Ten distinct ids is the largest accepted array.
+    const ten = await seedSponsors(CLUB_IDS.alpha, 10);
+    expect(await record(CLUB_IDS.alpha, event({ type: "logo_seen", sponsorIds: ten }))).toBe("recorded");
+    expect(await sponsorRows(CLUB_IDS.alpha)).toHaveLength(10);
+  });
+
+  it("answers bad_signature for a forged signature on each new type", async () => {
+    const [sponsor] = await seedSponsors(CLUB_IDS.alpha, 1);
+    const payloads = [
+      event({ type: "logo_seen", sponsorIds: [sponsor] }),
+      event({ type: "click", sponsorId: sponsor }),
+      event({ type: "heartbeat", engagedMs: 5000 }),
+    ];
+    for (const payload of payloads) {
+      const text = payloadText(payload);
+      expect(await callRecord(CLUB_IDS.alpha, text, signPayload(CLUB_IDS.alpha, text, "ab".repeat(32)))).toBe("bad_signature");
+      expect(await callRecord(CLUB_IDS.alpha, text, "0".repeat(64))).toBe("bad_signature");
+    }
+    expect(await traces(CLUB_IDS.alpha)).toEqual({ events: 0, salts: 0, windows: 0 });
+  });
+
+  it("answers not_entitled and writes nothing for each new type when the club lacks the add-on", async () => {
+    const [sponsor] = await seedSponsors(CLUB_IDS.alpha, 1);
+    await revoke(CLUB_IDS.alpha);
+    for (const payload of [
+      event({ type: "logo_seen", sponsorIds: [sponsor] }),
+      event({ type: "click", sponsorId: sponsor }),
+      event({ type: "heartbeat", engagedMs: 5000 }),
+    ]) {
+      expect(await record(CLUB_IDS.alpha, payload)).toBe("not_entitled");
+    }
+    expect(await traces(CLUB_IDS.alpha)).toEqual({ events: 0, salts: 0, windows: 0 });
+  });
+
+  it("puts a heartbeat in the visit its view opened, and it is never an entry", async () => {
+    expect(await record(CLUB_IDS.alpha, event({ type: "view" }))).toBe("recorded");
+    expect(await record(CLUB_IDS.alpha, event({ type: "heartbeat", engagedMs: 3000 }))).toBe("recorded");
+    const written = await sponsorRows(CLUB_IDS.alpha);
+    expect(written.map((row) => [row.event_type, row.is_entry])).toEqual([
+      ["view", true],
+      ["heartbeat", false],
+    ]);
+    expect(new Set(written.map((row) => row.visit_id)).size).toBe(1);
   });
 });

@@ -37,6 +37,8 @@ export function isPublicTenantPath(pathname: string): boolean {
   return (
     /^\/roster\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
     /^\/schedule\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
+    // TELEMETRY-02: sponsor click redirect; the handler resolves the sponsor within the verified club.
+    /^\/r\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
     NEWS_ARTICLE_PATH.test(pathname) ||
     PROGRAM_DETAIL_PATH.test(pathname) ||
     REGISTRATION_PATH.test(pathname)

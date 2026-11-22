@@ -125,6 +125,8 @@ describe("the migration", () => {
       // TELEMETRY-01 P1 page telemetry.
       "20261121060000_page_telemetry.sql",
       "20261121183000_hero_video_pending.sql",
+      // TELEMETRY-02 page telemetry rollups.
+      "20261121230000_page_telemetry_rollups.sql",
     ]);
   });
 

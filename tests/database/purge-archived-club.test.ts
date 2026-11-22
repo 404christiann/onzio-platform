@@ -33,17 +33,18 @@ const ROSE_CITY_MIGRATION = resolve(
   __dirname,
   "../../supabase/migrations/20261117020000_cinematic_purge_tables.sql",
 );
-// TELEMETRY-01 redefines it again with onzio.page_events and must win over
+// TELEMETRY-01 redefines it again with onzio.page_events, and TELEMETRY-02 with the three rollup
+// tables first; the latest definition must win over
 // both. Only the purge part of that migration is applied here: its tables
 // already exist in the local database.
 const TELEMETRY_MIGRATION = resolve(
   __dirname,
-  "../../supabase/migrations/20261121060000_page_telemetry.sql",
+  "../../supabase/migrations/20261121230000_page_telemetry_rollups.sql",
 );
 function telemetryPurgeDefinition(): string {
   const sql = readFileSync(TELEMETRY_MIGRATION, "utf8");
   const start = sql.indexOf("create or replace function onzio_private.purge_archived_club");
-  if (start < 0) throw new Error("TELEMETRY-01 migration lost its purge definition");
+  if (start < 0) throw new Error("TELEMETRY-02 migration lost its purge definition");
   return sql.slice(start);
 }
 const OPERATOR = USER_IDS.ownerAal2;
@@ -219,6 +220,10 @@ begin
   insert into onzio_private.page_event_rate_windows (club_id, bucket, window_start, hits) values (c, '*', date_trunc('minute', now()), 1);
   insert into onzio_private.page_event_drop_counts (club_id, local_date, reason, dropped) values (c, current_date, 'network', 1);
   insert into onzio_private.club_addons (club_id, addon) values (c, 'telemetry');
+  -- TELEMETRY-02 rollups.
+  insert into onzio.page_daily_totals (club_id, local_date, views) values (c, current_date, 1);
+  insert into onzio.page_daily_breakdowns (club_id, local_date, dimension, value, views) values (c, current_date, 'path', '/', 1);
+  insert into onzio.sponsor_daily_rollups (club_id, local_date, sponsor_id, logo_views) values (c, current_date, gen_random_uuid(), 1);
 end
 $fixture$;
 `;
@@ -376,6 +381,43 @@ describe("hard purge of an archived club", () => {
       "presentation_documents_immutable",
       "presentation_publications_immutable",
     ]);
+  });
+
+  it("purges the club's rollup rows and leaves other clubs' rollup rows unchanged", async () => {
+    const other = CLUB_IDS.alpha;
+    const sponsor = randomUUID();
+    await db.query(
+      "insert into onzio.page_daily_totals (club_id, local_date, views, visitors) values ($1, current_date, 7, 3)",
+      [other],
+    );
+    await db.query(
+      "insert into onzio.page_daily_breakdowns (club_id, local_date, dimension, value, views) values ($1, current_date, 'source', 'direct', 7)",
+      [other],
+    );
+    await db.query(
+      "insert into onzio.sponsor_daily_rollups (club_id, local_date, sponsor_id, logo_views, clicks) values ($1, current_date, $2, 5, 1)",
+      [other, sponsor],
+    );
+    const tables = ["onzio.page_daily_totals", "onzio.page_daily_breakdowns", "onzio.sponsor_daily_rollups"];
+    const snapshot = async (id: string) =>
+      Object.fromEntries(
+        await Promise.all(
+          tables.map(async (table) => [
+            table,
+            (await db.query(`select coalesce(string_agg(t::text, '|' order by t::text), '') as d from ${table} t where club_id = $1`, [id])).rows[0].d,
+          ]),
+        ),
+      );
+    for (const table of tables) expect(await count(table, "club_id = $1", [club])).toBe(1);
+    const alphaBefore = await snapshot(other);
+
+    const result = await purge();
+
+    for (const table of tables) {
+      expect(result.rows_deleted[table], `${table} counted`).toBe(1);
+      expect(await count(table, "club_id = $1", [club])).toBe(0);
+    }
+    expect(await snapshot(other)).toEqual(alphaBefore);
   });
 
   it("retries as already purged with the same export and slug, and nothing else", async () => {
