@@ -1,3 +1,7 @@
+## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX
+
+- The Rose City hero video uploader is now one box that keeps its size through every state. It shows the new video's first frame, the % with its phase word, and progress along the box's bottom edge. Success is a green "Live on your website" box plus a "Live" badge on the preview, for 2.5s, then back to the invitation. The replaces cap is a 10-dot meter. UI only, no migration. Branch `claude/rc-hero-video-success-ux`, PR #219, not merged. Next, a separate package: refresh the preview's old video poster after a swap. Record: `STATUS.md` (RC-HERO-VIDEO-SUCCESS-UX).
+
 ## 2026-11-21 - UI-POLISH-DASHBOARD: classic admin dashboard
 
 - **Status:** `ready for review`, branch `claude/ui-polish-dashboard` off main `234e4cac`, PR open, not merged. Visual, markup and copy only; no query, gate, `app/api/**` or `supabase/**` change. Record: `STATUS.md` (UI-POLISH-DASHBOARD).
@@ -31,10 +35,6 @@
 - **Status:** `ready for review`, branch `claude/telemetry-03-site` (rebased onto main `ee21290d`, after TELEMETRY-02 #216), PR #217 open, not merged. No `supabase/**` change. No migration, env, API or middleware change. Record: `STATUS.md` (TELEMETRY-03).
 - **What:** shared `sendTelemetry`; `SiteTelemetry` context mounted only for add-on clubs; time-on-page heartbeats in `PageBeacon`; sponsor-logo `logo_seen` tracking and `/r/<id>` sponsored links in `CinematicSponsors` (not in the admin preview, uuid sponsors only).
 - **Exact next step:** TELEMETRY-02 merges, then Christian reviews this PR.
-
-## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX
-
-- After a hero video goes live, the uploader shows a green "Completed" card in the drop zone's spot. It holds 2.5s, then fades back to "Click to upload", once per video, with reduced motion handled. UI only, no migration. Branch `claude/rc-hero-video-success-ux`, PR open, not merged. Next, a separate package: refresh the preview's old video poster after a swap. Record: `STATUS.md` (RC-HERO-VIDEO-SUCCESS-UX).
 
 ## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI
 

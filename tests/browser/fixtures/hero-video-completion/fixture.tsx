@@ -22,6 +22,7 @@ function Page() {
         <p data-refreshed={refreshed} hidden>{refreshed}</p>
         <button type="button" data-toggle-control onClick={() => setShown(value => !value)}>{shown ? "Hide video control" : "Show video control"}</button>
         {controller ? (shown ? <HeroVideoControl controller={controller} disabled={new URLSearchParams(window.location.search).has("disabled")} /> : null) : <p>Loading the editor…</p>}
+        <p data-below>Below the video control</p>
       </div>
     </div>
   );

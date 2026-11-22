@@ -1,5 +1,21 @@
 # Diverse City FC Status
 
+## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX: one-box uploader with a clear "Live on your website" moment
+
+- **Agent / package:** Claude Code (Opus coordinating, Sonnet workers; emil-design-eng review; stageshow design study), `RC-HERO-VIDEO-SUCCESS-UX`, branch `claude/rc-hero-video-success-ux` from main `9129ee1` (#215), PR #219.
+- **Status:** `in_progress`, pushed, PR open. Not merged. UI only: the controller (`lib/homepage-editor/**`), `lib/hero-video-swap.ts`, `app/api`, `supabase` and package files are unchanged. The only lib change is two copy constants in `lib/hero-video-lifecycle.ts`. No migration.
+- **Why:** Christian, after verifying a live upload: "Not 100% clear that the upload worked." First pass: a green Completed card that fades back to the drop zone. He then had stageshow animate the shipped design and propose an alternative, and chose the alternative ("Build the alternative").
+- **Completed (the alternative, in the real control):**
+  - One box keeps its size and place through idle → uploading → processing → success → idle. The dashed edge fades to solid; the contents crossfade (opacity, 2px blur, scale .98, 240ms, `cubic-bezier(0.23, 1, 0.32, 1)`); progress runs along the box's bottom edge. Nothing below it moves, at desktop and at 375px. The failed box keeps the same minimum height but grows to fit the message and buttons.
+  - The % carries its phase word ("Uploading 32%" → "Processing 70%"). Cancel shows only while uploading; its slot stays reserved, and the leave-page hint explains the change.
+  - The new video's first frame shows in the box, taken from the chosen file via a local object URL kept per controller. It falls back to the video icon when the browser can't decode the file.
+  - Success: a green box ("Live on your website" / "Replaced the previous video just now.") plus a green "Live" badge on the preview, whose caption shows the new file name. It holds 2.5s, then returns to the invitation, once per live video (per-controller acknowledgement).
+  - The daily cap is a quiet 10-dot meter, "9 of 10 left today", on the section's top line, with the limits on one short line in the box. Revert is dimmed while a replace runs.
+  - Reduced motion: opacity-only fades, no scale, blur or pop.
+- **Verification:** final table in the PR body. Screenshots: `test-results/hero-video-completion/uploader-{idle,uploading,processing,completed,returned,failed}-{desktop,375}.png`. Stageshow demos (local, outside the repo): `~/.claude/skills/stageshow/examples/rc-video-upload{,-alt}/`.
+- **Next (separate package, not started):** the homepage editor's preview still shows the old video poster image after a swap (the "2" section Christian pointed at).
+- **Exact next step:** Christian reviews and merges #219. No production gate is needed (no migration).
+
 ## 2026-11-22 - TELEMETRY-FLAG: Rose City sponsor_insights on in production
 
 **Agent/package:** Claude Code (Opus 5.5), TELEMETRY-FLAG. Branch `claude/telemetry-flag-rose-city`. Docs and operator
@@ -475,20 +491,6 @@ authenticated local session, a dev server, and Rose City's public page, which th
 
 **Exact next step:** review and merge this PR (Christian's call); the visitor-cap overlap is a separate main migration if wanted. A real-browser check on
 production waits for the Rose City hold to lift.
-
-## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX: clear "Completed" moment, then back to the drop zone
-
-- **Agent / package:** Claude Code (Opus coordinating, Sonnet worker, emil-design-eng review), `RC-HERO-VIDEO-SUCCESS-UX`, branch `claude/rc-hero-video-success-ux` from main `9129ee1` (#215).
-- **Status:** `in_progress`, committed and pushed, PR open. Not merged. UI only: `lib/**`, `app/api`, `supabase`, and package files unchanged; no migration.
-- **Why:** Christian, after verifying a live upload: "Not 100% clear that the upload worked." He asked for the progress to go away, a clear "Completed", then a fade back to only "Click to upload".
-- **Completed:**
-  - At live after a replace, the bar, % and small label are gone. A green success card (check in a soft circle, "Completed", "Your new video is live on your website.") sits in the drop zone's place with the zone's footprint. It borrows the zone's measured height, so nothing below moves, at 375px too.
-  - Motion: the card enters with a 240ms opacity/scale/2px-blur crossfade, and the check pops once. It holds 2.5s, exits in 200ms, and the dashed zone fades back in the same spot (220ms). Easing is `cubic-bezier(0.23, 1, 0.32, 1)`. Reduced motion uses opacity-only fades, with no scale, blur or pop.
-  - The card shows once per live video. A per-controller `WeakMap` of the acknowledged live GUID keeps "Completed" from returning when the edit dialog is closed and reopened; a new video going live shows it again.
-  - Screen readers still hear "Your new video is live." once, and the card is aria-hidden. After the fade the live region is empty.
-- **Verification:** final table in the PR body. Screenshots: `test-results/hero-video-completion/uploader-{completed,returned}-{desktop,375}.png`.
-- **Next (separate package, not started):** the homepage editor's preview still shows the old video poster image after a swap (the "2" section Christian pointed at). It needs a fresh poster or frame for the new video.
-- **Exact next step:** Christian reviews and merges. No production gate is needed (no migration).
 
 ## 2026-11-21 - RC-HERO-VIDEO-UPLOADER-UI: Untitled-style uploader on the proven one-bar flow
 
