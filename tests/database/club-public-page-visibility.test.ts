@@ -141,6 +141,14 @@ describe("public_page_visibility column", () => {
     }
   });
 
+  it("on a club that is not live yet, is hidden from anon but readable by its own signed-in owner (the preview read)", async () => {
+    await db.query("update onzio.clubs set lifecycle='onboarding', public_access='preview', public_page_visibility='{\"stadium\":false}'::jsonb where id=$1", [alpha]);
+    await actor("anon");
+    expect((await db.query("select public_page_visibility from onzio.clubs where id=$1", [alpha])).rows).toEqual([]);
+    await actor({ userId: USER_IDS.ownerAal2 });
+    expect((await db.query("select public_page_visibility as visibility from onzio.clubs where id=$1", [alpha])).rows).toEqual([{ visibility: { stadium: false } }]);
+  });
+
   it("cannot be written by a club owner, an admin or anon with a direct update", async () => {
     for (const caller of [{ userId: USER_IDS.ownerAal2 }, { userId: USER_IDS.adminAal2 }, "anon"] as Caller[]) {
       await actor(caller);

@@ -33,7 +33,8 @@ beforeEach(() => {
   db.select.mockReturnValue({ eq: db.eq });
   db.from.mockReturnValue({ select: db.select });
   db.schema.mockReturnValue({ from: db.from });
-  db.createPublicClient.mockReturnValue({ schema: db.schema });
+  db.createClient.mockReset();
+  db.createClient.mockResolvedValue({ schema: db.schema });
 });
 
 describe("fetchPublicPageVisibility", () => {
@@ -43,11 +44,12 @@ describe("fetchPublicPageVisibility", () => {
     await expect(fetchPublicPageVisibility(CLUB_ID)).resolves.toEqual({ stadium: false, "chick-fil-a": true });
   });
 
-  it("asks only for the one column, by club id, in the onzio schema, with the anonymous client", async () => {
+  it("asks only for the one column, by club id, in the onzio schema, with the request's own (cookie) client, never the anon-only one", async () => {
     db.maybeSingle.mockResolvedValue({ data: { public_page_visibility: {} }, error: null });
     const fetchPublicPageVisibility = await load();
     await fetchPublicPageVisibility(CLUB_ID);
-    expect(db.createPublicClient).toHaveBeenCalledTimes(1);
+    expect(db.createClient).toHaveBeenCalledTimes(1);
+    expect(db.createPublicClient).not.toHaveBeenCalled();
     expect(db.schema).toHaveBeenCalledWith("onzio");
     expect(db.from).toHaveBeenCalledWith("clubs");
     expect(db.select).toHaveBeenCalledWith("public_page_visibility");
@@ -80,7 +82,7 @@ describe("fetchPublicPageVisibility", () => {
   });
 
   it("fails open when the client cannot even be created", async () => {
-    db.createPublicClient.mockImplementation(() => { throw new Error("missing NEXT_PUBLIC_SUPABASE_URL"); });
+    db.createClient.mockRejectedValue(new Error("missing NEXT_PUBLIC_SUPABASE_URL"));
     const fetchPublicPageVisibility = await load();
     await expect(fetchPublicPageVisibility(CLUB_ID)).resolves.toEqual({});
   });
@@ -110,20 +112,13 @@ describe("fetchPublicPageVisibility", () => {
   });
 });
 
-describe("fetchAdminPageVisibility", () => {
-  it("reads with the signed-in client, not the anon one", async () => {
+describe("a club that is not live yet", () => {
+  it("still reads the owner's saved switches through the signed-in client, so their preview hides what they hid", async () => {
     db.maybeSingle.mockResolvedValue({ data: { public_page_visibility: { stadium: false } }, error: null });
-    db.createClient.mockResolvedValue({ schema: db.schema });
-    const { fetchAdminPageVisibility } = await import("@/lib/public-page-visibility-query");
-    await expect(fetchAdminPageVisibility(CLUB_ID)).resolves.toEqual({ stadium: false });
+    const fetchPublicPageVisibility = await load();
+    await expect(fetchPublicPageVisibility(CLUB_ID)).resolves.toEqual({ stadium: false });
     expect(db.createClient).toHaveBeenCalledTimes(1);
     expect(db.createPublicClient).not.toHaveBeenCalled();
-  });
-
-  it("fails open the same way", async () => {
-    db.createClient.mockRejectedValue(new Error("no cookies"));
-    const { fetchAdminPageVisibility } = await import("@/lib/public-page-visibility-query");
-    await expect(fetchAdminPageVisibility(CLUB_ID)).resolves.toEqual({});
   });
 });
 
@@ -178,8 +173,7 @@ describe("tenant resolution stays out of it", () => {
 
   it("the admin layout provides the map inside the club context so the switch can read it", () => {
     const layout = source("app/admin/layout.tsx");
-    expect(layout).toContain("fetchAdminPageVisibility(club.id)");
-    expect(layout).not.toContain("fetchPublicPageVisibility(");
+    expect(layout).toContain("fetchPublicPageVisibility(club.id)");
     expect(layout.indexOf("<ClubContextProvider")).toBeLessThan(layout.indexOf("<PublicPageVisibilityProvider"));
     expect(layout.indexOf("<PublicPageVisibilityProvider")).toBeLessThan(layout.lastIndexOf("{children}"));
   });
