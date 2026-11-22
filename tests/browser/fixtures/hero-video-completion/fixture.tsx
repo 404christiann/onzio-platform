@@ -6,6 +6,8 @@ import "@/styles/globals.css";
 
 function Page() {
   const [refreshed, setRefreshed] = useState("");
+  // Stands in for closing and reopening the edit dialog: the control unmounts while the controller stays alive.
+  const [shown, setShown] = useState(true);
   const controller = useHeroVideoController(true, async (range) => {
     setRefreshed(`${range.before}:${range.after}`);
     return "applied";
@@ -18,7 +20,9 @@ function Page() {
           <a href="/admin/roster">Roster</a>
         </nav>
         <p data-refreshed={refreshed} hidden>{refreshed}</p>
-        {controller ? <HeroVideoControl controller={controller} disabled={new URLSearchParams(window.location.search).has("disabled")} /> : <p>Loading the editor…</p>}
+        <button type="button" data-toggle-control onClick={() => setShown(value => !value)}>{shown ? "Hide video control" : "Show video control"}</button>
+        {controller ? (shown ? <HeroVideoControl controller={controller} disabled={new URLSearchParams(window.location.search).has("disabled")} /> : null) : <p>Loading the editor…</p>}
+        <p data-below>Below the video control</p>
       </div>
     </div>
   );

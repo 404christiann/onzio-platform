@@ -1,12 +1,93 @@
-.preview {
-  display: grid;
-  place-items: center;
+.section {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --hero-success: #34C759;
+  --hero-box-h: 76px;
+  --hero-thumb-w: 72px;
+  --hero-thumb-h: 40px;
+  --hero-pad: 16px;
+  position: relative;
+}
+
+:global(.admin-theme[data-admin-theme="dark"]) .section {
+  --hero-success: #30D158;
+}
+
+@media (max-width: 520px) {
+  .section {
+    --hero-box-h: 92px;
+    --hero-thumb-w: 56px;
+    --hero-thumb-h: 32px;
+    --hero-pad: 14px;
+  }
+}
+
+/* The daily cap: a quiet meter on the section's own top line, level with the legend. */
+.meter {
+  position: absolute;
+  top: 15px;
+  right: 16px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 18px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+
+.pips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.pips > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: hsl(var(--border));
+  transition: background-color 300ms ease-out;
+}
+
+.pips > span[data-on] {
+  background: hsl(var(--muted-foreground) / .55);
+}
+
+@media (max-width: 520px) {
+  .meter {
+    gap: 6px;
+  }
+
+  .pips {
+    gap: 2px;
+  }
+
+  .pips > span {
+    width: 5px;
+    height: 5px;
+  }
+}
+
+/* What is live: the preview beside its caption and the revert action. */
+.live {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
   min-width: 0;
-  max-width: 28rem;
+}
+
+.preview {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: min(208px, 100%);
+  min-width: 0;
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid hsl(var(--border));
-  border-radius: 12px;
+  border-radius: 10px;
   background: hsl(var(--secondary));
 }
 
@@ -16,43 +97,208 @@
   object-fit: cover;
 }
 
-.uploader {
+.liveMeta {
   display: grid;
-  gap: 2px;
+  flex: 1;
+  justify-items: start;
   min-width: 0;
-  max-width: 28rem;
+  padding-top: 2px;
 }
 
-/* The drop zone is one native button. aria-disabled (not disabled) keeps drag events flowing so a stray drop never opens the file in the browser. */
-.zone {
+.eyebrow {
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+
+.liveName {
+  max-width: 100%;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: heroNameIn 240ms var(--ease-out) backwards;
+}
+
+.liveName[data-unknown] {
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+
+.revert {
+  margin-top: 12px;
+}
+
+@media (max-width: 520px) {
+  .live {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .preview {
+    width: 100%;
+  }
+
+  .liveMeta {
+    width: 100%;
+    padding-top: 0;
+  }
+
+  .revert {
+    margin-top: 8px;
+  }
+}
+
+/* The Live badge sits over the preview's corner while the success shows. */
+.badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 7px 0 6px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 62%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+
+.badge[data-on] {
+  opacity: 1;
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--hero-success);
+}
+
+/* ---- The one box ---- */
+
+.box {
+  position: relative;
   display: grid;
-  justify-items: center;
-  gap: 4px;
-  width: 100%;
-  min-width: 0;
-  padding: 16px;
-  border: 1px dashed hsl(var(--border));
+  box-sizing: border-box;
+  /* The same height in every state at a given width, so nothing below it moves. A failure may need more room for its words. */
+  height: var(--hero-box-h);
+  border: 1px solid transparent;
   border-radius: 12px;
   background: hsl(var(--background));
+  transition: border-color 180ms ease-out, background-color 180ms ease-out;
+}
+
+.box[data-face="failed"] {
+  height: auto;
+  min-height: var(--hero-box-h);
+  border-color: hsl(var(--destructive) / .6);
+  background: color-mix(in srgb, hsl(var(--destructive)) 5%, hsl(var(--background)));
+}
+
+.box[data-face="flight"] {
+  border-color: hsl(var(--border));
+}
+
+.box[data-face="done"] {
+  border-color: color-mix(in srgb, var(--hero-success) 45%, transparent);
+  background: color-mix(in srgb, var(--hero-success) 6%, hsl(var(--background)));
+}
+
+.box[data-leaving] {
+  border-color: transparent;
+  background: hsl(var(--background));
+}
+
+.box:has(.zone:not([aria-disabled="true"]):hover),
+.box:has(.zone[data-dragging]) {
+  background: hsl(var(--primary) / .06);
+}
+
+.box:has(.zone:focus-visible) {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* The dashed edge is its own layer at full size: it only fades, so the box never changes size. */
+.dash {
+  position: absolute;
+  inset: -1px;
+  border: 1px dashed hsl(var(--border));
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity 180ms ease-out, border-color 150ms ease-out;
+}
+
+.box:not([data-face="idle"]) .dash {
+  opacity: 0;
+}
+
+.box[data-leaving] .dash {
+  opacity: 1;
+}
+
+.zone:not([aria-disabled="true"]):hover ~ .dash,
+.zone[data-dragging] ~ .dash {
+  border-color: hsl(var(--primary));
+}
+
+.zone[aria-disabled="true"] ~ .dash {
+  opacity: .55;
+}
+
+/* A face is the box's content layer: the invitation (the whole-box button), the file, the success or the failure. */
+.zone,
+.face {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  grid-area: 1 / 1;
+  min-width: 0;
+  padding: 0 var(--hero-pad);
+}
+
+.box[data-face="flight"] .face,
+.box[data-face="done"] .face {
+  padding-left: calc(var(--hero-pad) + var(--hero-thumb-w) + 12px);
+}
+
+.box[data-lead="circle"] .face {
+  padding-left: calc(var(--hero-pad) + 40px + 12px);
+}
+
+.box[data-face="failed"] .face {
+  align-items: flex-start;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+/* The invitation is one native button. aria-disabled (not disabled) keeps drag events flowing so a stray drop never opens the file in the browser. */
+.zone {
+  width: 100%;
+  border: 0;
+  background: transparent;
   color: hsl(var(--foreground));
-  text-align: center;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
-  transition: border-color .15s ease-out, background-color .15s ease-out;
 }
 
 .zone > * {
   pointer-events: none;
 }
 
-.zone:hover,
-.zone[data-dragging] {
-  border-color: hsl(var(--primary));
-  background: hsl(var(--primary) / .06);
-}
-
 .zone:focus-visible {
-  outline: 2px solid hsl(var(--primary));
-  outline-offset: 2px;
+  outline: none;
 }
 
 .zone[aria-disabled="true"] {
@@ -60,13 +306,7 @@
   opacity: .55;
 }
 
-.zone[aria-disabled="true"]:hover {
-  border-color: hsl(var(--border));
-  background: hsl(var(--background));
-}
-
-.zoneIcon,
-.rowIcon {
+.zoneIcon {
   display: grid;
   flex: none;
   place-items: center;
@@ -75,12 +315,31 @@
   border-radius: 999px;
   background: hsl(var(--secondary));
   color: hsl(var(--muted-foreground));
+  transition: background-color 150ms ease-out, color 150ms ease-out;
 }
 
-.zoneTitle {
+.zone:not([aria-disabled="true"]):hover .zoneIcon,
+.zone[data-dragging] .zoneIcon {
+  background: hsl(var(--primary) / .12);
+  color: hsl(var(--primary));
+}
+
+.text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
   font-size: 13px;
   line-height: 1.4;
   color: hsl(var(--muted-foreground));
+}
+
+.face .title {
+  color: hsl(var(--foreground));
+  font-weight: 600;
 }
 
 .zoneLink {
@@ -88,122 +347,44 @@
   font-weight: 600;
 }
 
-.zoneHint {
+.meta {
   font-size: 12px;
   line-height: 1.4;
   color: hsl(var(--muted-foreground));
+  text-wrap: balance;
 }
 
-.row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 0;
-  max-width: 28rem;
-  padding: 14px;
-  border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  background: hsl(var(--background));
-}
-
-.row[data-hero-row="failed"] {
-  border-color: hsl(var(--destructive) / .6);
-  background: hsl(var(--destructive) / .05);
-}
-
-.rowIcon {
-  border-radius: 10px;
-}
-
-.rowIcon[data-tone="error"] {
-  background: hsl(var(--destructive) / .12);
-  color: hsl(var(--destructive));
-}
-
-.rowBody {
-  display: grid;
-  flex: 1;
-  gap: 6px;
-  min-width: 0;
-}
-
-.rowHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-}
-
-.rowMeta {
-  min-width: 0;
+.metaItem + .metaItem::before {
+  content: "·";
+  margin: 0 6px;
 }
 
 .fileName {
   overflow: hidden;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.fileSize {
-  font-size: 12px;
-  line-height: 1.4;
-  color: hsl(var(--muted-foreground));
-}
-
-.trash {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin: -10px -10px 0 0;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: hsl(var(--muted-foreground));
-  cursor: pointer;
-}
-
-.trash:hover {
-  background: hsl(var(--accent));
-  color: color-mix(in srgb, hsl(var(--destructive)) 75%, hsl(var(--foreground)));
-}
-
-.trash:focus-visible {
-  outline: 2px solid hsl(var(--primary));
-  outline-offset: 2px;
-}
-
-.barLine {
+.end {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
+  gap: 2px;
 }
 
-.track {
-  flex: 1;
-  min-width: 0;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: hsl(var(--secondary));
-  border: 1px solid hsl(var(--border));
+.phasePercent {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  text-align: right;
 }
 
-.bar {
-  height: 100%;
-  border-radius: 999px;
-  background: hsl(var(--primary));
-  transition: width .2s ease-out;
+.phaseWord {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
 }
 
 .percent {
-  flex: none;
   min-width: 3ch;
   font-size: 12px;
   font-weight: 600;
@@ -212,29 +393,205 @@
   color: hsl(var(--foreground));
 }
 
-.phaseLabel {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
+.cancel {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-right: -8px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
   color: hsl(var(--muted-foreground));
 }
 
+button.cancel {
+  cursor: pointer;
+}
+
+button.cancel:hover {
+  background: hsl(var(--accent));
+  color: color-mix(in srgb, hsl(var(--destructive)) 75%, hsl(var(--foreground)));
+}
+
+button.cancel:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  /* The name and the phase with its percent share the first line; the status line gets the whole width under them. */
+  .face[data-hero-phase] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: center;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 2px;
+  }
+
+  .face[data-hero-phase] .text {
+    display: contents;
+  }
+
+  .face[data-hero-phase] .fileName {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .face[data-hero-phase] .meta {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-wrap: pretty;
+  }
+
+  .face[data-hero-phase] .end {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .end {
+    flex-direction: row-reverse;
+    gap: 0;
+  }
+
+  .phasePercent {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+  }
+
+  .phaseWord {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .percent {
+    min-width: 0;
+  }
+
+  .cancel {
+    width: 32px;
+    margin-right: -6px;
+    margin-left: 2px;
+  }
+}
+
+/* The file's first frame (or its icon) leads the file and success faces, and stays put while the words change. */
+.lead {
+  position: absolute;
+  top: calc(50% - var(--hero-thumb-h) / 2);
+  left: var(--hero-pad);
+  z-index: 1;
+  width: var(--hero-thumb-w);
+  height: var(--hero-thumb-h);
+}
+
+.box[data-lead="circle"] .lead {
+  top: calc(50% - 20px);
+  width: 40px;
+  height: 40px;
+}
+
+.thumb {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #18181b;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 6%);
+}
+
+.thumb[data-fallback] {
+  background: hsl(var(--secondary));
+  color: hsl(var(--muted-foreground));
+}
+
+.thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.thumb video[hidden] {
+  display: none;
+}
+
+.thumbCheck {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 2px solid color-mix(in srgb, var(--hero-success) 6%, hsl(var(--background)));
+  border-radius: 999px;
+  background: var(--hero-success);
+  color: #fff;
+}
+
+.checkCircle {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hero-success) 16%, transparent);
+  color: var(--hero-success);
+}
+
+.check {
+  flex: none;
+  color: var(--hero-success);
+}
+
+.thumbCheck .check {
+  color: #fff;
+}
+
+.failIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: hsl(var(--destructive) / .12);
+  color: hsl(var(--destructive));
+}
+
 .alert {
+  flex: 1;
+  min-width: 0;
   color: hsl(var(--destructive));
   font-size: 13px;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
-.check {
-  flex: none;
-  color: #34C759;
+/* The progress runs along the box's own foot, clipped by its radius. */
+.track {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 0 0 11px 11px;
+  background: hsl(var(--secondary));
 }
 
-:global(.admin-theme[data-admin-theme="dark"]) .check {
-  color: #30D158;
+.bar {
+  height: 100%;
+  background: hsl(var(--primary));
+  transition: width .24s ease-out;
 }
 
 .status {
@@ -253,26 +610,85 @@
   white-space: nowrap;
 }
 
+/* Content crossfades: it fades in as the old face goes, and the success fades out before the invitation returns. */
+.face[data-leaving],
+.lead[data-leaving] {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bar { transition: none; }
+
+  .face,
+  .zone,
+  .lead {
+    transition: opacity 200ms ease-out;
+  }
+
+  .face[data-enter],
+  .zone[data-enter],
+  .lead[data-enter] {
+    animation: heroFaceFade 200ms ease-out backwards;
+  }
+
+  .check,
+  .check path {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .face,
+  .zone,
+  .lead {
+    transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out), filter 200ms var(--ease-out);
+  }
+
+  .face[data-enter],
+  .zone[data-enter],
+  .lead[data-enter] {
+    animation: heroFaceIn 240ms var(--ease-out) backwards;
+  }
+
+  .face[data-leaving],
+  .lead[data-leaving] {
+    transform: scale(.98);
+    filter: blur(2px);
+  }
+
+  .badge {
+    transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+    transform: scale(.92);
+  }
+
+  .badge[data-on] {
+    transform: none;
+    animation: heroBump 420ms var(--ease-out) 160ms;
+  }
+
   /* While processing, the filled part breathes so a bar that waits for the next percent still reads as working. */
   .bar[data-working] {
     animation: heroBarPulse 1.6s ease-in-out infinite;
   }
 
   .check {
-    animation: heroPop var(--admin-motion-save-pop, 320ms) var(--admin-motion-ease-out, ease-out);
+    animation: heroPop 320ms var(--ease-out) 200ms backwards;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .check,
-  .check path {
-    animation: none;
-  }
+@keyframes heroFaceIn {
+  0% { opacity: 0; transform: scale(.98); filter: blur(2px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes heroFaceFade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes heroNameIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 @keyframes heroBarPulse {
@@ -282,6 +698,11 @@
 
 @keyframes heroPop {
   0% { transform: scale(.85); }
-  60% { transform: scale(1.1); }
-  100% { transform: none; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes heroBump {
+  0%, 100% { transform: none; }
+  45% { transform: scale(1.12); }
 }

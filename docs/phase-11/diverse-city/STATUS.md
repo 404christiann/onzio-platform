@@ -1,5 +1,21 @@
 # Diverse City FC Status
 
+## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX: one-box uploader with a clear "Live on your website" moment
+
+- **Agent / package:** Claude Code (Opus coordinating, Sonnet workers; emil-design-eng review; stageshow design study), `RC-HERO-VIDEO-SUCCESS-UX`, branch `claude/rc-hero-video-success-ux` from main `9129ee1` (#215), PR #219.
+- **Status:** `in_progress`, pushed, PR open. Not merged. UI only: the controller (`lib/homepage-editor/**`), `lib/hero-video-swap.ts`, `app/api`, `supabase` and package files are unchanged. The only lib change is two copy constants in `lib/hero-video-lifecycle.ts`. No migration.
+- **Why:** Christian, after verifying a live upload: "Not 100% clear that the upload worked." First pass: a green Completed card that fades back to the drop zone. He then had stageshow animate the shipped design and propose an alternative, and chose the alternative ("Build the alternative").
+- **Completed (the alternative, in the real control):**
+  - One box keeps its size and place through idle → uploading → processing → success → idle. The dashed edge fades to solid; the contents crossfade (opacity, 2px blur, scale .98, 240ms, `cubic-bezier(0.23, 1, 0.32, 1)`); progress runs along the box's bottom edge. Nothing below it moves, at desktop and at 375px. The failed box keeps the same minimum height but grows to fit the message and buttons.
+  - The % carries its phase word ("Uploading 32%" → "Processing 70%"). Cancel shows only while uploading; its slot stays reserved, and the leave-page hint explains the change.
+  - The new video's first frame shows in the box, taken from the chosen file via a local object URL kept per controller. It falls back to the video icon when the browser can't decode the file.
+  - Success: a green box ("Live on your website" / "Replaced the previous video just now.") plus a green "Live" badge on the preview, whose caption shows the new file name. It holds 2.5s, then returns to the invitation, once per live video (per-controller acknowledgement).
+  - The daily cap is a quiet 10-dot meter, "9 of 10 left today", on the section's top line, with the limits on one short line in the box. Revert is dimmed while a replace runs.
+  - Reduced motion: opacity-only fades, no scale, blur or pop.
+- **Verification:** final table in the PR body. Screenshots: `test-results/hero-video-completion/uploader-{idle,uploading,processing,completed,returned,failed}-{desktop,375}.png`. Stageshow demos (local, outside the repo): `~/.claude/skills/stageshow/examples/rc-video-upload{,-alt}/`.
+- **Next (separate package, not started):** the homepage editor's preview still shows the old video poster image after a swap (the "2" section Christian pointed at).
+- **Exact next step:** Christian reviews and merges #219. No production gate is needed (no migration).
+
 ## 2026-11-22 - TELEMETRY-FLAG: Rose City sponsor_insights on in production
 
 **Agent/package:** Claude Code (Opus 5.5), TELEMETRY-FLAG. Branch `claude/telemetry-flag-rose-city`. Docs and operator

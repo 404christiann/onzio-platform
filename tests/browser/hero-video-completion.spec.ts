@@ -203,8 +203,9 @@ const FAILED = "We couldn't finish this video. Try again or use a different file
 const LEAVE = "You can leave this page; we'll finish in the background.";
 const KEEP_OPEN = "Keep this page open until the upload finishes.";
 const LIVE_COPY = "Your new video is live.";
-const CAP = (left: number) => `${left} of 10 replaces left today.`;
-const LIMITS = "MP4, MOV or WebM · up to 500 MB · up to 10 minutes · at least 720p";
+const CAP = (left: number) => `${left} of 10 left today`;
+const DONE = "Live on your website";
+const LIMITS = "MP4, MOV or WebM · 500 MB · 10 min · 720p+";
 const zoneOf = (page: Page) => page.getByRole("button", { name: /Click to upload/ });
 const bar = (page: Page) => page.getByRole("progressbar", { name: "Hero video progress" });
 const fill = (page: Page) => bar(page).locator(":scope > div");
@@ -267,14 +268,18 @@ async function uploadToProcessing(page: Page) {
   await expect(bar(page)).toHaveAttribute("aria-valuetext", "Processing…", { timeout: 15_000 });
 }
 
-test("idle: the drop zone reads like an upload area, with the limits and the allowance under it", async ({ page }) => {
+test("idle: the one box reads like an upload area, with the limits in it and the allowance meter on the section line", async ({ page }) => {
   await openEditor(page);
   await expect(zoneOf(page)).toBeEnabled();
   await expect(zoneOf(page)).toHaveText(/Click to upload or drag and drop/);
   await expect(page.getByText(LIMITS)).toBeVisible();
   await expect(page.getByText(CAP(10))).toBeVisible();
+  await expect(page.getByRole("img", { name: "10 of 10 replaces left today" })).toBeVisible();
+  await expect(page.getByRole("img", { name: /replaces left today/ }).locator("span > span")).toHaveCount(10);
   await expect(page.locator("[data-hero-row]")).toHaveCount(0);
-  await expect(page.getByText("Completed", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(DONE, { exact: true })).toHaveCount(0);
+  await expect(page.locator("[data-hero-badge][data-on]")).toHaveCount(0);
+  await expect(page.locator('[data-face="idle"]')).toHaveCSS("border-top-style", "solid");
   await uploaderShots(page, "idle");
 });
 
@@ -325,7 +330,7 @@ test("cancelling mid-upload with the trash button returns to idle with nothing s
   await expect(page.getByText("Upload canceled. Your current video is unchanged.")).toBeVisible();
   await expect(zoneOf(page)).toBeEnabled();
   await expect(page.getByText(CAP(10))).toBeVisible();
-  await expect(page.locator("video")).toHaveAttribute("src", new RegExp(LIVE));
+  await expect(page.getByLabel("Current hero video preview")).toHaveAttribute("src", new RegExp(LIVE));
   openGate();
   await page.waitForTimeout(500);
   expect(swaps).toBe(0);
@@ -333,13 +338,13 @@ test("cancelling mid-upload with the trash button returns to idle with nothing s
   expect(store.live).toBe(LIVE);
 });
 
-test("Completed and the check appear only at live", async ({ page }) => {
+test("the green success and its check appear only at live", async ({ page }) => {
   await openEditor(page);
   await uploadToProcessing(page);
-  await expect(page.getByText("Completed", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(DONE, { exact: true })).toHaveCount(0);
   await expect(page.locator("[data-hero-check]")).toHaveCount(0);
   await postReadyWebhook(page);
-  await expect(page.getByText("Completed", { exact: true })).toBeVisible({ timeout: 12_000 });
+  await expect(page.getByText(DONE, { exact: true })).toBeVisible({ timeout: 12_000 });
   await expect(page.locator("[data-hero-check]")).toHaveCount(1);
 });
 
@@ -358,13 +363,12 @@ test("after a video goes live, a rejected second file shows a red row without th
   await openEditor(page);
   await uploadToProcessing(page);
   await postReadyWebhook(page);
-  await expect(page.getByText("Completed", { exact: true })).toBeVisible({ timeout: 12_000 });
-  await expect(page.getByText("hero.mp4", { exact: true })).toBeVisible();
+  await expect(page.getByText(DONE, { exact: true })).toBeVisible({ timeout: 12_000 });
   await page.getByLabel("Choose hero video").setInputFiles({ name: "notes.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(1024, 1) });
   const row = page.locator('[data-hero-row="failed"]');
   await expect(row).toBeVisible();
   await expect(page.getByRole("alert")).toHaveText(/^That file is not a video we can use\./);
-  await expect(row.getByText("Video", { exact: true })).toBeVisible();
+  await expect(row.getByRole("button", { name: "Try again" })).toBeVisible();
   await expect(page.getByText("hero.mp4", { exact: true })).toHaveCount(0);
   await expect(page.getByText("0.1 MB", { exact: true })).toHaveCount(0);
 });
@@ -437,26 +441,193 @@ test("one bar runs from upload through processing to live, never backwards, with
   await uploaderShots(page, "processing");
 
   expect(await postReadyWebhook(page)).toEqual({ status: 200, body: { received: true, outcome: "live" } });
-  await expect(page.getByText("Completed", { exact: true })).toBeVisible({ timeout: 12_000 });
+  await expect(page.getByText(DONE, { exact: true })).toBeVisible({ timeout: 12_000 });
   await expect(liveText(page)).toHaveText(LIVE_COPY);
   // Visually hidden (a 1px clipped box): it is for screen readers only.
   expect(await liveText(page).evaluate((element) => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
-  await expect(bar(page)).toHaveAttribute("aria-valuenow", "100");
+  // At live the bar is gone: the success face says Live on your website and nothing else.
+  await expect(bar(page)).toHaveCount(0);
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible();
   await expect(page.locator("[data-hero-check]")).toHaveCount(1);
   await expect(page.getByText(LEAVE)).toHaveCount(0);
-  await expect(page.locator('[aria-hidden="true"]', { hasText: "100%" })).toHaveCount(1);
+  await expect(page.getByText("100%")).toHaveCount(0);
+  await expect(zoneOf(page)).toHaveCount(0);
   await shot(page, "live");
   await uploaderShots(page, "completed");
 
   const all = await samples();
   const run = all.slice(all.findIndex((sample) => sample.bars > 0));
-  expect(run.every((sample) => sample.bars === 1)).toBe(true);
-  const values = run.map((sample) => sample.now as number);
+  const barRun = run.filter((sample) => sample.bars > 0);
+  expect(barRun.every((sample) => sample.bars === 1)).toBe(true);
+  const values = barRun.map((sample) => sample.now as number);
   expect(values).toEqual([...values].sort((a, b) => a - b));
-  expect(values.at(-1)).toBe(100);
-  expect([...new Set(run.map((sample) => sample.text))]).toEqual(["Uploading…", "Processing…", LIVE_COPY]);
-  expect(run.filter((sample) => sample.check > 0).every((sample) => sample.text === LIVE_COPY)).toBe(true);
+  expect(values.at(-1)).toBe(70);
+  expect([...new Set(barRun.map((sample) => sample.text))]).toEqual(["Uploading…", "Processing…"]);
+  expect(run.filter((sample) => sample.check > 0).every((sample) => sample.bars === 0 && sample.label === LIVE_COPY)).toBe(true);
   expect(run.some((sample) => sample.alert)).toBe(false);
+});
+
+/** Text that is on screen: sr-only (1px, clipped) and aria-hidden-free content only. */
+const visibleCopy = (page: Page, text: string) => page.evaluate((copy) => [...document.querySelectorAll("body *")].some((element) => {
+  if (element.children.length > 0 || element.textContent?.trim() !== copy) return false;
+  const box = element.getBoundingClientRect();
+  return box.width > 1 && box.height > 1;
+}), text);
+
+const boxOf = (page: Page) => page.locator("[data-face]");
+const below = (page: Page) => page.locator("[data-below]");
+/** The box's height and where the content below it sits, in one read. */
+const geometry = async (page: Page) => {
+  const box = (await boxOf(page).boundingBox())!;
+  const after = (await below(page).boundingBox())!;
+  return { box, gap: after.y - (box.y + box.height), x: box.x, width: box.width };
+};
+
+test("at live the box turns green in the same place and size, holds, then fades back to the invitation", async ({ page }) => {
+  await openEditor(page);
+  const before = await geometry(page);
+  await uploadToProcessing(page);
+  await postReadyWebhook(page);
+  const card = page.locator('[data-hero-row="completed"]');
+  await expect(card).toBeVisible({ timeout: 12_000 });
+  await expect(card).toHaveText(/Live on your website/);
+  await expect(card).toHaveText(/Replaced the previous video just now\./);
+  await expect(page.locator("[data-hero-check]")).toHaveCount(1);
+  await expect(boxOf(page)).toHaveAttribute("data-face", "done");
+  await expect(bar(page)).toHaveCount(0);
+  await expect(page.getByText("100%")).toHaveCount(0);
+  await expect(zoneOf(page)).toHaveCount(0);
+  await expect(card).toHaveAttribute("aria-hidden", "true");
+  const during = await geometry(page);
+  expect(during.width).toBeCloseTo(before.width, 0);
+  expect(Math.abs(during.box.height - before.box.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(during.box.y - before.box.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(during.gap - before.gap)).toBeLessThanOrEqual(1);
+  await expect(liveText(page)).toHaveText(LIVE_COPY);
+
+  // Hold, then fade; the invitation returns in the same spot.
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0, { timeout: 5_000 });
+  await expect(zoneOf(page)).toBeVisible();
+  await expect(zoneOf(page)).toBeEnabled();
+  await expect(zoneOf(page)).toHaveAttribute("data-returning", "true");
+  await expect(page.getByText(CAP(9))).toBeVisible();
+  expect(await visibleCopy(page, LIVE_COPY)).toBe(false);
+  await expect(liveText(page)).toHaveText("");
+  await expect(page.locator("[data-hero-check]")).toHaveCount(0);
+  await expect(page.getByText(DONE, { exact: true })).toHaveCount(0);
+  await page.waitForTimeout(300);
+  const after = await geometry(page);
+  expect(Math.abs(after.box.y - before.box.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.box.height - before.box.height)).toBeLessThanOrEqual(1);
+  expect(await zoneOf(page).evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+  await expect(boxOf(page)).toHaveAttribute("data-face", "idle");
+  await uploaderShots(page, "returned");
+});
+
+for (const [label, width] of [["desktop", 1280], ["375px", 375]] as const) {
+  test(`the box keeps its height and the content below stays put from idle through uploading, processing and success and back (${label})`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 800 });
+    await openEditor(page);
+    const idle = await geometry(page);
+    const same = async (state: string) => {
+      const now = await geometry(page);
+      expect(Math.abs(now.box.height - idle.box.height), `${state}: box height`).toBeLessThanOrEqual(1);
+      expect(Math.abs(now.box.y - idle.box.y), `${state}: box top`).toBeLessThanOrEqual(1);
+      expect(Math.abs(now.gap - idle.gap), `${state}: content below`).toBeLessThanOrEqual(1);
+      expect(Math.abs(now.width - idle.width), `${state}: box width`).toBeLessThanOrEqual(1);
+    };
+    await chooseVideo(page);
+    await expect(bar(page)).toHaveAttribute("aria-valuetext", "Uploading…");
+    await expect(boxOf(page)).toHaveAttribute("data-face", "flight");
+    await page.waitForTimeout(300);
+    await same("uploading");
+    openGate();
+    await expect(bar(page)).toHaveAttribute("aria-valuetext", "Processing…", { timeout: 15_000 });
+    await page.waitForTimeout(300);
+    await same("processing");
+    await postReadyWebhook(page);
+    await expect(boxOf(page)).toHaveAttribute("data-face", "done", { timeout: 12_000 });
+    await page.waitForTimeout(300);
+    await same("success");
+    await expect(boxOf(page)).toHaveAttribute("data-face", "idle", { timeout: 5_000 });
+    await page.waitForTimeout(400);
+    await same("idle again");
+  });
+}
+
+test("the chosen file's first frame is attempted as a thumbnail in the box, falling back to the icon when it can't decode", async ({ page }) => {
+  await openEditor(page);
+  await expect(page.locator('[data-face] video')).toHaveCount(0);
+  await chooseVideo(page);
+  await expect(boxOf(page)).toHaveAttribute("data-face", "flight");
+  const thumb = page.locator('[data-face] video[aria-hidden="true"]');
+  await expect(thumb).toHaveCount(1);
+  await expect(thumb).toHaveAttribute("src", /^blob:.*#t=0\.1$/);
+  expect(await thumb.evaluate((element: HTMLVideoElement) => element.muted && element.playsInline && element.preload === "metadata" && !element.controls)).toBe(true);
+  // The bytes are not a video, so the frame cannot decode and the icon takes its place.
+  await expect(page.locator('[data-fallback="icon"]')).toBeVisible();
+  await expect(page.locator('[data-fallback="icon"] svg')).toBeVisible();
+  // The thumbnail leads the success too, and is released once the invitation returns.
+  openGate();
+  await expect(bar(page)).toHaveAttribute("aria-valuetext", "Processing…", { timeout: 15_000 });
+  await postReadyWebhook(page);
+  await expect(boxOf(page)).toHaveAttribute("data-face", "done", { timeout: 12_000 });
+  await expect(page.locator('[data-face] video[aria-hidden="true"]')).toHaveCount(1);
+  await expect(boxOf(page)).toHaveAttribute("data-face", "idle", { timeout: 5_000 });
+  await expect(page.locator('[data-face] video')).toHaveCount(0);
+});
+
+test("at success the preview shows the Live badge and the side column the new file's name, then the badge goes and the invitation returns", async ({ page }) => {
+  await openEditor(page);
+  await expect(page.locator("[data-hero-badge][data-on]")).toHaveCount(0);
+  await expect(page.getByText("Current video", { exact: true })).toBeVisible();
+  await uploadToProcessing(page);
+  await expect(page.locator("[data-hero-badge][data-on]")).toHaveCount(0);
+  await postReadyWebhook(page);
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible({ timeout: 12_000 });
+  const badge = page.locator("[data-hero-badge][data-on]");
+  await expect(badge).toHaveCount(1);
+  await expect(badge).toHaveText("Live");
+  await expect(page.locator("[data-hero-badge]")).toBeVisible();
+  await expect(page.getByText("hero.mp4", { exact: true })).toHaveCount(1);
+  await expect(page.getByText("hero.mp4", { exact: true })).toBeVisible();
+  await expect(page.getByText("Current video", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("On your website", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-hero-badge][data-on]")).toHaveCount(0, { timeout: 5_000 });
+  await expect(zoneOf(page)).toBeVisible();
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0);
+  await expect(page.locator("[data-hero-badge]")).toHaveCSS("opacity", "0");
+});
+
+test("closing and reopening the control after the card faded does not show the success again", async ({ page }) => {
+  await openEditor(page);
+  await uploadToProcessing(page);
+  await postReadyWebhook(page);
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible({ timeout: 12_000 });
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0, { timeout: 5_000 });
+  await page.getByRole("button", { name: "Hide video control" }).click();
+  await expect(zoneOf(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "Show video control" }).click();
+  await expect(zoneOf(page)).toBeVisible();
+  await expect(zoneOf(page)).not.toHaveAttribute("data-returning", "true");
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0);
+  await expect(page.getByText(DONE, { exact: true })).toHaveCount(0);
+  expect(await visibleCopy(page, LIVE_COPY)).toBe(false);
+  await expect(liveText(page)).toHaveText("");
+  await page.waitForTimeout(400);
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0);
+});
+
+test("reopening the control while the card is still holding restarts the hold", async ({ page }) => {
+  await openEditor(page);
+  await uploadToProcessing(page);
+  await postReadyWebhook(page);
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible({ timeout: 12_000 });
+  await page.getByRole("button", { name: "Hide video control" }).click();
+  await page.getByRole("button", { name: "Show video control" }).click();
+  await expect(page.locator('[data-hero-row="completed"]')).toBeVisible();
+  await expect(page.locator("[data-hero-row]")).toHaveCount(0, { timeout: 5_000 });
+  await expect(zoneOf(page)).toBeVisible();
 });
 
 test("leaving mid-processing keeps going: the webhook lands while away and the next visit shows live", async ({ page }) => {
@@ -474,8 +645,8 @@ test("leaving mid-processing keeps going: the webhook lands while away and the n
 
   await page.goto(`${origin}/tests/browser/fixtures/hero-video-completion/`);
   await expect(liveText(page)).toHaveText(LIVE_COPY);
-  await expect(page.getByText("Completed", { exact: true })).toBeVisible();
-  await expect(bar(page)).toHaveAttribute("aria-valuenow", "100");
+  await expect(page.getByText(DONE, { exact: true })).toBeVisible();
+  await expect(bar(page)).toHaveCount(0);
   await expect(page.locator("[data-hero-check]")).toHaveCount(1);
   // A fresh page load shows the notice but never refreshes the revision: the editor just loaded the current one.
   await expect(page.locator("[data-refreshed]")).toHaveAttribute("data-refreshed", "");
@@ -519,7 +690,7 @@ test("closing the tab during the upload leaves the current video live", async ({
   await expect(next.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await expect(next.getByRole("progressbar")).toHaveCount(0);
   await expect(next.getByText(LIVE_COPY)).toHaveCount(0);
-  await expect(next.getByText("Completed", { exact: true })).toHaveCount(0);
+  await expect(next.getByText(DONE, { exact: true })).toHaveCount(0);
   await expect(next.locator("video")).toHaveAttribute("src", new RegExp(LIVE));
   expect(store.live).toBe(LIVE);
   expect(store.videos.has(PREVIOUS)).toBe(true);
@@ -535,7 +706,9 @@ test("a missing mp4 shows the plain failure copy, with Replace and Revert still 
   await expect(page.getByRole("alert")).not.toContainText(/bunny|video service|MP4_MISSING/i);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
   await expect(page.locator("[data-hero-check]")).toHaveCount(0);
-  await expect(zoneOf(page)).toBeEnabled();
+  await expect(page.locator('[data-face="failed"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeEnabled();
+  await expect(page.getByLabel("Choose hero video")).toBeEnabled();
   await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await shot(page, "failed");
   await uploaderShots(page, "failed");
@@ -550,7 +723,9 @@ test("a video below 720p says what to change, with Replace and Revert still enab
   await expect(page.getByRole("alert")).not.toContainText(FAILED);
   await expect(page.getByRole("alert")).not.toContainText(/bunny|video service|RESOLUTION_TOO_LOW/i);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
-  await expect(zoneOf(page)).toBeEnabled();
+  await expect(page.locator('[data-face="failed"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeEnabled();
+  await expect(page.getByLabel("Choose hero video")).toBeEnabled();
   await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await shot(page, "failed-resolution");
 });
@@ -560,7 +735,9 @@ test("a video that is not live by its deadline shows the same failure copy", asy
   await uploadToProcessing(page);
   store.phase = "preparing_overdue";
   await expect(page.getByRole("alert")).toHaveText(new RegExp(`^${FAILED}`), { timeout: 12_000 });
-  await expect(zoneOf(page)).toBeEnabled();
+  await expect(page.locator('[data-face="failed"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeEnabled();
+  await expect(page.getByLabel("Choose hero video")).toBeEnabled();
   await expect(page.getByRole("button", { name: "Revert to previous" })).toBeEnabled();
   await shot(page, "failed-overdue");
 });

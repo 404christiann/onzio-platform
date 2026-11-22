@@ -1,3 +1,7 @@
+## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX
+
+- The Rose City hero video uploader is now one box that keeps its size through every state. It shows the new video's first frame, the % with its phase word, and progress along the box's bottom edge. Success is a green "Live on your website" box plus a "Live" badge on the preview, for 2.5s, then back to the invitation. The replaces cap is a 10-dot meter. UI only, no migration. Branch `claude/rc-hero-video-success-ux`, PR #219, not merged. Next, a separate package: refresh the preview's old video poster after a swap. Record: `STATUS.md` (RC-HERO-VIDEO-SUCCESS-UX).
+
 ## 2026-11-21 - UI-POLISH-DASHBOARD: classic admin dashboard
 
 - **Status:** `ready for review`, branch `claude/ui-polish-dashboard` off main `234e4cac`, PR open, not merged. Visual, markup and copy only; no query, gate, `app/api/**` or `supabase/**` change. Record: `STATUS.md` (UI-POLISH-DASHBOARD).

@@ -29,7 +29,7 @@ const row = (effective: string, encodeProgress: number | null = null) => ({ vide
 const bar = (markup: string) => markup.match(/<div class="[^"]*track[^"]*" role="progressbar"[^>]*>/)?.[0] ?? "";
 const zone = (markup: string) => markup.match(/<button[^>]*>(?:(?!<\/button>).)*Click to upload(?:(?!<\/button>).)*<\/button>/)?.[0] ?? "";
 const cancelButton = (markup: string) => markup.match(/<button[^>]*aria-label="Cancel upload"[^>]*>/)?.[0] ?? "";
-const COMPLETED = ">Completed<";
+const COMPLETED = ">Live on your website<";
 const LIVE_COPY = "Your new video is live.";
 
 describe("hero video control rendering", () => {
@@ -49,13 +49,14 @@ describe("hero video control rendering", () => {
     expect(markup).not.toContain("Hero video");
     expect(markup).toContain("Click to upload");
     expect(markup).toContain("or drag and drop");
-    expect(markup).toContain("MP4, MOV or WebM · up to 500 MB · up to 10 minutes · at least 720p");
+    expect(markup).toContain("MP4, MOV or WebM · 500 MB · 10 min · 720p+");
     expect(markup).toContain("Revert to previous");
     expect(markup).toContain("8 of 10 replaces left today");
+    expect(markup).toContain("8 of 10 left today");
+    expect(markup).not.toContain("8 of 10 replaces left today.");
     expect(markup).toContain("not part of the Save button");
     expect(markup).toContain('accept="video/*"');
     expect(markup).toContain('aria-live="polite"');
-    expect(markup).toContain("8 of 10 replaces left today.");
     expect(markup).not.toContain("Maximum file size");
     expect(zone(markup)).not.toContain("aria-label");
     expect(zone(markup)).not.toMatch(/ disabled/);
@@ -132,7 +133,7 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(bar(markup)).toContain('aria-valuemax="100"');
     expect(bar(markup)).toContain('aria-valuetext="Uploading…"');
     expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*srOnly[^"]*">Uploading…<\/p>/);
-    expect(markup).toMatch(/<span aria-hidden="true" class="[^"]*percent[^"]*">20%<\/span>/);
+    expect(markup).toMatch(/<span class="[^"]*phasePercent[^"]*" aria-hidden="true"><span class="[^"]*phaseWord[^"]*">Uploading<\/span> <span class="[^"]*percent[^"]*">20%<\/span><\/span>/);
     expect(markup).toContain('title="hero.mp4"');
     expect(markup).toContain(">hero.mp4<");
     expect(markup).toContain(">9.5 MB<");
@@ -140,10 +141,9 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(cancelButton(markup)).not.toBe("");
     expect(zone(markup)).toBe("");
     expect(markup).not.toContain("Click to upload");
-    expect(markup).toContain("8 of 10 replaces left today.");
-    // The row sits where the drop zone was: above the allowance line.
-    expect(markup.indexOf('data-hero-row="uploading"')).toBeGreaterThan(-1);
-    expect(markup.indexOf('data-hero-row="uploading"')).toBeLessThan(markup.indexOf("8 of 10 replaces left today."));
+    expect(markup).toContain('data-hero-row="uploading"');
+    // The file row sits in the one box, below the preview and the meter.
+    expect(markup.indexOf('data-hero-row="uploading"')).toBeGreaterThan(markup.indexOf("8 of 10 left today"));
     expect(markup).toContain('style="width:20%"');
     expect(markup).toContain(KEEP_OPEN);
     expect(markup).not.toContain(LEAVE);
@@ -161,6 +161,7 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(bar(markup)).toContain('aria-valuenow="40"');
     expect(bar(markup)).toContain('aria-valuetext="Processing…"');
     expect(markup).toContain(LEAVE);
+    expect(markup).toMatch(/phaseWord[^>]*>Processing<\/span> <span class="[^"]*percent[^"]*">40%</);
     expect(markup).not.toContain(KEEP_OPEN);
     expect(markup).toContain("data-working");
     expect(markup).not.toContain(COMPLETED);
@@ -184,19 +185,46 @@ describe("hero video control rendering: one bar from upload to live", () => {
     none.dispose();
   });
 
-  it("live is the only success state: Completed with the check and a full bar, the live sentence for screen readers only, and no leave line", async () => {
+  it("live is the only success state: the green success face replaces the row and the invitation, with the live sentence for screen readers only and no leave line", async () => {
     const live = { ...STATUS, liveGuid: "new-guid", pending: row("live"), completion: { videoGuid: "new-guid", revisionBefore: null, revisionAfter: null } };
     const controller = createHeroVideoController({ getStatus: async () => live } as unknown as HeroVideoDeps);
     await controller.load();
     const markup = html(editor(controller));
     expect(markup.match(/data-hero-check/g)).toHaveLength(1);
-    expect(bar(markup)).toContain('aria-valuenow="100"');
-    expect(bar(markup)).toContain('aria-valuetext="Your new video is live."');
+    expect(markup).not.toContain("progressbar");
+    expect(markup).not.toMatch(/class="[^"]*percent[^"]*"/);
+    expect(markup).not.toContain("100%");
+    expect(markup).toMatch(/<div class="[^"]*face[^"]*" data-hero-row="completed" aria-hidden="true">/);
+    expect(markup).toMatch(/<span class="[^"]*title[^"]*">Live on your website<\/span>/);
+    expect(markup).toContain("Replaced the previous video just now.");
+    expect(markup).not.toContain("Completed");
+    expect(markup).toMatch(/<svg[^>]*aria-hidden="true"[^>]*data-hero-check/);
+    expect(markup).not.toContain("Click to upload");
+    expect(zone(markup)).toBe("");
     expect(markup).toMatch(/<p role="status" aria-live="polite" class="[^"]*status[^"]*srOnly[^"]*">Your new video is live\.<\/p>/);
-    expect(markup).toMatch(/<p class="[^"]*phaseLabel[^"]*" aria-hidden="true"><svg[^>]*data-hero-check[^>]*>.*<\/svg>Completed<\/p>/);
-    expect(markup).toContain('title="Video">Video<');
+    expect(markup).toContain("8 of 10 left today");
+    expect(markup).not.toContain('title="Video"');
     expect(cancelButton(markup)).toBe("");
     expect(markup).not.toContain(LEAVE);
+  });
+
+  it("the success holds 2500 ms, fades in 200 ms, is acknowledged once per controller and video, and only fades (no scale or blur) with reduced motion", () => {
+    const source = readFileSync("components/admin/homepage/HeroVideoControl.tsx", "utf8");
+    const css = readFileSync("components/admin/homepage/HeroVideoControl.module.css", "utf8");
+    expect(source).toContain("const HERO_SUCCESS_HOLD_MS = 2500;");
+    expect(source).toContain("const HERO_SUCCESS_EXIT_MS = 200;");
+    expect(source).toContain("new WeakMap<HeroVideoController, string>()");
+    expect(source).toContain('status?.liveGuid ?? "live"');
+    expect(css).toContain("--hero-success");
+    expect(css).toContain("cubic-bezier(0.23, 1, 0.32, 1)");
+    const reduce = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g)].map(match => match[0]).join("\n");
+    expect(reduce).toContain("heroFaceFade");
+    expect(reduce).not.toMatch(/transform:|filter:|heroFaceIn|heroPop|heroBump/);
+    // Outside the motion-allowed block the faces use opacity only; scale and blur are motion-only.
+    const outside = css.slice(0, css.indexOf("@media (prefers-reduced-motion: no-preference) {\n  .face,"));
+    const rules = outside.replace(/@keyframes[\s\S]*$/, "");
+    expect(rules).not.toMatch(/\.(?:face|lead|zone)[^{}]*\{[^{}]*(?:transform:|filter:)/);
+    expect(css).toMatch(/@keyframes heroFaceIn \{[^}]*blur\(2px\)/);
   });
 
   it("idle shows no bar and no hint", async () => {
@@ -227,8 +255,9 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(markup).toContain(FAILED);
     expect(markup).not.toMatch(/bunny|video service|MP4_MISSING|RESOLUTION_MISSING|VIDEO_FAILED|PREPARE_TIMEOUT/i);
     expect(markup).not.toContain("progressbar");
-    expect(zone(markup)).not.toBe("");
-    expect(zone(markup)).not.toContain("disabled");
+    expect(zone(markup)).toBe("");
+    expect(markup).toMatch(/<input(?![^>]*disabled)[^>]*aria-label="Choose hero video"/);
+    expect(markup).toContain('data-face="failed"');
     expect(markup).toContain('data-hero-row="failed"');
     expect(markup).toMatch(/<button[^>]*>Try again<\/button>/);
     expect(markup).not.toContain(COMPLETED);
@@ -248,8 +277,7 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(markup).not.toContain(FAILED);
     expect(markup).not.toMatch(/bunny|video service|VIDEO_TOO_LONG|RESOLUTION_TOO_LOW|STORED_SIZE_TOO_LARGE/i);
     expect(markup).not.toContain("progressbar");
-    expect(zone(markup)).not.toBe("");
-    expect(zone(markup)).not.toContain("disabled");
+    expect(markup).toMatch(/<input(?![^>]*disabled)[^>]*aria-label="Choose hero video"/);
     expect(markup).toMatch(/<button(?![^>]*disabled)[^>]*>(?:(?!<\/button>).)*Revert to previous<\/button>/);
   });
 
@@ -281,17 +309,17 @@ describe("hero video control rendering: one bar from upload to live", () => {
     expect(source).not.toContain("progressText");
     expect(source.match(/role="progressbar"/g)).toHaveLength(1);
     expect(css).not.toMatch(/\.working|heroWork|\.progressText/);
-    const animated = css.slice(css.indexOf("@media (prefers-reduced-motion: no-preference)"), css.indexOf("@media (prefers-reduced-motion: reduce) {\n  .check,"));
+    const animated = css.slice(css.indexOf("@media (prefers-reduced-motion: no-preference) {\n  .face,"), css.indexOf("@keyframes heroFaceIn"));
     expect(animated).toContain(".bar[data-working]");
     expect(css.replace(animated, "")).not.toContain("heroBarPulse 1.6s");
   });
 
-  it("the drop zone is a native button that is aria-disabled, never disabled, while locked, and is replaced by the file row while a video uploads or processes", () => {
+  it("the invitation is a native button that is aria-disabled, never disabled, while locked, and the one box shows the file row while a video uploads or processes", () => {
     const source = readFileSync("components/admin/homepage/HeroVideoControl.tsx", "utf8");
     expect(source).toContain("aria-disabled={!enabled || undefined}");
     expect(source).not.toMatch(/Click to upload[\s\S]{0,40}disabled=/);
     expect(source).toContain('const inFlight = phase === "uploading" || phase === "preparing";');
-    expect(source).toContain("{!inFlight && <div className={styles.uploader}>");
+    expect(source).toContain('{face === "idle" && <button type="button"');
     expect(source).toContain("event.preventDefault()");
   });
 });
@@ -313,22 +341,22 @@ describe("hero video control rendering: a later failure never shows the live fil
     for (let i = 0; i < 20 && controller.getState().phase !== "live"; i += 1) await settle();
     const markup = html(editor(controller));
     expect(markup).toContain(COMPLETED);
-    expect(markup).toContain('title="hero.mp4"');
-    expect(markup).toContain(">9.5 MB<");
+    // The side column names the new file; the success face itself carries no size.
+    expect(markup).toMatch(/<span class="[^"]*liveName[^"]*" title="hero\.mp4">hero\.mp4<\/span>/);
+    expect(markup).not.toContain("9.5 MB");
     return controller;
   }
 
   it.each([
     ["too large", { name: "huge.mov", size: 600 * 1024 * 1024, type: "video/quicktime" }, "That video is too large. The limit is 500 MB. Choose a smaller file."],
     ["not a video", { name: "notes.pdf", size: 2_000, type: "application/pdf" }, "That file is not a video we can use. Choose an MP4 or MOV video."],
-  ])("a second file rejected as %s shows the red row without the live file's name or size", async (_label, second, copy) => {
+  ])("a second file rejected as %s shows the red box without the live file's name or size", async (_label, second, copy) => {
     const controller = await liveAfterUpload();
     await controller.replace(second as unknown as File);
     const markup = html(editor(controller));
     expect(markup).toContain('data-hero-row="failed"');
     expect(markup).toContain(`<div role="alert" class="`);
     expect(markup).toContain(`<p>${copy}</p>`);
-    expect(markup).toContain('title="Video">Video<');
     expect(markup).not.toContain("hero.mp4");
     expect(markup).not.toContain("9.5 MB");
     expect(markup).not.toContain(COMPLETED);
@@ -355,5 +383,49 @@ describe("hero video control rendering: a later failure never shows the live fil
     expect(markup).not.toContain("hero.mp4");
     expect(markup).not.toContain("9.5 MB");
     controller.dispose();
+  });
+});
+
+describe("hero video control rendering: the redesigned box and meter", () => {
+  it("the cap is a meter of replacesPerDay dots (left filled) with an accessible label that says replaces", async () => {
+    const controller = createHeroVideoController({ getStatus: async () => ({ ...STATUS, replacesUsedToday: 3, replacesPerDay: 12 }) } as unknown as HeroVideoDeps);
+    await controller.load();
+    const markup = html(editor(controller));
+    const meter = markup.match(/<span class="[^"]*meter[^"]*" role="img" aria-label="([^"]*)">([\s\S]*?)>9 of 12 left today</);
+    expect(meter?.[1]).toBe("9 of 12 replaces left today");
+    expect(meter?.[2].match(/<span data-on="true"><\/span>/g)).toHaveLength(9);
+    expect(meter?.[2].match(/<span><\/span>/g)).toHaveLength(3);
+    expect(markup).toContain(">9 of 12 left today<");
+  });
+
+  it("idle: one dashed box button with the invitation and the one-line limits, and no row", async () => {
+    const controller = createHeroVideoController({ getStatus: async () => STATUS } as unknown as HeroVideoDeps);
+    await controller.load();
+    const markup = html(editor(controller));
+    expect(markup).toContain('data-face="idle"');
+    expect(zone(markup)).toContain("Click to upload");
+    expect(zone(markup)).toContain("or drag and drop");
+    expect(zone(markup)).toContain("MP4, MOV or WebM · 500 MB · 10 min · 720p+");
+    expect(markup).not.toContain("data-hero-row");
+  });
+
+  it("the preview has its Live badge hidden until success, and the live side column says On your website", async () => {
+    const controller = createHeroVideoController({ getStatus: async () => STATUS } as unknown as HeroVideoDeps);
+    await controller.load();
+    const markup = html(editor(controller));
+    expect(markup).toContain("On your website");
+    expect(markup).not.toMatch(/class="[^"]*badge[^"]*" data-on/);
+  });
+
+  it("failed: the red box keeps the message first in the alert, with Try again and Dismiss and no bar", async () => {
+    const controller = createHeroVideoController({ getStatus: async () => STATUS, readDuration: async () => 601 } as unknown as HeroVideoDeps);
+    await controller.load();
+    await controller.replace(file);
+    const markup = html(editor(controller));
+    expect(markup).toContain('data-face="failed"');
+    expect(markup).toMatch(/<div role="alert"[^>]*><p>This video is longer than 10 minutes\. Use a shorter clip\.<\/p>/);
+    expect(markup).toMatch(/<button[^>]*>Try again<\/button>/);
+    expect(markup).toMatch(/<button[^>]*>Dismiss<\/button>/);
+    expect(markup).not.toContain("progressbar");
   });
 });
