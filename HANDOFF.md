@@ -11,7 +11,8 @@
   TELEMETRY-05 monthly report.
 - **Open:** time on page fills in once TELEMETRY-03's heartbeats (now on main) reach the rollups; until then it reads
   "Not measured yet". 4 classic-admin reimagined browser tests fail on the base too.
-- **Exact next step:** onzio-bot re-review of the rebased head, then Christian reviews #220.
+- **Exact next step:** Christian reviews and merges #220. onzio-coder re-review of `b13a8cd`: 0 High, 0 Medium,
+  0 Low; CI green; local `test:db` 1,557/1,557 on the rebased head.
 
 ## 2026-11-21 - TELEMETRY-03: sponsor logo views, click-through links, time on page
 

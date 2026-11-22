@@ -36,7 +36,16 @@ schema, env, Vercel, Stripe or production change.
 
 **Verification** (all local; every DB/browser run under `scripts/with-local-db-lock.sh`, reset with
 `npx supabase@2.109.1`, ledger max `20261121230000`):
-- Full suite on the `30f983f4` stack: non-DB vitest 400 files, 5,335 passed, 1 skipped; `test:db` 1,547 passed,
+- On the rebased head (main `235eff36`; `037b3253` rebase, `b13a8cdc` fix): `tsc` clean; lint clean (2 existing
+  warnings); non-DB vitest 405 files, 5,444 passed, 1 skipped; `test:architecture` 432 passed, 1 skipped; contracts
+  315 files, 4,192 passed; `npm run build` OK; locked reset + `test:db` 83 files, 1,557/1,557 (including
+  `insights-read`); `db:types:check` match; reimagined Playwright 210 passed, 5 failed, 3 skipped, 15 did not run: the
+  same 4 classic-admin cases plus `programs-tryouts:237` (two Delete menus under full load), which passed on a rebuild
+  of `b13a8cdc` alongside `admin-reimagined-insights` (14/14). Frozen-path diff against `origin/main`: empty; PR diff
+  has no `supabase/**` file.
+- onzio-coder: `c185703` 0 High, 0 Medium, 1 Low (per-page time divided by all views); fixed in `b13a8cdc` (average
+  only over days with engaged time, contract test first); re-review of `b13a8cd`: 0 High, 0 Medium, 0 Low. CI green.
+- Earlier, full suite on the `30f983f4` stack: non-DB vitest 400 files, 5,335 passed, 1 skipped; `test:db` 1,547 passed,
   1 failed (TELEMETRY-01's `sweep_page_telemetry` backlog test, 17.5 s under full load; passes alone, 105/105 with
   `insights-read`); `db:types:check` match; reimagined Playwright 212 passed, 4 failed, 3 skipped, 14 did not run. The
   4 failures (classic-admin cases in `diverse-city`, `sign-in`, `sponsors`, `tabs`) fail identically on the
@@ -53,10 +62,10 @@ schema, env, Vercel, Stripe or production change.
 **Local seed:** Rose City is not in `supabase/seed.sql`, so its `sponsor_insights` flag is not set locally (only
 `admin-reimagined-tabs.spec.ts` sets it briefly on Alpha renamed `rose-city`).
 
-**Blockers / decisions:** none for this package. The 4 classic-admin browser failures predate it.
+**Blockers / decisions:** none for this package. The 4 classic-admin browser failures predate it; `programs-tryouts:237`
+is flaky under full load.
 
-**Exact next step:** Christian reviews the PR after TELEMETRY-02 (#216) merges; then rebase onto `origin/main`
-(drop nothing) and rerun the checks before review.
+**Exact next step:** Christian reviews and merges #220 (two-way door, admin-only; no migration or prod gate needed).
 
 ## 2026-11-21 - TELEMETRY-02: review Medium fixed (heartbeats need an open visit with a view)
 
