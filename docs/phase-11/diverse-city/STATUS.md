@@ -1,5 +1,63 @@
 # Diverse City FC Status
 
+## 2026-11-21 - TELEMETRY-04: Sponsor Insights dashboard (P3), time on page and campaign link builder (P4)
+
+**Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet workers), TELEMETRY-04, branch
+`claude/telemetry-04-insights` (worktree `../onzio-telemetry-04`), rebased onto main `235eff36` (TELEMETRY-02 #216
+and TELEMETRY-03 #217 merged). PR #220, base `main`.
+**Status:** `ready for review`; committed, pushed, not merged. No `supabase/**` file in the diff. No migration, no
+schema, env, Vercel, Stripe or production change.
+
+**Completed:**
+- `lib/telemetry/insights-data.ts`: reads the three TELEMETRY-02 rollup tables plus `matches` and
+  `site_sponsor_logos` with the signed-in cookie client (RLS is the boundary; never the service role), every query
+  also filtered by `club_id`, paged past PostgREST's 1,000-row cap. Ranges 7/30/90 days ending yesterday in the
+  club's time zone (`lib/telemetry/insights-math.ts`). Returns `no-rollups` when the club has no rollup row visible.
+- Insights tab (`app/admin/(protected)/insights/page.tsx`): held clubs (`PUBLIC_SITE_HOLD_SLUGS`) and clubs without
+  rollups keep `InsightsWaiting` unchanged (a held club never calls the reader). Otherwise
+  `components/admin/reimagined/InsightsDashboard.tsx`: range switch, "Updated daily · last <time>" (plan: never
+  "live"), totals (views, visitor-days, visits, average time on page = engaged_ms / engaged_views, mm:ss or "Not
+  measured yet"), the SVG views-per-day chart with match-day diamonds and missing-day dashes plus a table view
+  (`components/admin/insights/DailyViewsChart.tsx`; the reimagined folder may draw no SVG), top pages (time per
+  view), sources, devices, countries/cities, campaigns, the sponsor table ("Removed sponsor" when the logo row is
+  gone, people who saw it as visitor-days, click rate "—" with no views), the dropped-views line, per-card empty
+  states.
+- Campaign link builder (`CampaignLinkBuilder.tsx`, client; `lib/telemetry/campaign-link.ts`): public paths only,
+  source/medium/campaign trimmed, 1-100 code points, no control characters (the `page_events` utm check), link on
+  the club's primary domain, Copy with an announced "Copied". No saving, no server call.
+- Marked TELEMETRY-05 slot for the monthly sponsor report. No report built.
+- Time on page: TELEMETRY-03 (now on main) sends the heartbeats; average time shows "Not measured yet" until the
+  rollups carry engaged time for the range.
+
+**Files:** the page, `InsightsDashboard.tsx`, `CampaignLinkBuilder.tsx`, `insights.module.css`,
+`components/admin/insights/DailyViewsChart.tsx`, `lib/telemetry/{insights-data,insights-math,campaign-link}.ts`,
+`tests/contracts/telemetry-{insights-math,insights-data,insights-boundary,insights-page,campaign-link}.test.ts`,
+`tests/database/insights-read.test.ts`, `tests/browser/admin-reimagined-insights.spec.ts`, this file, `HANDOFF.md`.
+
+**Verification** (all local; every DB/browser run under `scripts/with-local-db-lock.sh`, reset with
+`npx supabase@2.109.1`, ledger max `20261121230000`):
+- Full suite on the `30f983f4` stack: non-DB vitest 400 files, 5,335 passed, 1 skipped; `test:db` 1,547 passed,
+  1 failed (TELEMETRY-01's `sweep_page_telemetry` backlog test, 17.5 s under full load; passes alone, 105/105 with
+  `insights-read`); `db:types:check` match; reimagined Playwright 212 passed, 4 failed, 3 skipped, 14 did not run. The
+  4 failures (classic-admin cases in `diverse-city`, `sign-in`, `sponsors`, `tabs`) fail identically on the
+  TELEMETRY-02 build without this package (baseline run of those four files: same 4 failed, 47 passed).
+- On `38cc3c31` (after the last TELEMETRY-02 review fix): `tsc --noEmit` clean; `npm run lint` clean (two existing
+  warnings in files this package does not touch); `test:architecture` 432 passed, 1 skipped; telemetry +
+  admin-home contracts 12 files, 301 passed; `npm run build` OK; locked: `insights-read` + `page-telemetry` + `page-telemetry-rollups` 121/121, `db:types:check` match, Playwright `admin-reimagined-insights` + `admin-reimagined-tabs` 31 passed, 1 failed (the pre-existing classic-admin tabs case), 1 did not run; Insights spec 6/6.
+- `git diff --stat origin/claude/telemetry-02-data -- supabase app/api middleware.ts package.json package-lock.json`:
+  empty.
+- Screenshots: `test-results/telemetry-insights/{dashboard-1440,dashboard-390,dashboard-375,range-7,link-builder,held}.png`.
+- Fix found by the browser run: the dashboard overflowed 158 px at 390 px (the tab page's phone grid track grew to
+  the sponsor table); now one `minmax(0, 1fr)` grid child.
+
+**Local seed:** Rose City is not in `supabase/seed.sql`, so its `sponsor_insights` flag is not set locally (only
+`admin-reimagined-tabs.spec.ts` sets it briefly on Alpha renamed `rose-city`).
+
+**Blockers / decisions:** none for this package. The 4 classic-admin browser failures predate it.
+
+**Exact next step:** Christian reviews the PR after TELEMETRY-02 (#216) merges; then rebase onto `origin/main`
+(drop nothing) and rerun the checks before review.
+
 ## 2026-11-21 - TELEMETRY-02: review Medium fixed (heartbeats need an open visit with a view)
 
 **Agent/package:** Claude Code (Opus 5.5 orchestrator, Sonnet worker), TELEMETRY-02, PR #216, branch
