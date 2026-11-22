@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
 import { Shimmer } from "../Shimmer";
+import { useFitPreviewScale } from "./fitPreviewScale";
 import { KIT_EDIT_PROPS } from "./kitEdit";
 import { SCOPED_PREVIEW_ATTRIBUTES, scopePreviewIds } from "./scopePreviewIds";
 import { hasVisibilityControl, type SectionCardItem } from "./SectionCards";
@@ -23,7 +24,12 @@ export type PreviewCardsProps = {
   label?: string;
   /** Natural width the preview is laid out at, in px. Default 780. */
   previewWidth?: number;
-  /** transform scale applied to that width. Default .4. The box size is fixed, so changing it never shifts the page. */
+  /**
+   * transform scale used until the box has been measured (and where ResizeObserver is missing). Default .4. After that
+   * the preview is scaled so its full width fits the card: a fixed scale clipped the right side of every section in
+   * cards narrower than width × scale (Robinson's .46 × 780 = 359px in a ~306px card at 1280). Only the transform
+   * changes; the box size is fixed, so this never shifts the page.
+   */
   previewScale?: number;
   /** Mount a preview only once its card is near the viewport. Default true. Turn off in render tests. */
   lazy?: boolean;
@@ -55,8 +61,9 @@ function useNearViewport(enabled: boolean) {
   return { ref, near };
 }
 
-function PreviewBox({ children, width, scale, lazy }: { children: ReactNode; width: number; scale: number; lazy: boolean }) {
+function PreviewBox({ children, width, scale: fallbackScale, lazy }: { children: ReactNode; width: number; scale: number; lazy: boolean }) {
   const { ref, near } = useNearViewport(lazy);
+  const scale = useFitPreviewScale(ref, width, fallbackScale);
   const scope = `pv${useId().replace(/[^a-zA-Z0-9]/g, "")}-`;
   // The public components hardcode ids; one preview per card would repeat them across the admin page.
   useEffect(() => {

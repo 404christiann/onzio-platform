@@ -26,7 +26,10 @@
 @media (hover: hover) { .part:hover { outline-color: hsl(var(--primary)); background: hsl(var(--primary) / .07); } .part:hover .chip { opacity: 1; transform: none; } }
 .part:focus-visible .chip { opacity: 1; transform: none; }
 
-.num { position: absolute; inset-block-start: 4px; inset-inline-start: 4px; display: grid; place-items: center; inline-size: 26px; block-size: 26px; border-radius: 999px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: .8125rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 1px 3px #0003; }
+.num { position: absolute; inset-block-start: 4px; inset-inline-start: 4px; display: grid; place-items: center; inline-size: 26px; block-size: 26px; border-radius: 999px; background: hsl(var(--primary)); color: hsl(var(--part-num-ink)); font-size: .8125rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 1px 3px #0003; }
+/* The portal forces --primary-foreground to white, which fails on the dark-mode blue (about 2.3:1). Own ink, like the kit's Save and Done. */
+.root { --part-num-ink: 0 0% 100%; }
+:global(.admin-theme[data-admin-theme="dark"]) .root { --part-num-ink: 220 20% 10%; }
 .chip { position: absolute; inset-block-start: 4px; inset-inline-end: 4px; display: inline-flex; align-items: center; gap: 6px; max-inline-size: calc(100% - 44px); min-block-size: 26px; padding: 0 10px; border-radius: 999px; background: hsl(var(--foreground)); color: hsl(var(--background)); font-size: .75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(-3px); transition: opacity 120ms ease, transform 120ms cubic-bezier(.23, 1, .32, 1); pointer-events: none; }
 
 .hidden { position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: 8px; min-block-size: 36px; max-inline-size: calc(100% - 16px); padding: 0 12px; border: 1px dashed hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: .8125rem; font-weight: 500; cursor: pointer; transform: translateY(-50%); }
