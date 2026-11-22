@@ -156,6 +156,17 @@ describe("loadInsightsData", () => {
     expect(result.top.city).toEqual([]);
   });
 
+  it("averages a page's time only over days that recorded engaged time", async () => {
+    const rows: Row[] = [
+      crumb("path", "/", 10, { local_date: "2026-11-15", engaged_ms: 0 }), // before heartbeats: no time
+      crumb("path", "/", 5, { local_date: "2026-11-16", engaged_ms: 50_000 }),
+    ];
+    const { client } = fakeClient({ page_daily_totals: [total("2026-11-15")], page_daily_breakdowns: rows });
+    const result = await loadInsightsData(client, input);
+    if (result.status !== "ready") throw new Error("expected ready");
+    expect(result.top.path[0]).toMatchObject({ value: "/", views: 15, engagedMs: 50_000, avgTimeMs: 10_000 });
+  });
+
   it("names sponsors, labels removed ones, and gives a null click rate with no logo views", async () => {
     const sp = (sponsor_id: string, logo_views: number, clicks: number, local_date = "2026-11-15"): Row => ({
       club_id: CLUB, local_date, sponsor_id, logo_views, logo_viewers: Math.ceil(logo_views / 2), clicks,

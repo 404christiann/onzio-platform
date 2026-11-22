@@ -212,17 +212,20 @@ export async function loadInsightsData(
     // Top rows per dimension.
     const top = {} as Record<InsightsDimension, InsightsTopRow[]>;
     INSIGHTS_DIMENSIONS.forEach((dimension, index) => {
-      const sums = new Map<string, { views: number; visitorDays: number; engagedMs: number }>();
+      // Breakdowns have no engaged_views, so time per view divides only by views on days that recorded time.
+      const sums = new Map<string, { views: number; visitorDays: number; engagedMs: number; timedViews: number }>();
       for (const row of breakdownRows[index]) {
         const value = String(row.value);
-        const sum = sums.get(value) ?? { views: 0, visitorDays: 0, engagedMs: 0 };
+        const sum = sums.get(value) ?? { views: 0, visitorDays: 0, engagedMs: 0, timedViews: 0 };
+        const engagedMs = num(row.engaged_ms);
         sum.views += num(row.views);
         sum.visitorDays += num(row.visitors);
-        sum.engagedMs += num(row.engaged_ms);
+        sum.engagedMs += engagedMs;
+        if (engagedMs > 0) sum.timedViews += num(row.views);
         sums.set(value, sum);
       }
       top[dimension] = [...sums]
-        .map(([value, sum]) => ({ value, ...sum, avgTimeMs: averageTimeMs(sum.engagedMs, sum.views) }))
+        .map(([value, { timedViews, ...sum }]) => ({ value, ...sum, avgTimeMs: averageTimeMs(sum.engagedMs, timedViews) }))
         .sort((a, b) => b.views - a.views || (a.value < b.value ? -1 : a.value > b.value ? 1 : 0))
         .slice(0, INSIGHTS_TOP_LIMIT);
     });
