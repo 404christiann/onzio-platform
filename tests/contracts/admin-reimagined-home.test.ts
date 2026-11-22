@@ -30,7 +30,7 @@ describe("reimagined home (ADMIN-RE-05)", () => {
     expect(page).toMatch(/if \(portal\.portal === "reimagined"\) \{\s*return \(\s*<ReimaginedHomeContent/);
     // The classic dashboard is untouched for every other club.
     expect(page).toContain("getVisibleAdminQuickActions");
-    expect(page).toContain("<DashboardIntro clubName={club.name} />");
+    expect(page).toContain("<DashboardIntro clubName={club.name} seasonLabel={data.activeSeasonLabel} />");
   });
 
   it("builds the jobs from the manifest with the same capability predicates", () => {

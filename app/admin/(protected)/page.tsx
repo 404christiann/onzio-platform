@@ -13,15 +13,15 @@ import { headers } from "next/headers";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AdminRegistrationMixChart } from "@/components/admin/AdminRegistrationMixChart";
-import { AdminPage, AdminPanel } from "@/components/admin/AdminPage";
+import { AdminPage } from "@/components/admin/AdminPage";
 import {
   loadAdminDashboardData,
   type DashboardEvent,
   type DashboardSection,
 } from "@/lib/admin-dashboard-data";
-import guided from "@/components/admin/AdminGuided.module.css";
 import { REGISTRATION_MIX_COLORS } from "@/lib/admin-dashboard-mix";
 import { requireFreshClubSession } from "@/lib/auth-session";
+import { clubToday } from "@/lib/club-time";
 import { getClubContext, type ClubContext } from "@/lib/club-context";
 import {
   getVisibleAdminHomeJobs,
@@ -56,12 +56,29 @@ const ACTION_ICONS: Record<AdminQuickActionId, AdminIconComponent> = {
   payments: IconPayments,
 };
 
-function formatDate(date: string) {
+function formatDate(date: string, today: string) {
+  // The year only when it is not the club's current year.
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric",
+    ...(date.slice(0, 4) === today.slice(0, 4) ? {} : { year: "numeric" }),
   }).format(new Date(`${date}T12:00:00`));
+}
+
+function longDate(date: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(`${date}T12:00:00`));
+}
+
+function daysBetween(from: string, to: string) {
+  return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
+}
+
+function formatCount(value: number) {
+  return value.toLocaleString("en-US");
 }
 
 function formatTime(time: string | null) {
@@ -95,51 +112,77 @@ export default function AdminDashboard() {
   );
 }
 
+// UI-POLISH-DASHBOARD: one radius (rounded-lg), hairline borders instead of
+// shadows, three type sizes (text-xs, text-sm, text-2xl) and one accent
+// (primary). The next game or event is the one heavy thing on the page.
+const PANEL = "min-w-0 rounded-lg border border-border bg-card p-4 text-card-foreground sm:px-5";
+// Cells sit on the border colour with a 1px gap, so dividers are hairlines.
+// An odd last cell spans the row instead of leaving a grey hole.
+const HAIRLINE_GRID = "grid gap-px overflow-hidden rounded-lg border border-border bg-border";
+const STATS_GRID = `${HAIRLINE_GRID} grid-cols-2 [&>*:last-child:nth-child(odd)]:col-span-2`;
+// On wide screens the next game and the numbers share one row.
+const LEAD_ROW = "grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]";
+const ACTIONS_GRID = `${HAIRLINE_GRID} sm:grid-cols-2 sm:[&>*:last-child:nth-child(odd)]:col-span-2`;
+const FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+const TEXT_LINK = `inline-flex min-h-11 shrink-0 touch-manipulation items-center rounded-md text-sm font-medium text-primary underline-offset-4 [@media(hover:hover)]:hover:underline ${FOCUS}`;
+
 function DashboardSkeleton() {
   return (
-    <AdminPage>
-      <DashboardIntro />
+    <AdminPage className="gap-4">
+      <header className="min-w-0">
+        <AdminSkeletonRegion label="Loading club">
+          <Skeleton className="my-1 h-6 w-48 max-w-full" />
+          <Skeleton className="mt-2 h-4 w-24" />
+        </AdminSkeletonRegion>
+      </header>
 
-      <section aria-label="Quick Actions" className={guided.taskSection}>
-        <h2 className={guided.taskHeading}>Quick Actions</h2>
-        <AdminSkeletonRegion label="Loading quick actions" className={guided.taskList}>
+      <div className={LEAD_ROW}>
+      <section aria-label="Next up" className={`${PANEL} flex flex-col justify-center`}>
+        <AdminSkeletonRegion label="Loading next game">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="mt-3 h-7 w-64 max-w-full" />
+          <Skeleton className="mt-2 h-5 w-48 max-w-full" />
+        </AdminSkeletonRegion>
+      </section>
+
+      <section aria-label="Season numbers" className={STATS_GRID}>
+        {["Active players", "Active staff", "Matches this season", "Paid registrations"].map((label) => (
+          <div key={label} className="flex min-w-0 flex-col-reverse bg-card px-4 py-3 sm:px-5">
+            <p className="mt-1 break-words text-sm text-muted-foreground">{label}</p>
+            <AdminSkeletonRegion label={`Loading ${label.toLowerCase()}`}>
+              <Skeleton className="h-8 w-14" />
+            </AdminSkeletonRegion>
+          </div>
+        ))}
+      </section>
+      </div>
+
+      <section aria-label="Quick actions">
+        <h2 className="text-sm font-semibold normal-case text-foreground">Quick actions</h2>
+        <AdminSkeletonRegion label="Loading quick actions" className={`${ACTIONS_GRID} mt-3`}>
           {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className={guided.taskRow}>
-              <Skeleton className="size-11 shrink-0 rounded-xl" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-4 w-24 max-w-full" />
-                <Skeleton className="h-3 w-32 max-w-full" />
-              </div>
+            <div key={index} className="flex min-h-12 items-center gap-3 bg-card px-4">
+              <Skeleton className="size-5 shrink-0 rounded-md" />
+              <Skeleton className="h-4 w-32 max-w-full" />
             </div>
           ))}
         </AdminSkeletonRegion>
       </section>
 
-      <section aria-label="Club statistics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {["Active Players", "Active Staff", "Season Matches", "Paid Registrations"].map((label) => (
-          <AdminPanel key={label} className="p-4 sm:p-5">
-            <p className="break-words text-sm text-muted-foreground">{label}</p>
-            <AdminSkeletonRegion label={`Loading ${label.toLowerCase()}`} className="mt-3">
-              <Skeleton className="h-8 w-16" />
-            </AdminSkeletonRegion>
-          </AdminPanel>
-        ))}
-      </section>
-      <div className="grid gap-6 xl:grid-cols-2">
-        <DashboardPanel title="Registration Forms">
+      <div className="grid gap-4 xl:grid-cols-2">
+        <DashboardPanel title="Registration forms">
           <DashboardRowsSkeleton label="Loading registration forms" />
         </DashboardPanel>
-        <DashboardPanel title="Upcoming Fixtures & Events">
-          <DashboardRowsSkeleton label="Loading fixtures and events" />
+        <DashboardPanel title="Coming up">
+          <DashboardRowsSkeleton label="Loading games and events" />
         </DashboardPanel>
       </div>
-      <DashboardPanel title="Registration Mix" description="Paid registrations across current forms">
-        <AdminSkeletonRegion label="Loading registration mix" className="grid items-center gap-8 lg:grid-cols-[minmax(240px,360px)_1fr]">
-          <div className="mx-auto flex h-72 w-full max-w-sm items-center justify-center">
-            <Skeleton className="aspect-square h-56 max-w-full rounded-full" />
-          </div>
+      <DashboardPanel title="Paid registrations by form">
+        <AdminSkeletonRegion label="Loading paid registrations by form" className="grid items-center gap-6 lg:grid-cols-[160px_1fr]">
+          <Skeleton className="mx-auto size-40 rounded-full" />
           <div className="space-y-4">
-            {Array.from({ length: 4 }, (_, index) => (
+            {Array.from({ length: 3 }, (_, index) => (
               <div key={index} className="flex items-center gap-4 border-b border-border pb-3">
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="ml-auto h-4 w-10" />
@@ -153,12 +196,15 @@ function DashboardSkeleton() {
   );
 }
 
-function DashboardIntro({ clubName }: { clubName?: string }) {
+function DashboardIntro({ clubName, seasonLabel }: { clubName: string; seasonLabel: string | null }) {
   return (
-    <header className={guided.dashboardIntro}>
-      <p className="!mt-0 !text-xs font-medium">Dashboard</p>
-      <h1 className="mt-3 normal-case text-foreground">What would you like to do?</h1>
-      <p>{clubName ? `A few simple ways to keep ${clubName} moving.` : "A few simple ways to look after your club."}</p>
+    <header className="min-w-0">
+      <h1 className="break-words text-2xl font-semibold normal-case leading-8 tracking-tight text-foreground">
+        {clubName}
+      </h1>
+      <p className="mt-1 text-sm leading-5 text-muted-foreground">
+        {seasonLabel ? `${seasonLabel} season` : "No active season"}
+      </p>
     </header>
   );
 }
@@ -167,12 +213,12 @@ function DashboardRowsSkeleton({ label }: { label: string }) {
   return (
     <AdminSkeletonRegion label={label} className="divide-y divide-border">
       {Array.from({ length: 3 }, (_, index) => (
-        <div key={index} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+        <div key={index} className="flex items-center justify-between gap-4 py-2 first:pt-0 last:pb-0">
           <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-5 w-48 max-w-full" />
-            <Skeleton className="h-4 w-32 max-w-full" />
+            <Skeleton className="h-4 w-48 max-w-full" />
+            <Skeleton className="h-3 w-32 max-w-full" />
           </div>
-          <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
+          <Skeleton className="h-4 w-12 shrink-0" />
         </div>
       ))}
     </AdminSkeletonRegion>
@@ -228,85 +274,78 @@ async function AdminDashboardContent() {
   const quickActions = getVisibleAdminQuickActions(routeAccess);
   const { timeZone } = portal;
   const data = await loadAdminDashboardData(supabase, club.id, timeZone);
+  const today = clubToday(timeZone);
   // A club whose admin hides Registrations (Rose City) gets no registration
   // metric, form list or mix; the rest of the dashboard is unchanged.
   const showRegistrations = !isAdminRouteHiddenForClub(club.slug, "registrations");
+  // The first upcoming game or event leads the page; the panel lists the rest.
+  const nextEvent = data.events.status === "ready" ? (data.events.data[0] ?? null) : null;
 
   return (
-    <AdminPage>
-      <DashboardIntro clubName={club.name} />
+    <AdminPage className="gap-4">
+      <DashboardIntro clubName={club.name} seasonLabel={data.activeSeasonLabel} />
+
+      <div className={LEAD_ROW}>
+      <NextUp events={data.events} today={today} />
+
+      <section aria-label="Season numbers">
+        <dl className={STATS_GRID}>
+        <MetricCard label="Active players" section={data.players} />
+        <MetricCard label="Active staff" section={data.staff} />
+        <MetricCard label="Matches this season" section={data.seasonMatches} />
+        {showRegistrations ? <MetricCard label="Paid registrations" section={data.paidRegistrations} /> : null}
+        </dl>
+      </section>
+      </div>
 
       {/* Unauthorized actions disappear with no substitution; with none left the
           whole section is omitted and the page reflows. */}
       {quickActions.length ? (
-        <section aria-labelledby="quick-actions-heading" className={guided.taskSection}>
-          <h2 id="quick-actions-heading" className={guided.taskHeading}>
-            Quick Actions
+        <section aria-labelledby="quick-actions-heading">
+          <h2 id="quick-actions-heading" className="text-sm font-semibold normal-case text-foreground">
+            Quick actions
           </h2>
-          <div className={guided.taskList}>
+          <ul className={`${ACTIONS_GRID} mt-3`}>
             {quickActions.map((action) => {
               const Icon = ACTION_ICONS[action.id];
               return (
-                <Link
-                  key={action.id}
-                  href={action.href}
-                  title={action.description}
-                  className={guided.taskRow}
-                >
-                  <span className={guided.taskIcon}>
-                    <Icon className="size-5" aria-hidden="true" />
-                  </span>
-                  <span className={guided.taskCopy}>
-                    <span className={guided.taskLabel}>
-                      {action.label}
-                    </span>
-                    <span className={guided.taskDescription}>
-                      {action.description}
-                    </span>
-                  </span>
-                  <ChevronRight className="size-5 shrink-0 text-muted-foreground/60" aria-hidden="true" />
-                </Link>
+                <li key={action.id} className="min-w-0 bg-card">
+                  <Link
+                    href={action.href}
+                    title={action.description}
+                    className={`flex min-h-12 touch-manipulation select-none items-center gap-3 px-4 text-sm font-medium text-card-foreground transition-colors duration-150 active:bg-muted [@media(hover:hover)]:hover:bg-muted/60 ${FOCUS} focus-visible:ring-inset focus-visible:ring-offset-0`}
+                  >
+                    <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <span className="min-w-0 flex-1 break-words">{action.label}</span>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  </Link>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </section>
       ) : null}
 
-      {data.activeSeasonLabel ? (
-        <p className="-mb-3 text-sm font-medium text-muted-foreground">{data.activeSeasonLabel} season overview</p>
-      ) : null}
-      <section
-        aria-label="Club statistics"
-        className={`grid grid-cols-2 gap-4 ${showRegistrations ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
-      >
-        <MetricCard label="Active Players" section={data.players} />
-        <MetricCard label="Active Staff" section={data.staff} />
-        <MetricCard label="Season Matches" section={data.seasonMatches} />
-        {showRegistrations ? <MetricCard label="Paid Registrations" section={data.paidRegistrations} /> : null}
-      </section>
-
-      <div className={showRegistrations ? "grid gap-6 xl:grid-cols-2" : "grid gap-6"}>
+      <div className={showRegistrations ? "grid gap-4 xl:grid-cols-2" : "grid gap-4"}>
         {showRegistrations ? (
-        <DashboardPanel title="Registration Forms" actionHref="/admin/registrations" actionLabel="View all">
+        <DashboardPanel title="Registration forms" actionHref="/admin/registrations" actionLabel="View all">
           {data.forms.status === "error" ? (
             <SectionError message={data.forms.message} />
           ) : data.forms.data.length ? (
             <ul className="divide-y divide-border">
               {data.forms.data.slice(0, 6).map((form) => (
-                <li key={form.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                <li key={form.id} className="flex items-center justify-between gap-4 py-2 first:pt-0 last:pb-0">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-card-foreground" title={form.title}>
                       {form.title}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Created {formatDate(form.createdAt.slice(0, 10))}
+                      Created {formatDate(form.createdAt.slice(0, 10), today)}
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium capitalize ${
-                      form.status === "open"
-                        ? "bg-success/10 text-success"
-                        : "bg-muted text-muted-foreground"
+                    className={`shrink-0 text-xs font-medium capitalize ${
+                      form.status === "open" ? "text-success" : "text-muted-foreground"
                     }`}
                   >
                     {form.status}
@@ -315,33 +354,39 @@ async function AdminDashboardContent() {
               ))}
             </ul>
           ) : (
-            <EmptyState message="No current registration forms." />
+            <EmptyState message="No registration forms yet. Create one in Registrations to start taking sign-ups." />
           )}
         </DashboardPanel>
         ) : null}
 
-        <DashboardPanel title="Upcoming Fixtures & Events" actionHref="/admin/schedule" actionLabel="View schedule">
+        <DashboardPanel title="Coming up" actionHref="/admin/schedule" actionLabel="View schedule">
           {data.events.status === "error" ? (
             <SectionError message={data.events.message} />
-          ) : data.events.data.length ? (
+          ) : data.events.data.length > 1 ? (
             <ul className="divide-y divide-border">
-              {data.events.data.map((event) => (
-                <EventRow key={event.id} event={event} />
+              {data.events.data.slice(1).map((event) => (
+                <EventRow key={event.id} event={event} today={today} />
               ))}
             </ul>
           ) : (
-            <EmptyState message="No upcoming fixtures or events." />
+            <EmptyState
+              message={
+                nextEvent
+                  ? "Nothing else on the schedule after this one."
+                  : "Nothing on the schedule yet."
+              }
+            />
           )}
         </DashboardPanel>
       </div>
 
       {showRegistrations ? (
-      <DashboardPanel title="Registration Mix" description="Paid registrations across current forms">
+      <DashboardPanel title="Paid registrations by form">
         {data.registrationMix.status === "error" ? (
           <SectionError message={data.registrationMix.message} />
         ) : data.registrationMix.data.length ? (
-          <div className="grid items-center gap-8 lg:grid-cols-[minmax(240px,360px)_1fr]">
-            <div className="mx-auto h-72 w-full max-w-sm">
+          <div className="grid items-center gap-6 lg:grid-cols-[160px_1fr]">
+            <div className="mx-auto size-40">
               <AdminRegistrationMixChart items={data.registrationMix.data} />
             </div>
             <div className="min-w-0 overflow-x-auto">
@@ -350,17 +395,17 @@ async function AdminDashboardContent() {
                 <thead>
                   <tr className="border-b border-border text-xs text-muted-foreground">
                     <th scope="col" className="pb-2 pr-4 font-medium">Form</th>
-                    <th scope="col" className="pb-2 pr-4 text-right font-medium">Paid</th>
-                    <th scope="col" className="pb-2 text-right font-medium">Share</th>
+                    <th scope="col" className="w-16 pb-2 pr-4 text-right font-medium">Paid</th>
+                    <th scope="col" className="w-12 pb-2 text-right font-medium">Share</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {data.registrationMix.data.map((item, index) => (
                     <tr key={item.id}>
-                      <th scope="row" className="max-w-0 py-3 pr-4 font-medium text-card-foreground">
+                      <th scope="row" className="max-w-0 py-2 pr-4 font-medium text-card-foreground">
                         <span className="flex items-center gap-2">
                           <span
-                            className="size-2.5 shrink-0 rounded-full"
+                            className="size-2 shrink-0 rounded-full"
                             style={{
                               backgroundColor:
                                 REGISTRATION_MIX_COLORS[index % REGISTRATION_MIX_COLORS.length],
@@ -370,8 +415,8 @@ async function AdminDashboardContent() {
                           <span className="truncate" title={item.label}>{item.label}</span>
                         </span>
                       </th>
-                      <td className="py-3 pr-4 text-right tabular-nums text-muted-foreground">{item.count}</td>
-                      <td className="py-3 text-right font-medium tabular-nums text-card-foreground">{item.percentage}%</td>
+                      <td className="whitespace-nowrap py-2 pr-4 text-right tabular-nums text-card-foreground">{formatCount(item.count)}</td>
+                      <td className="whitespace-nowrap py-2 text-right tabular-nums text-muted-foreground">{item.percentage}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -379,7 +424,7 @@ async function AdminDashboardContent() {
             </div>
           </div>
         ) : (
-          <EmptyState message="Paid registrations will appear here once a current form receives payment." />
+          <EmptyState message="Shows up once a form takes its first payment." />
         )}
       </DashboardPanel>
       ) : null}
@@ -472,71 +517,112 @@ async function ReimaginedHomeContent({
 }
 
 function MetricCard({ label, section }: { label: string; section: DashboardSection<number> }) {
+  // flex-col-reverse: the number reads first, while screen readers still get
+  // the term before its value ("Active players, 24").
   return (
-    <AdminPanel className="p-4 sm:p-5">
-      <p className="break-words text-sm text-muted-foreground">{label}</p>
+    <div className="flex min-w-0 flex-col-reverse bg-card px-4 py-3 sm:px-5">
+      <dt className="mt-1 break-words text-sm text-muted-foreground">{label}</dt>
       {section.status === "ready" ? (
-        <p className="mt-3 text-[32px] font-semibold leading-none tracking-tight tabular-nums text-card-foreground">
-          {section.data.toLocaleString()}
-        </p>
+        <dd className="break-words text-2xl font-semibold leading-8 tracking-tight tabular-nums text-card-foreground">
+          {formatCount(section.data)}
+        </dd>
       ) : (
-        <p className="mt-3 text-sm font-medium text-destructive" role="status">Unavailable</p>
+        <dd className="text-sm font-medium leading-8 text-destructive" role="status">Unavailable</dd>
       )}
-    </AdminPanel>
+    </div>
+  );
+}
+
+function NextUp({ events, today }: { events: DashboardSection<DashboardEvent[]>; today: string }) {
+  const next = events.status === "ready" ? (events.data[0] ?? null) : null;
+  const days = next ? daysBetween(today, next.date) : null;
+  const when = days === null ? null : days === 0 ? "Today" : days === 1 ? "Tomorrow" : days < 14 ? `In ${days} days` : null;
+  return (
+    <section aria-labelledby="next-up-heading" className={`${PANEL} flex flex-col justify-center`}>
+      <h2 id="next-up-heading" className="text-sm font-medium normal-case text-muted-foreground">
+        {next?.kind === "tryout" ? "Next event" : "Next game"}
+      </h2>
+      {events.status === "error" ? (
+        <div className="mt-3">
+          <SectionError message={events.message} />
+        </div>
+      ) : next ? (
+        <>
+          <p className="mt-1 break-words text-2xl font-semibold leading-8 tracking-tight text-card-foreground">
+            {next.title}
+          </p>
+          <p className="mt-1 break-words text-sm leading-5 text-muted-foreground">
+            {when ? <span className="font-semibold text-primary">{when} · </span> : null}
+            {[longDate(next.date), formatTime(next.time), next.detail].filter(Boolean).join(" · ")}
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="mt-1 text-2xl font-semibold leading-8 tracking-tight text-card-foreground">Nothing scheduled</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-4">
+            <p className="text-sm leading-5 text-muted-foreground">
+              Add your next game or tryout and it shows here and on your site.
+            </p>
+            <Link href="/admin/schedule" className={TEXT_LINK}>
+              Open Schedule
+            </Link>
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
 function DashboardPanel({
   title,
-  description,
   actionHref,
   actionLabel,
   children,
 }: {
   title: string;
-  description?: string;
   actionHref?: string;
   actionLabel?: string;
   children: React.ReactNode;
 }) {
+  const headingId = `${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`;
   return (
-    <AdminPanel aria-labelledby={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`}>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-auto">
-          <h2 id={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`} className="break-words text-sm font-semibold normal-case text-foreground">
-            {title}
-          </h2>
-          {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
-        </div>
+    <section aria-labelledby={headingId} className={PANEL}>
+      <div className="-mt-3 mb-1 flex min-h-11 flex-wrap items-center justify-between gap-x-4">
+        <h2 id={headingId} className="min-w-0 break-words text-sm font-semibold normal-case text-foreground">
+          {title}
+        </h2>
         {actionHref && actionLabel ? (
-          <Link href={actionHref} className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Link href={actionHref} className={TEXT_LINK}>
             {actionLabel}
           </Link>
         ) : null}
       </div>
       {children}
-    </AdminPanel>
+    </section>
   );
 }
 
-function EventRow({ event }: { event: DashboardEvent }) {
+function EventRow({ event, today }: { event: DashboardEvent; today: string }) {
   return (
-    <li className="flex gap-4 py-3 first:pt-0 last:pb-0">
-      <div className="w-16 shrink-0 rounded-lg bg-muted px-2 py-2 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <li className="flex gap-4 py-2 first:pt-0 last:pb-0">
+      <div className="w-10 shrink-0 text-center" aria-hidden="true">
+        <span className="block text-xs font-medium uppercase text-muted-foreground">
           {new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(`${event.date}T12:00:00`))}
-        </p>
-        <p className="text-lg font-semibold leading-5 text-card-foreground">{Number(event.date.slice(-2))}</p>
+        </span>
+        <span className="block text-sm font-semibold tabular-nums text-card-foreground">
+          {Number(event.date.slice(-2))}
+        </span>
       </div>
-      <div className="min-w-0 flex-1 py-0.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="min-w-0 break-words text-sm font-medium text-card-foreground" title={event.title}>{event.title}</p>
-          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-primary">
-            {event.kind}
-          </span>
-        </div>
-        <p className="mt-1 break-words text-sm leading-5 text-muted-foreground">
-          {[formatTime(event.time), event.detail].filter(Boolean).join(" · ")}
+      <div className="min-w-0 flex-1">
+        <p className="break-words text-sm font-medium text-card-foreground">
+          <span className="sr-only">{longDate(event.date)}: </span>
+          {event.title}
+          {event.kind === "tryout" ? <span className="font-normal text-muted-foreground"> · Tryout</span> : null}
+        </p>
+        <p className="mt-0.5 break-words text-xs text-muted-foreground">
+          {[formatTime(event.time), event.detail, event.date.slice(0, 4) !== today.slice(0, 4) ? event.date.slice(0, 4) : null]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
       </div>
     </li>
@@ -544,9 +630,9 @@ function EventRow({ event }: { event: DashboardEvent }) {
 }
 
 function EmptyState({ message }: { message: string }) {
-  return <p className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">{message}</p>;
+  return <p className="text-sm text-muted-foreground">{message}</p>;
 }
 
 function SectionError({ message }: { message: string }) {
-  return <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">{message}</p>;
+  return <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive" role="alert">{message}</p>;
 }

@@ -276,7 +276,7 @@ test.describe("a classic club keeps the old admin", () => {
       await expect(page).toHaveURL(/\/admin$/);
       await expect(page.locator('[data-admin-shell="reimagined"]')).toHaveCount(0);
       await expect(tabs(page)).toHaveCount(0);
-      await expect(page.getByRole("heading", { name: "Quick Actions" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Quick actions" })).toBeVisible();
       await page.screenshot({ path: `${SHOTS}/tabs-classic-${width}.png` });
     });
   }

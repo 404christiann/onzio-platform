@@ -140,7 +140,7 @@ for (const width of [320, 390]) {
       await largeText(page);
       await noOverflow(page, width);
       if (route === "") {
-        await containedText(page.getByRole("main").getByText("Paid Registrations", { exact: true }));
+        await containedText(page.getByRole("main").getByText("Paid registrations", { exact: true }));
         await containedText(page.getByRole("main").getByRole("link", { name: "View all", exact: true }), "panel");
         await containedText(page.getByRole("main").getByRole("link", { name: "View schedule", exact: true }), "panel");
       }
@@ -242,7 +242,7 @@ test("Actual local grace and suspended Dashboard/Payments states preserve editin
     await fixture.set("grace", false);
     await page.goto("/admin");
     await expect(page.getByText(/Billing needs attention\. Content editing remains available/)).toBeVisible();
-    const quick = page.getByRole("region", { name: "Quick Actions", exact: true });
+    const quick = page.getByRole("region", { name: "Quick actions", exact: true });
     await expect(quick.locator('a[href="/admin/roster"]')).toBeVisible();
     await page.goto("/admin/payments");
     await expect(page.getByRole("main").getByText("Payment overdue", { exact: true })).toBeVisible();
@@ -261,7 +261,7 @@ test("Actual local grace and suspended Dashboard/Payments states preserve editin
     await expect(page).toHaveURL(new URL("/admin/payments", base).toString());
     await expect(page.getByRole("heading", { name: "Payments", exact: true })).toBeVisible();
     await expect(page.getByText(/Content changes are paused while billing is suspended\./)).toBeVisible();
-    await expect(page.getByRole("region", { name: "Quick Actions", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Quick actions", exact: true })).toHaveCount(0);
     await page.goto("/admin/roster");
     await expect(page).toHaveURL(new URL("/admin/payments", base).toString());
     await expect(page.getByRole("main").getByText("Subscription ended", { exact: true })).toBeVisible();

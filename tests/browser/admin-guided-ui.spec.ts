@@ -55,7 +55,7 @@ for (const width of [320, 1024, 1440]) {
   test(`${width}px: theme persists and route search opens the complete player form`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/admin");
-    await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
+    await expect(page.getByRole("main").locator("h1")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     const theme = page.getByRole("button", { name: "Switch to dark theme", exact: true });
     await theme.click();
