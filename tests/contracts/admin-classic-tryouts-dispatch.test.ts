@@ -25,7 +25,7 @@ const club: ClubContext = {
   id: "11111111-1111-4111-8111-111111111111", slug: "alpha", name: "Alpha FC",
   primaryDomain: "alpha.localhost", lifecycle: "active", publicAccess: "live", kind: "test",
   stripePriceId: null, tier: "pro", role: "owner", primaryColor: null, secondaryColor: null,
-  presentationTemplateKey: "academy@1", storeEnabled: false,
+  presentationTemplateKey: "academy@1", storeEnabled: false, publicPageVisibility: {},
 };
 function render(portal: "classic" | "reimagined", key: ClubContext["presentationTemplateKey"]) {
   const portalProps = { settings: { ...CLASSIC_ADMIN_PORTAL, portal }, isOwner: false };

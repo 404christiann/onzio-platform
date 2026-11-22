@@ -27,6 +27,7 @@ import "@/components/admin/homepage/homepage-editor.css";
 import { SettledPreview } from "./SettledPreview";
 import { FoothillSectionFields } from "./FoothillSectionFields";
 import { foothillPreviewStamps } from "./foothill-edit-targets";
+import { PageVisibilityControl } from "./PageVisibilityControl";
 import {
   FOOTHILL_FLAGS, FOOTHILL_PREVIEW_IMAGES, FOOTHILL_SECTIONS, buildFoothillSaveInput, changedFoothillSections, foothillDirty,
   foothillPreviewSlice, foothillSectionOnly, foothillSectionSummary, type FoothillSectionId,
@@ -259,7 +260,7 @@ export default function StadiumEditor() {
       skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={FOOTHILL_SECTIONS.length} /></div>}>
       <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/stadium/foothill-transit" description={DESCRIPTION} state={pageState}
         onSave={() => { void saveAction.save().catch(() => undefined); }}
-        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={<><PageVisibilityControl pageKey="foothill-transit" />{notice}</>}>
         <PreviewCards sections={sectionItems} label="Foothill Transit sections" renderPreview={previewOf} previewScale={0.46}
           stamps={id => stampsBySection.get(id as FoothillSectionId) ?? []}
           onEdit={(id, event, target) => { dialog.openSection(id as FoothillSectionId, event); dialog.focusField(target); }} />

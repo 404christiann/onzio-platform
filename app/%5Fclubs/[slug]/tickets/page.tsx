@@ -13,5 +13,5 @@ export default async function TicketsPage({ params }: {
     if (club.presentationTemplateKey !== "cinematic@2")
         notFound();
     const content = await fetchTicketsContent(club.id, (await createClient()).schema("onzio"));
-    return <CinematicTickets content={content}/>;
+    return <CinematicTickets content={content} pageVisibility={club.publicPageVisibility}/>;
 }

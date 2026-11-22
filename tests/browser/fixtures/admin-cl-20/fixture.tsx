@@ -9,7 +9,7 @@ import "@/styles/globals.css";
 import "./fixture.css";
 
 const theme = resolveAdminTheme(document.cookie.split("; ").find((entry) => entry.startsWith("onzio-admin-theme="))?.split("=")[1]);
-const club = { id: "11111111-1111-4111-8111-111111111111", name: "Alpha FC", slug: "alpha", primaryDomain: "alpha-onzio.vercel.app", lifecycle: "active", publicAccess: "live", kind: "test", tier: "pro", role: "owner", stripePriceId: null, primaryColor: null, secondaryColor: null, presentationTemplateKey: null, storeEnabled: false } as const;
+const club = { id: "11111111-1111-4111-8111-111111111111", name: "Alpha FC", slug: "alpha", primaryDomain: "alpha-onzio.vercel.app", lifecycle: "active", publicAccess: "live", kind: "test", tier: "pro", role: "owner", stripePriceId: null, primaryColor: null, secondaryColor: null, presentationTemplateKey: null, storeEnabled: false, publicPageVisibility: {} } as const;
 declare global { interface Window { __cl20Chart: () => unknown; } }
 let previousCanvas: HTMLCanvasElement | null = null;
 window.__cl20Chart = () => {

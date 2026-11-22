@@ -12,7 +12,7 @@ import "@/styles/globals.css";
 import "./fixture.css";
 const query = new URLSearchParams(location.search);
 const theme = query.get("theme") === "dark" ? "dark" : "light";
-const club = { id: "11111111-1111-4111-8111-111111111111", name: "Alpha FC", slug: "alpha", primaryDomain: "alpha.localhost", lifecycle: "active", publicAccess: "live", kind: "test", tier: "pro", role: "owner", stripePriceId: null, primaryColor: null, secondaryColor: null, presentationTemplateKey: query.has("clubhouse") ? "clubhouse@1" : "academy@1", storeEnabled: true } as const;
+const club = { id: "11111111-1111-4111-8111-111111111111", name: "Alpha FC", slug: "alpha", primaryDomain: "alpha.localhost", lifecycle: "active", publicAccess: "live", kind: "test", tier: "pro", role: "owner", stripePriceId: null, primaryColor: null, secondaryColor: null, presentationTemplateKey: query.has("clubhouse") ? "clubhouse@1" : "academy@1", storeEnabled: true, publicPageVisibility: {} } as const;
 function Fixture() {
  const [destination,setDestination]=useState("Standings");
  return <AdminThemeProvider initialTheme={theme}><ClubContextProvider club={club}><ClubBrandingProvider initialBranding={{logoPath:"",inverseLogoPath:"",footerTagline:"Our community"}}><AdminPortalProvider isOwner={false} settings={{...CLASSIC_ADMIN_PORTAL,portal:query.has("legacy")?"reimagined":"classic",timeZoneConfirmed:true}}><UnsavedGuardProvider navigate={setDestination}><main className={"admin-portal cl25-fixture " + guided.portal}><nav><a href="/admin/roster">Roster</a><output aria-label="Current page">{destination}</output></nav><StandingsPage /></main></UnsavedGuardProvider></AdminPortalProvider></ClubBrandingProvider></ClubContextProvider></AdminThemeProvider>;

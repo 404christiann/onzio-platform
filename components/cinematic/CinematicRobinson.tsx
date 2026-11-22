@@ -3,6 +3,7 @@ import CinematicStadium, { type StadiumTicketing } from './CinematicStadium';
 import NativeImage from '@/components/ResilientNativeImage';
 import type { RobinsonBlock, RobinsonImage, RobinsonPageContent } from '@/lib/cinematic-robinson-content';
 import { emptyStadiumContent, hydrateStadiumContent } from '@/lib/stadium-content';
+import { pageVisible, type PublicPageVisibility } from '@/lib/public-page-visibility';
 import './robinson-page.css';
 
 const STEP_SLOTS = ['step1', 'step2', 'step3'] as const;
@@ -21,9 +22,16 @@ function DirectionsBlock({ block }: { block: RobinsonBlock }) {
   </>;
 }
 
-/** Robinson Stadium (/stadium). Owner content from /admin/stadium; fixture from Schedule, match wording from Homepage, purchase from Tickets. */
-export default function CinematicRobinson({ content, ticketing }: { content: RobinsonPageContent; ticketing: StadiumTicketing }) {
+/**
+ * Robinson Stadium (/stadium). Owner content from /admin/stadium; fixture from Schedule, match wording from Homepage, purchase from Tickets.
+ * `pageVisibility` is the club's "Visible to visitors" map, passed by the public page only: the food block follows the Chick-fil-A page and
+ * the Road to the Match block follows the Foothill Transit page. The editor previews leave it out, so every section card stays editable.
+ */
+export default function CinematicRobinson({ content, ticketing, pageVisibility }: { content: RobinsonPageContent; ticketing: StadiumTicketing; pageVisibility?: PublicPageVisibility | null }) {
   const { heading, seating, story, info, match, lockers, food, route, directions, images } = content;
+  const visibility = { publicPageVisibility: pageVisibility };
+  const showFood = food.visible && pageVisible(visibility, 'chick-fil-a');
+  const showRoute = route.visible && pageVisible(visibility, 'foothill-transit');
   const matchCard = { ...hydrateStadiumContent(emptyStadiumContent(), []), showHeading: false, showMap: false, showSections: false, showBenefits: false, showMatch: true };
   matchCard.artwork.partner = images.partner;
   return <div className="new-robinson">
@@ -35,9 +43,9 @@ export default function CinematicRobinson({ content, ticketing }: { content: Rob
       {match.visible && <CinematicStadium content={matchCard} ticketing={ticketing} />}
     </section>}
     {lockers.visible && <div id="lockers" className="r-locker-divider" aria-hidden="true">{picture(images.lockers)}</div>}
-    {food.visible && <section className="r-food" aria-labelledby="r-food-title"><div className="r-food-header"><div className="r-food-title-row"><h2 id="r-food-title">{food.heading}</h2><span aria-hidden="true" /></div></div><div className="r-food-content"><div className="r-food-body">{picture(images.mealPass)}<p>{food.body}</p></div><div className="r-food-steps">{food.steps.map((step, index) => <div key={index}>{picture(images[STEP_SLOTS[index]])}<p>{step.label}</p><strong>{index + 1}</strong></div>)}</div></div></section>}
-    {(route.visible || directions.visible) && <section className="r-route" {...(route.visible ? { 'aria-labelledby': 'r-route-title' } : { 'aria-label': 'Directions' })}>
-      {route.visible && <><div className="r-route-heading"><div><h2 id="r-route-title">{route.heading}</h2>{route.subheading && <p>{route.subheading}</p>}</div>{picture(images.bus)}</div>{picture(images.routeMap, 'r-route-map')}</>}
+    {showFood && <section className="r-food" aria-labelledby="r-food-title"><div className="r-food-header"><div className="r-food-title-row"><h2 id="r-food-title">{food.heading}</h2><span aria-hidden="true" /></div></div><div className="r-food-content"><div className="r-food-body">{picture(images.mealPass)}<p>{food.body}</p></div><div className="r-food-steps">{food.steps.map((step, index) => <div key={index}>{picture(images[STEP_SLOTS[index]])}<p>{step.label}</p><strong>{index + 1}</strong></div>)}</div></div></section>}
+    {(showRoute || directions.visible) && <section className="r-route" {...(showRoute ? { 'aria-labelledby': 'r-route-title' } : { 'aria-label': 'Directions' })}>
+      {showRoute && <><div className="r-route-heading"><div><h2 id="r-route-title">{route.heading}</h2>{route.subheading && <p>{route.subheading}</p>}</div>{picture(images.bus)}</div>{picture(images.routeMap, 'r-route-map')}</>}
       {directions.visible && <div className="r-directions">{directions.blocks.map(block => <Fragment key={block.id}><DirectionsBlock block={block} /></Fragment>)}</div>}
     </section>}
   </div>;

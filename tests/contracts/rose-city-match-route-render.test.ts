@@ -18,7 +18,7 @@ vi.mock("@/lib/cinematic-identity", () => ({ fetchClubIdentity: mocks.identity }
 import MatchRoute from "@/app/%5Fclubs/[slug]/schedule/[fixtureId]/page";
 
 const FIXTURE_ID = "baf199e2-bea4-5fc7-840f-e1dc59fefb4d";
-const club = (patch: Partial<ClubContext>): ClubContext => ({ id: "11111111-1111-4111-8111-111111111111", slug: "rose-city", name: "Rose City FC", primaryDomain: "rose-city.localhost", lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null, tier: "pro", role: null, primaryColor: "#E73C2E", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true, ...patch });
+const club = (patch: Partial<ClubContext>): ClubContext => ({ id: "11111111-1111-4111-8111-111111111111", slug: "rose-city", name: "Rose City FC", primaryDomain: "rose-city.localhost", lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null, tier: "pro", role: null, primaryColor: "#E73C2E", secondaryColor: "#141414", presentationTemplateKey: "cinematic@2", storeEnabled: true, publicPageVisibility: {}, ...patch });
 const played = { id: FIXTURE_ID, date: "2027-05-02", time: "19:45:00", opponent: "Ocelot FC", opponentLogoUrl: null, home: true, venue: "Robinson Stadium", address: "1570 E Colorado Blvd", city: "Pasadena", state: "CA", competition: "UPSL Premier Regular Season", roseCityScore: 2, opponentScore: 1, attendance: 1356, scorers: [], replayVideoUrl: "", summary: null };
 
 async function resolveAsync(node: React.ReactElement): Promise<React.ReactElement> {

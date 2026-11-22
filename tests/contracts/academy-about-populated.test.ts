@@ -13,7 +13,7 @@ const club: ClubContext = {
   id: fixture.club_id, slug: "alpha", name: "Alpha FC", primaryDomain: "alpha.localhost",
   lifecycle: "active", publicAccess: "live", kind: "test", stripePriceId: null,
   tier: "pro", role: null, primaryColor: null, secondaryColor: null,
-  presentationTemplateKey: "academy@1", storeEnabled: true,
+  presentationTemplateKey: "academy@1", storeEnabled: true, publicPageVisibility: {},
 };
 
 describe("populated Academy About content", () => {

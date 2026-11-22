@@ -1359,6 +1359,7 @@ export type Database = {
           name: string
           primary_color: string | null
           public_access: string
+          public_page_visibility: Json
           secondary_color: string | null
           slug: string
           store_enabled: boolean
@@ -1380,6 +1381,7 @@ export type Database = {
           name: string
           primary_color?: string | null
           public_access?: string
+          public_page_visibility?: Json
           secondary_color?: string | null
           slug: string
           store_enabled?: boolean
@@ -1401,6 +1403,7 @@ export type Database = {
           name?: string
           primary_color?: string | null
           public_access?: string
+          public_page_visibility?: Json
           secondary_color?: string | null
           slug?: string
           store_enabled?: boolean
@@ -4731,6 +4734,10 @@ export type Database = {
       }
       save_tryouts_page: {
         Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      set_public_page_visibility: {
+        Args: { p_club_id: string; p_page_key: string; p_visible: boolean }
         Returns: Json
       }
       swap_hero_video: {

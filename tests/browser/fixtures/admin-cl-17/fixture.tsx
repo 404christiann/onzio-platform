@@ -17,7 +17,7 @@ import "@/styles/globals.css";
 import "./fixture.css";
 const query = new URLSearchParams(location.search);
 const theme = query.get("theme") === "dark" ? "dark" : "light";
-const club = { id: "11111111-1111-4111-8111-111111111111", name: "Alpha FC", slug: query.has("fixed") ? "rose-city" : "alpha", primaryDomain: "alpha.localhost", lifecycle: "active", publicAccess: "live", kind: "test", tier: "pro", role: "owner", stripePriceId: null, primaryColor: null, secondaryColor: null, presentationTemplateKey: query.has("academy") ? "academy@1" : query.has("clubhouse") ? "clubhouse@1" : null, storeEnabled: true } as const;
+const club = { id: "11111111-1111-4111-8111-111111111111", name: "Alpha FC", slug: query.has("fixed") ? "rose-city" : "alpha", primaryDomain: "alpha.localhost", lifecycle: "active", publicAccess: "live", kind: "test", tier: "pro", role: "owner", stripePriceId: null, primaryColor: null, secondaryColor: null, presentationTemplateKey: query.has("academy") ? "academy@1" : query.has("clubhouse") ? "clubhouse@1" : null, storeEnabled: true, publicPageVisibility: {} } as const;
 function PublicHomepage() {
  const [snapshot, setSnapshot] = useState<HomepageEditorSnapshot | null>(null);
  useEffect(() => { void fetch("/api/admin/homepage").then(response => response.json()).then(setSnapshot); }, []);

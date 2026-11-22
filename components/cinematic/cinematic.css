@@ -108,6 +108,8 @@
   .cinematic-site .header-partner{display:flex;align-items:center;flex:0 1 122px;width:122px;height:22px;margin-left:auto;transform:none}
   .cinematic-site .header-partner img{width:100%;max-height:22px;object-fit:contain}
   .cinematic-site .menu-toggle{gap:8px;min-width:44px;padding:10px 0 10px 8px;font-size:12px}
+  /* With no header partner (the owner hid its page), the Menu button still sits at the right edge. */
+  .cinematic-site .desktop-nav+.menu-toggle{margin-left:auto}
 }
 @media(max-width:360px){
   .cinematic-site .club-header{padding-left:16px;padding-right:16px;gap:10px}

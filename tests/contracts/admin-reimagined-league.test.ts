@@ -110,6 +110,8 @@ describe("the migration", () => {
       "20261121183000_hero_video_pending.sql",
       // TELEMETRY-02 page telemetry rollups.
       "20261121230000_page_telemetry_rollups.sql",
+      // RC public page visibility (clubs.public_page_visibility).
+      "20261122120000_club_public_page_visibility.sql",
     ]);
   });
 

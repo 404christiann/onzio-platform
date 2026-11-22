@@ -26,7 +26,7 @@ const club: ClubContext = {
   primaryColor: null,
   secondaryColor: null,
   presentationTemplateKey: "academy@1",
-  storeEnabled: true,
+  storeEnabled: true, publicPageVisibility: {},
 };
 const branding = { logoPath: "/crest.webp", inverseLogoPath: "", footerTagline: "Club first" };
 const footerGuard = "html:has([data-academy-page-loading]) footer { display: none; }";

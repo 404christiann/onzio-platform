@@ -7,6 +7,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import NativeImage from "@/components/ResilientNativeImage";
 import type { DBSiteSocialLink } from "@/lib/db-types";
 import { fetchSiteSocialLinks } from "@/lib/queries";
+import { withoutHiddenPageLinks } from "@/lib/public-page-visibility";
 import type { FooterOverrides } from "@/components/Footer";
 import { useCinematicContent } from "./CinematicContent";
 import CinematicSocialLink from "./CinematicSocialLink";
@@ -38,7 +39,7 @@ export default function CinematicFooter({ overrides }: { overrides?: FooterOverr
       // An owner-uploaded footer logo (e.g. a sub-mark) replaces the crest, name and tagline.
       ? <Link className="footer-brand footer-logo" href="/"><NativeImage src={footerLogo.url} alt={footerLogo.alt || club.name} /></Link>
       : <Link className="footer-brand" href="/">{clubLogoUrl && <NativeImage src={clubLogoUrl} alt={`${club.name} crest`} />}<span><strong>{club.name}</strong>{(overrides?.tagline ?? footerTagline) && <small>{overrides?.tagline ?? footerTagline}</small>}</span></Link>}
-      <nav aria-label="Footer navigation">{LINKS.filter(item => item.id !== "shop" || club.storeEnabled).map(item => <Link key={item.id} href={item.href}>{content?.navigation.labels[item.id] || item.label}</Link>)}</nav>
+      <nav aria-label="Footer navigation">{withoutHiddenPageLinks(LINKS.filter(item => item.id !== "shop" || club.storeEnabled), club).map(item => <Link key={item.id} href={item.href}>{content?.navigation.labels[item.id] || item.label}</Link>)}</nav>
       <div className="socials">{links.map(social => <CinematicSocialLink key={social.id} social={social} />)}</div>
     </div>
     <p>© {new Date().getFullYear()} {club.name}. All rights reserved.</p>

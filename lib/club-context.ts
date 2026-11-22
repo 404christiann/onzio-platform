@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { failContract } from "@/lib/contract-error";
 import { normalizeHostname } from "@/lib/tenant";
+import { parsePublicPageVisibility, type PublicPageVisibility } from "@/lib/public-page-visibility";
 import {
   isActiveTemplateKey,
   parsePresentationDocument,
@@ -24,6 +25,9 @@ export type ClubContext = {
   presentationTemplateKey: ActiveTemplateKey | null;
   // Operator-only public-store toggle (onzio.clubs.store_enabled).
   storeEnabled: boolean;
+  // Owner-controlled per-page "Visible to visitors" switches (onzio.clubs.public_page_visibility).
+  // A missing key means the page is shown; only an explicit false hides it.
+  publicPageVisibility: PublicPageVisibility;
 };
 
 const TEST_CONTEXTS = {
@@ -40,6 +44,7 @@ const TEST_CONTEXTS = {
     primaryColor: "#111111",
     secondaryColor: "#E7001B",
     storeEnabled: true,
+    publicPageVisibility: {},
   },
   "bravo-onzio.vercel.app": {
     id: "22222222-2222-4222-8222-222222222222",
@@ -54,6 +59,7 @@ const TEST_CONTEXTS = {
     primaryColor: "#222222",
     secondaryColor: "#666666",
     storeEnabled: true,
+    publicPageVisibility: {},
   },
 } as const;
 
@@ -84,7 +90,7 @@ const resolveDatabaseContext = cache(
     const { data: domain, error } = await onzio
       .from("club_domains")
       .select(
-        "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color, store_enabled)",
+        "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color, store_enabled, public_page_visibility)",
       )
       .eq("hostname", hostname)
       .eq("active", true)
@@ -105,6 +111,7 @@ const resolveDatabaseContext = cache(
       primary_color: string | null;
       secondary_color: string | null;
       store_enabled: boolean;
+      public_page_visibility: unknown;
     };
 
     const [{ data: primary }, membership, presentationTemplateKey] =
@@ -151,6 +158,7 @@ const resolveDatabaseContext = cache(
       secondaryColor: club.secondary_color,
       presentationTemplateKey,
       storeEnabled: club.store_enabled,
+      publicPageVisibility: parsePublicPageVisibility(club.public_page_visibility),
     };
   },
 );
@@ -211,7 +219,7 @@ const resolveClubContextBySlug = cache(
     const onzio = supabase.schema("onzio");
     const { data: club, error } = await onzio
       .from("clubs")
-      .select("id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color, store_enabled")
+      .select("id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color, store_enabled, public_page_visibility")
       .eq("slug", slug)
       .maybeSingle();
     if (error || !club) failContract("UNKNOWN_TENANT");
@@ -261,6 +269,7 @@ const resolveClubContextBySlug = cache(
       secondaryColor: club.secondary_color,
       presentationTemplateKey,
       storeEnabled: club.store_enabled,
+      publicPageVisibility: parsePublicPageVisibility(club.public_page_visibility),
     };
   },
 );

@@ -17,7 +17,7 @@ const club = {
   id: "11111111-1111-4111-8111-111111111111", name: "Alpha FC", slug: "alpha",
   primaryDomain: "alpha.localhost", lifecycle: "active", publicAccess: "live", kind: "test",
   tier: "pro", role: "owner", stripePriceId: null, primaryColor: "#111111", secondaryColor: "#E7001B",
-  presentationTemplateKey: params.get("unsupported") === "1" ? "clubhouse@1" : "academy@1", storeEnabled: false,
+  presentationTemplateKey: params.get("unsupported") === "1" ? "clubhouse@1" : "academy@1", storeEnabled: false, publicPageVisibility: {},
 } as const;
 function Workspace() {
   const [open, setOpen] = useState(true);

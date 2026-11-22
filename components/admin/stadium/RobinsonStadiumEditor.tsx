@@ -29,6 +29,8 @@ import "@/components/admin/homepage/homepage-editor.css";
 import { SettledPreview } from "./SettledPreview";
 import { RobinsonSectionFields } from "./RobinsonSectionFields";
 import { robinsonPreviewStamps } from "./robinson-edit-targets";
+import { PageVisibilityControl } from "./PageVisibilityControl";
+import { ROBINSON_HIDDEN_NOTE } from "@/lib/public-page-visibility";
 import {
   ROBINSON_SECTIONS, ROBINSON_SECTION_IMAGES, buildRobinsonSaveInput, robinsonPageState, changedRobinsonSections, robinsonSectionOnly, robinsonSectionSlice, robinsonSectionSummary,
   type RobinsonSectionId,
@@ -245,7 +247,7 @@ export default function RobinsonStadiumEditor() {
       skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={ROBINSON_SECTIONS.length} /></div>}>
       <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/stadium" description={DESCRIPTION} state={pageState}
         onSave={() => { void saveAction.save().catch(() => undefined); }}
-        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={<><PageVisibilityControl pageKey="stadium" note={ROBINSON_HIDDEN_NOTE} />{notice}</>}>
         <PreviewCards sections={sectionItems} label="Robinson Stadium sections" renderPreview={previewOf} previewScale={0.46}
           stamps={id => stampsBySection.get(id as RobinsonSectionId) ?? []}
           onEdit={(id, event, target) => { dialog.openSection(id as RobinsonSectionId, event); dialog.focusField(target); }} />
