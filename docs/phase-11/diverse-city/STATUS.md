@@ -1,5 +1,18 @@
 # Diverse City FC Status
 
+## 2026-11-22 - RC-MATCH-SUMMARY-REF-CHECK: Match Summary checked against Sam's page-12 comp; timeline spine added
+
+- **Agent / package:** Claude Code (Opus coordinating, Sonnet worker), `RC-MATCH-SUMMARY-REF-CHECK`, branch `claude/rc-match-summary-ref-check` from main `62718ed7`.
+- **Status:** `ready for review`, PR open for onzio-bot. Not merged. One CSS file only; no migration, schema, env, admin, chrome or Diverse City change.
+- **Why:** Christian asked to confirm, not redesign, that the shipped Match Summary (#151, #203) produces a page that looks like Sam's "Rose City FC Match Summary page 12 2027" comp (2484x10717), and to fix only real visual or layout gaps.
+- **How it was checked:** `origin/main` served from the isolated Rose City rehearsal (127.0.0.1:55321/55322, club `32ceba0b…`, kind `test`) through the preview-unhold path (`RC_PREVIEW_UNHOLD=1 VERCEL_ENV=preview RC_PREVIEW_HOST=<fake host> ONZIO_ENVIRONMENT=staging`, a DNS preload for that host, dev server on port 80). A local sample filled every section of the latest played match (12 timeline rows with stoppage minutes, the editor's 16 standard stats, 5 officials, 3 kit rows, 11 + 7 + staff per side, attendance, embed-form replay URL, competition, short name). Screenshots at 1440 and 390, full page, compared section by section with the comp.
+- **Result:** every section matched the comp's layout and style except the timeline: the comp runs a thin light-gray vertical spine through the score chips and card/sub circles; ours had none. Fixed in `components/cinematic/match-summary.css` (a centered 1px `#e3e3e3` line behind the markers, inset to the first and last marker, at both breakpoints).
+- **Not changed, by design or rule:** copy differences ("& replay" vs "& replay match", no "@RoseCityFC" in the YouTube line, sentence-case "Match information" / "Jersey color:" / starter stat labels), the replay cover's approved white "Watch on YouTube" logo instead of the comp's "Watch now" + wordmark, stoppage minutes on one line (`45′+3′`) instead of stacked, slightly smaller score chips, icon circles with a soft shadow instead of a hairline ring. Chrome (shared shell, not changed): no "Powered by our partners" row on this page (that row is rendered by the News pages only), Schedule nav item not underlined, footer copy differs from the comp. Mock bugs ignored.
+- **Files changed:** `components/cinematic/match-summary.css`, this entry, `HANDOFF.md`.
+- **Verification:** `vitest run tests/contracts/match-summary-pages.test.ts tests/contracts/match-summary-content.test.ts tests/contracts/cinematic-match-summary-first-paint.test.ts` 17/17 pass. Spine measured in Playwright on all 12 rows: centered on every marker to 0.01 px at 1440 and 390, behind the markers (z-index), at least 42 px (1440) / 27 px (390) from any timeline text. No console or page errors. Screenshots (not committed): worktree `tmp/match-summary-check/` (`desktop-1440-full.png`, `mobile-390-full.png`, `after-*.png`). The local sample was removed afterwards and the receipt deleted.
+- **Blockers:** none.
+- **Exact next step:** onzio-bot review, then Christian decides on merging. No production gate needed (no migration).
+
 ## 2026-11-21 - RC-HERO-VIDEO-SUCCESS-UX: one-box uploader with a clear "Live on your website" moment
 
 - **Agent / package:** Claude Code (Opus coordinating, Sonnet workers; emil-design-eng review; stageshow design study), `RC-HERO-VIDEO-SUCCESS-UX`, branch `claude/rc-hero-video-success-ux` from main `9129ee1` (#215), PR #219.
