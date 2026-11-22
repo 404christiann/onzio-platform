@@ -2,14 +2,12 @@
 // site emits. The server derives the visitor, device, geography and staff flag
 // itself; the client adds no cookie, storage or id of any kind.
 
+import type { BeaconBody } from "@/lib/telemetry/beacon-contract";
+
 export const BEACON_URL = "/api/t";
 
-export type TelemetryBody =
-  | { t: "view"; p: string; r?: string; q?: string }
-  /** `s` holds 1 to 10 distinct sponsor logo ids (site_sponsor_logos.id). */
-  | { t: "logo_seen"; p: string; s: string[] }
-  /** `e` is an integer count of visible milliseconds, 1000 to 60000. */
-  | { t: "heartbeat"; p: string; e: number };
+/** The body POST /api/t accepts (main's zod contract): view, logo_seen (1-10 distinct sponsor uuids) or heartbeat (1000-60000 ms). */
+export type TelemetryBody = BeaconBody;
 
 export function sendTelemetry(body: TelemetryBody): void {
   try {

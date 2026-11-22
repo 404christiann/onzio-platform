@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BEACON_URL, sendTelemetry, type TelemetryBody } from "@/components/telemetry/send";
+import { createHeartbeat, HEARTBEAT_MAX_PIECE_MS, HEARTBEAT_MIN_PIECE_MS } from "@/components/telemetry/heartbeat";
+import { LOGO_SEEN_MAX_IDS } from "@/components/telemetry/logo-seen";
+import {
+  beaconBodySchema,
+  ENGAGED_MS_MAX,
+  ENGAGED_MS_MIN,
+  MAX_BEACON_BYTES,
+  MAX_LOGO_IDS,
+} from "@/lib/telemetry/beacon-contract";
 
 // TELEMETRY-03: every public telemetry beacon leaves through this one function.
 const view: TelemetryBody = { t: "view", p: "/news", r: "https://example.test/", q: "?utm_source=x" };
@@ -74,5 +83,41 @@ describe("sendTelemetry", () => {
     vi.unstubAllGlobals();
     vi.stubGlobal("navigator", undefined);
     expect(() => sendTelemetry(view)).not.toThrow();
+  });
+});
+
+describe("main's /api/t wire contract (lib/telemetry/beacon-contract)", () => {
+  it("shares its limits: 10 logo ids, heartbeat pieces of 1000-60000 ms", () => {
+    expect(LOGO_SEEN_MAX_IDS).toBe(MAX_LOGO_IDS);
+    expect(HEARTBEAT_MIN_PIECE_MS).toBe(ENGAGED_MS_MIN);
+    expect(HEARTBEAT_MAX_PIECE_MS).toBe(ENGAGED_MS_MAX);
+  });
+
+  it.each([view, heartbeat, logoSeen])("accepts the body %j", (body) => {
+    expect(beaconBodySchema.safeParse(body).success).toBe(true);
+  });
+
+  it("accepts every heartbeat a 40 minute visible read with a hide and a route change produces", () => {
+    vi.useFakeTimers();
+    try {
+      const sent: TelemetryBody[] = [];
+      const beat = createHeartbeat({ send: (body) => sent.push(body) });
+      beat.startView("/news");
+      vi.advanceTimersByTime(10 * 60_000 + 4_321);
+      beat.setHidden(true);
+      vi.advanceTimersByTime(5 * 60_000);
+      beat.setHidden(false);
+      vi.advanceTimersByTime(30 * 60_000 + 777);
+      beat.startView("/schedule");
+      vi.advanceTimersByTime(65_000);
+      beat.stop();
+      expect(sent.length).toBeGreaterThan(30);
+      for (const body of sent) {
+        expect(beaconBodySchema.safeParse(body).success).toBe(true);
+        expect(new TextEncoder().encode(JSON.stringify(body)).length).toBeLessThanOrEqual(MAX_BEACON_BYTES);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

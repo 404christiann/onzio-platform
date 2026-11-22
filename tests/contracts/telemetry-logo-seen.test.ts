@@ -9,6 +9,7 @@ import {
 } from "@/components/telemetry/logo-seen";
 import { attachSponsorLogoSeen } from "@/components/telemetry/useSponsorLogoSeen";
 import type { TelemetryBody } from "@/components/telemetry/send";
+import { beaconBodySchema } from "@/lib/telemetry/beacon-contract";
 
 // TELEMETRY-03: a sponsor logo is "seen" after one second at 50% or more while the tab is visible; each id once per
 // page view; at most one beacon every two seconds; whatever is queued goes out immediately when the page hides.
@@ -231,6 +232,7 @@ describe("batching", () => {
       expect(s.length).toBeGreaterThanOrEqual(1);
       expect(s.length).toBeLessThanOrEqual(LOGO_SEEN_MAX_IDS);
       expect(new Set(s).size).toBe(s.length);
+      expect(beaconBodySchema.safeParse(body).success).toBe(true);
     }
     expect(sentIds().sort()).toEqual([...ids].sort());
   });
