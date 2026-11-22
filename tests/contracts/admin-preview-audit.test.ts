@@ -102,6 +102,17 @@ describe("Schedule match previews are never blank", () => {
     const later = fixture("later", "2027-04-10");
     expect(matchPreviewFixtures(later, next, "America/Los_Angeles", now)).toEqual({ fixtures: [later], listed: false });
   });
+  it("the Schedule editor feeds both previews through it (card thumb and dialog live preview)", () => {
+    const source = read("components/admin/schedule/rose-city/RoseCityScheduleEditor.tsx");
+    // The dialog's MatchLive gets activeFixtures; each card's MatchThumb gets `row`.
+    expect(source).toMatch(/const activeFixtures = useMemo\(\(\) => \{[^}]*return matchPreviewFixtures\(fixtureFromForm\(editingKey, active\), nextFixture, timeZone\)\.fixtures;/);
+    expect(source).toMatch(/const \{ fixtures: row, listed \} = matchPreviewFixtures\(fixtureFromForm\(key, form\), nextFixture, timeZone\);/);
+    expect(source).toMatch(/<MatchThumb [^>]*fixtures=\{row\}/);
+    expect(source).toMatch(/useDeferredValue\(activeFixtures\)/);
+    expect(source).toMatch(/listed \? "Upcoming" : "Upcoming · on the site once it is next"/);
+    // The old construction, which left later matches blank, is gone from both places.
+    expect(source).not.toMatch(/\[nextFixture, /);
+  });
   it("keeps Next beside a match the public page lists", () => {
     const played = fixture("played", "2027-03-06", true);
     expect(matchPreviewFixtures(played, next, "America/Los_Angeles", now)).toEqual({ fixtures: [next, played], listed: true });

@@ -2,6 +2,7 @@
 
 - **Status:** `ready for review`, branch `claude/ui-preview-audit` off main `62718ed7`, PR open, not merged. Visual and markup only; no payload, query, gate, `app/api/**` or `supabase/**` change. Record: `STATUS.md` (UI-PREVIEW-AUDIT).
 - **What:** every classic-admin live preview audited for Rose City and Diverse City (1280/390, light/dark). Fixed: readable Homepage Overview part numbers in dark (the white numbers), unclipped kit/News card previews, Tickets cards showing their own section, Schedule matches after Next no longer blank.
+- **Review follow-up (2026-11-22):** the Low is fixed (test that both Schedule previews use the fix).
 - **Exact next step:** Christian reviews; then PR B (shared edit targets + dialog field focus). PRs C-I wait for B.
 
 ## 2026-11-22 - RC-MATCH-SUMMARY-REF-CHECK
