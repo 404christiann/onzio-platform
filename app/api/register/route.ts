@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isPublicSiteOpen } from "@/lib/club-access";
 import { z } from "zod";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
     });
     if (
       club.lifecycle !== "active" ||
-      (club.publicAccess !== "live" && club.publicAccess !== "grace")
+      !isPublicSiteOpen(club.publicAccess)
     ) {
       throw new ContractError("REGISTRATION_NOT_PUBLIC");
     }

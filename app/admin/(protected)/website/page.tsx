@@ -3,7 +3,7 @@ import { TabPage, type TabButton } from "@/components/admin/reimagined/TabPage";
 import { getVisibleAdminHomeJobs } from "@/lib/admin-route-manifest";
 import { loadAdminTabPage } from "@/lib/admin-tab-page";
 import { getAdminTab, getAdminTabPages, websiteTabStatus } from "@/lib/admin-tabs";
-import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
+import { publicSiteState } from "@/lib/club-access";
 import { websiteState } from "@/lib/save-status";
 
 // ADMIN-RE-24: the Website tab (design: admin-plain-search-two-clubs.html).
@@ -26,7 +26,7 @@ export default async function WebsiteTabPage() {
       testId: "admin-view-website",
     },
   ];
-  const state = PUBLIC_SITE_HOLD_SLUGS.has(club.slug) ? "held" : websiteState(club);
+  const state = publicSiteState(club.publicAccess) === "prelaunch" ? "held" : websiteState(club);
   return (
     <TabPage
       tab="website"

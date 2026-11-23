@@ -47,3 +47,21 @@ export function resolvePublicAccess(
 
   return "suspended";
 }
+
+export type PublicSiteState = "open" | "prelaunch" | "suspended";
+
+/**
+ * The single decider of whether a club's public site is visible. Its input is
+ * the stored `public_access` (the value middleware reads at request time).
+ * live|grace -> open; preview -> prelaunch (held until the club pays);
+ * suspended or anything unrecognised -> suspended (fail closed).
+ */
+export function publicSiteState(access: unknown): PublicSiteState {
+  if (access === "live" || access === "grace") return "open";
+  if (access === "preview") return "prelaunch";
+  return "suspended";
+}
+
+export function isPublicSiteOpen(access: unknown): boolean {
+  return publicSiteState(access) === "open";
+}

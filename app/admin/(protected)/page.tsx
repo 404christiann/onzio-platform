@@ -45,7 +45,7 @@ import {
 import { gameLine, loadHomeBoard, needsSummary, signUpsNeed, versus } from "@/lib/admin-home-board";
 import { getAdminTab, getVisibleAdminTabs } from "@/lib/admin-tabs";
 import { readAdminHomeCounts } from "@/lib/admin-tab-page";
-import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
+import { publicSiteState } from "@/lib/club-access";
 import type { AdminPortalSettings } from "@/lib/admin-portal";
 import { createClient } from "@/lib/supabase-server";
 
@@ -499,7 +499,7 @@ async function ReimaginedHomeContent({
   }
 
   const tabs = getVisibleAdminTabs(access);
-  const held = PUBLIC_SITE_HOLD_SLUGS.has(club.slug);
+  const held = publicSiteState(club.publicAccess) === "prelaunch";
   return (
     <ReimaginedHome
       greeting={adminGreeting(displayName)}

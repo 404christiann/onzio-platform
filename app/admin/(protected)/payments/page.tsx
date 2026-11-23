@@ -8,7 +8,7 @@ import { buildPaymentsView } from "@/lib/admin-payments-view";
 import { readAdminPortal } from "@/lib/admin-portal";
 import { isAdminRouteHiddenForClub } from "@/lib/admin-route-manifest";
 import { getClubContext } from "@/lib/club-context";
-import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
+import { publicSiteState } from "@/lib/club-access";
 import { getConfiguredStripePriceLabel } from "@/lib/stripe-price";
 import { createClient } from "@/lib/supabase-server";
 import {
@@ -85,7 +85,7 @@ async function PaymentsPageContent() {
           clubKind: club.kind,
           domain: club.primaryDomain,
           publicAccess: club.publicAccess,
-          held: PUBLIC_SITE_HOLD_SLUGS.has(club.slug),
+          held: publicSiteState(club.publicAccess) === "prelaunch",
           timeZone: portal.timeZone,
         })}
       />

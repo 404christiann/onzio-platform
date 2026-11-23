@@ -10,7 +10,7 @@ import { InsightsWaiting } from "@/components/admin/reimagined/InsightsWaiting";
 import { TabPage } from "@/components/admin/reimagined/TabPage";
 import { loadAdminTabPage } from "@/lib/admin-tab-page";
 import { getAdminTab } from "@/lib/admin-tabs";
-import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
+import { publicSiteState } from "@/lib/club-access";
 import { loadInsightsData } from "@/lib/telemetry/insights-data";
 import { parseInsightsRange } from "@/lib/telemetry/insights-math";
 import { formatClubDate } from "@/lib/club-time";
@@ -46,7 +46,7 @@ export default async function InsightsTabPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { supabase, club, portal } = await loadAdminTabPage("insights");
-  const held = PUBLIC_SITE_HOLD_SLUGS.has(club.slug);
+  const held = publicSiteState(club.publicAccess) === "prelaunch";
   const query = await searchParams;
 
   if (portal.portal !== "reimagined") {
