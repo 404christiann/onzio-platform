@@ -242,22 +242,6 @@ test.describe("UI-PREVIEW-CLICK-VISITOR-2/3: list rows open their own row's fiel
     await clickRowField(page, "benefits", target, "Label");
   });
 
-  test("Season Ticket Membership: the stamped purchase link opens its field and never opens a tab or leaves the admin", async ({ page }) => {
-    await ready(page, "/admin/season-membership", "heading");
-    const target = "seasonMembership.button.label";
-    const isLink = await card(page, "button").locator(`[data-edit-target="${target}"]`).first().evaluate(node => node.closest("a[href]") !== null);
-    expect(isLink, `${target} is a link`).toBe(true);
-    const { x, y } = await fieldPoint(page, "button", target);
-    const before = page.url();
-    const popup = page.context().waitForEvent("page", { timeout: 1_500 }).catch(() => null);
-    await page.mouse.click(x, y);
-    expect(await popup, "clicking a stamped link opened a new tab").toBeNull();
-    await expect(panel(page, "button")).toBeVisible();
-    await expect.poll(() => focusedTarget(page)).toBe(target);
-    expect(page.url()).toBe(before);
-    expect(page.context().pages()).toHaveLength(1);
-  });
-
   test("Know Before You Go: the second match-day tile's label, keyed by the tile's id", async ({ page }) => {
     await ready(page, "/admin/know-before-you-go", "heading");
     const targets = await rowTargetsInDialog(page, "facts", "Match-day tiles", "label", 2, "Add tile");

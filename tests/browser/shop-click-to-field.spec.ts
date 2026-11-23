@@ -75,14 +75,26 @@ async function expectNothingFocused(page: Page) {
   expect(await focusedTarget(page)).toBeNull();
   await expect(page.locator("[data-edit-target-flash]")).toHaveCount(0);
 }
+// A stamped field can be a link (Buy now, the purchase button): a click must open the field, never a tab, a page, or a new
+// document inside the preview frame. Tabs are logged as they open; expectStayed checks after the field assertions, so its wait
+// never eats the field's short highlight ring.
+const popups = new WeakMap<Page, string[]>();
+const clickedFrom = new WeakMap<Page, string>();
 async function clickField(page: Page, title: string, target: string) {
   const { x, y } = await pointIn(page, title, target);
-  const before = page.url();
-  const popup = page.context().waitForEvent("page", { timeout: 1_500 }).catch(() => null);
+  if (!popups.has(page)) { const opened: string[] = []; popups.set(page, opened); page.context().on("page", tab => opened.push(tab.url())); }
+  clickedFrom.set(page, page.url());
   await page.mouse.click(x, y);
-  // A stamped field can be a link (Buy now, the purchase button): the click must open the field, never a tab or a page.
-  expect(await popup, `clicking ${target} opened a new tab`).toBeNull();
-  expect(page.url()).toBe(before);
+}
+/** No field click opened a tab, the admin is still where the last click started, and every preview frame still shows its own document. */
+async function expectStayed(page: Page) {
+  await page.waitForTimeout(1_000);
+  expect(popups.get(page) ?? [], "a field click opened a new tab").toEqual([]);
+  expect(page.url(), "a field click navigated the admin").toBe(clickedFrom.get(page));
+  expect(page.context().pages()).toHaveLength(1);
+  const frames = await page.evaluate(() => Array.from(document.querySelectorAll<HTMLIFrameElement>("iframe[srcdoc]")).map(frame => frame.contentWindow?.location.href ?? null));
+  expect(frames.length).toBeGreaterThan(0);
+  for (const href of frames) expect(href, "a field click navigated a preview frame").toBe("about:srcdoc");
 }
 /** The stamped field is (or sits inside) a real link with an href: the case the shared preview link guard exists for. */
 async function expectStampedLink(page: Page, title: string, target: string) {
@@ -101,6 +113,7 @@ async function clickAndExpect(page: Page, title: string, section: string, target
   await clickField(page, title, target);
   await expect(panel(page, section)).toBeVisible();
   await expectFocused(page, target);
+  await expectStayed(page);
   if (compare) {
     expect(shown).not.toBe("");
     // A textarea keeps a line break where the page flows the text on.
@@ -154,7 +167,6 @@ test.describe("UI-PREVIEW-CLICK-SHOP: Rose City Shop", () => {
     await closeDialog(page);
     await expectStampedLink(page, LEFT, "shop.purchase.buttonLabel");
     await clickAndExpect(page, LEFT, "purchase", "shop.purchase.buttonLabel");
-    expect(page.context().pages()).toHaveLength(1);
   });
 
   test("each kit's fields open on their own kit: the Away frame's description, small heading, bullets, store note and button", async ({ page }) => {
@@ -320,6 +332,7 @@ test.describe("UI-PREVIEW-CLICK-SHOP: Diverse City classic Shop", () => {
     await expect.poll(() => focusedTarget(page)).toBe(target);
     await expect(page.locator(`${stamped(target)}[data-edit-target-flash]`)).toHaveCount(1);
     expect(await adminDialog(page).locator(":focus").inputValue()).toBe(shown);
+    await expectStayed(page);
   }
 
   test("a click on the kit's title opens Kit text with the title focused and ringed; so do the small heading, store note and button", async ({ page }) => {
@@ -344,7 +357,6 @@ test.describe("UI-PREVIEW-CLICK-SHOP: Diverse City classic Shop", () => {
     const shown = await nodeText(page, FRAME, target);
     await clickField(page, FRAME, target);
     await expectDialogFocus(page, target, shown);
-    expect(page.context().pages()).toHaveLength(1);
   });
 
   test("the description and the bullet list open their own fields", async ({ page }) => {
