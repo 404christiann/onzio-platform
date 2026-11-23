@@ -10,6 +10,7 @@ import { HomepagePreviewContext } from "@/lib/homepage-editor/preview-context";
 import type { HomepageDraft } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PARTS, PREVIEW_PIECES, type HomepagePart, type PartId } from "./homepage-parts";
 import { editTargetHitAt, watchEditTargetStamps } from "@/components/admin/ui/editor-kit/editTargets";
+import { usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { homepagePreviewStamps } from "./homepage-edit-targets";
 import styles from "./HomepageOverview.module.css";
@@ -71,6 +72,7 @@ const FRAME_STYLE = `
 /** One full render of the real public homepage in its own 1200px document, fed by the draft. Inert: the parts above it take the clicks. */
 function PageFrame({ draft, videoSource, height, onBody, hidden }: { draft: HomepageDraft; videoSource: string; height: number; onBody: (body: HTMLElement | null) => void; hidden: boolean }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  usePreviewLinkGuard(frame);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const initialDocument = useRef("<!doctype html><html lang='en'><head></head><body></body></html>");
   useEffect(() => {
@@ -121,7 +123,7 @@ function PageFrame({ draft, videoSource, height, onBody, hidden }: { draft: Home
       data-preview-settling={hidden ? "true" : undefined} style={{ width: OVERVIEW_DESIGN_WIDTH, height, visibility: hidden ? "hidden" : "visible" }} />
     {body && createPortal(
       <HomepagePreviewContext.Provider value={value}>
-        <div data-homepage-preview="true" data-playback="false" onClickCapture={event => event.preventDefault()} onSubmitCapture={event => event.preventDefault()}>
+        <div data-homepage-preview="true" data-playback="false">
           <style>{FRAME_STYLE}</style>
           <CinematicShell editing><HomePageClient initialHeroContent={{ ...draft.hero, id: 1, updated_at: "" }} /></CinematicShell>
         </div>

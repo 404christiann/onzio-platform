@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { createElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -587,5 +587,88 @@ describe("kit colours do not depend on the portal's forced --primary-foreground 
       expect(css(`${file}.module.css`)).not.toMatch(/transition:\s*all|transition-property:\s*all/);
     }
     expect(css("PageFrame.module.css")).not.toContain("backdrop-filter");
+  });
+});
+
+// ---- the one preview link and submit guard (UI-PREVIEW-LINK-GUARD) ----
+describe("the shared preview link guard", () => {
+  const read = (path: string) => readFileSync(path, "utf8");
+  const GUARD = "components/admin/ui/editor-kit/previewLinkGuard.ts";
+  // Every preview iframe that renders public components must install the guard on its iframe.
+  const GUARDED_FRAMES = [
+    "components/admin/shop/ShopPreviewFrame.tsx",
+    "components/admin/shop/rose-city/ShopScaledFrame.tsx",
+    "components/admin/homepage/HomepagePreviewFrame.tsx",
+    "components/admin/homepage/HomepageOverviewPreview.tsx",
+  ];
+  // Frames that still carry their own click/submit handling and are not moved to the guard yet (About and Contact have
+  // PRs in flight, Program and Tryouts route their own links). Move one over, then delete it from this list.
+  const LEGACY_FRAMES = [
+    "components/admin/about/AboutPageCanvas.tsx",
+    "components/admin/contact/ContactPageCanvas.tsx",
+    "components/admin/ProgramCanvasFrame.tsx",
+    "components/admin/TryoutsPreviewFrame.tsx",
+  ];
+
+  it("lives in the kit and is exported from its index", () => {
+    expect(read("components/admin/ui/editor-kit/index.ts")).toMatch(/usePreviewLinkGuard[^}]*\}\s*from "\.\/previewLinkGuard"/);
+  });
+
+  it("listens on the iframe body in the capture phase for click, auxclick and submit", () => {
+    const guard = read(GUARD);
+    expect(guard).toMatch(/const GUARDED_EVENTS = \["click", "auxclick", "submit"\] as const;/);
+    expect(guard).toMatch(/GUARDED_EVENTS\.forEach\(type => body\.addEventListener\(type, listener, \{ capture: true \}\)\)/);
+    expect(guard).toMatch(/GUARDED_EVENTS\.forEach\(type => body\.removeEventListener\(type, listener, \{ capture: true \}\)\)/);
+    expect(guard).toMatch(/body = frame\.contentDocument\?\.body/);
+    expect(guard).not.toMatch(/(?:document|window|doc|win|defaultView)\.addEventListener\(/);
+  });
+
+  it("cancels and halts with preventDefault + stopPropagation, never stopImmediatePropagation", () => {
+    const guard = read(GUARD);
+    expect(guard).toMatch(/event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);
+    expect(guard).not.toMatch(/stopImmediatePropagation\(\)/);
+  });
+
+  it("blocks window.open and gives it back on cleanup, and re-installs on iframe load", () => {
+    const guard = read(GUARD);
+    expect(guard).toMatch(/win\.open = blocked;/);
+    expect(guard).toMatch(/if \(win\.open === blocked\) win\.open = original;/);
+    expect(guard).toMatch(/frame\.addEventListener\("load", mount\)/);
+    expect(guard).toMatch(/frame\.removeEventListener\("load", mount\)/);
+  });
+
+  it.each(GUARDED_FRAMES)("%s installs the guard on its iframe", path => {
+    const source = read(path);
+    expect(source).toMatch(/import \{[^}]*usePreviewLinkGuard[^}]*\} from "@\/components\/admin\/ui\/editor-kit\/previewLinkGuard";/);
+    expect(source).toMatch(/usePreviewLinkGuard\((?:iframe|frame)(?:, near)?\);/);
+  });
+
+  // The pieces on the homepage are selected by a bubble-phase onClick that the guard halts for a link; the frame selects the piece first.
+  it("the homepage frame selects the piece under a clicked link in the capture phase", () => {
+    const frame = read("components/admin/homepage/HomepagePreviewFrame.tsx");
+    expect(frame).toMatch(/if \(target\.closest\(PREVIEW_LINK_SELECTOR\)\) \{\s*const piece = target\.closest<HTMLElement>\("\[data-homepage-piece\]"\)\?\.dataset\.homepagePiece;\s*if \(piece\) preview\?\.select\(piece as PieceId\);/);
+    expect(frame).toMatch(/if \(target\.closest\("button,iframe"\)\) event\.preventDefault\(\);/);
+  });
+
+  // No preview frame keeps its own link/submit guard: scan every file that renders into an iframe body.
+  const frameFiles = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const path = `${dir}/${entry.name}`;
+    return entry.isDirectory() ? frameFiles(path) : /\.tsx?$/.test(entry.name) ? [path] : [];
+  }).filter(path => path !== GUARD);
+  const previewFrames = frameFiles("components/admin").filter(path => {
+    const source = read(path);
+    return /createPortal\(/.test(source) && /contentDocument/.test(source);
+  });
+
+  it("finds the frames it is meant to scan", () => {
+    for (const path of [...GUARDED_FRAMES, ...LEGACY_FRAMES]) expect(previewFrames, path).toContain(path);
+  });
+
+  it.each(previewFrames.filter(path => !LEGACY_FRAMES.includes(path)))("%s has no guard of its own", path => {
+    const source = read(path);
+    expect(source).not.toMatch(/onSubmitCapture\s*=/);
+    // closest("a"), closest("a,button"), closest<HTMLElement>('a[href]') ... answered by preventDefault or stopPropagation.
+    expect(source).not.toMatch(/closest(?:<[^>]*>)?\(\s*["'`](?:a|area)(?:[,\[:"'`\s])[^)]*\)[^;]{0,200}?(?:preventDefault|stopPropagation)/);
+    expect(source).not.toMatch(/closest(?:<[^>]*>)?\(\s*["'`](?:a|area)(?:[,\[:"'`\s])[^)]*\)\)?\s*\{?\s*(?:event\.)?(?:preventDefault|stopPropagation)/);
   });
 });

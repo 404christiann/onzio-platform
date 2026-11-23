@@ -1,3 +1,10 @@
+## 2026-11-22 - UI-PREVIEW-LINK-GUARD: one link and submit guard for the admin preview iframes
+
+- **Status:** `ready for review`, branch `claude/preview-shared-link-guard-9b0f15` off main `1fdfc9cb`, not pushed. Kit `previewLinkGuard.ts` (`usePreviewLinkGuard`) on the iframe body, capture phase, installed in both Shop frames, `HomepagePreviewFrame` and the Overview `PageFrame`; all per-site `a`/submit guards deleted. Record: `STATUS.md` (UI-PREVIEW-LINK-GUARD).
+- **What:** a stamped link (Buy now, hero CTA, partner button) in any preview opens its field and never opens a tab, runs a Next Link router push, or leaves the admin; `window.open` and form submits are blocked too. Homepage piece selection under a clicked link now runs in the capture phase.
+- **Evidence:** 14 unit tests on the guard (propagation order modelled), contract pins for the module and each frame, 18 breaks each caught; browser assertions added to four specs, unrun until the integration build.
+- **Exact next step:** orchestrator runs the browser specs and opens the PR.
+
 ## 2026-11-22 - UI-PREVIEW-CLICK-ROSTER: click a Rose City Roster player-card field to edit it
 
 - **Status:** `ready for review`, branch `claude/ui-preview-click-roster` off main `c5ef8f59` (rebased onto `1fdfc9cb`), PR open, not merged. Rose City kit Roster only (`/admin/roster`); no payload, query, gate, `app/api/**`, `supabase/**`, kit or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-ROSTER).

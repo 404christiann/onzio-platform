@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
+import { PREVIEW_LINK_SELECTOR, usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
+import type { PieceId } from "@/lib/homepage-editor/model";
 
 const DECORATIONS = ["hp-piece-corners", "hp-piece-tag"];
 const isDecoration = (node: Node) => node.nodeType === 1 && DECORATIONS.some(name => (node as HTMLElement).classList.contains(name));
@@ -15,6 +18,8 @@ const isDecoration = (node: Node) => node.nodeType === 1 && DECORATIONS.some(nam
  */
 export default function HomepagePreviewFrame({ children, host, playback = false, label = "Homepage", tags, classic = false, loading = false, theme = "light" }: { children: ReactNode; host: string; playback?: boolean; label?: string; tags?: { changed: readonly string[] }; classic?: boolean; loading?: boolean; theme?: "light" | "dark" }) {
   const iframe = useRef<HTMLIFrameElement>(null);
+  usePreviewLinkGuard(iframe);
+  const preview = useHomepagePreview();
   const [body, setBody] = useState<HTMLElement | null>(null);
   const tagsOn = !!tags;
   const delayed = useDelayedLoading(loading || !body);
@@ -150,13 +155,17 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
     <div className="hp-browser-chrome"><span aria-hidden="true">● ● ●</span><span>{host} · {label} preview</span></div>
     <iframe ref={iframe} title={label + " preview"} className="hp-preview-frame" srcDoc={initialDocument.current} />
     {body && createPortal(<div style={classic && !delayed.showContent ? { display: "none" } : undefined} data-homepage-preview="true" data-playback={playback} data-homepage-tags={tagsOn || undefined} onClickCapture={event => {
+      if (playback) return;
       const target = event.target as HTMLElement;
-      const blocked = target.closest(playback ? "a,form" : "a,button,iframe");
-      if (blocked) event.preventDefault();
-      // Stop Next Link/router handlers too: preventDefault alone does not stop
-      // React handlers in portal descendants from navigating the parent app.
-      if (target.closest("a") && (playback || !target.closest("[data-homepage-piece]"))) event.stopPropagation();
-    }} onSubmitCapture={event => event.preventDefault()}>
+      // The shared link guard (usePreviewLinkGuard) cancels every link click and halts it before React's bubble phase, where a
+      // piece's own onClick selects it. So a click on a link inside a piece selects that piece here, in the capture phase
+      // (innermost piece, as the bubbling onClick would). Other clicks still reach the piece's onClick.
+      if (target.closest(PREVIEW_LINK_SELECTOR)) {
+        const piece = target.closest<HTMLElement>("[data-homepage-piece]")?.dataset.homepagePiece;
+        if (piece) preview?.select(piece as PieceId);
+      }
+      if (target.closest("button,iframe")) event.preventDefault();
+    }}>
       <style>{`
         html { scroll-behavior: auto !important; }
         body { margin: 0; }

@@ -6,6 +6,7 @@ import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
 import { ADMIN_MOTION_DURATIONS } from "@/lib/admin-motion";
 import { EDIT_TARGET_ATTRIBUTE, EDIT_TARGET_SELECTOR, resolveEditTarget, type EditTargetId } from "@/lib/admin-edit-targets";
 import { watchEditTargetStamps, type EditTargetStamp } from "@/components/admin/ui/editor-kit/editTargets";
+import { usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 
 /**
  * A real CSS viewport keeps the public page's phone breakpoints honest. Click to field (UI-PREVIEW-CLICK-SHOP, classic Shop only):
@@ -38,6 +39,7 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect, clas
     return () => window.clearTimeout(timer);
   }, [classic, loading]);
   const frame = useRef<HTMLIFrameElement>(null);
+  usePreviewLinkGuard(frame);
   const viewport = useRef<HTMLDivElement>(null);
   const skeletonContent = useRef<HTMLDivElement>(null);
   const [availableWidth, setAvailableWidth] = useState(390);
@@ -204,12 +206,6 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect, clas
                 hotspot.focus({ preventScroll: true });
                 onSelect(hotspot.dataset.shopEditorTarget ?? "copy", hotspot, field);
               }
-              // The preview must never send fans to checkout or navigate the
-              // admin away. Product tab and Front/Back controls still work.
-              if (target.closest("a")) {
-                event.preventDefault();
-                event.stopPropagation();
-              }
             }}
             onKeyDownCapture={(event) => {
               if (event.key !== "Enter" && event.key !== " ") return;
@@ -220,7 +216,6 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect, clas
                 else onSelect(hotspot.dataset.shopEditorTarget ?? "copy", hotspot);
               }
             }}
-            onSubmitCapture={(event) => event.preventDefault()}
           >
             <style>{`
               html { scroll-behavior:auto !important; }

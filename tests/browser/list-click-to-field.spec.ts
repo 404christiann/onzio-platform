@@ -102,6 +102,23 @@ test.describe("UI-PREVIEW-CLICK-LIST-1: Partners", () => {
     await expect(dialog(page).locator("[data-edit-target-flash]")).toHaveCount(0, { timeout: 3_000 });
   });
 
+  test("a stamped link (the page's button) opens its field and never opens a tab or leaves the admin", async ({ page }) => {
+    await open(page, PARTNERS.route, "page:partners");
+    const card = pageCard(page, "page:partners"), target = "partners.partners.ctaLabel";
+    // The public page only draws this button once it has a link, so a seed without one has nothing to click.
+    test.skip(await card.locator(stamped(target)).count() === 0, "the seeded Partners page has no button link");
+    expect(await card.locator(stamped(target)).first().evaluate(node => node.closest("a[href]") !== null), `${target} is a link`).toBe(true);
+    const { x, y } = await pointIn(card, stamped(target));
+    const before = page.url();
+    const popup = page.context().waitForEvent("page", { timeout: 1_500 }).catch(() => null);
+    await page.mouse.click(x, y);
+    expect(await popup, "clicking a stamped link opened a new tab").toBeNull();
+    await expect(panel(page, "page:partners")).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe(target);
+    expect(page.url()).toBe(before);
+    expect(page.context().pages()).toHaveLength(1);
+  });
+
   test("the Partnership Opportunities page card opens its own page's heading (not the Club Partners one); its button has no link yet, so it is not drawn", async ({ page }) => {
     await open(page, PARTNERS.route, "page:opportunities");
     const card = pageCard(page, "page:opportunities");
