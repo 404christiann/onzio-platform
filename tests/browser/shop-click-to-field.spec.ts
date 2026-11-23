@@ -77,7 +77,12 @@ async function expectNothingFocused(page: Page) {
 }
 async function clickField(page: Page, title: string, target: string) {
   const { x, y } = await pointIn(page, title, target);
+  const before = page.url();
+  const popup = page.context().waitForEvent("page", { timeout: 1_500 }).catch(() => null);
   await page.mouse.click(x, y);
+  // A stamped field can be a link (Buy now, the purchase button): the click must open the field, never a tab or a page.
+  expect(await popup, `clicking ${target} opened a new tab`).toBeNull();
+  expect(page.url()).toBe(before);
 }
 /** A click on a field opens its own section with it focused, holding the text the node shows. */
 async function clickAndExpect(page: Page, title: string, section: string, target: string, compare = true) {

@@ -518,3 +518,16 @@ describe("the Diverse City classic Shop editor and frame", () => {
     for (const name of ["purchaseHeading", "purchaseFooterLabel", "purchaseFooterText", "purchaseButtonLabel", "purchaseButtonLink"]) expect(editor).toContain(`target={SHOP_TARGETS.${name}}`);
   });
 });
+
+describe("stamped links in the shop previews never navigate", () => {
+  // Click to field gives stamped links pointer events again, so both frames must swallow a link click entirely.
+  it("the Rose City frame cancels the link and stops the click after opening the field", () => {
+    const frame = read("components/admin/shop/rose-city/ShopScaledFrame.tsx");
+    expect(frame).toMatch(/const link = target\.closest\("a"\);\s*(?:\/\/[^\n]*\s*)*if \(link\) \{ event\.preventDefault\(\); \}/);
+    expect(frame).toMatch(/onSelect\(hotspot\?\.dataset\.shopEditorTarget \?\? "copy", field\);\s*if \(link\) event\.stopPropagation\(\);/);
+  });
+  it("the Diverse City frame cancels the link and stops the click", () => {
+    expect(read("components/admin/shop/ShopPreviewFrame.tsx")).toMatch(/if \(target\.closest\("a"\)\) \{\s*event\.preventDefault\(\);\s*event\.stopPropagation\(\);\s*\}/);
+  });
+});
+

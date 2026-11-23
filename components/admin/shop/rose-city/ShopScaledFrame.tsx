@@ -150,11 +150,15 @@ export function ShopScaledFrame({ naturalWidth, naturalHeight, css, onSelect, ch
         aria-hidden="true"
         onClickCapture={event => {
           const target = event.target as HTMLElement;
-          if (target.closest("a")) { event.preventDefault(); }
+          // Stamped links take clicks now (click to field): never let one open the store or navigate the admin. preventDefault
+          // alone does not stop a Next Link handler inside the portal, so the click stops here too (as ShopPreviewFrame does).
+          const link = target.closest("a");
+          if (link) { event.preventDefault(); }
           const hotspot = target.closest<HTMLElement>("[data-shop-editor-target]");
           // Only a pointer click names a field (detail 0 is the keyboard or a script); an undeclared id names none.
           const field = event.detail > 0 ? resolveEditTarget(target.closest(EDIT_TARGET_SELECTOR)?.getAttribute(EDIT_TARGET_ATTRIBUTE))?.id : undefined;
           if (hotspot || field) onSelect(hotspot?.dataset.shopEditorTarget ?? "copy", field);
+          if (link) event.stopPropagation();
         }}
         onSubmitCapture={event => event.preventDefault()}
       >
