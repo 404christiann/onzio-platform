@@ -4,13 +4,21 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "re
 import { createPortal } from "react-dom";
 import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
 import { ADMIN_MOTION_DURATIONS } from "@/lib/admin-motion";
+import { EDIT_TARGET_ATTRIBUTE, EDIT_TARGET_SELECTOR, resolveEditTarget, type EditTargetId } from "@/lib/admin-edit-targets";
+import { watchEditTargetStamps, type EditTargetStamp } from "@/components/admin/ui/editor-kit/editTargets";
 
-/** A real CSS viewport keeps the public page's phone breakpoints honest. */
-export default function ShopPreviewFrame({ children, host, phone, onSelect, classic = false, invalidPhotos = false, loading = false, skeleton }: {
+/**
+ * A real CSS viewport keeps the public page's phone breakpoints honest. Click to field (UI-PREVIEW-CLICK-SHOP, classic Shop only):
+ * `stamps` mark the nodes inside the frame that show one field, and a pointer click on one reports its id as the third argument
+ * of `onSelect`. The frame is same-origin and already catches the click, so the field is the click target's own
+ * `closest("[data-edit-target]")`. A click with no field under it, and the keyboard, report the region alone.
+ */
+export default function ShopPreviewFrame({ children, host, phone, onSelect, classic = false, invalidPhotos = false, loading = false, skeleton, stamps }: {
   children: ReactNode;
   host: string;
   phone: boolean;
-  onSelect: (target: string, opener?: HTMLElement) => void;
+  onSelect: (target: string, opener?: HTMLElement, field?: EditTargetId) => void;
+  stamps?: readonly EditTargetStamp[];
   classic?: boolean;
   invalidPhotos?: boolean;
   loading?: boolean;
@@ -105,6 +113,8 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect, clas
     return () => observer.disconnect();
   }, [body, classic, invalidPhotos]);
 
+  useEffect(() => (body && stamps ? watchEditTargetStamps(body, stamps) : undefined), [body, stamps]);
+
   useEffect(() => {
     const iframe = frame.current;
     if (!iframe) return;
@@ -188,9 +198,11 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect, clas
             onClickCapture={(event) => {
               const target = event.target as HTMLElement;
               const hotspot = target.closest<HTMLElement>("[data-shop-editor-target]");
+              // Only a pointer click names a field (detail 0 is the keyboard or a script); an undeclared id names none.
+              const field = stamps && event.detail > 0 ? resolveEditTarget(target.closest(EDIT_TARGET_SELECTOR)?.getAttribute(EDIT_TARGET_ATTRIBUTE))?.id : undefined;
               if (hotspot) {
                 hotspot.focus({ preventScroll: true });
-                onSelect(hotspot.dataset.shopEditorTarget ?? "copy", hotspot);
+                onSelect(hotspot.dataset.shopEditorTarget ?? "copy", hotspot, field);
               }
               // The preview must never send fans to checkout or navigate the
               // admin away. Product tab and Front/Back controls still work.
@@ -216,6 +228,12 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect, clas
               [data-shop-editor-target] { cursor:pointer; outline-offset:3px; }
               [data-shop-editor-target]:hover { outline:2px solid #6b5cd6; }
               [data-shop-editor-target]:focus-visible { outline:3px solid #6b5cd6; }
+              ${stamps ? `
+                [data-edit-target] { cursor:pointer; }
+                [data-edit-target]:hover { outline:2px solid #2563eb; outline-offset:2px; }
+                [data-shop-editor-target]:has([data-edit-target]:hover) { outline-color:transparent; }
+                [data-admin-editable-region]:has([data-edit-target]:hover)::after { opacity:0; }
+              ` : ""}
               @media(prefers-reduced-motion:reduce) { [data-shop-editor-preview] * { animation:none !important; transition:none !important; } }
               ${classic ? `
                 [data-admin-editable-region] { position:relative; outline:2px solid transparent; outline-offset:-2px; }

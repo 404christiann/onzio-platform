@@ -21,6 +21,9 @@ import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { Button } from "@/components/ui/button";
 import ShopPreviewFrame from "./ShopPreviewFrame";
+import { editTargetControl, findEditTarget, focusEditTarget } from "@/components/admin/ui/editor-kit/editTargets";
+import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
+import { CLASSIC_PURCHASE_STAMPS, SHOP_TARGETS, cardTarget, kitTarget, shopKitSectionStamps, shopSectionOf } from "./shop-edit-targets";
 import { useShopPresentation } from "./ShopPageEditor";
 import { submitPageSave } from "@/lib/page-editor-save";
 import { createClient } from "@/lib/admin-client";
@@ -34,6 +37,8 @@ import styles from "./ClassicShopPageEditor.module.css";
 const KITS: ShopVariant[] = ["home", "away", "third"];
 const LABELS: Record<ShopVariant, string> = { home: "Home kit", away: "Away kit", third: "Third kit" };
 type Target = "copy" | "photos" | "cta" | "photoRows" | "purchase" | "fixed" | "kit";
+/** The dialog a field's section opens: the kit text dialog or the purchase details dialog. */
+const FIELD_DIALOG: Record<string, Target> = { kitText: "copy", purchase: "purchase" };
 type PendingSave = { request: ShopSaveRequest; draft: ShopPageDraft };
 type Store = {
   snapshots: Partial<Record<ShopSurface, ShopSnapshot>>;
@@ -64,6 +69,8 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
   const [target, setTarget] = useState<Target | null>(null);
   const editorOpener = useRef<HTMLElement | null>(null);
   const editorSelection = useRef<Target>("copy");
+  /** The field a preview click asked the next-opened dialog to focus. */
+  const fieldRequest = useRef<EditTargetId | null>(null);
   const [phone, setPhone] = useState(false);
   const [saving, setSaving] = useState(false);
   const saveBusy = useRef(false);
@@ -95,7 +102,11 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
     setStore(next);
   }
   function interact() { epoch.current++; }
-  function openEditor(next: Target, opener?: HTMLElement) {
+  function openEditor(requested: Target, opener?: HTMLElement, field?: EditTargetId) {
+    // A field opens the dialog that holds it; a part with no field under the click opens as before.
+    const fieldDialog = FIELD_DIALOG[shopSectionOf(field) ?? ""];
+    const next = fieldDialog ?? requested;
+    fieldRequest.current = fieldDialog ? field ?? null : null;
     editorSelection.current = next;
     editorOpener.current = opener ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     setTarget(next);
@@ -295,6 +306,27 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
     setError(keep ? "Your draft is ready to save over the reviewed page." : null);
   }
 
+  // Which node shows which field. Built from the kit alone (never the draft), so the stamps hold still while the page is edited.
+  // The Clubhouse page is a different public component with a title-only dialog, so it keeps the part-level click.
+  const previewStamps = useMemo(() => nameOnly ? undefined : [...shopKitSectionStamps(variant), ...CLASSIC_PURCHASE_STAMPS], [nameOnly, variant]);
+  // After a click on a field, the dialog focuses that field's control (initial focus), then scrolls to it and rings it.
+  const initialFocus = useCallback(() => {
+    const id = fieldRequest.current;
+    const element = id ? findEditTarget(document, id) : null;
+    return (element && editTargetControl(element)) ?? true;
+  }, []);
+  useEffect(() => {
+    const id = fieldRequest.current;
+    if (!target || !id) return;
+    let frames = 0, handle = 0;
+    const attempt = () => {
+      if (focusEditTarget(document, id) || ++frames > 30) { fieldRequest.current = null; return; }
+      handle = window.requestAnimationFrame(attempt);
+    };
+    handle = window.requestAnimationFrame(attempt);
+    return () => window.cancelAnimationFrame(handle);
+  }, [target]);
+
   const content = useMemo(() => draft ? Object.fromEntries(KITS.map((key) => {
     const entry = draft.variants[key];
     const kitContent = publicKit(entry.section, entry.photos, surface, key);
@@ -326,7 +358,7 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
         <PreviewToggle value={phone ? "phone" : "desktop"} onChange={(value) => setPhone(value === "phone")} />
       </div></div>
       <div className={styles.canvas} data-shop-classic-canvas="">
-        <ShopPreviewFrame classic loading={!draft} skeleton={<div className={"admin-theme admin-portal " + styles.loading} data-admin-theme={theme} role="status" aria-label="Loading Shop page"><Shimmer className="h-8 w-40" /><Shimmer className="mt-6 h-56 w-full" /><Shimmer className="mt-6 h-24 w-full" /></div>} host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} onSelect={(value, opener) => openEditor(value as Target, opener)} invalidPhotos={draft ? kitNeedsPhoto(draft, variant) : false}>
+        <ShopPreviewFrame classic loading={!draft} skeleton={<div className={"admin-theme admin-portal " + styles.loading} data-admin-theme={theme} role="status" aria-label="Loading Shop page"><Shimmer className="h-8 w-40" /><Shimmer className="mt-6 h-56 w-full" /><Shimmer className="mt-6 h-24 w-full" /></div>} host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} stamps={previewStamps} onSelect={(value, opener, field) => openEditor(value as Target, opener, field)} invalidPhotos={draft ? kitNeedsPhoto(draft, variant) : false}>
           {!draft || !content || !selectedContent ? null : presentation.renderPreview(content, surface, setSelected, <div style={{ backgroundColor: "var(--color-white)" }}>
               {selectedContent.section ? <ShopKitSection section={selectedContent.section} photos={selectedContent.photos} headingTag={surface === "shop" ? "h1" : "h2"} animate={false} ctaHref={surface === "home" ? "/shop" : undefined} /> : <div data-shop-editor-target="copy" className="p-12 text-center text-slate-600">This kit is not set up yet. Add text and a photo to show it.</div>}
               {extras && draft.photoRows[variant].length > 0 && <ShopPhotoStrip photos={publicPhotoRow(draft.photoRows[variant], variant)} />}
@@ -337,41 +369,41 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
     </div>
     {surface === "shop" && variants.filter((key) => key !== variant).map((key) => <div key={key} id={`shop-kits-panel-${key}`} role="tabpanel" aria-labelledby={`shop-kits-tab-${key}`} hidden />)}
     <div ref={pageToastHost} className={styles.pageToast} />
-    <AdminDialog open={Boolean(target)} onClose={() => setTarget(null)} title={title} finalFocus={restoreEditorFocus} eyebrow={`${surface === "home" ? "Homepage shop feature" : "Shop page"} · ${LABELS[variant]}`} footer={<><div ref={setDialogToastHost} /><AdminDialogFooter primary={<Button type="button" data-primary="" onClick={() => setTarget(null)}>Done</Button>} /></>}>
+    <AdminDialog open={Boolean(target)} onClose={() => setTarget(null)} title={title} initialFocus={initialFocus} finalFocus={restoreEditorFocus} eyebrow={`${surface === "home" ? "Homepage shop feature" : "Shop page"} · ${LABELS[variant]}`} footer={<><div ref={setDialogToastHost} /><AdminDialogFooter primary={<Button type="button" data-primary="" onClick={() => setTarget(null)}>Done</Button>} /></>}>
       {target === "fixed" && <p className={styles.note}>This copy belongs to the website design and is managed by Onzio.</p>}
       {(target === "copy" || target === "kit" || target === "cta") && kit && <>
         {nameOnly && <p className={styles.note}>The Shop and homepage use this kit name and its first photo. Campaign copy, price, sizes, and checkout are managed by Onzio.</p>}
         {target !== "cta" && <AdminDialogSection title="Heading"><AdminDialogFields>
-          {!nameOnly && <Field label="Small heading" value={kit.section.eyebrow} onChange={(value) => sectionField("eyebrow", value)} />}
-          <Field label="Kit title" value={kit.section.title} onChange={(value) => sectionField("title", value)} />
-          {!nameOnly && <Field area label="Description" value={kit.section.description} onChange={(value) => sectionField("description", value)} />}
+          {!nameOnly && <Field target={kitTarget(variant, "eyebrow")} label="Small heading" value={kit.section.eyebrow} onChange={(value) => sectionField("eyebrow", value)} />}
+          <Field target={kitTarget(variant, "title")} label="Kit title" value={kit.section.title} onChange={(value) => sectionField("title", value)} />
+          {!nameOnly && <Field target={kitTarget(variant, "description")} area label="Description" value={kit.section.description} onChange={(value) => sectionField("description", value)} />}
         </AdminDialogFields></AdminDialogSection>}
         {!nameOnly && target !== "cta" && <AdminDialogSection title="Details"><AdminDialogFields>
-          <Field area label="Bullet points, one per line" value={kit.section.bullet_points.join("\n")} onChange={(value) => sectionField("bullet_points", value.split("\n").slice(0, 8))} />
-          <Field area label="Store information" value={kit.section.store_note} onChange={(value) => sectionField("store_note", value)} />
+          <Field target={kitTarget(variant, "bullets")} area label="Bullet points, one per line" value={kit.section.bullet_points.join("\n")} onChange={(value) => sectionField("bullet_points", value.split("\n").slice(0, 8))} />
+          <Field target={kitTarget(variant, "storeNote")} area label="Store information" value={kit.section.store_note} onChange={(value) => sectionField("store_note", value)} />
         </AdminDialogFields>{surface === "shop" && policy?.shopPageShows && <p className={styles.note}>Your Shop page shows the first {policy.shopPageShows.bullets} bullet points, split at the first colon into a label and value. Any more are saved but not shown.</p>}</AdminDialogSection>}
-        {!nameOnly && <AdminDialogSection title="Button"><AdminDialogFields><Field label="Button text" value={kit.section.cta_label} onChange={(value) => sectionField("cta_label", value)} />
-          {surface === "shop" && <Field label="Buy link" value={kit.section.cta_link} onChange={(value) => sectionField("cta_link", value)} />}
+        {!nameOnly && <AdminDialogSection title="Button"><AdminDialogFields><Field target={kitTarget(variant, "buttonLabel")} label="Button text" value={kit.section.cta_label} onChange={(value) => sectionField("cta_label", value)} />
+          {surface === "shop" && <Field target={kitTarget(variant, "buyLink")} label="Buy link" value={kit.section.cta_link} onChange={(value) => sectionField("cta_link", value)} />}
         </AdminDialogFields><p className={styles.note}>{surface === "home" ? "The button opens this club's Shop page." : "Use the full http or https address of your store, or an email address if supporters order by email."}</p></AdminDialogSection>}
       </>}
       {(target === "photos" || target === "photoRows") && <div ref={setPhotoDestination} />}
       {target === "photos" && shownPhotos && <p className={styles.note}>{surface === "shop" ? "Your Shop page" : "The homepage shop feature"} shows the first {shownPhotos} photos (front, then back). Any more are saved but not shown.</p>}
       {target === "photos" && draft && kitNeedsPhoto(draft, variant) && <p className={styles.photoWarning}>Add at least one photo before saving this kit.</p>}
       {target === "purchase" && extras && draft && <>
-        <AdminDialogSection title="Section"><Field label="Section heading" value={draft.purchase.heading} onChange={(value) => purchaseField("heading", value)} /></AdminDialogSection>
+        <AdminDialogSection title="Section"><Field target={SHOP_TARGETS.purchaseHeading} label="Section heading" value={draft.purchase.heading} onChange={(value) => purchaseField("heading", value)} /></AdminDialogSection>
         <AdminDialogSection title={`Detail cards · ${draft.purchase.cards.length} of 4`}>
           {draft.purchase.cards.map((card, index) => <div key={index} className={styles.card}><div className={styles.cardHeading}><span>Detail card {index + 1}</span><Button variant="ghost" aria-label={`Remove detail card ${index + 1}`} onClick={() => purchaseField("cards", draft.purchase.cards.filter((_, at) => at !== index))}>Remove</Button></div><AdminDialogFields>
-            <Field label="Label" value={card.label} onChange={(value) => purchaseField("cards", draft.purchase.cards.map((item, at) => at === index ? { ...item, label: value } : item))} />
-            <Field label="Title" value={card.title} onChange={(value) => purchaseField("cards", draft.purchase.cards.map((item, at) => at === index ? { ...item, title: value } : item))} />
-            <Field area label="Text" value={card.body} onChange={(value) => purchaseField("cards", draft.purchase.cards.map((item, at) => at === index ? { ...item, body: value } : item))} />
+            <Field target={cardTarget(index, "label")} label="Label" value={card.label} onChange={(value) => purchaseField("cards", draft.purchase.cards.map((item, at) => at === index ? { ...item, label: value } : item))} />
+            <Field target={cardTarget(index, "title")} label="Title" value={card.title} onChange={(value) => purchaseField("cards", draft.purchase.cards.map((item, at) => at === index ? { ...item, title: value } : item))} />
+            <Field target={cardTarget(index, "body")} area label="Text" value={card.body} onChange={(value) => purchaseField("cards", draft.purchase.cards.map((item, at) => at === index ? { ...item, body: value } : item))} />
           </AdminDialogFields></div>)}
           <Button variant="outline" disabled={draft.purchase.cards.length >= 4} onClick={() => purchaseField("cards", [...draft.purchase.cards, { label: "", title: "", body: "" }])}>Add detail card</Button>
         </AdminDialogSection>
         <AdminDialogSection title="Footer"><AdminDialogFields>
-          <Field label="Footer label" value={draft.purchase.cta_eyebrow} onChange={(value) => purchaseField("cta_eyebrow", value)} />
-          <Field area label="Footer text" value={draft.purchase.cta_text} onChange={(value) => purchaseField("cta_text", value)} />
-          <Field label="Button text" value={draft.purchase.cta_label} onChange={(value) => purchaseField("cta_label", value)} />
-          <Field label="Button link" value={draft.purchase.cta_link} onChange={(value) => purchaseField("cta_link", value)} />
+          <Field target={SHOP_TARGETS.purchaseFooterLabel} label="Footer label" value={draft.purchase.cta_eyebrow} onChange={(value) => purchaseField("cta_eyebrow", value)} />
+          <Field target={SHOP_TARGETS.purchaseFooterText} area label="Footer text" value={draft.purchase.cta_text} onChange={(value) => purchaseField("cta_text", value)} />
+          <Field target={SHOP_TARGETS.purchaseButtonLabel} label="Button text" value={draft.purchase.cta_label} onChange={(value) => purchaseField("cta_label", value)} />
+          <Field target={SHOP_TARGETS.purchaseButtonLink} label="Button link" value={draft.purchase.cta_link} onChange={(value) => purchaseField("cta_link", value)} />
         </AdminDialogFields></AdminDialogSection>
       </>}
     </AdminDialog>
@@ -410,9 +442,9 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
   </AdminPage>;
 }
 
-function Field({ label, value, onChange, area = false }: { label: string; value: string; onChange: (value: string) => void; area?: boolean }) {
+function Field({ label, value, onChange, area = false, target }: { label: string; value: string; onChange: (value: string) => void; area?: boolean; target?: EditTargetId }) {
   const id = useId();
-  return <label htmlFor={id} className={styles.field}><span id={`${id}-label`}>{label}</span>{area ? <textarea id={id} aria-labelledby={`${id}-label`} rows={3} value={value} onChange={(event) => onChange(event.target.value)} /> : <input id={id} aria-labelledby={`${id}-label`} value={value} onChange={(event) => onChange(event.target.value)} />}</label>;
+  return <label htmlFor={id} className={styles.field} {...editTargetProps(target)}><span id={`${id}-label`}>{label}</span>{area ? <textarea id={id} aria-labelledby={`${id}-label`} rows={3} value={value} onChange={(event) => onChange(event.target.value)} /> : <input id={id} aria-labelledby={`${id}-label`} value={value} onChange={(event) => onChange(event.target.value)} />}</label>;
 }
 
 function PersistentPhotos({ collectionId, destination, photos, onChange, onUpload, onWork, onUndoWork, onInteraction, onAbandoned }: {

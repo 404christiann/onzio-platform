@@ -1,3 +1,10 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-SHOP: click a Shop preview field to edit it
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-shop` off main `c5ef8f59`, PR open, not merged. Rose City `/admin/shop` (all frames) and Diverse City classic Shop only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change; the reimagined Shop editor is untouched. Record: `STATUS.md` (UI-PREVIEW-CLICK-SHOP).
+- **What:** clicking a field inside a Shop preview frame opens the dialog on the section holding the field, on the frame's own kit, with the control focused and ringed (kit text, the jersey option's line, purchase cards and footer, Jersey details tiles, care line, size chart cells and size names, map heading and picture, partner heading; on Diverse City the kit's heading, description, bullets, store note and button). Photos, chips, keyboard and a click away from any field open the section as before. Frames stamp their own body and read the click target's closest stamped node (one approach for both editors).
+- **Evidence:** contract tests run the real stamps on the real public components; 34 breaks caught, plus 3 against a rebuilt production build (10 of 12 browser tests red); browser spec 12/12 and `playwright.visitor-click.config.ts` 47/47 on a production build (three unrelated "every stamp" geometry tests were flaky once under heavy machine load).
+- **Exact next step:** Christian reviews; then PR G: Schedule / match cards and MatchLive, including the match-summary fields.
+
 ## 2026-11-22 - UI-PREVIEW-CLICK-LIST-2: click a News or Rose City Sponsors preview field to edit it
 
 - **Status:** `ready for review`, branch `claude/ui-preview-click-list-pages-2` off main `fd39060c`, PR open, not merged. `NewsCards` opt-in `stamps` / `ownsTarget` plus News and Rose City Sponsors only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-LIST-2).
