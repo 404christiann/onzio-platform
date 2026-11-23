@@ -6,6 +6,8 @@ import FileUpload from "@/components/admin/FileUpload";
 import ResilientImage from "@/components/ResilientImage";
 import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { SPONSOR_NAME_LIMIT, SPONSOR_WEBSITE_LIMIT, type SponsorDraft } from "@/lib/sponsor-content";
+import { editTargetProps } from "@/lib/admin-edit-targets";
+import { sponsorTarget } from "./sponsors-edit-targets";
 import { PLACE_CAP, PLACE_NOUN, inPlace, type Place } from "./rose-city-sponsors-model";
 import styles from "./RoseCitySponsorsEditor.module.css";
 
@@ -98,7 +100,7 @@ function SponsorRow({ api, draft, index, count, place, onReplace }: {
         )}
       </div>
       <div className={styles.body}>
-        <div className={styles.field}>
+        <div className={styles.field} {...editTargetProps(sponsorTarget(draft.key, "name"))}>
           <label className={styles.label} htmlFor={`${id}-name`}>Name</label>
           <input
             id={`${id}-name`}
@@ -112,7 +114,7 @@ function SponsorRow({ api, draft, index, count, place, onReplace }: {
           />
           <p id={`${id}-name-hint`} className={styles.hint}>Left blank, it saves as “Sponsor {index + 1}”.</p>
         </div>
-        <div className={styles.field}>
+        <div className={styles.field} {...editTargetProps(sponsorTarget(draft.key, "website"))}>
           <label className={styles.label} htmlFor={`${id}-site`}>Their website (optional)</label>
           <input
             id={`${id}-site`}
@@ -135,7 +137,7 @@ function SponsorRow({ api, draft, index, count, place, onReplace }: {
         </div>
       </div>
       <div className={styles.actions}>
-        <button type="button" className={`admin-press ${styles.tool}`} disabled={api.locked} onClick={onReplace} aria-label={`Replace logo for ${label}`}>
+        <button type="button" className={`admin-press ${styles.tool}`} disabled={api.locked} onClick={onReplace} aria-label={`Replace logo for ${label}`} {...editTargetProps(sponsorTarget(draft.key, "logo"))}>
           <IconUpload size={16} aria-hidden="true" />
           Replace
         </button>

@@ -1,3 +1,7 @@
+import type { NewsEditorArticle } from "@/lib/cinematic-news";
+import type { NewsDraft } from "@/lib/cinematic-news-editor";
+import type { NewsCardItem } from "@/components/admin/news/news-page";
+import type { SponsorDraft } from "@/lib/sponsor-content";
 import type { CinematicPartnersContent, PartnerLogoMedia } from "@/lib/cinematic-partners-content";
 import type { CinematicInjuryReportContent } from "@/lib/cinematic-injury-report-content";
 import type { InjuryAsset, InjuryPlayerRow } from "@/lib/cinematic-injury-report-query";
@@ -155,3 +159,44 @@ export function injuryFixture(): CinematicInjuryReportContent {
     ],
   };
 }
+
+/**
+ * UI-PREVIEW-CLICK-LIST-2: News articles (three saved, one removed, one new) with every field filled, and Rose City sponsors
+ * (a saved one, an unsaved upload, one with a website). Same media url scheme as the fixtures above.
+ */
+export const NEWS_IDS = ["ffffffff-0000-4000-8000-000000000001", "ffffffff-0000-4000-8000-000000000002", "ffffffff-0000-4000-8000-000000000003"] as const;
+export const NEWS_NEW_KEY = "new-1";
+export const newsCoverUrl = (name: string) => `https://media.test/storage/v1/object/public/onzio-media/news/${name}.webp`;
+const NEWS_COVER_ASSET = "99999999-0000-4000-8000-000000000001";
+export function newsDraftFixture(index: number): NewsDraft {
+  return {
+    category: (["news", "community", "partner"] as const)[index % 3], cardHeading: ["Foothill Transit", "Fan Night", "Derby Day"][index % 3],
+    title: ["New bus line to Robinson", "Fan night is back", "The derby preview"][index % 3], subtitle: `Subtitle ${index}`, coverAlt: `Cover ${index}`,
+    body: `First paragraph ${index}\nSecond paragraph ${index}`, actionLabel: "Partner with us", actionHref: "/community/partnership",
+    publishedLocal: `2026-11-1${index}T12:00`, coverAssetId: index === 2 ? null : NEWS_COVER_ASSET, coverUrl: index === 2 ? "" : newsCoverUrl(`cover-${index}`),
+  };
+}
+function newsArticleFixture(index: number, removed = false): NewsEditorArticle {
+  const { body, coverAssetId, coverUrl, publishedLocal, ...content } = newsDraftFixture(index);
+  void coverUrl; void publishedLocal; void coverAssetId;
+  return {
+    id: NEWS_IDS[index], slug: `article-${index}`, revision: "r1", publishedAt: `2026-11-1${index}T20:00:00.000Z`, removedAt: removed ? "2026-11-20T00:00:00.000Z" : null,
+    cover: index === 2 ? null : { assetId: NEWS_COVER_ASSET, storage_bucket: "onzio-media", storage_path: `news/cover-${index}.webp`, width: 2287, height: 1237 } as NewsEditorArticle["cover"],
+    content: { ...content, paragraphs: body.split("\n") },
+  };
+}
+/** Cards as the page lists them: newest first, a removed one (no preview button) and an unsaved new one with a cover typed in. */
+export function newsCardsFixture(): NewsCardItem[] {
+  const saved = [0, 1, 2].map(index => {
+    const article = newsArticleFixture(index, index === 1), draft = newsDraftFixture(index);
+    return { key: article.id, article, draft, removed: index === 1, changed: index === 0, isNew: false, publishedAt: article.publishedAt, title: draft.title, slug: article.slug, coverUrl: draft.coverUrl };
+  });
+  const fresh = newsDraftFixture(0);
+  return [...saved, { key: NEWS_NEW_KEY, article: null, draft: { ...fresh, title: "A brand new article" }, removed: false, changed: true, isNew: true, publishedAt: "2026-11-21T20:00:00.000Z", title: "A brand new article", slug: null, coverUrl: fresh.coverUrl }];
+}
+export const SPONSOR_KEYS = ["11111111-0000-4000-8000-000000000001", "11111111-0000-4000-8000-000000000002", "upload-3"] as const;
+export const sponsorLogoUrl = (index: number) => `https://media.test/storage/v1/object/public/onzio-media/sponsors/logo-${index}.webp`;
+export const sponsorDraftsFixture = (): SponsorDraft[] => SPONSOR_KEYS.map((key, index) => ({
+  key, id: index === 2 ? null : key, name: ["Alpha Bank", "Beta Brewing", "Gamma Gear"][index], logo_url: sponsorLogoUrl(index),
+  website: index === 1 ? "betabrewing.test" : "", homepage: true, footer: false,
+}));

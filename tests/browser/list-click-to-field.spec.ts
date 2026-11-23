@@ -1,6 +1,12 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /**
+ * UI-PREVIEW-CLICK-LIST-2: on /admin/news a click on a field inside an article card's thumbnail opens that article on the
+ * dialog section holding the field (a title or heading: Details; the cover photo: Cover photo) with the control focused and
+ * ringed; on /admin/sponsors a click on a sponsor logo in the carousel card opens the dialog on that sponsor's logo control. Nothing
+ * here saves: News and Sponsors edits stay in the page until Save, which no test presses, and the only edit is a typed title
+ * that dies with the page.
+ *
  * UI-PREVIEW-CLICK-LIST-1: on /admin/partners and /admin/injury-report a click on a field inside a page card's or an item
  * card's preview opens that card's dialog with the field's control focused and ringed. Nothing here saves: the local seed has
  * no partners or injuries, so the items are typed into the unsaved draft, and every test throws the draft and its browser
@@ -26,17 +32,17 @@ async function open(page: Page, route: string, firstCard: string) {
 }
 
 /** Viewport point at the centre of the part of a stamped (or selected) preview node that shows inside its card's box. */
-async function pointIn(card: Locator, selector: string) {
+async function pointIn(card: Locator, selector: string, boxSelector = "[data-preview-box]") {
   await card.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
   await card.page().waitForTimeout(250);
-  const point = await card.evaluate((element, css) => {
+  const point = await card.evaluate((element, [css, boxCss]) => {
     const node = element.querySelector(css);
-    const box = element.querySelector("[data-preview-box]")?.getBoundingClientRect();
+    const box = element.querySelector(boxCss)?.getBoundingClientRect();
     if (!node || !box) return null;
     const rect = node.getBoundingClientRect();
     const left = Math.max(rect.left, box.left), right = Math.min(rect.right, box.right), top = Math.max(rect.top, box.top), bottom = Math.min(rect.bottom, box.bottom);
     return right > left && bottom > top ? { x: (left + right) / 2, y: (top + bottom) / 2 } : null;
-  }, selector);
+  }, [selector, boxSelector] as const);
   if (!point) throw new Error(`no visible preview node for ${selector}`);
   return point;
 }
@@ -320,6 +326,276 @@ test.describe("UI-PREVIEW-CLICK-LIST-1: Injury Report", () => {
       await expect(panel(page, id)).toBeVisible();
       await expect.poll(() => focusedTarget(page)).toBe(target);
       await expect(dialog(page).locator(":focus")).toHaveAccessibleName("Injury");
+    });
+  });
+});
+
+/* ---------------------------------------------------------------- LIST-2: News */
+const NEWS = { route: "/admin/news" };
+const newsCard = (page: Page, nth: number) => page.locator("[data-news-card]").nth(nth);
+const NEWS_BOX = "[data-news-thumb]";
+/** A viewport point inside the card's preview box that no stamped node covers, so a click there is a click away from every field. */
+async function pointAwayFromFields(card: Locator, boxSelector: string) {
+  await card.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
+  const point = await card.evaluate((element, boxCss) => {
+    const box = element.querySelector(boxCss)!.getBoundingClientRect();
+    const rects = Array.from(element.querySelectorAll("[data-edit-target]")).map(node => node.getBoundingClientRect());
+    for (let y = box.top + 4; y < box.bottom - 2; y += 6) for (let x = box.left + 4; x < box.right - 2; x += 6) {
+      if (!rects.some(rect => x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)) return { x, y };
+    }
+    return null;
+  }, boxSelector);
+  if (!point) throw new Error("every point of the preview is a field");
+  return point;
+}
+async function openNews(page: Page) {
+  page.on("dialog", item => void item.accept());
+  await page.goto(NEWS.route, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("[data-news-card]").first()).toBeVisible({ timeout: 60_000 });
+  await expect.poll(() => newsCard(page, 0).locator("[data-edit-target]").count(), { timeout: 30_000 }).toBeGreaterThan(0);
+}
+/** The card's own article key, its stamped targets by field, and the title it shows. */
+const keyOf = (card: Locator) => card.getAttribute("data-news-card") as Promise<string>;
+const field = (key: string, section: string, name: string) => `news.${section}.row:${key}.${name}`;
+async function clickNews(page: Page, card: Locator, section: string, target: string) {
+  const { x, y } = await pointIn(card, stamped(target), NEWS_BOX);
+  await page.mouse.click(x, y);
+  await expect(panel(page, section)).toBeVisible();
+  await expect.poll(() => focusedTarget(page)).toBe(target);
+  await expect(dialog(page).locator(stamped(target))).toHaveAttribute("data-edit-target-flash", "");
+}
+
+test.describe("UI-PREVIEW-CLICK-LIST-2: News", () => {
+  test.afterEach(async ({ page }) => { await page.goto("about:blank"); });
+
+  test("a title opens that article's Details with the title focused, holding the title the card shows, and the mouse shows the outline", async ({ page }) => {
+    await openNews(page);
+    const card = newsCard(page, 1), key = await keyOf(card), target = field(key, "details", "title");
+    const shown = await nodeText(card, target);
+    const { x, y } = await pointIn(card, stamped(target), NEWS_BOX);
+    await page.mouse.move(x, y);
+    await expect(card.locator("[data-field-hover]:not([hidden])")).toHaveAttribute("data-target", target);
+    await page.mouse.click(x, y);
+    await expect(panel(page, "details")).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe(target);
+    await expect(dialog(page).locator(":focus")).toHaveAccessibleName("Title");
+    expect(await dialog(page).locator(":focus").inputValue()).toBe(shown);
+    await expect(dialog(page)).toContainText(shown);
+    await expect(dialog(page).locator("[data-edit-target-flash]")).toHaveCount(0, { timeout: 3_000 });
+  });
+
+  test("each card opens its own article, and the card heading and the category open Details too", async ({ page }) => {
+    await openNews(page);
+    const count = await page.locator("[data-news-card]").count();
+    expect(count).toBeGreaterThanOrEqual(2);
+    for (const nth of [0, count - 1]) {
+      const card = newsCard(page, nth), key = await keyOf(card), title = await nodeText(card, field(key, "details", "title"));
+      await clickNews(page, card, "details", field(key, "details", "cardHeading"));
+      await expect(dialog(page).locator(":focus")).toHaveAccessibleName("Card heading");
+      await expect(dialog(page)).toContainText(title);
+      await closeDialog(page);
+    }
+    const card = newsCard(page, 0), key = await keyOf(card);
+    await clickNews(page, card, "details", field(key, "details", "category"));
+    await expect(dialog(page).locator(":focus")).toBeChecked();
+  });
+
+  test("the cover photo opens the Cover photo section, not Details, and a title typed there is on the card and still clicks through", async ({ page }) => {
+    await openNews(page);
+    const card = newsCard(page, 0), key = await keyOf(card);
+    await clickNews(page, card, "photo", field(key, "photo", "cover"));
+    await expect(panel(page, "details")).toHaveCount(0);
+    await closeDialog(page);
+    await clickNews(page, card, "details", field(key, "details", "title"));
+    await dialog(page).locator(":focus").fill("Click to field typed title");
+    await closeDialog(page);
+    await expect.poll(() => nodeText(card, field(key, "details", "title"))).toBe("Click to field typed title");
+    await clickNews(page, card, "details", field(key, "details", "title"));
+    expect(await dialog(page).locator(":focus").inputValue()).toBe("Click to field typed title");
+  });
+
+  test("a click away from any field, the footer Edit and the keyboard open the article's Details with no field focused", async ({ page }) => {
+    await openNews(page);
+    const card = newsCard(page, 0);
+    const away = await pointAwayFromFields(card, NEWS_BOX);
+    await page.mouse.click(away.x, away.y);
+    await expect(panel(page, "details")).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(await focusedTarget(page)).toBeNull();
+    await closeDialog(page);
+    await card.locator("[data-preview-edit]").click();
+    await expect(panel(page, "details")).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(await focusedTarget(page)).toBeNull();
+    await expect(dialog(page).locator("[data-edit-target-flash]")).toHaveCount(0);
+    await closeDialog(page);
+    await card.locator("[data-preview-button]").evaluate(button => (button as HTMLButtonElement).focus());
+    await page.keyboard.press("Enter");
+    await expect(panel(page, "details")).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(await focusedTarget(page)).toBeNull();
+  });
+
+  test("every stamp in every card is on that card's own shown nodes", async ({ page }) => {
+    await openNews(page);
+    const total = await page.locator("[data-news-card]").count();
+    for (let nth = 0; nth < total; nth += 1) {
+      const card = newsCard(page, nth), key = await keyOf(card);
+      await card.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
+      if (await card.locator("[data-preview-button]").count() === 0) continue;
+      await expect.poll(() => card.locator("[data-edit-target]").count(), { timeout: 15_000 }).toBeGreaterThan(0);
+      const nodes = await card.evaluate(element => Array.from(element.querySelectorAll("[data-edit-target]")).map(node => ({
+        id: node.getAttribute("data-edit-target"), shown: node.getClientRects().length > 0 && getComputedStyle(node).visibility !== "hidden" && getComputedStyle(node).display !== "none" && !node.closest("[hidden]"),
+      })));
+      expect(nodes.length).toBeGreaterThan(0);
+      for (const node of nodes) { expect(node.id?.includes(`.row:${key}.`), `${node.id} on ${key}`).toBe(true); expect(node.shown, `${node.id} is shown`).toBe(true); }
+    }
+  });
+
+  test.describe("phone", () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+    test("the sheet opens on the cover photo's section and focuses it", async ({ page }) => {
+      await openNews(page);
+      const card = newsCard(page, 0), key = await keyOf(card), target = field(key, "photo", "cover");
+      const { x, y } = await pointIn(card, stamped(target), NEWS_BOX);
+      await page.mouse.click(x, y);
+      await expect(dialog(page)).toHaveAttribute("data-view", "section");
+      await expect(panel(page, "photo")).toBeVisible();
+      await expect.poll(() => focusedTarget(page)).toBe(target);
+    });
+  });
+});
+
+/* ---------------------------------------------------------------- LIST-2: Rose City Sponsors */
+const SPONSORS = { route: "/admin/sponsors" };
+const strip = (page: Page) => pageCard(page, "carousel");
+async function openSponsors(page: Page) {
+  page.on("dialog", item => void item.accept());
+  await page.goto(SPONSORS.route, { waitUntil: "domcontentloaded" });
+  await expect(strip(page)).toBeVisible({ timeout: 60_000 });
+  await expect.poll(() => strip(page).locator("[data-edit-target]").count(), { timeout: 30_000 }).toBeGreaterThan(0);
+}
+/** Holds the strip still, the way a visitor who asks for reduced motion sees it, so a logo is under a known point. */
+async function holdStrip(page: Page, offset: "first" | "clone") {
+  await strip(page).evaluate((card, which) => {
+    const track = card.querySelector<HTMLElement>(".sponsor-track");
+    const set = card.querySelector<HTMLElement>(".sponsor-set");
+    if (!track || !set) throw new Error("no strip");
+    track.style.animation = "none";
+    track.style.transform = which === "clone" ? `translateX(-${set.offsetWidth}px)` : "none";
+  }, offset);
+  await page.waitForTimeout(150);
+}
+const rowKey = (target: string) => target.slice(target.indexOf("row:") + 4, target.lastIndexOf("."));
+
+test.describe("UI-PREVIEW-CLICK-LIST-2: Rose City Sponsors", () => {
+  test.afterEach(async ({ page }) => { await page.goto("about:blank"); });
+
+  test("a logo opens the dialog on that sponsor's logo control, in that sponsor's own row, and the mouse shows the outline", async ({ page }) => {
+    await openSponsors(page);
+    await holdStrip(page, "first");
+    const card = strip(page);
+    const ids = await card.locator(".sponsor-set").first().locator("img[data-edit-target]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-edit-target") as string));
+    expect(ids.length).toBeGreaterThan(0);
+    const target = ids[0];
+    const alt = await card.locator(stamped(target)).first().getAttribute("alt");
+    const { x, y } = await pointIn(card, `.sponsor-set:first-of-type img${stamped(target)}`);
+    await page.mouse.move(x, y);
+    await expect(card.locator("[data-field-hover]:not([hidden])")).toHaveAttribute("data-target", target);
+    await page.mouse.click(x, y);
+    await expect(panel(page, "carousel")).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe(target);
+    await expect(dialog(page).locator(stamped(target))).toHaveAttribute("data-edit-target-flash", "");
+    const row = dialog(page).locator(`[data-sponsor-row="${rowKey(target)}"]`);
+    await expect(row).toBeVisible();
+    await expect(row.locator(":focus")).toHaveAccessibleName(`Replace logo for ${alt}`);
+  });
+
+  test("every logo is stamped to its own sponsor, the clone set to the same sponsors as the real set, and a clone logo opens the same row", async ({ page }) => {
+    await openSponsors(page);
+    const card = strip(page);
+    const sets = await card.locator(".sponsor-set").evaluateAll(nodes => nodes.map(node => ({ hidden: node.getAttribute("aria-hidden"), ids: Array.from(node.querySelectorAll("img")).map(img => img.getAttribute("data-edit-target")) })));
+    expect(sets).toHaveLength(2);
+    expect(sets[0].hidden).toBeNull();
+    expect(sets[1].hidden).toBe("true");
+    expect(sets[0].ids.length).toBeGreaterThan(0);
+    expect(sets[1].ids).toEqual(sets[0].ids);
+    expect(new Set(sets[0].ids).size).toBe(sets[0].ids.length);
+    for (const id of sets[0].ids) expect(id).toMatch(/^sponsors\.carousel\.row:[A-Za-z0-9_-]+\.logo$/);
+    await holdStrip(page, "clone");
+    const target = sets[1].ids[0] as string;
+    const { x, y } = await pointIn(card, `.sponsor-set[aria-hidden="true"] img${stamped(target)}`);
+    await page.mouse.click(x, y);
+    await expect(panel(page, "carousel")).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe(target);
+    await expect(dialog(page).locator(`[data-sponsor-row="${rowKey(target)}"] :focus`)).toHaveCount(1);
+  });
+
+  test("a logo that fails to load (fallback box in the strip, nothing in its clone) never shifts the other logos to the wrong sponsor", async ({ page }) => {
+    await openSponsors(page);
+    const card = strip(page);
+    // Each logo's URL and its sponsor's id, from a normal load.
+    const owners = await card.locator(".sponsor-set").first().locator("img[data-edit-target]").evaluateAll(nodes =>
+      nodes.map(node => [node.getAttribute("src") as string, node.getAttribute("data-edit-target") as string] as const));
+    expect(owners.length).toBeGreaterThan(1);
+    const idBySrc = new Map(owners);
+    const [failedSrc] = owners[0];
+    // Make the first logo fail for real, so ResilientNativeImage takes its failure path.
+    await page.route(failedSrc, route => route.fulfill({ status: 404, body: "" }));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(strip(page)).toBeVisible({ timeout: 60_000 });
+    await expect.poll(() => card.locator(".sponsor-set").nth(1).locator("img").count(), { timeout: 30_000 }).toBe(owners.length - 1);
+    await expect.poll(() => card.locator(".sponsor-set").first().locator("img").count()).toBe(owners.length - 1);
+    // Every logo still drawn, in the strip and its clone, carries its own sponsor's id.
+    await expect.poll(async () => (await card.locator(".sponsor-set img").evaluateAll(nodes =>
+      nodes.map(node => [node.getAttribute("src"), node.getAttribute("data-edit-target")]))).every(([src, id]) => id === idBySrc.get(src as string))).toBe(true);
+    // The clone's first logo is now the second sponsor's: a click opens that sponsor's row, not the failed one's.
+    await holdStrip(page, "clone");
+    const target = owners[1][1];
+    const { x, y } = await pointIn(card, `.sponsor-set[aria-hidden="true"] img${stamped(target)}`);
+    await page.mouse.click(x, y);
+    await expect(panel(page, "carousel")).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe(target);
+    await expect(dialog(page).locator(`[data-sponsor-row="${rowKey(target)}"] :focus`)).toHaveCount(1);
+  });
+
+  test("the strip's heading, a click away, the footer Edit and the keyboard open the card with no field focused", async ({ page }) => {
+    await openSponsors(page);
+    const card = strip(page);
+    expect(await card.locator("h2[data-edit-target]").count()).toBe(0);
+    await card.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
+    const heading = (await card.locator(".partners > h2").boundingBox())!;
+    expect(heading).not.toBeNull();
+    await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+    await expect(panel(page, "carousel")).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(await focusedTarget(page)).toBeNull();
+    await closeDialog(page);
+    await card.getByRole("button", { name: /^Edit .* section$/ }).click();
+    await expect(panel(page, "carousel")).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(await focusedTarget(page)).toBeNull();
+    await expect(dialog(page).locator("[data-edit-target-flash]")).toHaveCount(0);
+    await closeDialog(page);
+    await card.locator("[data-preview-button]").evaluate(button => (button as HTMLButtonElement).focus());
+    await page.keyboard.press("Enter");
+    await expect(panel(page, "carousel")).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(await focusedTarget(page)).toBeNull();
+  });
+
+  test.describe("phone", () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+    test("the sheet opens on the sponsors and focuses the clicked logo's control", async ({ page }) => {
+      await openSponsors(page);
+      await holdStrip(page, "first");
+      const card = strip(page);
+      const target = await card.locator(".sponsor-set").first().locator("img[data-edit-target]").first().getAttribute("data-edit-target") as string;
+      const { x, y } = await pointIn(card, `.sponsor-set:first-of-type img${stamped(target)}`);
+      await page.mouse.click(x, y);
+      await expect(dialog(page)).toHaveAttribute("data-view", "section");
+      await expect(panel(page, "carousel")).toBeVisible();
+      await expect.poll(() => focusedTarget(page)).toBe(target);
     });
   });
 });

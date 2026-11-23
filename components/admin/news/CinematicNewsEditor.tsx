@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
@@ -26,6 +27,7 @@ import { loadNewsEditor, newsDraftFromArticle, saveNewsArticle, type NewsDraft, 
 import "@/components/admin/homepage/homepage-editor.css";
 import { NewsArticleFields, type NewsFieldsApi } from "./NewsArticleFields";
 import { NewsCards, NewsEmpty } from "./NewsCards";
+import { newsOwnsTarget, newsSectionOf, newsStampsByCard } from "./news-edit-targets";
 import {
   DEFAULT_NEWS_FILTER, NEWS_SECTIONS, landCover, changedEntries, dropOnClose, entryForArticle, entryForNew, entryTitle, filterNewsCards, newsCards,
   newsPageFailure, planPageSave, previewArticle, rebaseEntries, runSaveItems, savedPrefix, draftParagraphs, type NewsCardItem, type NewsEntry, type NewsFilter, type NewsSaveItem, type NewsSectionId, type NewsSendResult,
@@ -33,6 +35,7 @@ import {
 import styles from "./NewsEditor.module.css";
 
 const PAGE = "News";
+const NO_STAMPS: readonly never[] = [];
 const CRUMBS = [{ label: "Website" }, { label: "Pages", href: "/admin/website-pages" as const }];
 const DESCRIPTION = "Write the articles shown on your News page. Saving shows an article on the site right away.";
 
@@ -101,6 +104,9 @@ export default function CinematicNewsEditor() {
 
   const cards = useMemo(() => (articles ? newsCards(articles, entries, timeZone) : []), [articles, entries, timeZone]);
   const visibleCards = useMemo(() => filterNewsCards(cards, filter), [cards, filter]);
+  // Click-to-field: one stamps array per article card, rebuilt only when the set of article ids changes (never while typing).
+  const cardKeys = cards.map(card => card.key).join("\n");
+  const cardStamps = useMemo(() => newsStampsByCard(cardKeys ? cardKeys.split("\n") : []), [cardKeys]);
 
   const clearNotices = () => { setMessage(""); setFailed(false); setSaveFailed(false); setInvalid(null); };
   const replaceArticle = (article: NewsEditorArticle) => setArticles(current => [...(current ?? []).filter(item => item.id !== article.id), article]);
@@ -109,11 +115,13 @@ export default function CinematicNewsEditor() {
     setProblems(current => { const { [key]: _gone, ...rest } = current; return rest; });
   };
 
-  function open(card: NewsCardItem, event?: MouseEvent<HTMLElement>) {
+  /** `target` is the field clicked in the card's preview: its section opens, not always Details, and the field is focused. */
+  function open(card: NewsCardItem, event?: MouseEvent<HTMLElement>, target?: EditTargetId) {
     if (locked || !card.article && !entries[card.key]) return;
     if (card.article) setEntries(current => (current[card.key] ? current : { ...current, [card.key]: entryForArticle(card.article!, timeZone) }));
     setOpenKey(card.key);
-    dialog.openSection("details", event);
+    dialog.openSection(newsSectionOf(target) ?? "details", event);
+    dialog.focusField(target);
   }
   function addArticle(event: MouseEvent<HTMLButtonElement>) {
     if (locked) return;
@@ -332,7 +340,7 @@ export default function CinematicNewsEditor() {
 
   const draft = entry?.draft;
   const fieldsApi: NewsFieldsApi | null = entry && draft ? {
-    draft, slug: entry.article?.slug ?? null, timeZone, problems: problems[entry.key] ?? {}, locked, uploading,
+    articleKey: entry.key, draft, slug: entry.article?.slug ?? null, timeZone, problems: problems[entry.key] ?? {}, locked, uploading,
     update, upload: file => void uploadCover(file), removeCover: () => void removeCover(),
   } : null;
   const previewInstant = draft ? newsLocalToInstant(draft.publishedLocal, timeZone) : null;
@@ -361,14 +369,15 @@ export default function CinematicNewsEditor() {
         </div>
         <p className={styles.countLine}><b>{live} on the site</b>{removed ? ` · ${removed} removed` : ""} · newest first</p>
         {visibleCards.length
-          ? <NewsCards cards={visibleCards} shared={shared} timeZone={timeZone} locked={locked} onEdit={(card, event) => open(card, event)}
+          ? <NewsCards cards={visibleCards} shared={shared} timeZone={timeZone} locked={locked} onEdit={(card, event, target) => open(card, event, target)}
+            stamps={key => cardStamps.get(key) ?? NO_STAMPS} ownsTarget={newsOwnsTarget}
             onRemove={card => void setRemoved(card, true)} onRestore={card => void setRemoved(card, false)}
             onDiscard={card => setConfirm({ kind: "discard", card })} />
           : <NewsEmpty hasArticles={cards.length > 0} />}
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-news-status="">{status}</p>
-    <EditorDialog open={dialog.open} onClose={closeDialog} title={dialogTitle} mode="split" returnFocusRef={dialog.returnFocusRef}
+    <EditorDialog open={dialog.open} onClose={closeDialog} title={dialogTitle} mode="split" returnFocusRef={dialog.returnFocusRef} focusRequest={dialog.focusRequest}
       footerNote="Edits stay on the page until you press Save. Saving shows the article on the site right away."
       previewHint="The article as visitors see it"
       sections={NEWS_SECTIONS.map(section => ({

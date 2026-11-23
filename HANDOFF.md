@@ -1,3 +1,11 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-LIST-2: click a News or Rose City Sponsors preview field to edit it
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-list-pages-2` off main `fd39060c`, PR open, not merged. `NewsCards` opt-in `stamps` / `ownsTarget` plus News and Rose City Sponsors only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-LIST-2).
+- **What:** clicking a field inside a News card's thumbnail opens that article on the section holding the field with the control focused and ringed (card heading, title and category: Details; the cover photo: Cover photo); clicking a sponsor logo in the Sponsors carousel card (real set or its looping clone) opens that sponsor's logo control. Footer Edit, menu and keyboard open the card with no field focused.
+- **Evidence:** contract tests run the real stamps on the real server-rendered public components; 33 breaks each caught; browser spec 46/46 (10 new) on a production build.
+- **Review follow-up (2026-11-22):** sponsor logos now match their sponsor by image URL (the clone strip drops failed logos entirely); proven against the real component and a real failed logo in the browser.
+- **Exact next step:** Christian reviews; then PR F: Shop click-to-field, Rose City then Diverse City gaps.
+
 ## 2026-11-22 - UI-PREVIEW-CLICK-LIST-1: click a Partners or Injury Report preview field to edit it
 
 - **Status:** `ready for review`, branch `claude/ui-preview-click-list-pages` off main `d7730c01`, PR open, not merged. Kit `ItemPreviewCards` opt-in `stamps` plus Partners and Injury Report only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-LIST-1).
