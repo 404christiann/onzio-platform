@@ -88,9 +88,9 @@ const prior = (status: string | null, extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
-function setStripeStatus(status: string) {
+function setStripeStatus(status: string, extra: Record<string, unknown> = {}) {
   mocks.subscription.mockResolvedValue({
-    id: "sub_test", customer: "cus_test", livemode: false, status,
+    id: "sub_test", customer: "cus_test", livemode: false, status, ...extra,
     metadata: { onzio_club_id: clubId, onzio_environment: "staging" },
     items: { data: [{
       price: { id: "price_test", unit_amount: 8500, currency: "usd", recurring: { interval: "month" } },
@@ -204,6 +204,68 @@ describe("operator billing notifications from the Stripe webhook", () => {
       grace_ends_at: "2026-10-31T23:16:28.000Z",
     });
     await POST(request("invoice.payment_failed"));
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it.each(["past_due", "unpaid"])("a recovered payment (%s to active) sends a recovery email, not the went-live email", async (from) => {
+    mocks.state.row = prior(from, {
+      paid_through: "2026-09-11T23:16:28.000Z",
+      grace_ends_at: "2026-10-01T23:16:28.000Z",
+    });
+    expect((await POST(request("invoice.paid"))).status).toBe(200);
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+    const [payload, options] = mocks.send.mock.calls[0];
+    expect(payload.subject).toBe("Rose City Futbol Club payment recovered — subscription active");
+    expect(payload.subject).not.toContain("is live");
+    expect(payload.text).toContain("https://rosecityfutbolclub.com");
+    expect(options.idempotencyKey).toMatch(/^onzio:recovery:/);
+  });
+
+  it("a first payment after a canceled subscription is a went-live email", async () => {
+    mocks.state.row = prior("canceled");
+    await POST(request("checkout.session.completed"));
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+    expect(mocks.send.mock.calls[0][1].idempotencyKey).toMatch(/^onzio:activation:/);
+  });
+
+  it.each([
+    ["before the paid period ends", "2026-10-12T18:00:00Z"],
+    ["after the paid period ends (access moves to grace)", "2026-10-20T00:00:00Z"],
+  ])("a canceled subscription sends one cancellation email %s", async (_label, now) => {
+    vi.setSystemTime(new Date(now));
+    setStripeStatus("canceled");
+    mocks.state.row = prior("active", { paid_through: "2026-10-11T23:16:28.000Z" });
+    expect((await POST(request("customer.subscription.updated"))).status).toBe(200);
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+    const [payload, options] = mocks.send.mock.calls[0];
+    expect(payload.subject).toBe("Rose City Futbol Club canceled its subscription");
+    expect(options.idempotencyKey).toBe(`onzio:cancellation:${clubId}:sub_test`);
+  });
+
+  it("an already canceled subscription does not resend", async () => {
+    setStripeStatus("canceled");
+    mocks.state.row = prior("canceled", {
+      paid_through: "2026-10-11T23:16:28.000Z",
+      grace_ends_at: "2026-10-31T23:16:28.000Z",
+    });
+    await POST(request("customer.subscription.updated"));
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it("scheduling a cancellation at period end sends one heads-up email", async () => {
+    setStripeStatus("active", { cancel_at_period_end: true });
+    mocks.state.row = prior("active", { cancel_at_period_end: false });
+    await POST(request("customer.subscription.updated"));
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+    const [payload, options] = mocks.send.mock.calls[0];
+    expect(payload.subject).toBe("Rose City Futbol Club scheduled a cancellation");
+    expect(options.idempotencyKey).toMatch(/^onzio:cancellation-scheduled:/);
+  });
+
+  it("an already scheduled cancellation does not resend", async () => {
+    setStripeStatus("active", { cancel_at_period_end: true });
+    mocks.state.row = prior("active", { cancel_at_period_end: true });
+    await POST(request("customer.subscription.updated"));
     expect(mocks.send).not.toHaveBeenCalled();
   });
 

@@ -14,7 +14,17 @@ export type PriorSubscriptionRow = {
   status: string | null;
   grace_ends_at: string | null;
   paid_through?: string | null;
+  cancel_at_period_end?: boolean | null;
 } | null;
+
+export type BillingTransition =
+  | "activation"
+  | "recovery"
+  | "failure"
+  | "cancellation"
+  | "cancellation_scheduled";
+
+const LATE_PAYMENT_STATUSES = new Set(["past_due", "unpaid"]);
 
 type Input = {
   service: Service;
@@ -23,6 +33,7 @@ type Input = {
   priorRow: PriorSubscriptionRow;
   newStatus: string;
   newAccess: string;
+  newCancelAtPeriodEnd: boolean;
   paidThrough: string | null;
   now?: Date;
 };
@@ -43,8 +54,9 @@ export function classifyBillingTransition(input: {
   priorRow: PriorSubscriptionRow;
   newStatus: string;
   newAccess: string;
+  newCancelAtPeriodEnd?: boolean;
   now: Date;
-}): "activation" | "failure" | null {
+}): BillingTransition | null {
   const { priorRow, newStatus, newAccess, now } = input;
   const priorStatus = priorRow?.status ?? null;
   const priorAccess = priorRow
@@ -57,13 +69,27 @@ export function classifyBillingTransition(input: {
         now,
       ).publicAccess
     : "preview";
-  if (newStatus === "active" && priorStatus !== "active") return "activation";
+  // A canceled subscription can also move access into grace; one cancellation
+  // email covers it instead of a "billing problem" email.
+  if (newStatus === "canceled" && priorStatus !== "canceled") return "cancellation";
+  if (newStatus === "active" && priorStatus !== "active") {
+    return priorStatus !== null && LATE_PAYMENT_STATUSES.has(priorStatus)
+      ? "recovery"
+      : "activation";
+  }
   if (
     (newStatus === "past_due" && priorStatus !== "past_due") ||
     ((newAccess === "grace" || newAccess === "suspended") &&
       priorAccess !== newAccess)
   ) {
     return "failure";
+  }
+  if (
+    priorRow &&
+    input.newCancelAtPeriodEnd === true &&
+    priorRow.cancel_at_period_end !== true
+  ) {
+    return "cancellation_scheduled";
   }
   return null;
 }
@@ -82,6 +108,7 @@ export async function notifyBillingTransition(input: Input): Promise<void> {
       priorRow: input.priorRow,
       newStatus: input.newStatus,
       newAccess: input.newAccess,
+      newCancelAtPeriodEnd: input.newCancelAtPeriodEnd,
       now: input.now ?? new Date(),
     });
     if (!kind) return;
@@ -109,7 +136,7 @@ export async function notifyBillingTransition(input: Input): Promise<void> {
     // activation. Both can read the pre-apply row before either applies, so
     // the prior-vs-new check alone can pass twice. The key below depends only
     // on the transition, not the event id, so Resend collapses the duplicate.
-    if (kind === "activation") {
+    if (kind === "activation" || kind === "recovery") {
       const { data: domain } = await input.service
         .from("club_domains")
         .select("hostname")
@@ -120,10 +147,39 @@ export async function notifyBillingTransition(input: Input): Promise<void> {
         .limit(1)
         .maybeSingle();
       const url = domain?.hostname ? `https://${domain.hostname}` : "no verified domain yet";
+      if (kind === "recovery") {
+        await sendOperatorEmail({
+          subject: `${clubName} payment recovered — subscription active`,
+          text: [`A late payment for ${clubName} went through and the subscription is active again.`, "", ...summary, `Paid through: ${input.paidThrough ?? "unknown"}`, `Public URL: ${url}`].join("\n"),
+          idempotencyKey: `onzio:recovery:${input.clubId}:${subscriptionId}:active:${marker}`,
+          clubSlug,
+        });
+        return;
+      }
       await sendOperatorEmail({
         subject: `${clubName} is live — subscription active`,
         text: [`${clubName} just paid and is live.`, "", ...summary, `Public URL: ${url}`].join("\n"),
         idempotencyKey: `onzio:activation:${input.clubId}:${subscriptionId}:active:${marker}`,
+        clubSlug,
+      });
+      return;
+    }
+
+    if (kind === "cancellation") {
+      await sendOperatorEmail({
+        subject: `${clubName} canceled its subscription`,
+        text: [`The subscription for ${clubName} is canceled. The public site stays up until the paid period ends, then goes through grace and is suspended.`, "", ...summary, `Paid through: ${input.paidThrough ?? "unknown"}`].join("\n"),
+        idempotencyKey: `onzio:cancellation:${input.clubId}:${subscriptionId}`,
+        clubSlug,
+      });
+      return;
+    }
+
+    if (kind === "cancellation_scheduled") {
+      await sendOperatorEmail({
+        subject: `${clubName} scheduled a cancellation`,
+        text: [`${clubName} set its subscription to cancel at the end of the paid period. Nothing changes until then.`, "", ...summary, `Paid through: ${input.paidThrough ?? "unknown"}`].join("\n"),
+        idempotencyKey: `onzio:cancellation-scheduled:${input.clubId}:${subscriptionId}:${marker}`,
         clubSlug,
       });
       return;

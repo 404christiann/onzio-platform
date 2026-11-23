@@ -184,7 +184,7 @@ export async function POST(request: Request) {
     ? await service
         .from("club_subscriptions")
         .select(
-          "club_id,stripe_customer_id,stripe_subscription_id,last_applied_stripe_event_id,last_applied_stripe_event_created_at,status,grace_ends_at,paid_through",
+          "club_id,stripe_customer_id,stripe_subscription_id,last_applied_stripe_event_id,last_applied_stripe_event_created_at,status,grace_ends_at,paid_through,cancel_at_period_end",
         )
         .eq("club_id", clubId)
         .maybeSingle()
@@ -317,6 +317,7 @@ export async function POST(request: Request) {
       priorRow: row,
       newStatus: projection.status as string,
       newAccess: runtimeAccess.publicAccess,
+      newCancelAtPeriodEnd: projection.cancelAtPeriodEnd === true,
       paidThrough: (projection.paidThrough as string | null) ?? null,
     });
   }
