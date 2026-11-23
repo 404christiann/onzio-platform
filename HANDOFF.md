@@ -1,3 +1,12 @@
+## 2026-11-22 - UI-PREVIEW-OVERVIEW-OVERLAY-FIX: Homepage Overview overlays sit on their own sections; no blank sections
+
+- **Status:** `ready for review`, branch `claude/homepage-overlay-fix-6ad0aa`, PR open, not merged. Overview preview and `HomepagePreviewFrame` only; no payload, query, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-OVERVIEW-OVERLAY-FIX).
+- **Why it broke:** the right column showed the second frame but its buttons came from the first frame's layout; clipped lazy pictures (the raffle art, no size) stayed unloaded in one frame, shifting it 1590px; and the column split was fixed before that picture arrived.
+- **What:** one measurement per frame, part names and boxes from one part id (labels now in `EDIT_TARGET_REGISTRY.homepage`), a split that rebalances when the page really changes shape, and preview documents that load every picture now and show entrance effects finished (`html[data-preview="true"]`).
+- **Evidence:** 16 new contract tests, 22 mutations each red; 5 new browser tests red on main with the reported symptoms, green on the fix; checked in Christian's Chrome (IoU 1.000 for all 11 parts in both modes).
+- **Review follow-up (2026-11-22):** the Medium (Playback preview lost its animations) is fixed: only static frames are frozen (`data-preview-static`), playback frames keep their motion; proven in real Chromium CSS and in the Diverse City editor, regression and wiring breaks each red.
+- **Exact next step:** Christian re-reviews.
+
 ## 2026-11-22 - UI-PREVIEW-CLICK-ABOUT-CONTACT-POLICIES: Rose City About, Contact and Policies preview and click-to-field
 
 - **Status:** `ready for review`, branch `claude/ui-preview-click-about-contact-policies` off main `c5ef8f59`, PR open, not merged. Rose City `/admin/about`, `/admin/contact`, `/admin/policies` only; no payload, query, gate, `app/api/**`, `supabase/**`, kit or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-ABOUT-CONTACT-POLICIES).
@@ -5,6 +14,7 @@
 - **Evidence:** 91 new contract tests on the real public components; 29 breaks each caught; browser spec 25/25 on a production build, plus one break caught on a rebuild.
 - **Review follow-up (grokbot #241):** the Contact and Policies shared-content effects dropped their template check (it pushed the architecture template-selector cap over, so CI `unit` was red) and use `[club.id]` like About; the "Link pending" and digits-only line guards are now tested, each red when removed. Record: `STATUS.md`.
 - **Exact next step:** Christian reviews; then the Diverse City About, Contact, Programs and Tryouts gaps.
+
 ## 2026-11-22 - UI-PREVIEW-LINK-GUARD: one link and submit guard for the admin preview iframes
 
 - **Status:** `ready for review`, branch `claude/preview-shared-link-guard-9b0f15` off main `1fdfc9cb` (rebased onto `33643828`, after #239), PR open, not merged. Kit `previewLinkGuard.ts` (`usePreviewLinkGuard`) on the iframe body, capture phase, installed in both Shop frames, `HomepagePreviewFrame`, the Overview `PageFrame`, and the About, Contact, Program and Tryouts frames; all per-site `a`/submit guards deleted. Record: `STATUS.md` (UI-PREVIEW-LINK-GUARD).

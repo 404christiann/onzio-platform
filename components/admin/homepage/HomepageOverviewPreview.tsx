@@ -8,7 +8,8 @@ import { IconEdit } from "@/components/admin/icons";
 import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { HomepagePreviewContext } from "@/lib/homepage-editor/preview-context";
 import type { HomepageDraft } from "@/lib/homepage-editor/model";
-import { HOMEPAGE_PARTS, PREVIEW_PIECES, type HomepagePart, type PartId } from "./homepage-parts";
+import { HOMEPAGE_PARTS, PREVIEW_PIECES, type HomepagePart, type PartAnchor, type PartId } from "./homepage-parts";
+import { preparePreviewDocument } from "./preview-document";
 import { editTargetHitAt, watchEditTargetStamps } from "@/components/admin/ui/editor-kit/editTargets";
 import { usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import type { EditTargetId } from "@/lib/admin-edit-targets";
@@ -39,25 +40,130 @@ const rectOf = (element: Element | null | undefined): Rect | null => {
   return { top: r.top, left: r.left, width: r.width, height: r.height };
 };
 
-/** Find each part's block in the rendered public page by the pieces the public components already tag. */
-function measure(doc: Document): Measurement | null {
+/** The node an anchor names in the rendered page, or null when that block is not on the page. */
+export function findAnchor(doc: Pick<Document, "querySelector">, anchor: PartAnchor): Element | null {
+  const node = doc.querySelector(anchor.selector) ?? (anchor.fallback ? doc.querySelector(anchor.fallback) : null);
+  return anchor.closest ? node?.closest(anchor.closest) ?? null : node;
+}
+
+/**
+ * Each part's block(s), measured from the real DOM of one rendered page and keyed by the part that names them: a part's
+ * rects come only from its own anchors, so a box can never be filed under another part's id.
+ */
+export function measureParts(doc: Document, parts: readonly HomepagePart[] = HOMEPAGE_PARTS): Measurement | null {
   const body = doc.body;
   if (!body) return null;
-  const piece = (id: string) => doc.querySelector(`[data-homepage-piece="${id}"]`);
   const rects: PartRects = {};
-  const add = (part: PartId, rect: Rect | null) => { if (rect) (rects[part] ??= []).push(rect); };
-  add("menu", rectOf(piece("revamp.navigation") ?? doc.querySelector("header.club-header")));
-  add("menu", rectOf(doc.querySelector("footer.club-footer")));
-  add("hero", rectOf(piece("hero.heading")?.closest("section") ?? doc.querySelector("section.hero")));
-  add("raffle", rectOf(piece("revamp.raffle")));
-  add("match", rectOf(piece("revamp.match")));
-  add("prices", rectOf(piece("revamp.prices")));
-  add("ticket", rectOf(piece("revamp.ticket")));
-  add("photos", rectOf(piece("photos")));
-  add("championship", rectOf(piece("revamp.championship")));
-  add("video", rectOf(piece("video")));
-  add("sponsors", rectOf(piece("revamp.sponsors")?.closest("section")));
+  for (const part of parts) {
+    for (const anchor of part.anchors) {
+      const rect = rectOf(findAnchor(doc, anchor));
+      if (rect) (rects[part.id] ??= []).push(rect);
+    }
+  }
   return { total: Math.ceil(body.getBoundingClientRect().height), rects };
+}
+
+/** Every node the parts are measured from, so a size change on any of them re-measures. */
+const anchorNodes = (doc: Document, parts: readonly HomepagePart[]) => parts.flatMap(part => part.anchors.map(anchor => findAnchor(doc, anchor))).filter((node): node is Element => !!node);
+
+/**
+ * Calls `onChange` (once per frame) whenever anything that can move a part changes inside a preview document: the body or
+ * any part block resizing, DOM or attribute changes (Schedule's results, partner logos, edits), pictures, posters and media
+ * metadata loading or failing, and web fonts arriving. Returns the cleanup.
+ */
+export function watchFrameLayout(body: HTMLElement, parts: readonly HomepagePart[], onChange: () => void): () => void {
+  const doc = body.ownerDocument;
+  const view = doc.defaultView;
+  let frame = 0;
+  let active = true;
+  const request = () => {
+    if (!active) return;
+    (view ?? window).cancelAnimationFrame(frame);
+    frame = (view ?? window).requestAnimationFrame(() => { if (!active) return; observeAnchors(); onChange(); });
+  };
+  const Resize = view?.ResizeObserver ?? ResizeObserver;
+  const Mutation = view?.MutationObserver ?? MutationObserver;
+  const resize = new Resize(request);
+  const observed = new Set<Element>();
+  const observeAnchors = () => {
+    for (const node of [body, ...anchorNodes(doc, parts)]) if (!observed.has(node)) { observed.add(node); resize.observe(node); }
+  };
+  observeAnchors();
+  const mutation = new Mutation(request);
+  mutation.observe(body, { childList: true, subtree: true, attributes: true, characterData: true });
+  const events = ["load", "error", "loadeddata", "loadedmetadata"] as const;
+  events.forEach(type => doc.addEventListener(type, request, true));
+  doc.fonts?.addEventListener?.("loadingdone", request);
+  void doc.fonts?.ready.then(request);
+  request();
+  return () => {
+    active = false;
+    (view ?? window).cancelAnimationFrame(frame);
+    resize.disconnect(); mutation.disconnect();
+    events.forEach(type => doc.removeEventListener(type, request, true));
+    doc.fonts?.removeEventListener?.("loadingdone", request);
+  };
+}
+
+/**
+ * How much closer to the middle another block must be before the column split moves, as a share of the page height
+ * (about 150px of a 7400px page): more than a typed line or two, far less than a picture or section arriving.
+ */
+export const SPLIT_SLACK = 0.02;
+
+/**
+ * The block the second column starts at: the part whose top is nearest the middle of the page, so the columns come out about
+ * the same height. The split keeps its part while edits move text by a little and moves when the page really changes shape
+ * (a large picture arriving late, a section shown or hidden), so neither column is left with a long blank end.
+ */
+export function chooseSplit(measurement: Measurement, current: PartId | null): PartId | null {
+  const middle = measurement.total / 2;
+  const tops = (Object.keys(measurement.rects) as PartId[]).filter(part => part !== "menu")
+    .map(part => ({ part, top: Math.min(...(measurement.rects[part] ?? []).map(rect => rect.top)) }))
+    .filter(entry => Number.isFinite(entry.top));
+  if (!tops.length) return current;
+  const best = tops.reduce((winner, entry) => Math.abs(entry.top - middle) < Math.abs(winner.top - middle) ? entry : winner, tops[0]);
+  const kept = current ? tops.find(entry => entry.part === current) : undefined;
+  if (kept && Math.abs(kept.top - middle) - Math.abs(best.top - middle) <= SPLIT_SLACK * measurement.total) return current;
+  return best.part;
+}
+
+export type PartButton = {
+  key: string; part: PartId; index: number; title: string; label: string; number?: number;
+  /** Shorter than HIDDEN_BELOW on the page: drawn as a pill instead of a box. */
+  hidden: boolean;
+  /** Position in the column box, in screen px. */
+  top: number; left: number; width: number; height: number;
+};
+
+/**
+ * The part buttons for one column, built from one frame's measurement. Each button's title, name and number and its box
+ * are read for the same part id from the same part record, so a label can never sit on another part's block.
+ */
+export function layoutPartButtons(parts: readonly HomepagePart[], measurement: Measurement | null, numbers: PartNumbers, offset: number, span: number, scale: number): PartButton[] {
+  if (!measurement) return [];
+  const out: PartButton[] = [];
+  // DOM order puts "Top of the page" (a plain text field) first and Menu and footer last; the page position is absolute anyway.
+  const ordered = [...parts].sort((a, b) => Number(a.id === "menu") - Number(b.id === "menu"));
+  for (const part of ordered) {
+    if (part.offPage) continue;
+    (measurement.rects[part.id] ?? []).forEach((rect, index) => {
+      const mid = rect.top + rect.height / 2;
+      if (mid < offset - 1 || mid > offset + span + 1) return;
+      const title = `Edit ${part.title}`;
+      const number = numbers[part.id]?.[index];
+      const hidden = rect.height < HIDDEN_BELOW;
+      out.push({
+        key: `${part.id}-${index}`, part: part.id, index, title, number, hidden,
+        label: hidden ? `${title}. Hidden on the page.` : number ? `${title} (part ${number})` : title,
+        top: (rect.top - offset) * scale,
+        left: hidden ? Math.max(8, rect.left * scale + 8) : rect.left * scale,
+        width: rect.width * scale,
+        height: Math.min(rect.height, offset + span - rect.top) * scale,
+      });
+    });
+  }
+  return out;
 }
 
 const FRAME_STYLE = `
@@ -79,6 +185,7 @@ function PageFrame({ draft, videoSource, height, onBody, hidden }: { draft: Home
     const element = frame.current;
     if (!element) return;
     let observer: MutationObserver | undefined;
+    let unprepare: (() => void) | undefined;
     let active = true;
     let generation = 0;
     const mount = () => {
@@ -87,6 +194,8 @@ function PageFrame({ draft, videoSource, height, onBody, hidden }: { draft: Home
       if (!doc?.documentElement || !doc.head || !doc.body) return;
       doc.documentElement.lang = "en";
       doc.documentElement.className = document.documentElement.className.replace(/\bdark\b/g, "");
+      unprepare?.();
+      unprepare = preparePreviewDocument(doc);
       const sync = () => {
         const current = ++generation;
         const pending: Promise<void>[] = [];
@@ -112,7 +221,7 @@ function PageFrame({ draft, videoSource, height, onBody, hidden }: { draft: Home
     };
     element.addEventListener("load", mount);
     mount();
-    return () => { active = false; observer?.disconnect(); element.removeEventListener("load", mount); onBody(null); };
+    return () => { active = false; observer?.disconnect(); unprepare?.(); element.removeEventListener("load", mount); onBody(null); };
   }, [onBody]);
   const value = useMemo(() => ({ playback: false, draft, videoSource, selection: null, allowedPieces: PREVIEW_PIECES, select: () => undefined }), [draft, videoSource]);
   // Click-to-field: put each field's edit target on the public node that shows it, in this preview frame only. Content
@@ -153,10 +262,12 @@ export type HomepageOverviewPreviewProps = {
 export default function HomepageOverviewPreview({ draft, videoSource, parts, actual, onOpen, onNumbers }: HomepageOverviewPreviewProps) {
   const root = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const [measurement, setMeasurement] = useState<Measurement | null>(null);
+  // One measurement per frame. Each column's buttons and slice come from the frame that column shows, never from another
+  // frame's layout: two renders of the same page can differ for a moment (a picture or Schedule result landing in one first).
+  const [measurements, setMeasurements] = useState<[Measurement | null, Measurement | null]>([null, null]);
+  const [bodies, setBodies] = useState<[HTMLElement | null, HTMLElement | null]>([null, null]);
   const [ready, setReady] = useState(false);
-  const bodies = useRef<(HTMLElement | null)[]>([null, null]);
-  const split = useRef<PartId | "lead" | null>(null);
+  const [split, setSplit] = useState<PartId | null>(null);
 
   useEffect(() => {
     const element = root.current;
@@ -172,56 +283,56 @@ export default function HomepageOverviewPreview({ draft, videoSource, parts, act
   const colWidth = columns === 2 ? (width - COLUMN_GAP) / 2 : width;
   const scale = actual ? 1 : colWidth > 0 ? colWidth / OVERVIEW_DESIGN_WIDTH : 0.4;
 
-  // The first frame reports the layout; both frames render the same page so the second column just shows its lower half.
-  const run = useCallback((index: number) => {
-    const body = bodies.current[index];
-    const doc = body?.ownerDocument;
-    if (!doc || index !== 0) return;
-    const next = measure(doc);
-    if (next && next.total > 400) setMeasurement(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+  const setBody = useCallback((index: 0 | 1, body: HTMLElement | null) => {
+    setBodies(previous => previous[index] === body ? previous : (index === 0 ? [body, previous[1]] : [previous[0], body]));
   }, []);
-  const schedule = useRef(0);
-  const request = useCallback((index: number) => {
-    window.cancelAnimationFrame(schedule.current);
-    schedule.current = window.requestAnimationFrame(() => run(index));
-  }, [run]);
-  const onBody0 = useCallback((body: HTMLElement | null) => {
-    bodies.current[0] = body;
-    if (!body) return;
-    const observer = new ResizeObserver(() => request(0));
-    observer.observe(body);
-    const mutation = new MutationObserver(() => request(0));
-    mutation.observe(body, { childList: true, subtree: true, attributes: true });
-    body.ownerDocument.addEventListener("load", () => request(0), true);
-    body.ownerDocument.fonts?.ready.then(() => request(0));
-    request(0);
-  }, [request]);
-  const onBody1 = useCallback((body: HTMLElement | null) => { bodies.current[1] = body; }, []);
+  const onBody0 = useCallback((body: HTMLElement | null) => setBody(0, body), [setBody]);
+  const onBody1 = useCallback((body: HTMLElement | null) => setBody(1, body), [setBody]);
+  const watchBody = useCallback((index: 0 | 1, body: HTMLElement | null) => {
+    const store = (next: Measurement | null) => setMeasurements(previous => {
+      if (JSON.stringify(previous[index]) === JSON.stringify(next)) return previous;
+      return index === 0 ? [next, previous[1]] : [previous[0], next];
+    });
+    // A new (or no) frame document starts unmeasured: its column never borrows an old frame's layout.
+    store(null);
+    if (!body) return undefined;
+    return watchFrameLayout(body, HOMEPAGE_PARTS, () => {
+      const next = measureParts(body.ownerDocument, HOMEPAGE_PARTS);
+      if (next && next.total > 400) store(next);
+    });
+  }, []);
+  const [body0, body1] = bodies;
+  useEffect(() => watchBody(0, body0), [watchBody, body0]);
+  useEffect(() => watchBody(1, body1), [watchBody, body1]);
 
+  const first = measurements[0];
   useEffect(() => {
-    if (!measurement) return;
+    if (!first) return;
     const timer = window.setTimeout(() => setReady(true), 350);
     return () => window.clearTimeout(timer);
-  }, [measurement]);
+  }, [first]);
+  useEffect(() => { if (first) setSplit(current => chooseSplit(first, current)); }, [first]);
 
-  const rects = useMemo(() => measurement?.rects ?? {}, [measurement]);
-  const total = measurement?.total ?? OVERVIEW_PAGE_RATIO * OVERVIEW_DESIGN_WIDTH;
-  const numbers = useMemo(() => numberParts(rects), [rects]);
-  useEffect(() => { if (measurement) onNumbers?.(numbers); }, [numbers, measurement, onNumbers]);
+  const numbers = useMemo(() => numberParts(first?.rects ?? {}), [first]);
+  useEffect(() => { if (first) onNumbers?.(numbers); }, [numbers, first, onNumbers]);
 
-  // Split the page at the block boundary nearest its middle, once. Edits then move text inside a column, never the split.
-  const tops = useMemo(() => (Object.keys(rects) as PartId[]).filter(part => part !== "menu").map(part => ({ part, top: Math.min(...(rects[part] ?? [{ top: Infinity }]).map(rect => rect.top)) })).filter(entry => Number.isFinite(entry.top)).sort((a, b) => a.top - b.top), [rects]);
-  if (ready && measurement && split.current === null && tops.length) {
-    split.current = tops.reduce((best, entry) => Math.abs(entry.top - total / 2) < Math.abs(best.top - total / 2) ? entry : best, tops[0]).part;
-  }
-  const splitTop = columns === 2 && split.current && split.current !== "lead" ? (rects[split.current]?.[0]?.top ?? total / 2) : total;
-  const firstHeight = columns === 2 ? splitTop : total;
-  const secondHeight = columns === 2 ? Math.max(0, total - splitTop) : 0;
-  // Until the page has been measured the box keeps the skeleton's reserved shape. Then it takes the real height once, so the
+  // Column 1 shows the second frame; until that frame has measured itself it is covered by the shimmer, not guessed at.
+  const second = columns === 2 ? measurements[1] : null;
+  const totalOf = (measurement: Measurement | null) => measurement?.total ?? OVERVIEW_PAGE_RATIO * OVERVIEW_DESIGN_WIDTH;
+  const splitTopOf = (measurement: Measurement | null) => {
+    const total = totalOf(measurement);
+    return split ? measurement?.rects[split]?.[0]?.top ?? total / 2 : total / 2;
+  };
+  const firstSpan = columns === 2 ? splitTopOf(first) : totalOf(first);
+  const secondOffset = splitTopOf(second);
+  const secondSpan = Math.max(0, totalOf(second) - secondOffset);
+  const columnReady = (index: 0 | 1) => ready && (index === 0 || !!second);
+  // Until the page has been measured the box keeps the skeleton's reserved shape. Then it takes the real height, so the
   // columns end where their content ends. Nothing below the box needs to move: the form chip sits above it.
-  const boxHeight = ready ? Math.max(1, columns === 2 ? Math.max(firstHeight, secondHeight) : total) : overviewReservedHeight(columns);
+  const boxHeight = ready ? Math.max(1, columns === 2 ? Math.max(firstSpan, second ? secondSpan : 0) : totalOf(first)) : overviewReservedHeight(columns);
 
-  const iframeHeight = Math.max(measurement?.total ?? 0, 1200);
+  // Both frames get the same viewport height, so viewport-relative sizes (svh) lay them out the same.
+  const iframeHeight = Math.max(first?.total ?? 0, second?.total ?? 0, 1200);
   // The part buttons sit in the same box as the inert preview frame, so the field under the pointer is found by geometry.
   const fieldUnder = (button: HTMLElement, x: number, y: number) => button.parentElement ? editTargetHitAt(button.parentElement, x, y) : null;
   // The field hover outline is moved directly (no React state), so moving the mouse never re-renders the preview.
@@ -244,62 +355,49 @@ export default function HomepageOverviewPreview({ draft, videoSource, parts, act
     if (outline) { outline.hidden = true; delete outline.dataset.target; }
   };
   const fieldHover = <span className={styles.fieldHover} data-field-hover="" aria-hidden="true" hidden />;
-  const visibleParts = new Set(parts.map(part => part.id));
-  const buttons = (offset: number, span: number) => {
-    const out: React.ReactNode[] = [];
-    // DOM order puts "Top of the page" (a plain text field) first and Menu and footer last; the page position is absolute anyway.
-    const ordered = [...parts].sort((a, b) => Number(a.id === "menu") - Number(b.id === "menu"));
-    for (const part of ordered) {
-      if (part.offPage || !visibleParts.has(part.id)) continue;
-      (rects[part.id] ?? []).forEach((rect, index) => {
-        const mid = rect.top + rect.height / 2;
-        if (mid < offset - 1 || mid > offset + span + 1) return;
-        const label = `Edit ${part.title}`;
-        const number = numbers[part.id]?.[index];
-        const common = {
-          type: "button" as const, "data-part": part.id, "data-kit-edit": "",
-          // A pointer click opens the field under the pointer; Enter or Space (detail 0) opens the part, as before.
-          onClick: (event: React.MouseEvent<HTMLButtonElement>) => onOpen(part.id, event.currentTarget, event.detail > 0 ? fieldUnder(event.currentTarget, event.clientX, event.clientY)?.id : undefined),
-          onPointerMove: (event: React.PointerEvent<HTMLButtonElement>) => { if (event.pointerType === "mouse") showFieldHover(event.currentTarget, event.clientX, event.clientY); },
-          onPointerLeave: (event: React.PointerEvent<HTMLButtonElement>) => hideFieldHover(event.currentTarget),
-        };
-        if (rect.height < HIDDEN_BELOW) {
-          out.push(<button key={`${part.id}-${index}`} {...common} className={styles.hidden} aria-label={`${label}. Hidden on the page.`}
-            style={{ top: (rect.top - offset) * scale, left: Math.max(8, rect.left * scale + 8) }}><IconEdit size={14} aria-hidden="true" />{part.title} is hidden on the page. Click to edit or show it.</button>);
-          return;
-        }
-        out.push(<button key={`${part.id}-${index}`} {...common} className={styles.part} aria-label={number ? `${label} (part ${number})` : label}
-          style={{ top: (rect.top - offset) * scale, left: rect.left * scale, width: rect.width * scale, height: Math.min(rect.height, offset + span - rect.top) * scale }}>
-          <span className={styles.num} aria-hidden="true">{number}</span>
-          <span className={styles.chip} aria-hidden="true"><IconEdit size={13} />{label}</span>
-        </button>);
-      });
-    }
-    return out;
-  };
+  const buttons = (measurement: Measurement | null, offset: number, span: number) => layoutPartButtons(parts, measurement, numbers, offset, span, scale).map(button => {
+    const common = {
+      type: "button" as const, "data-part": button.part, "data-kit-edit": "", "aria-label": button.label,
+      // A pointer click opens the field under the pointer; Enter or Space (detail 0) opens the part, as before.
+      onClick: (event: React.MouseEvent<HTMLButtonElement>) => onOpen(button.part, event.currentTarget, event.detail > 0 ? fieldUnder(event.currentTarget, event.clientX, event.clientY)?.id : undefined),
+      onPointerMove: (event: React.PointerEvent<HTMLButtonElement>) => { if (event.pointerType === "mouse") showFieldHover(event.currentTarget, event.clientX, event.clientY); },
+      onPointerLeave: (event: React.PointerEvent<HTMLButtonElement>) => hideFieldHover(event.currentTarget),
+    };
+    const title = button.title.slice("Edit ".length);
+    if (button.hidden) return <button key={button.key} {...common} className={styles.hidden}
+      style={{ top: button.top, left: button.left }}><IconEdit size={14} aria-hidden="true" />{title} is hidden on the page. Click to edit or show it.</button>;
+    return <button key={button.key} {...common} className={styles.part}
+      style={{ top: button.top, left: button.left, width: button.width, height: button.height }}>
+      <span className={styles.num} aria-hidden="true">{button.number}</span>
+      <span className={styles.chip} aria-hidden="true"><IconEdit size={13} />{button.title}</span>
+    </button>;
+  });
 
   const ratio = `${OVERVIEW_DESIGN_WIDTH} / ${boxHeight}`;
   const column = (index: 0 | 1) => {
-    const offset = index === 0 ? 0 : splitTop;
-    const span = index === 0 ? firstHeight : secondHeight;
-    const frameBody = <PageFrame draft={draft} videoSource={videoSource} height={iframeHeight} hidden={!ready} onBody={index === 0 ? onBody0 : onBody1} />;
+    const measurement = index === 0 ? first : second;
+    const offset = index === 0 ? 0 : secondOffset;
+    const span = index === 0 ? firstSpan : secondSpan;
+    const shown = columnReady(index);
+    const frameBody = <PageFrame draft={draft} videoSource={videoSource} height={iframeHeight} hidden={!shown} onBody={index === 0 ? onBody0 : onBody1} />;
     const stage = <div className={styles.stage} style={{ width: OVERVIEW_DESIGN_WIDTH, transform: `scale(${scale}) translateY(${-offset}px)` }}>{frameBody}</div>;
-    return <div key={index} className={styles.box} style={{ "--ar": ratio, aspectRatio: ratio } as CSSProperties} data-column={index} data-ready={ready}>
+    return <div key={index} className={styles.box} style={{ "--ar": ratio, aspectRatio: ratio } as CSSProperties} data-column={index} data-ready={shown}>
       <div className={styles.clip} style={{ height: span * scale }}>{stage}</div>
-      {!ready && <Shimmer className={styles.cover} />}
-      {ready && buttons(offset, span)}
-      {ready && fieldHover}
+      {!shown && <Shimmer className={styles.cover} />}
+      {shown && buttons(measurement, offset, span)}
+      {shown && fieldHover}
     </div>;
   };
 
   if (actual) {
+    const total = totalOf(first);
     return <div ref={root} className={styles.columns} style={{ "--columns": 1 } as CSSProperties}>
       <div className={styles.box} data-actual="true" data-ready={ready}>
         <div className={styles.scrollSpacer} style={{ width: OVERVIEW_DESIGN_WIDTH, height: total }}>
           <div className={styles.stage} style={{ width: OVERVIEW_DESIGN_WIDTH }}>
             <PageFrame draft={draft} videoSource={videoSource} height={iframeHeight} hidden={!ready} onBody={onBody0} />
           </div>
-          {ready && buttons(0, total)}
+          {ready && buttons(first, 0, total)}
           {ready && fieldHover}
         </div>
       </div>

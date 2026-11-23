@@ -125,13 +125,14 @@ describe("Homepage Overview: clicks", () => {
   const editorSource = read("components/admin/homepage/HomepageOverviewEditor.tsx");
 
   it("a pointer click passes the field under the pointer; Enter or Space (detail 0) opens the part as before", () => {
-    expect(preview).toMatch(/onOpen\(part\.id, event\.currentTarget, event\.detail > 0 \? fieldUnder\(event\.currentTarget, event\.clientX, event\.clientY\)\?\.id : undefined\)/);
+    expect(preview).toMatch(/onOpen\(button\.part, event\.currentTarget, event\.detail > 0 \? fieldUnder\(event\.currentTarget, event\.clientX, event\.clientY\)\?\.id : undefined\)/);
     expect(preview).toMatch(/const fieldUnder = \(button: HTMLElement, x: number, y: number\) => button\.parentElement \? editTargetHitAt\(button\.parentElement, x, y\) : null;/);
   });
 
   it("the part buttons and their names stay (the numbered fallback and verify-rc-admin's kit path)", () => {
-    expect(preview).toMatch(/"data-part": part\.id, "data-kit-edit": ""/);
-    expect(preview).toMatch(/aria-label=\{number \? `\$\{label\} \(part \$\{number\}\)` : label\}/);
+    // UI-PREVIEW-OVERVIEW-OVERLAY-FIX moved the names into layoutPartButtons (behaviour tested in homepage-overview-editor.test.ts).
+    expect(preview).toMatch(/"data-part": button\.part, "data-kit-edit": "", "aria-label": button\.label/);
+    expect(preview).toMatch(/label: hidden \? `\$\{title\}\. Hidden on the page\.` : number \? `\$\{title\} \(part \$\{number\}\)` : title/);
   });
 
   it("the editor opens the field's own section and asks the dialog to focus it", () => {
