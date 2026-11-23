@@ -155,3 +155,30 @@ export function refocusEditTarget(container: ParentNode, id: string): boolean {
 export function editTargetHasFocus(container: ParentNode, id: string, active: Element | null): boolean {
   return Boolean(active && findEditTarget(container, id)?.contains(active));
 }
+
+export type EditTargetStampEnvironment = {
+  requestFrame: (callback: () => void) => number;
+  cancelFrame: (handle: number) => void;
+  observe: (root: Node, onChange: () => void) => { disconnect: () => void };
+};
+const browserStampEnvironment = (): EditTargetStampEnvironment => ({
+  requestFrame: callback => window.requestAnimationFrame(callback),
+  cancelFrame: handle => window.cancelAnimationFrame(handle),
+  observe: (root, onChange) => { const observer = new MutationObserver(onChange); observer.observe(root, { childList: true, subtree: true }); return observer; },
+});
+
+/**
+ * Stamps a preview now and again (once per frame) whenever its content changes, such as Schedule or logos that render
+ * after the first paint. Call it again with new stamps when the draft changes (rows added, removed or reordered).
+ * Returns the cleanup. `environment` is the frame and mutation source (a fake one in tests).
+ */
+export function watchEditTargetStamps(root: Node & ParentNode, stamps: readonly EditTargetStamp[], environment: EditTargetStampEnvironment = browserStampEnvironment()) {
+  let frame = 0;
+  const stamp = () => {
+    environment.cancelFrame(frame);
+    frame = environment.requestFrame(() => applyEditTargetStamps(root, stamps));
+  };
+  stamp();
+  const observer = environment.observe(root, stamp);
+  return () => { observer.disconnect(); environment.cancelFrame(frame); };
+}

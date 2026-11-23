@@ -35,6 +35,7 @@ export {
   focusEditTarget,
   pickEditTarget,
   refocusEditTarget,
+  watchEditTargetStamps,
   type EditTargetCandidate,
   type EditTargetStamp,
 } from "./editTargets";

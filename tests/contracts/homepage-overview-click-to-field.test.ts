@@ -113,7 +113,7 @@ describe("Homepage Overview: preview stamps", () => {
 
   it("only the preview frame stamps public nodes; the public components gain nothing", () => {
     const preview = read("components/admin/homepage/HomepageOverviewPreview.tsx");
-    expect(preview).toMatch(/applyEditTargetStamps\(body, stamps\)/);
+    expect(preview).toMatch(/watchEditTargetStamps\(body, homepagePreviewStamps\(draft\)\)/);
     for (const file of ["components/cinematic/CinematicHome.tsx", "components/cinematic/CinematicHero.tsx", "components/cinematic/CinematicEpisode.tsx", "components/cinematic/CinematicSponsors.tsx"]) {
       expect(read(file)).not.toMatch(/edit-target|editTarget/);
     }

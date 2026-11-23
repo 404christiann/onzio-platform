@@ -9,7 +9,7 @@ import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { HomepagePreviewContext } from "@/lib/homepage-editor/preview-context";
 import type { HomepageDraft } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PARTS, PREVIEW_PIECES, type HomepagePart, type PartId } from "./homepage-parts";
-import { applyEditTargetStamps, editTargetHitAt } from "@/components/admin/ui/editor-kit/editTargets";
+import { editTargetHitAt, watchEditTargetStamps } from "@/components/admin/ui/editor-kit/editTargets";
 import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { homepagePreviewStamps } from "./homepage-edit-targets";
 import styles from "./HomepageOverview.module.css";
@@ -115,16 +115,7 @@ function PageFrame({ draft, videoSource, height, onBody, hidden }: { draft: Home
   const value = useMemo(() => ({ playback: false, draft, videoSource, selection: null, allowedPieces: PREVIEW_PIECES, select: () => undefined }), [draft, videoSource]);
   // Click-to-field: put each field's edit target on the public node that shows it, in this preview frame only. Content
   // that loads later (Schedule, partner logos) re-renders the page, so the stamps are re-applied on each change.
-  useEffect(() => {
-    if (!body) return;
-    const stamps = homepagePreviewStamps(draft);
-    let frame = 0;
-    const stamp = () => { window.cancelAnimationFrame(frame); frame = window.requestAnimationFrame(() => applyEditTargetStamps(body, stamps)); };
-    stamp();
-    const observer = new MutationObserver(stamp);
-    observer.observe(body, { childList: true, subtree: true });
-    return () => { observer.disconnect(); window.cancelAnimationFrame(frame); };
-  }, [body, draft]);
+  useEffect(() => body ? watchEditTargetStamps(body, homepagePreviewStamps(draft)) : undefined, [body, draft]);
   return <>
     <iframe ref={frame} title="Homepage preview" aria-hidden="true" tabIndex={-1} {...{ inert: true }} srcDoc={initialDocument.current}
       data-preview-settling={hidden ? "true" : undefined} style={{ width: OVERVIEW_DESIGN_WIDTH, height, visibility: hidden ? "hidden" : "visible" }} />
