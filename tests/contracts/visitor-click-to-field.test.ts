@@ -301,7 +301,8 @@ describe("Tickets: the editor and the public page", () => {
   it("only the admin preview stamps public nodes; the public component gains nothing", () => {
     expect(read("components/cinematic/CinematicTickets.tsx")).not.toMatch(/edit-target|editTarget/);
   });
-  it("Season Membership and Know Before You Go are untouched by this package", () => {
-    expect(read("components/admin/ticket-pages/TicketPageEditor.tsx")).not.toMatch(/edit-target|editTarget|focusField|stamps=/);
+  it("the Tickets editor is separate from the shared ticket-page shell: Tickets never imports it, and the shell's click-to-field wiring is pinned in ticket-pages-click-to-field.test.ts (UI-PREVIEW-CLICK-VISITOR-3)", () => {
+    expect(editor).not.toMatch(/ticket-pages\/TicketPageEditor/);
+    expect(read("components/admin/ticket-pages/TicketPageEditor.tsx")).toMatch(/focusField\(target\)/);
   });
 });

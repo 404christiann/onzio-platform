@@ -1,7 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * UI-PREVIEW-CLICK-VISITOR-2: on /admin/foothill-transit, /admin/chick-fil-a and /admin/tickets a click on a field inside a
+ * UI-PREVIEW-CLICK-VISITOR-2 and -3: on /admin/foothill-transit, /admin/chick-fil-a, /admin/tickets, /admin/season-membership and
+ * /admin/know-before-you-go a click on a field inside a
  * card's preview opens that card's dialog with the field's control focused and ringed. Nothing here saves: any rows these
  * need are typed into the unsaved draft, and every test throws the draft and its browser recovery copy away.
  */
@@ -62,11 +63,13 @@ const ROUTES = [
   { name: "Foothill Transit", route: "/admin/foothill-transit", keyPrefix: "onzio:stadium:", first: "heading", heading: { section: "heading", title: "Page heading", target: "foothill.heading.title", label: "Page heading" } },
   { name: "Chick-fil-A", route: "/admin/chick-fil-a", keyPrefix: "onzio:chick-fil-a:", first: "heading", heading: { section: "heading", title: "Page heading", target: "chickFilA.heading.title", label: "Page heading" } },
   { name: "Tickets", route: "/admin/tickets", keyPrefix: "onzio:tickets:", first: "page", heading: { section: "page", title: "Page and purchase link", target: "tickets.page.title", label: "Page heading" } },
+  { name: "Season Ticket Membership", route: "/admin/season-membership", keyPrefix: "onzio:season-membership:", first: "heading", heading: { section: "heading", title: "Page heading", target: "seasonMembership.heading.title", label: "Title" } },
+  { name: "Know Before You Go", route: "/admin/know-before-you-go", keyPrefix: "onzio:know-before-you-go:", first: "heading", heading: { section: "heading", title: "Page heading", target: "knowBeforeYouGo.heading.title", label: "Title" } },
 ] as const;
 
 for (const spec of ROUTES) {
   const { heading } = spec;
-  test.describe(`UI-PREVIEW-CLICK-VISITOR-2: click a ${spec.name} preview field to edit it`, () => {
+  test.describe(`UI-PREVIEW-CLICK-VISITOR-2/3: click a ${spec.name} preview field to edit it`, () => {
     test.beforeEach(async ({ page }) => {
       page.on("dialog", item => void item.accept());
       await ready(page, spec.route, spec.first);
@@ -127,7 +130,32 @@ for (const spec of ROUTES) {
   });
 }
 
-test.describe("UI-PREVIEW-CLICK-VISITOR-2: list rows open their own row's field", () => {
+/** The ids of one field on every row of a list in the open dialog's section, in row order (the list grows with `addName` until it has `count`). */
+async function rowTargetsInDialog(page: Page, section: string, sectionTitle: string, field: string, count: number, addName: string) {
+  if (!(await dialog(page).count())) {
+    await card(page, section).getByRole("button", { name: `Edit ${sectionTitle} section` }).click();
+    await expect(panel(page, section)).toBeVisible();
+  }
+  const fields = panel(page, section).locator(`[data-edit-target*=".row:"][data-edit-target$=".${field}"]`);
+  for (let attempt = 0; attempt < 12 && (await fields.count()) < count; attempt++) await panel(page, section).getByRole("button", { name: addName, exact: true }).click();
+  expect(await fields.count()).toBeGreaterThanOrEqual(count);
+  return fields.evaluateAll(nodes => nodes.map(node => node.getAttribute("data-edit-target") as string));
+}
+
+/** Clicks the preview node of a row's field and checks the dialog opened its own section with that row's control focused, holding the text the node shows. */
+async function clickRowField(page: Page, section: string, target: string, name: string | RegExp) {
+  await closeDialog(page, section, target);
+  const shown = await nodeText(page, section, target);
+  const { x, y } = await fieldPoint(page, section, target);
+  await page.mouse.click(x, y);
+  await expect(panel(page, section)).toBeVisible();
+  await expect.poll(() => focusedTarget(page)).toBe(target);
+  await expect(dialog(page).locator(":focus")).toHaveAccessibleName(name);
+  expect(shown).not.toBe("");
+  expect(await dialog(page).locator(":focus").inputValue()).toBe(shown);
+}
+
+test.describe("UI-PREVIEW-CLICK-VISITOR-2/3: list rows open their own row's field", () => {
   test.afterEach(async ({ page }) => {
     for (const spec of ROUTES) await clearDraft(page, spec.keyPrefix);
     await page.goto("about:blank");
@@ -191,4 +219,54 @@ test.describe("UI-PREVIEW-CLICK-VISITOR-2: list rows open their own row's field"
       }
     }
   });
+  test("Season Ticket Membership: the second price row's price, keyed by the row's id", async ({ page }) => {
+    await ready(page, "/admin/season-membership", "heading");
+    const targets = await rowTargetsInDialog(page, "pricing", "Price table", "price0", 2, "Add seating section");
+    const target = targets[1];
+    expect(target).toMatch(/^seasonMembership\.pricing\.row:seat-[a-z0-9-]+\.price0$/);
+    const control = panel(page, "pricing").locator(`[data-edit-target="${target}"] input`);
+    if (!(await control.inputValue())) await control.fill("$99");
+    await clickRowField(page, "pricing", target, /^Full season per match price.*seating section 2$/);
+  });
+
+  test("Season Ticket Membership: the second benefit's label, keyed by the benefit's id", async ({ page }) => {
+    await ready(page, "/admin/season-membership", "heading");
+    const targets = await rowTargetsInDialog(page, "benefits", "Member Benefits", "label", 2, "Add benefit");
+    const target = targets[1];
+    expect(target).toMatch(/^seasonMembership\.benefits\.row:benefit-[a-z0-9-]+\.label$/);
+    const control = panel(page, "benefits").locator(`[data-edit-target="${target}"] input`);
+    if (!(await control.inputValue())) await control.fill("Click to field benefit two");
+    await clickRowField(page, "benefits", target, "Label");
+  });
+
+  test("Know Before You Go: the second match-day tile's label, keyed by the tile's id", async ({ page }) => {
+    await ready(page, "/admin/know-before-you-go", "heading");
+    const targets = await rowTargetsInDialog(page, "facts", "Match-day tiles", "label", 2, "Add tile");
+    const target = targets[1];
+    expect(target).toMatch(/^knowBeforeYouGo\.facts\.row:tile-[a-z0-9-]+\.label$/);
+    const control = panel(page, "facts").locator(`[data-edit-target="${target}"] input`);
+    if (!(await control.inputValue())) await control.fill("Click to field tile two");
+    await clickRowField(page, "facts", target, "Label");
+  });
+
+  for (const { name, route, editor, sections } of [
+    { name: "Season Ticket Membership", route: "/admin/season-membership", editor: "seasonMembership", sections: ["heading", "intro", "pricing", "button", "benefits", "closing"] },
+    { name: "Know Before You Go", route: "/admin/know-before-you-go", editor: "knowBeforeYouGo", sections: ["heading", "match", "facts", "raffle", "donor"] },
+  ]) {
+    test(`${name}: every stamp in every card is on that card's own shown section (none on a node the card's CSS hides)`, async ({ page }) => {
+      await ready(page, route, "heading");
+      let stampedTotal = 0;
+      for (const section of sections) {
+        const stamped = await card(page, section).evaluate(element => Array.from(element.querySelectorAll("[data-edit-target]")).map(node => ({
+          id: node.getAttribute("data-edit-target"), shown: node.getClientRects().length > 0 && getComputedStyle(node).visibility !== "hidden" && !node.closest("[hidden]"),
+        })));
+        stampedTotal += stamped.length;
+        for (const node of stamped) {
+          expect(node.id?.startsWith(`${editor}.${section}.`), `${node.id} is stamped in the ${section} card`).toBe(true);
+          expect(node.shown, `${node.id} is shown in the ${section} card`).toBe(true);
+        }
+      }
+      expect(stampedTotal).toBeGreaterThan(0);
+    });
+  }
 });

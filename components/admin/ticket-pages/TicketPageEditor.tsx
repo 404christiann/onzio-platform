@@ -14,6 +14,7 @@ import {
   EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
 } from "@/components/admin/ui/editor-kit";
 import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
+import type { EditTargetStamp } from "@/components/admin/ui/editor-kit/editTargets";
 import { createClient } from "@/lib/admin-client";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { loadVisitorPageEditor, saveVisitorPageEditor } from "@/lib/visitor-page-editor";
@@ -57,10 +58,12 @@ function SectionLiveInner<K extends TicketPageKey>({ spec, id, content, media, s
 const SectionLive = memo(SectionLiveInner, (a, b) => a.id === b.id && a.slice === b.slice && a.media === b.media && a.shared === b.shared) as typeof SectionLiveInner;
 
 /** Load, draft recovery, upload, atomic save and conflict handling for the two Tickets-menu pages (RC2027-TICKET-PAGES), on the editor kit. */
-export default function TicketPageEditor<K extends TicketPageKey>({ spec, title, description, openPageHref, renderFields, renderLive }: {
+export default function TicketPageEditor<K extends TicketPageKey>({ spec, title, description, openPageHref, renderFields, renderLive, stamps }: {
   spec: TicketPageSpec<K>; title: string; description: string; openPageHref: string;
   renderFields: (api: TicketPageFieldsApi<K>, id: string) => ReactNode;
   renderLive: (view: TicketPageView<K>) => ReactNode;
+  /** Click-to-field: where a card's fields show on the page, for that card's preview only. A module-level function, so it is stable. */
+  stamps?: (content: TicketPageContent<K>, id: string) => readonly EditTargetStamp[];
 }) {
   const pageKey = spec.key;
   const club = useClubContext();
@@ -226,6 +229,8 @@ export default function TicketPageEditor<K extends TicketPageKey>({ spec, title,
   const deferred = useDeferredValue(draft);
   const pageState = editorPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
   const changed = useMemo(() => new Set(draft && snapshot ? changedTicketPageSections(spec, draft, snapshot.content) : []), [spec, draft, snapshot]);
+  // The cards show the deferred draft, so they stamp it, once per draft and card: a card's stamp watcher restarts only when its stamps change.
+  const stampsBySection = useMemo(() => new Map(spec.sections.map(section => [section.id, deferred && stamps ? stamps(deferred, section.id) : []])), [spec, stamps, deferred]);
   const view = draft ? ticketPageView(draft, media) : null;
   const loading = !draft || !view || loadedClubId !== club.id;
 
@@ -263,13 +268,14 @@ export default function TicketPageEditor<K extends TicketPageKey>({ spec, title,
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
         <PreviewCards sections={sectionItems} label={`${title} sections`} renderPreview={previewOf} previewScale={0.46}
-          onEdit={(id, event) => dialog.openSection(id, event)} />
+          stamps={stamps ? id => stampsBySection.get(id) ?? [] : undefined}
+          onEdit={(id, event, target) => { dialog.openSection(id, event); dialog.focusField(target); }} />
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-ticket-page-status="">{status}</p>
     {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${title}`} mode="split" returnFocusRef={dialog.returnFocusRef}
       sections={spec.sections.map(section => ({ id: section.id, title: section.title, summary: draft && (ticketPageSectionShown(spec, draft, section.id) === false ? "Hidden on the page" : spec.summary(draft, section.id)) }))}
-      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id)}
+      focusRequest={dialog.focusRequest} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id)}
       renderSection={id => dialog.open ? renderFields(api, id) : null}
       renderPreview={id => dialog.open ? <div className={styles.livePreview}>
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${title} section`}>
