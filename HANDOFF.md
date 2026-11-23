@@ -1,3 +1,10 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-VISITOR-1: click a Robinson Stadium preview field to edit it
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-visitor-pages` off main `5d16fb12`, PR open, not merged. Kit `PreviewCards` opt-in `stamps` plus Robinson Stadium only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-VISITOR-1).
+- **What:** clicking a field inside a Robinson section card's preview opens that section with the field focused and ringed (heading title -> Title; a story paragraph -> that Paragraph; a Directions bullet -> its Bullet); footer Edit and keyboard open the section as before; mouse-only field outline. Editors that do not pass `stamps` are unchanged (markup pinned).
+- **Evidence:** contract tests run the real stamps on the real server-rendered `CinematicRobinson`; 24 breaks each caught; browser spec 6/6 on a production build.
+- **Exact next step:** Christian reviews; then PR D2 (Foothill, Chick-fil-A, Tickets, Season Membership, Know Before You Go).
+
 ## 2026-11-22 - UI-PREVIEW-CLICK-HOMEPAGE: click a Homepage Overview field to edit it
 
 - **Status:** `ready for review`, branch `claude/ui-preview-click-homepage` off main `8a44dde2`, PR open, not merged. Classic Rose City Overview only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-HOMEPAGE).

@@ -117,6 +117,25 @@ export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
       sponsors: { fields: ["heading"] },
     },
   },
+  /**
+   * Rose City (cinematic@2) Robinson Stadium (/admin/stadium). Sections are ROBINSON_SECTIONS ids. List rows are keyed
+   * by position (story paragraphs, info rows, food steps) or, for Directions, by the block's stable id
+   * (`<blockId>` for its heading, note and closing line, `<blockId>-p<n>` and `<blockId>-b<n>` for its paragraphs and bullets).
+   */
+  robinson: {
+    route: "/admin/stadium",
+    sections: {
+      heading: { fields: ["title", "subtitle"] },
+      seating: { fields: ["imageAlt", "caption", "expandLabel"] },
+      story: { fields: ["quote", "attribution"], rowFields: ["paragraph"] },
+      info: { fields: ["heading", "note"], rowFields: ["label", "value"] },
+      match: { fields: ["partnerImageAlt"] },
+      lockers: { fields: ["imageAlt"] },
+      food: { fields: ["heading", "body", "mealPassImageAlt"], rowFields: ["label", "iconAlt"] },
+      route: { fields: ["heading", "subheading", "busImageAlt", "mapImageAlt"] },
+      directions: { rowFields: ["heading", "note", "closing", "paragraph", "bullet"] },
+    },
+  },
 };
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);

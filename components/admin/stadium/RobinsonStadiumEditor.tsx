@@ -28,6 +28,7 @@ import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/
 import "@/components/admin/homepage/homepage-editor.css";
 import { SettledPreview } from "./SettledPreview";
 import { RobinsonSectionFields } from "./RobinsonSectionFields";
+import { robinsonPreviewStamps } from "./robinson-edit-targets";
 import {
   ROBINSON_SECTIONS, ROBINSON_SECTION_IMAGES, buildRobinsonSaveInput, robinsonPageState, changedRobinsonSections, robinsonSectionOnly, robinsonSectionSlice, robinsonSectionSummary,
   type RobinsonSectionId,
@@ -208,6 +209,9 @@ export default function RobinsonStadiumEditor() {
   const deferred = useDeferredValue(draft);
   const pageState = robinsonPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
   const changed = useMemo(() => new Set(draft && snapshot ? changedRobinsonSections(draft, snapshot.content) : []), [draft, snapshot]);
+  // Click-to-field stamps per section, rebuilt only when the (deferred) draft changes, so each card's stamp watcher restarts
+  // on a draft change and not on every render of the page.
+  const stampsBySection = useMemo(() => new Map(ROBINSON_SECTIONS.map(section => [section.id, deferred ? robinsonPreviewStamps(deferred, section.id) : []])), [deferred]);
   const page = draft ? hydrateRobinsonContent(draft, media) : null;
   const loading = !draft || !page || loadedClubId !== club.id;
 
@@ -243,13 +247,14 @@ export default function RobinsonStadiumEditor() {
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
         <PreviewCards sections={sectionItems} label="Robinson Stadium sections" renderPreview={previewOf} previewScale={0.46}
-          onEdit={(id, event) => dialog.openSection(id as RobinsonSectionId, event)} />
+          stamps={id => stampsBySection.get(id as RobinsonSectionId) ?? []}
+          onEdit={(id, event, target) => { dialog.openSection(id as RobinsonSectionId, event); dialog.focusField(target); }} />
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-robinson-status="">{status}</p>
     {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE}`} mode="split" returnFocusRef={dialog.returnFocusRef}
       sections={ROBINSON_SECTIONS.map(section => ({ id: section.id, title: section.title, summary: draft && (draft[section.id].visible ? robinsonSectionSummary(draft, section.id) : "Hidden on the page") }))}
-      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as RobinsonSectionId)}
+      focusRequest={dialog.focusRequest} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as RobinsonSectionId)}
       renderSection={id => dialog.open ? <RobinsonSectionFields api={api} id={id as RobinsonSectionId} /> : null}
       renderPreview={id => dialog.open ? <div className={styles.livePreview}>
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>
