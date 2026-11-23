@@ -1,3 +1,11 @@
+## 2026-11-23 - UI-FIX-LOGO-FOOTER-PREVIEW: branding footer preview, phone header logo, pinned sidebar
+
+- **Status:** `ready for review`, branch `claude/logo-footer-preview` off main `b603f1e1`, PR open, not merged. Classic admin only; no upload/storage, server action, gate, `app/api/**`, `supabase/**`, dependency or public component change. Record: `STATUS.md` (UI-FIX-LOGO-FOOTER-PREVIEW).
+- **Why it broke:** the branding dialog rendered the real Rose City footer outside `.cinematic-site`, so none of its scoped `vw` sizes applied; the desktop sidebar lost `lg:top-0` to tailwind-merge (a later `lg:inset-y-auto`), so it was sticky with `top: auto` and scrolled away.
+- **What:** `RoseCityFooterPreview` lays the real footer out in a 1440px iframe and scales it into a fixed frame (tall footers shrink to fit); honest copy when the footer uses its own footer logo or there is no logo; the phone header shows the saved club logo (same branding provider) or the club name; sidebar uses `lg:bottom-auto`.
+- **Evidence:** contract test pins the 1440 viewport, the public 5.8vw/5.5vw rules and the frame fit, and the sidebar class surviving twMerge; browser spec 5/5 (sidebar box unchanged after scrolling and opening/closing the dialog, header logo = saved `club_logo_path`, preview logo = public desktop width, under the frame height); both red with the old sidebar class; stable over 5 repeats after the review follow-up (preview waits for the footer's own content, newest-only style sync, header logo tile and width cap).
+- **Exact next step:** Christian reviews.
+
 ## 2026-11-23 - RC-LAUNCH (billing + domain): Rose City bills at $150/month on rosecityfutbolclub.com
 
 - **Status:** production operations done and verified (`F1`, `F2`, `D1`), each on Christian's "go". No code change. Record: `STATUS.md` (RC-LAUNCH billing + domain).

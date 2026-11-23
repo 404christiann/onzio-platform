@@ -83,7 +83,9 @@ function Sidebar({
     return () => media.removeEventListener("change", update);
   }, []);
   const sidebarClass = cn(
-    "bg-sidebar text-sidebar-foreground border-sidebar-border fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] w-[--sidebar-width] flex-col overflow-hidden border-r transition-transform duration-200 ease-linear lg:sticky lg:top-0 lg:inset-y-auto lg:z-auto lg:flex lg:h-screen lg:h-[100dvh] lg:max-h-screen lg:max-h-[100dvh] lg:self-start lg:translate-x-0",
+    // cn() runs tailwind-merge, where a later inset-y utility removes an earlier top-* one. A desktop `lg:inset-y-auto` after
+    // `lg:top-0` left the sticky sidebar with top:auto, so it scrolled away with the page. Only the bottom edge is released.
+    "bg-sidebar text-sidebar-foreground border-sidebar-border fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] w-[--sidebar-width] flex-col overflow-hidden border-r transition-transform duration-200 ease-linear lg:sticky lg:top-0 lg:bottom-auto lg:z-auto lg:flex lg:h-screen lg:h-[100dvh] lg:max-h-screen lg:max-h-[100dvh] lg:self-start lg:translate-x-0",
     openMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
     className,
   );
