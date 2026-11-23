@@ -13,7 +13,8 @@ const CLUBS: Record<string, { id: string; slug: string; lifecycle: string; publi
     id: "11111111-1111-4111-8111-111111111111",
     slug: "rose-city",
     lifecycle: "active",
-    public_access: "live",
+    // Held because it has not paid yet: public_access=preview is the only hold.
+    public_access: "preview",
   },
   "diverse-city": {
     id: "22222222-2222-4222-8222-222222222222",
@@ -53,10 +54,15 @@ vi.mock("@supabase/ssr", () => ({
       },
       // resolve_verified_tenant (admin/billing fallback) finds no row for a
       // preview host, exactly as production's club_domains would.
-      rpc: (name: string) => {
+      rpc: (name: string, args?: { p_club_id?: string }) => {
         const result =
           name === "get_club_runtime_access"
-            ? { data: "live", error: null }
+            ? {
+                data:
+                  Object.values(CLUBS).find((club) => club.id === args?.p_club_id)
+                    ?.public_access ?? "suspended",
+                error: null,
+              }
             : { data: null, error: null };
         return Object.assign(Promise.resolve(result), {
           maybeSingle: async () => result,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const tenantState = vi.hoisted(() => ({ slug: "rose-city" }));
+const tenantState = vi.hoisted(() => ({ slug: "rose-city", access: "preview" }));
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => {
@@ -9,7 +9,7 @@ vi.mock("@supabase/ssr", () => ({
       id: "11111111-1111-4111-8111-111111111111",
       slug: tenantState.slug,
       lifecycle: "active",
-      public_access: "live",
+      public_access: tenantState.access,
     };
     const domainQuery = {
       select: () => domainQuery,
@@ -21,7 +21,7 @@ vi.mock("@supabase/ssr", () => ({
       auth: { getUser: async () => ({ data: { user: null } }) },
       schema: () => ({
         from: () => domainQuery,
-        rpc: async () => ({ data: "live", error: null }),
+        rpc: async () => ({ data: tenantState.access, error: null }),
       }),
     };
   },
@@ -36,9 +36,10 @@ function request(pathname: string, method = "GET") {
   });
 }
 
-describe("Rose City public site hold", () => {
+describe("Rose City public site hold (public_access=preview)", () => {
   beforeEach(() => {
     tenantState.slug = "rose-city";
+    tenantState.access = "preview";
   });
 
   it.each([
@@ -77,6 +78,7 @@ describe("Rose City public site hold", () => {
 
   it("leaves Diverse City public pages routed normally", async () => {
     tenantState.slug = "diverse-city";
+    tenantState.access = "live";
 
     const response = await middleware(request("/roster"));
 

@@ -113,8 +113,8 @@ async function render(searchParams: Record<string, string> = {}): Promise<string
   return renderToStaticMarkup(element);
 }
 
-function club(slug: string) {
-  return { supabase: {}, club: { id: "club-1", slug, primaryDomain: "example.org" }, portal: { portal: "reimagined", timeZone: "America/Los_Angeles" } };
+function club(slug: string, publicAccess = "live") {
+  return { supabase: {}, club: { id: "club-1", slug, publicAccess, primaryDomain: "example.org" }, portal: { portal: "reimagined", timeZone: "America/Los_Angeles" } };
 }
 
 describe("insights page", () => {
@@ -124,7 +124,7 @@ describe("insights page", () => {
   });
 
   it("a held club sees the waiting state and its numbers are never read", async () => {
-    loadAdminTabPage.mockResolvedValue(club("rose-city"));
+    loadAdminTabPage.mockResolvedValue(club("rose-city", "preview"));
     const html = await render();
     expect(html).toContain('data-testid="insights-waiting"');
     expect(html).toContain("data-held");

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isPublicSiteOpen } from "@/lib/club-access";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
 import { hashRegistrationStatusToken } from "@/lib/registration-status-token";
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     });
     if (
       club.lifecycle !== "active" ||
-      (club.publicAccess !== "live" && club.publicAccess !== "grace")
+      !isPublicSiteOpen(club.publicAccess)
     ) {
       throw new ContractError("REGISTRATION_NOT_PUBLIC");
     }

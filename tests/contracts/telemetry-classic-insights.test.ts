@@ -260,7 +260,7 @@ describe("Insights on the classic admin", () => {
   });
 
   it("shows a held club's waiting state without reading its numbers", async () => {
-    setClub(club({ slug: "rose-city" }), portal("classic"));
+    setClub(club({ publicAccess: "preview" }), portal("classic"));
     const markup = await insightsPage();
     expect(markup).toContain("data-held");
     expect(mocks.loadInsightsData).not.toHaveBeenCalled();

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { ContractError } from "@/lib/contract-error";
+import { notifyBillingTransition } from "@/lib/billing-notifications";
 import { getStripeClient } from "@/lib/stripe-client";
 import { getStripePaidThrough } from "@/lib/stripe-paid-through";
 import {
@@ -97,6 +98,7 @@ function currentState(row: {
   last_applied_stripe_event_created_at: string | null;
   status: string | null;
   grace_ends_at: string | null;
+  paid_through?: string | null;
 } | null) {
   if (!row) return null;
   return {
@@ -182,7 +184,7 @@ export async function POST(request: Request) {
     ? await service
         .from("club_subscriptions")
         .select(
-          "club_id,stripe_customer_id,stripe_subscription_id,last_applied_stripe_event_id,last_applied_stripe_event_created_at,status,grace_ends_at",
+          "club_id,stripe_customer_id,stripe_subscription_id,last_applied_stripe_event_id,last_applied_stripe_event_created_at,status,grace_ends_at,paid_through,cancel_at_period_end",
         )
         .eq("club_id", clubId)
         .maybeSingle()
@@ -301,6 +303,23 @@ export async function POST(request: Request) {
       { error: "TRANSACTION_ROLLED_BACK" },
       { status: 500 },
     );
+  }
+
+  // Strictly after a successful apply; duplicate, stale and rejected events
+  // returned earlier. Never throws and never changes this response.
+  // The RPC reports DUPLICATE/STALE/etc. as data, not an error, so only an
+  // explicit "applied" action counts as a successful apply.
+  if ((applied as { action?: string } | null)?.action === "applied") {
+    await notifyBillingTransition({
+      service,
+      clubId: projection.clubId as string,
+      subscription,
+      priorRow: row,
+      newStatus: projection.status as string,
+      newAccess: runtimeAccess.publicAccess,
+      newCancelAtPeriodEnd: projection.cancelAtPeriodEnd === true,
+      paidThrough: (projection.paidThrough as string | null) ?? null,
+    });
   }
 
   return NextResponse.json({ received: true, result: applied });

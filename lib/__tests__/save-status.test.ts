@@ -10,8 +10,8 @@ describe("websiteState", () => {
     expect(websiteState({ slug: "alpha", publicAccess })).toBe("paused");
   });
 
-  it("is paused for a held club even when its access is live", () => {
-    expect(websiteState({ slug: "rose-city", publicAccess: "live" })).toBe("paused");
+  it("follows public_access alone, not the club slug", () => {
+    expect(websiteState({ slug: "rose-city", publicAccess: "live" })).toBe("live");
   });
 });
 

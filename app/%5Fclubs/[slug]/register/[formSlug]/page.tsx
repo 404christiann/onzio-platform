@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isPublicSiteOpen } from "@/lib/club-access";
 import { codeSiteFor } from "@/lib/code-site";
 import AcademyRegistrationPage from "@/components/sites/diverse-city/AcademyRegistrationPage";
 import RegistrationCtaButton from "@/components/registration/RegistrationCtaButton";
@@ -22,7 +23,7 @@ export default async function RegistrationPage({
   try {
     const club = await getClubContextBySlug(slug);
     registrationSite = codeSiteFor(club) === "diverse-city" ? "academy" : "platform";
-    if (club.lifecycle !== "active" || (club.publicAccess !== "live" && club.publicAccess !== "grace")) notFound();
+    if (club.lifecycle !== "active" || !isPublicSiteOpen(club.publicAccess)) notFound();
     const form = toPublicRegistrationForm(await loadOpenRegistrationForm(club.id, formSlug));
     if (registrationSite === "academy") {
       return <AcademyRegistrationPage state="open" clubName={club.name} form={form} checkoutCancelled={query.checkout === "cancelled"} />;

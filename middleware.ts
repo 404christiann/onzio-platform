@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { normalizeHostname } from "@/lib/tenant";
-import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
+import { isPublicSiteOpen } from "@/lib/club-access";
 import { ROSE_CITY_PREVIEW_SLUG, roseCityPreviewHost } from "@/lib/rose-city-preview";
 import { CINEMATIC_PLACEHOLDER_ROUTES } from "@/lib/cinematic-routes";
 import { parsePresentationDocument, templateKey } from "@/packages/presentation";
@@ -54,6 +54,7 @@ function isInternalClubPath(pathname: string, slug: string): boolean {
   return internalPath === `/_clubs/${slug}` || internalPath.startsWith(`/_clubs/${slug}/`);
 }
 
+/** Public tenant surface that is closed until the club's public_access opens it. */
 function isHeldPublicSiteRequest(pathname: string, method: string, slug: string): boolean {
   return isPublicTenantPath(pathname) ||
     isInternalClubPath(pathname, slug) ||
@@ -283,7 +284,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (
-    PUBLIC_SITE_HOLD_SLUGS.has(tenant.slug) &&
+    !isPublicSiteOpen(runtimeAccess) &&
     !isRoseCityPreviewRequest &&
     isHeldPublicSiteRequest(request.nextUrl.pathname, request.method, tenant.slug)
   ) {
@@ -307,22 +308,9 @@ export async function middleware(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { db: { schema: "onzio" }, cookies: { getAll: () => [], setAll: () => {} } },
     );
-    let presentationClient = publicClient.schema("onzio");
-    let publishedId: string | null = null;
-    if (runtimeAccess === "private_preview") {
-      // A member's private preview is protected by the existing fresh-session
-      // RLS. Resolve its explicit published pointer, never its latest draft.
-      const { data: state, error: stateError } = await onzio
-        .from("presentation_state").select("published_document_id")
-        .eq("club_id", tenant.id).maybeSingle();
-      if (stateError || !state?.published_document_id) return applyTenantRobotsPolicy(notFound());
-      publishedId = state.published_document_id;
-      presentationClient = onzio;
-    }
-    let publishedQuery = presentationClient.from("presentation_documents")
-      .select("configuration").eq("club_id", tenant.id);
-    if (publishedId) publishedQuery = publishedQuery.eq("id", publishedId);
-    const { data: published, error } = await publishedQuery.maybeSingle();
+    const presentationClient = publicClient.schema("onzio");
+    const { data: published, error } = await presentationClient.from("presentation_documents")
+      .select("configuration").eq("club_id", tenant.id).maybeSingle();
     if (error || !published) return applyTenantRobotsPolicy(notFound());
     try {
       if (templateKey(parsePresentationDocument(published.configuration, { surface: "production" }).template) !== "cinematic@2") {

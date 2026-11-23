@@ -16,7 +16,7 @@ export type PaymentsViewInput = {
   clubKind: "customer" | "demo" | "test";
   domain: string;
   publicAccess: "preview" | "live" | "grace" | "suspended";
-  /** True for a club whose public site is held (lib/public-site-hold.ts). */
+  /** True for a club whose public site is held (public_access is preview; see publicSiteState in lib/club-access.ts). */
   held: boolean;
   /** The club's own time zone, so "Dec 1" is the day the club sees. */
   timeZone: string;

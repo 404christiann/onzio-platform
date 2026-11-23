@@ -253,6 +253,8 @@ describe("tenant and privileged-boundary architecture contract", () => {
       /^app\/api\/webhooks\/bunny-stream\//,
       /^app\/api\/cron\/hero-video\//,
       /^lib\/billing-lifecycle\.ts$/,
+      // Daily operator drift alert: read-only comparison of customer clubs against their subscriptions.
+      /^lib\/billing-drift\.ts$/,
       /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
     ];

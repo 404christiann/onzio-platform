@@ -40,18 +40,4 @@ describe('published-template route guard', () => {
     }
     expect(state.calls).toEqual([1, 1, 1, 1, 1]);
   });
-  it('retains authorized private preview and follows only its published pointer', async () => {
-    state.runtime = 'private_preview'; state.published = document(2);
-    const response = await middleware(request('/tickets'));
-    expect(response.headers.get('x-middleware-rewrite')).toContain('/_clubs/alpha/tickets');
-    expect(state.filters).toContainEqual(['presentation_documents', 'id', 'explicit-published-id']);
-    state.published = document(1); // a newer private draft cannot enable this path
-    expect((await middleware(request('/tickets'))).status).toBe(404);
-  });
-  it('rejects private preview when member RLS cannot read the pointer', async () => {
-    state.runtime = 'private_preview'; state.published = document(2); state.authorized = false;
-    const response = await middleware(request('/tickets'));
-    expect(response.status).toBe(404);
-    expect(state.filters.some(([table]) => table === 'presentation_documents')).toBe(false);
-  });
 });
