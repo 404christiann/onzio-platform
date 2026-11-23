@@ -21,6 +21,8 @@ export const EDIT_TARGET_SELECTOR = `[${EDIT_TARGET_ATTRIBUTE}]`;
 export type EditTargetId = string & { readonly __editTarget: unique symbol };
 
 export type EditTargetSection = {
+  /** The section's name as the editor shows it (Homepage Overview: the part button, dialog section and part list). */
+  label?: string;
   /** Fields that appear once in the section. */
   fields?: readonly string[];
   /** Fields that appear on every row of a list in the section (`row:<rowId>.<field>`). */
@@ -108,18 +110,24 @@ export function createEditTargets(registry: EditTargetRegistry) {
  */
 export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
   ...ABOUT_CONTACT_POLICIES_TARGETS,
-  /** Rose City (cinematic@2) Homepage Overview. Sections are the Overview's part ids (components/admin/homepage/homepage-parts.ts). */
+  /**
+   * Rose City (cinematic@2) Homepage Overview. Sections are the Overview's part ids, in page order, and each `label` is that
+   * part's name everywhere (components/admin/homepage/homepage-parts.ts reads it; no part title is written anywhere else).
+   */
   homepage: {
     route: "/admin/homepage",
     sections: {
-      hero: { fields: ["eyebrow", "intro", "headlineLineOne", "headlineLineTwo", "primaryCtaLabel", "secondaryCtaLabel"] },
-      raffle: { fields: ["imageAlt"] },
-      match: { fields: ["heading", "buttonLabel", "emptyMessage"] },
-      prices: { fields: ["heading", "footnote"], rowFields: ["label", "price", "description", "note"] },
-      ticket: { fields: ["imageAlt"] },
-      championship: { fields: ["league", "year", "title", "body", "imageAlt"] },
-      video: { fields: ["eyebrow", "title", "description"] },
-      sponsors: { fields: ["heading"] },
+      menu: { label: "Menu and footer" },
+      hero: { label: "Top of the page", fields: ["eyebrow", "intro", "headlineLineOne", "headlineLineTwo", "primaryCtaLabel", "secondaryCtaLabel"] },
+      raffle: { label: "Raffle", fields: ["imageAlt"] },
+      match: { label: "Next home match", fields: ["heading", "buttonLabel", "emptyMessage"] },
+      prices: { label: "Ticket prices", fields: ["heading", "footnote"], rowFields: ["label", "price", "description", "note"] },
+      ticket: { label: "Ticket and map", fields: ["imageAlt"] },
+      photos: { label: "Photo slideshow" },
+      championship: { label: "Championship", fields: ["league", "year", "title", "body", "imageAlt"] },
+      video: { label: "Behind the Rose video", fields: ["eyebrow", "title", "description"] },
+      sponsors: { label: "Partners strip", fields: ["heading"] },
+      forms: { label: "External forms" },
     },
   },
   /**

@@ -6,6 +6,7 @@ import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
 import { PREVIEW_LINK_SELECTOR, usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import type { PieceId } from "@/lib/homepage-editor/model";
+import { preparePreviewDocument } from "./preview-document";
 
 const DECORATIONS = ["hp-piece-corners", "hp-piece-tag"];
 const isDecoration = (node: Node) => node.nodeType === 1 && DECORATIONS.some(name => (node as HTMLElement).classList.contains(name));
@@ -110,6 +111,7 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
     const frame = iframe.current;
     if (!frame) return;
     let observer: MutationObserver | undefined;
+    let unprepare: (() => void) | undefined;
     let active = true;
     let styleGeneration = 0;
     const mount = () => {
@@ -121,6 +123,9 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
       doc.documentElement.lang = "en";
       // Only root font classes; admin theme attributes never cross the frame.
       doc.documentElement.className = document.documentElement.className.replace(/\bdark\b/g, "");
+      // Scaled and clipped, the frame would leave lazy pictures unloaded and entrance effects unplayed (preview-document.ts).
+      unprepare?.();
+      unprepare = preparePreviewDocument(doc);
       const syncStyles = () => {
         const generation = ++styleGeneration;
         const pending: Promise<void>[] = [];
@@ -149,7 +154,7 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
     };
     frame.addEventListener("load", mount);
     mount();
-    return () => { active = false; observer?.disconnect(); frame.removeEventListener("load", mount); };
+    return () => { active = false; observer?.disconnect(); unprepare?.(); frame.removeEventListener("load", mount); };
   }, []);
   return <div className="hp-browser" data-classic={classic || undefined} aria-busy={classic ? loading || !delayed.showContent : undefined}>
     <div className="hp-browser-chrome"><span aria-hidden="true">● ● ●</span><span>{host} · {label} preview</span></div>
