@@ -26,14 +26,18 @@ export {
 export { editorDialogReducer, stepFocusRequest, FOCUS_GIVE_UP_MS, FOCUS_SETTLE_MS } from "./editorDialogFocus";
 export {
   EDIT_TARGET_FLASH_ATTRIBUTE,
+  applyEditTargetStamps,
   editTargetAt,
+  editTargetHitAt,
   editTargetControl,
   editTargetHasFocus,
   findEditTarget,
   focusEditTarget,
   pickEditTarget,
   refocusEditTarget,
+  watchEditTargetStamps,
   type EditTargetCandidate,
+  type EditTargetStamp,
 } from "./editTargets";
 export { ValidationMessage, type ValidationMessageProps } from "./ValidationMessage";
 export {

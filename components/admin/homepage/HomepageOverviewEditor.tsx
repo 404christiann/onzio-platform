@@ -27,6 +27,7 @@ import HomepageOverviewPreview, { type PartNumbers } from "./HomepageOverviewPre
 import HomepageOverviewSkeleton from "./HomepageOverviewSkeleton";
 import HomepageRecoveryReview from "./HomepageRecoveryReview";
 import { HOMEPAGE_PARTS, type PartId } from "./homepage-parts";
+import { resolveEditTarget, type EditTargetId } from "@/lib/admin-edit-targets";
 import styles from "./HomepageOverview.module.css";
 import "./homepage-editor.css";
 import { DISCARD_CONFIRM } from "../editor-copy";
@@ -122,10 +123,13 @@ export default function HomepageOverviewEditor() {
     dialog.returnFocusRef.current = opener;
     dialog.switchTo(part);
   }
-  const openFromPreview = useCallback((part: PartId, opener: HTMLElement) => {
+  const openFromPreview = useCallback((part: PartId, opener: HTMLElement, target?: EditTargetId) => {
     dialog.returnFocusRef.current = opener;
-    dialog.switchTo(part);
-  }, [dialog]);
+    // A field click opens the field's own section (it is always the clicked part's) and focuses the field.
+    const section = resolveEditTarget(target)?.section as PartId | undefined;
+    dialog.switchTo(section && parts.some(item => item.id === section) ? section : part);
+    if (section) dialog.focusField(target);
+  }, [dialog, parts]);
 
   async function discard() {
     setDiscarding(true);
@@ -211,6 +215,7 @@ export default function HomepageOverviewEditor() {
       activeId={dialog.activeId}
       onActiveChange={id => dialog.switchTo(id as PartId)}
       returnFocusRef={dialog.returnFocusRef}
+      focusRequest={dialog.focusRequest}
       renderSection={id => <HomepagePartFields part={id as PartId} e={e} />}
     />
     {reviewRecovery && editor.recoveryConflict && <HomepageRecoveryReview current={state.baseline} recovered={editor.recoveryConflict.draft} reason={editor.recoveryConflict.reason} allowedAction={editor.recoveryConflict.allowedAction} close={() => setReviewRecovery(false)} restore={editor.restoreRecoveredDraft} />}

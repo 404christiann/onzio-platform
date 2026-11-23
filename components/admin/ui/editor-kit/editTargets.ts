@@ -14,13 +14,18 @@ export type EditTargetCandidate = { id: string; rect: EditTargetRect };
  * without a browser. Ties keep the first (document order: an outer node comes before the nodes inside it).
  */
 export function pickEditTarget(candidates: readonly EditTargetCandidate[], x: number, y: number): string | null {
+  return pickEditTargetCandidate(candidates, x, y)?.id ?? null;
+}
+
+/** pickEditTarget, returning the candidate itself (its box is the node under the point, even when an id repeats). */
+export function pickEditTargetCandidate(candidates: readonly EditTargetCandidate[], x: number, y: number): EditTargetCandidate | null {
   let best: EditTargetCandidate | null = null;
   for (const candidate of candidates) {
     const { left, top, width, height } = candidate.rect;
     if (width <= 0 || height <= 0 || x < left || x > left + width || y < top || y > top + height) continue;
     if (!best || width * height < best.rect.width * best.rect.height) best = candidate;
   }
-  return best?.id ?? null;
+  return best;
 }
 
 function candidatesIn(scope: ParentNode, map: (rect: DOMRect) => EditTargetRect): EditTargetCandidate[] {
@@ -42,6 +47,16 @@ export function editTargetAt(
   clientY: number,
   resolve: (id: string) => ResolvedEditTarget | null = resolveEditTarget,
 ): EditTargetId | null {
+  return editTargetHitAt(root, clientX, clientY, resolve)?.id ?? null;
+}
+
+/** editTargetAt plus the hit field's box in viewport coordinates (for a hover outline). */
+export function editTargetHitAt(
+  root: HTMLElement,
+  clientX: number,
+  clientY: number,
+  resolve: (id: string) => ResolvedEditTarget | null = resolveEditTarget,
+): { id: EditTargetId; rect: EditTargetRect } | null {
   const candidates = candidatesIn(root, rect => rect);
   root.querySelectorAll("iframe").forEach(frame => {
     let doc: Document | null = null;
@@ -55,7 +70,32 @@ export function editTargetAt(
   });
   // Points outside every declared node, or on a node whose id is not in the registry, give null: the section fallback.
   const declared = candidates.filter(candidate => resolve(candidate.id));
-  return pickEditTarget(declared, clientX, clientY) as EditTargetId | null;
+  const hit = pickEditTargetCandidate(declared, clientX, clientY);
+  return hit ? { id: hit.id as EditTargetId, rect: hit.rect } : null;
+}
+
+/** One rule for stamping a preview: every node `selector` matches gets the id `target` returns for it (null clears it). */
+export type EditTargetStamp = { selector: string; target: (element: Element, index: number) => string | null };
+
+/**
+ * Stamps data-edit-target on public nodes inside an admin preview (never on the public site: only preview frames call
+ * this). Run it again after the preview re-renders; it only writes attributes that changed. Returns how many nodes
+ * carry a target.
+ */
+export function applyEditTargetStamps(root: ParentNode, stamps: readonly EditTargetStamp[]): number {
+  let stamped = 0;
+  for (const stamp of stamps) {
+    root.querySelectorAll(stamp.selector).forEach((element, index) => {
+      const id = stamp.target(element, index);
+      if (id) {
+        if (element.getAttribute(EDIT_TARGET_ATTRIBUTE) !== id) element.setAttribute(EDIT_TARGET_ATTRIBUTE, id);
+        stamped += 1;
+      } else if (element.getAttribute(EDIT_TARGET_ATTRIBUTE) !== null) {
+        element.removeAttribute(EDIT_TARGET_ATTRIBUTE);
+      }
+    });
+  }
+  return stamped;
 }
 
 const FOCUSABLE = [
@@ -114,4 +154,31 @@ export function refocusEditTarget(container: ParentNode, id: string): boolean {
 /** Whether `active` (normally document.activeElement) is the target's field or inside it. */
 export function editTargetHasFocus(container: ParentNode, id: string, active: Element | null): boolean {
   return Boolean(active && findEditTarget(container, id)?.contains(active));
+}
+
+export type EditTargetStampEnvironment = {
+  requestFrame: (callback: () => void) => number;
+  cancelFrame: (handle: number) => void;
+  observe: (root: Node, onChange: () => void) => { disconnect: () => void };
+};
+const browserStampEnvironment = (): EditTargetStampEnvironment => ({
+  requestFrame: callback => window.requestAnimationFrame(callback),
+  cancelFrame: handle => window.cancelAnimationFrame(handle),
+  observe: (root, onChange) => { const observer = new MutationObserver(onChange); observer.observe(root, { childList: true, subtree: true }); return observer; },
+});
+
+/**
+ * Stamps a preview now and again (once per frame) whenever its content changes, such as Schedule or logos that render
+ * after the first paint. Call it again with new stamps when the draft changes (rows added, removed or reordered).
+ * Returns the cleanup. `environment` is the frame and mutation source (a fake one in tests).
+ */
+export function watchEditTargetStamps(root: Node & ParentNode, stamps: readonly EditTargetStamp[], environment: EditTargetStampEnvironment = browserStampEnvironment()) {
+  let frame = 0;
+  const stamp = () => {
+    environment.cancelFrame(frame);
+    frame = environment.requestFrame(() => applyEditTargetStamps(root, stamps));
+  };
+  stamp();
+  const observer = environment.observe(root, stamp);
+  return () => { observer.disconnect(); environment.cancelFrame(frame); };
 }

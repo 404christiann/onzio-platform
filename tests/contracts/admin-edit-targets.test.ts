@@ -13,7 +13,7 @@ import {
   resolveEditTarget,
   type EditTargetRegistry,
 } from "@/lib/admin-edit-targets";
-import { EDIT_TARGET_FLASH_ATTRIBUTE, EDIT_TARGET_FLASH_MS, editTargetAt, editTargetHasFocus, findEditTarget, focusEditTarget, pickEditTarget, refocusEditTarget } from "@/components/admin/ui/editor-kit/editTargets";
+import { EDIT_TARGET_FLASH_ATTRIBUTE, EDIT_TARGET_FLASH_MS, applyEditTargetStamps, editTargetAt, editTargetHitAt, editTargetHasFocus, findEditTarget, focusEditTarget, pickEditTarget, refocusEditTarget } from "@/components/admin/ui/editor-kit/editTargets";
 import { EditorDialogBody, useEditorDialog } from "@/components/admin/ui/editor-kit/EditorDialog";
 import {
   createFocusInterruption,
@@ -453,5 +453,35 @@ describe("the person's click or key ends the focus hold", () => {
     focused = true;
     interruption.onInput();
     expect(interruption.interrupted()).toBe(true);
+  });
+});
+
+describe("editTargetHitAt and applyEditTargetStamps", () => {
+  it("returns the hit field's box (for the hover outline) along with its id", () => {
+    const lineOne = new FakeNode("h1", { target: "homepage.hero.lineOne", rect: { left: 10, top: 20, width: 100, height: 30 } });
+    const intro = new FakeNode("p", { target: "homepage.hero.intro", rect: { left: 0, top: 0, width: 400, height: 300 } });
+    expect(editTargetHitAt(asElement(new FakeNode("div", { children: [intro, lineOne] })), 50, 30, fixture.resolve))
+      .toEqual({ id: "homepage.hero.lineOne", rect: { left: 10, top: 20, width: 100, height: 30 } });
+  });
+
+  it("the box is the node under the point even when the same id is stamped twice", () => {
+    const far = new FakeNode("span", { target: "homepage.hero.lineOne", rect: { left: 500, top: 500, width: 20, height: 10 } });
+    const near = new FakeNode("h1", { target: "homepage.hero.lineOne", rect: { left: 10, top: 20, width: 100, height: 30 } });
+    expect(editTargetHitAt(asElement(new FakeNode("div", { children: [far, near] })), 50, 30, fixture.resolve)?.rect).toEqual(near.rect);
+  });
+
+  it("stamps, rewrites only what changed, and clears a node whose target is gone", () => {
+    const nodes = [0, 1, 2].map(() => ({ value: null as string | null, writes: 0,
+      getAttribute() { return this.value; }, setAttribute(_: string, v: string) { this.value = v; this.writes += 1; }, removeAttribute() { this.value = null; } }));
+    const root = { querySelectorAll: (selector: string) => selector === ".row" ? nodes : [] };
+    const ids = ["homepage.hero.lineOne", "homepage.hero.intro", null];
+    const stamps = [{ selector: ".row", target: (_: Element, index: number) => ids[index] }];
+    expect(applyEditTargetStamps(root as unknown as ParentNode, stamps)).toBe(2);
+    expect(nodes.map(node => node.value)).toEqual(["homepage.hero.lineOne", "homepage.hero.intro", null]);
+    applyEditTargetStamps(root as unknown as ParentNode, stamps);
+    expect(nodes.map(node => node.writes)).toEqual([1, 1, 0]);
+    ids[1] = null;
+    applyEditTargetStamps(root as unknown as ParentNode, stamps);
+    expect(nodes[1].value).toBeNull();
   });
 });

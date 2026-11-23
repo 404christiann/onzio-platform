@@ -13,6 +13,8 @@ import type { HeroVideoController } from "@/lib/homepage-editor/hero-video-uploa
 import HeroVideoControl from "./HeroVideoControl";
 import CinematicHomepageFields from "./CinematicHomepageFields";
 import type { PartId } from "./homepage-parts";
+import { HOMEPAGE_TARGETS } from "./homepage-edit-targets";
+import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 
 type Program = { slug: string; navLabel: string; displayTitle: string };
 
@@ -37,8 +39,8 @@ export type HomepagePartEditor = {
   heroVideo?: HeroVideoController | null;
 };
 
-function Text({ label, value, max, disabled, multiline, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; onChange: (value: string) => void }) {
-  return <label className={kit.field}><span className={kit.fieldLabel}>{label}</span>{multiline
+function Text({ label, value, max, disabled, multiline, target, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; target?: EditTargetId; onChange: (value: string) => void }) {
+  return <label className={kit.field} {...editTargetProps(target)}><span className={kit.fieldLabel}>{label}</span>{multiline
     ? <textarea value={value} maxLength={max} disabled={disabled} onChange={event => onChange(event.target.value)} />
     : <input value={value} maxLength={max} disabled={disabled} onChange={event => onChange(event.target.value)} />}</label>;
 }
@@ -53,14 +55,14 @@ function Route({ label, value, disabled, programs, onChange }: { label: string; 
 
 function HeroFields({ e }: { e: HomepagePartEditor }) {
   const { hero } = e.draft;
-  const text = (label: string, field: keyof typeof hero & string, max: number, multiline = false) =>
-    <Text label={label} value={hero[field as keyof typeof hero]} max={max} disabled={e.disabled} multiline={multiline} onChange={value => e.field(`hero.${field}`, value)} />;
+  const text = (label: string, field: keyof typeof hero & string, max: number, target: EditTargetId, multiline = false) =>
+    <Text label={label} value={hero[field as keyof typeof hero]} max={max} disabled={e.disabled} multiline={multiline} target={target} onChange={value => e.field(`hero.${field}`, value)} />;
   return <div className={kit.stack}>
-    {text("Small heading", "eyebrow", HOMEPAGE_HERO_EYEBROW_MAX)}
-    {text("Intro", "intro", 320, true)}
-    <EditorGroup legend="Main heading">{text("Line one", "headline_line_one", 80)}{text("Line two", "headline_line_two", 80)}</EditorGroup>
-    <EditorGroup legend="First button">{text("Button text", "primary_cta_label", 20_000)}<Route label="Where it goes" value={hero.primary_cta_href} disabled={e.disabled} programs={e.programs} onChange={value => e.field("hero.primary_cta_href", value)} /></EditorGroup>
-    <EditorGroup legend="Second button">{text("Button text", "secondary_cta_label", 20_000)}<Route label="Where it goes" value={hero.secondary_cta_href} disabled={e.disabled} programs={e.programs} onChange={value => e.field("hero.secondary_cta_href", value)} /></EditorGroup>
+    {text("Small heading", "eyebrow", HOMEPAGE_HERO_EYEBROW_MAX, HOMEPAGE_TARGETS.heroEyebrow)}
+    {text("Intro", "intro", 320, HOMEPAGE_TARGETS.heroIntro, true)}
+    <EditorGroup legend="Main heading">{text("Line one", "headline_line_one", 80, HOMEPAGE_TARGETS.heroLineOne)}{text("Line two", "headline_line_two", 80, HOMEPAGE_TARGETS.heroLineTwo)}</EditorGroup>
+    <EditorGroup legend="First button">{text("Button text", "primary_cta_label", 20_000, HOMEPAGE_TARGETS.heroPrimaryCta)}<Route label="Where it goes" value={hero.primary_cta_href} disabled={e.disabled} programs={e.programs} onChange={value => e.field("hero.primary_cta_href", value)} /></EditorGroup>
+    <EditorGroup legend="Second button">{text("Button text", "secondary_cta_label", 20_000, HOMEPAGE_TARGETS.heroSecondaryCta)}<Route label="Where it goes" value={hero.secondary_cta_href} disabled={e.disabled} programs={e.programs} onChange={value => e.field("hero.secondary_cta_href", value)} /></EditorGroup>
     {e.heroVideo
       ? <HeroVideoControl controller={e.heroVideo} disabled={e.disabled} />
       : <p className={kit.hint}>The background video and poster are set by Onzio.</p>}
@@ -90,8 +92,9 @@ function PhotosFields({ e }: { e: HomepagePartEditor }) {
 
 function VideoFields({ e }: { e: HomepagePartEditor }) {
   const { video } = e.draft;
+  const targets = { eyebrow: HOMEPAGE_TARGETS.videoEyebrow, title: HOMEPAGE_TARGETS.videoTitle, description: HOMEPAGE_TARGETS.videoDescription };
   const text = (label: string, field: "eyebrow" | "title" | "description", max: number, multiline = false) =>
-    <Text label={label} value={video[field]} max={max} disabled={e.disabled} multiline={multiline} onChange={value => e.field(`video.${field}`, value)} />;
+    <Text label={label} value={video[field]} max={max} disabled={e.disabled} multiline={multiline} target={targets[field]} onChange={value => e.field(`video.${field}`, value)} />;
   return <div className={kit.stack}>
     <p className={kit.hint}>The video itself is set by Onzio.{!e.videoSourceSet && " Contact Onzio to add a video."}</p>
     {text("Small heading", "eyebrow", 20_000)}

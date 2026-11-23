@@ -9,6 +9,9 @@ import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { HomepagePreviewContext } from "@/lib/homepage-editor/preview-context";
 import type { HomepageDraft } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PARTS, PREVIEW_PIECES, type HomepagePart, type PartId } from "./homepage-parts";
+import { editTargetHitAt, watchEditTargetStamps } from "@/components/admin/ui/editor-kit/editTargets";
+import type { EditTargetId } from "@/lib/admin-edit-targets";
+import { homepagePreviewStamps } from "./homepage-edit-targets";
 import styles from "./HomepageOverview.module.css";
 
 /** The public page is laid out at this width, then scaled down. Its sizes are in vw, so any width gives the same picture. */
@@ -110,6 +113,9 @@ function PageFrame({ draft, videoSource, height, onBody, hidden }: { draft: Home
     return () => { active = false; observer?.disconnect(); element.removeEventListener("load", mount); onBody(null); };
   }, [onBody]);
   const value = useMemo(() => ({ playback: false, draft, videoSource, selection: null, allowedPieces: PREVIEW_PIECES, select: () => undefined }), [draft, videoSource]);
+  // Click-to-field: put each field's edit target on the public node that shows it, in this preview frame only. Content
+  // that loads later (Schedule, partner logos) re-renders the page, so the stamps are re-applied on each change.
+  useEffect(() => body ? watchEditTargetStamps(body, homepagePreviewStamps(draft)) : undefined, [body, draft]);
   return <>
     <iframe ref={frame} title="Homepage preview" aria-hidden="true" tabIndex={-1} {...{ inert: true }} srcDoc={initialDocument.current}
       data-preview-settling={hidden ? "true" : undefined} style={{ width: OVERVIEW_DESIGN_WIDTH, height, visibility: hidden ? "hidden" : "visible" }} />
@@ -137,7 +143,8 @@ export type HomepageOverviewPreviewProps = {
   videoSource: string;
   parts: readonly HomepagePart[];
   actual: boolean;
-  onOpen: (part: PartId, opener: HTMLElement) => void;
+  /** `target`: the field under the pointer when a part was clicked (keyboard activation passes none). */
+  onOpen: (part: PartId, opener: HTMLElement, target?: EditTargetId) => void;
   onNumbers?: (numbers: PartNumbers) => void;
 };
 
@@ -213,6 +220,28 @@ export default function HomepageOverviewPreview({ draft, videoSource, parts, act
   const boxHeight = ready ? Math.max(1, columns === 2 ? Math.max(firstHeight, secondHeight) : total) : overviewReservedHeight(columns);
 
   const iframeHeight = Math.max(measurement?.total ?? 0, 1200);
+  // The part buttons sit in the same box as the inert preview frame, so the field under the pointer is found by geometry.
+  const fieldUnder = (button: HTMLElement, x: number, y: number) => button.parentElement ? editTargetHitAt(button.parentElement, x, y) : null;
+  // The field hover outline is moved directly (no React state), so moving the mouse never re-renders the preview.
+  const showFieldHover = (button: HTMLElement, x: number, y: number) => {
+    const root = button.parentElement;
+    const outline = root?.querySelector<HTMLElement>(":scope > [data-field-hover]");
+    if (!root || !outline) return;
+    const hit = fieldUnder(button, x, y);
+    if (!hit) { outline.hidden = true; delete outline.dataset.target; return; }
+    const box = root.getBoundingClientRect();
+    outline.style.left = `${hit.rect.left - box.left}px`;
+    outline.style.top = `${hit.rect.top - box.top}px`;
+    outline.style.width = `${hit.rect.width}px`;
+    outline.style.height = `${hit.rect.height}px`;
+    outline.dataset.target = hit.id;
+    outline.hidden = false;
+  };
+  const hideFieldHover = (button: HTMLElement) => {
+    const outline = button.parentElement?.querySelector<HTMLElement>(":scope > [data-field-hover]");
+    if (outline) { outline.hidden = true; delete outline.dataset.target; }
+  };
+  const fieldHover = <span className={styles.fieldHover} data-field-hover="" aria-hidden="true" hidden />;
   const visibleParts = new Set(parts.map(part => part.id));
   const buttons = (offset: number, span: number) => {
     const out: React.ReactNode[] = [];
@@ -225,7 +254,13 @@ export default function HomepageOverviewPreview({ draft, videoSource, parts, act
         if (mid < offset - 1 || mid > offset + span + 1) return;
         const label = `Edit ${part.title}`;
         const number = numbers[part.id]?.[index];
-        const common = { type: "button" as const, "data-part": part.id, "data-kit-edit": "", onClick: (event: React.MouseEvent<HTMLButtonElement>) => onOpen(part.id, event.currentTarget) };
+        const common = {
+          type: "button" as const, "data-part": part.id, "data-kit-edit": "",
+          // A pointer click opens the field under the pointer; Enter or Space (detail 0) opens the part, as before.
+          onClick: (event: React.MouseEvent<HTMLButtonElement>) => onOpen(part.id, event.currentTarget, event.detail > 0 ? fieldUnder(event.currentTarget, event.clientX, event.clientY)?.id : undefined),
+          onPointerMove: (event: React.PointerEvent<HTMLButtonElement>) => { if (event.pointerType === "mouse") showFieldHover(event.currentTarget, event.clientX, event.clientY); },
+          onPointerLeave: (event: React.PointerEvent<HTMLButtonElement>) => hideFieldHover(event.currentTarget),
+        };
         if (rect.height < HIDDEN_BELOW) {
           out.push(<button key={`${part.id}-${index}`} {...common} className={styles.hidden} aria-label={`${label}. Hidden on the page.`}
             style={{ top: (rect.top - offset) * scale, left: Math.max(8, rect.left * scale + 8) }}><IconEdit size={14} aria-hidden="true" />{part.title} is hidden on the page. Click to edit or show it.</button>);
@@ -251,6 +286,7 @@ export default function HomepageOverviewPreview({ draft, videoSource, parts, act
       <div className={styles.clip} style={{ height: span * scale }}>{stage}</div>
       {!ready && <Shimmer className={styles.cover} />}
       {ready && buttons(offset, span)}
+      {ready && fieldHover}
     </div>;
   };
 
@@ -262,6 +298,7 @@ export default function HomepageOverviewPreview({ draft, videoSource, parts, act
             <PageFrame draft={draft} videoSource={videoSource} height={iframeHeight} hidden={!ready} onBody={onBody0} />
           </div>
           {ready && buttons(0, total)}
+          {ready && fieldHover}
         </div>
       </div>
     </div>;

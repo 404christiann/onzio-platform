@@ -365,6 +365,131 @@ async function expectSponsorLinks(page: Page) {
   }
 }
 
+/** Viewport point at the centre of a stamped field inside whichever Overview column shows it (scrolled into view first). */
+async function fieldPoint(page: Page, target: string) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const point = await page.evaluate(id => {
+      for (const frame of Array.from(document.querySelectorAll<HTMLIFrameElement>('iframe[title="Homepage preview"]'))) {
+        const node = Array.from(frame.contentDocument?.querySelectorAll("[data-edit-target]") ?? []).find(element => element.getAttribute("data-edit-target") === id);
+        const clip = frame.closest("[data-column]")?.firstElementChild?.getBoundingClientRect();
+        if (!node || !clip) continue;
+        const box = frame.getBoundingClientRect();
+        const scale = box.width / frame.clientWidth;
+        const rect = node.getBoundingClientRect();
+        const x = box.left + (rect.left + rect.width / 2) * scale;
+        const y = box.top + (rect.top + rect.height / 2) * scale;
+        if (x > clip.left && x < clip.right && y > clip.top && y < clip.bottom) return { x, y };
+      }
+      return null;
+    }, target);
+    if (!point) throw new Error(`no visible preview node for ${target}`);
+    // Clear of the sticky admin header and the phone Save bar, which sit above the preview.
+    if (point.y > 120 && point.y < page.viewportSize()!.height - 140) return point;
+    // The admin content scrolls in its own container: scroll the part button that covers the point.
+    await page.evaluate(({ x, y }) => {
+      const covering = Array.from(document.querySelectorAll<HTMLElement>("button[data-part]")).filter(button => {
+        const r = button.getBoundingClientRect();
+        return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+      }).sort((a, b) => a.getBoundingClientRect().height - b.getBoundingClientRect().height)[0];
+      covering?.scrollIntoView({ block: "center", behavior: "instant" });
+    }, point);
+    await page.waitForTimeout(300);
+  }
+  throw new Error(`could not bring ${target} into view`);
+}
+const focusedTarget = (page: Page) => page.evaluate(() => document.activeElement?.closest("[data-edit-target]")?.getAttribute("data-edit-target") ?? null);
+
+test.describe("UI-PREVIEW-CLICK-HOMEPAGE: click a preview field to edit it", () => {
+  /** Rose City's hero is the video alone; its heading only shows when Line one has words, so type a draft (never saved). */
+  async function ready(page: Page) {
+    await page.goto("/admin/homepage", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("button[data-part]").first()).toBeVisible({ timeout: 60_000 });
+    await expect.poll(() => overviewFrame(page).locator("[data-edit-target]").count(), { timeout: 30_000 }).toBeGreaterThan(5);
+    if (!(await snapshot(page)).content.hero.headline_line_one) {
+      await page.getByRole("button", { name: /^Edit Top of the page/ }).first().focus();
+      await page.keyboard.press("Enter");
+      await partDialog(page).getByLabel("Line one", { exact: true }).fill("Click to field");
+      await done(page);
+    }
+    await expect.poll(() => overviewFrame(page).locator('h1[data-edit-target="homepage.hero.headlineLineOne"]').evaluate(node => node.getBoundingClientRect().height)).toBeGreaterThan(20);
+  }
+  test.beforeEach(async ({ page }) => { await ready(page); });
+  test.afterEach(async ({ page }) => {
+    // Throw the draft away so nothing is saved and no browser recovery copy is left for the next test.
+    if (await partDialog(page).count()) await page.keyboard.press("Escape");
+    const discard = page.getByRole("button", { name: "Discard changes" }).filter({ visible: true }).first();
+    if (await discard.count()) { await discard.click(); await page.getByRole("button", { name: "Discard and reload" }).click(); }
+  });
+
+  test("hero heading opens Top of the page with Line one focused and ringed", async ({ page }) => {
+    const { x, y } = await fieldPoint(page, "homepage.hero.headlineLineOne");
+    await page.mouse.move(x, y);
+    await expect(page.locator("[data-field-hover]:not([hidden])")).toHaveAttribute("data-target", "homepage.hero.headlineLineOne");
+    await page.mouse.click(x, y);
+    await expect(partDialog(page).locator('[data-editor-dialog-panel="hero"]')).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe("homepage.hero.headlineLineOne");
+    await expect(partDialog(page).locator(":focus")).toHaveAccessibleName("Line one");
+    await expect(partDialog(page).locator('[data-edit-target="homepage.hero.headlineLineOne"]')).toHaveAttribute("data-edit-target-flash", "");
+    await expect(partDialog(page).locator("[data-edit-target-flash]")).toHaveCount(0, { timeout: 3_000 });
+  });
+
+  test("a ticket price opens Ticket prices with that row's Price or offer focused", async ({ page }) => {
+    const rows = (await snapshot(page)).content.revamp!.prices.rows;
+    // The last option that shows a price (a row whose price is blank has no price on the page), not the first.
+    const row = rows.filter(item => item.price).at(-1)!;
+    expect(rows.indexOf(row)).toBeGreaterThan(0);
+    const target = `homepage.prices.row:${row.id}.price`;
+    const { x, y } = await fieldPoint(page, target);
+    await page.mouse.click(x, y);
+    await expect(partDialog(page).locator('[data-editor-dialog-panel="prices"]')).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe(target);
+    await expect(partDialog(page).locator(":focus")).toHaveAccessibleName("Price or offer");
+    await expect(partDialog(page).locator(":focus")).toHaveValue(row.price);
+  });
+
+  test("Schedule-owned text and the keyboard open the part, with no field focused", async ({ page }) => {
+    await page.getByRole("button", { name: /^Edit Ticket prices/ }).first().focus();
+    await page.keyboard.press("Enter");
+    await expect(partDialog(page).locator('[data-editor-dialog-panel="prices"]')).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(await focusedTarget(page)).toBeNull();
+    await expect(partDialog(page).locator("[data-edit-target-flash]")).toHaveCount(0);
+  });
+
+  test("closing and reopening with the part button does not jump back to the last field", async ({ page }) => {
+    const { x, y } = await fieldPoint(page, "homepage.hero.headlineLineOne");
+    await page.mouse.click(x, y);
+    await expect.poll(() => focusedTarget(page)).toBe("homepage.hero.headlineLineOne");
+    await page.keyboard.press("Escape");
+    await expect(partDialog(page)).toHaveCount(0);
+    await page.getByRole("button", { name: /^Edit Top of the page/ }).first().focus();
+    await page.keyboard.press("Enter");
+    await expect(partDialog(page).locator('[data-editor-dialog-panel="hero"]')).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(await focusedTarget(page)).toBeNull();
+  });
+
+  test("reduced motion: the ring shows without animating", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const { x, y } = await fieldPoint(page, "homepage.hero.headlineLineOne");
+    await page.mouse.click(x, y);
+    const field = partDialog(page).locator('[data-edit-target="homepage.hero.headlineLineOne"]');
+    await expect(field).toHaveAttribute("data-edit-target-flash", "static");
+    expect(await field.evaluate(element => getComputedStyle(element).animationName)).toBe("none");
+  });
+
+  test.describe("phone", () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+    test("the sheet opens on the field's section and focuses it", async ({ page }) => {
+      const { x, y } = await fieldPoint(page, "homepage.hero.headlineLineOne");
+      await page.mouse.click(x, y);
+      await expect(partDialog(page)).toHaveAttribute("data-view", "section");
+      await expect(partDialog(page).locator('[data-editor-dialog-panel="hero"]')).toBeVisible();
+      await expect.poll(() => focusedTarget(page)).toBe("homepage.hero.headlineLineOne");
+    });
+  });
+});
+
 test.describe("TELEMETRY-03 sponsor telemetry harness", () => {
   // At 2400 px one five-logo set (1400 px) leaves room for the clone's first four logos, so every counted sponsor is on screen twice at once.
   test.use({ viewport: { width: 2400, height: 900 } });
