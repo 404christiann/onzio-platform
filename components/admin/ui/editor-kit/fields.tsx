@@ -13,13 +13,15 @@ import styles from "./fields.module.css";
 export type ImageFieldWithDescriptionProps = AdminImageFieldProps & {
   /** One line on where the image appears or how it is cropped. */
   description: ReactNode;
+  /** Click-to-field: the id a preview click focuses the image control by. Stamped on the field's group only; none, no attribute. */
+  target?: EditTargetId;
 };
 
 /** AdminImageField (unchanged) plus a description line the field is described by. Square by default. */
-export function ImageFieldWithDescription({ description, shape = "square", size = 96, ...image }: ImageFieldWithDescriptionProps) {
+export function ImageFieldWithDescription({ description, target, shape = "square", size = 96, ...image }: ImageFieldWithDescriptionProps) {
   const descriptionId = useId();
   return (
-    <div className={styles.imageField} role="group" aria-label={image.label} aria-describedby={descriptionId} data-image-field-with-description="">
+    <div className={styles.imageField} role="group" aria-label={image.label} aria-describedby={descriptionId} data-image-field-with-description="" {...editTargetProps(target)}>
       <AdminImageField {...image} shape={shape} size={size} />
       <p id={descriptionId} className={styles.description}>{description}</p>
     </div>

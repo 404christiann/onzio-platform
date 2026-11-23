@@ -29,6 +29,7 @@ import {
 import { addPartner, loadCinematicPartnersEditor, movePartner, removePartner, saveCinematicPartnersEditor, unusedUploads } from "@/lib/cinematic-partners-editor";
 import "@/components/admin/homepage/homepage-editor.css";
 import { DISCARD_CONFIRM } from "../editor-copy";
+import { partnerStampsByCard, partnersOwnsTarget, partnersPageStampsByCard } from "./partners-edit-targets";
 import { PartnersDialogFields, type PartnersFieldsApi } from "./PartnerFields";
 import {
   PAGE_LABELS, changedPages, changedPartnerIds, logoUrl, mergeLogos, pageDialogId, pageSample, pageWithPartner, parseDialogId,
@@ -47,6 +48,9 @@ const PAGE = "Partners";
 const CRUMBS = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Partners" }];
 const DESCRIPTION = "Edit the Club Partners and Partnership Opportunities pages. Both pages show the same partner list. Save applies all changes together.";
 const PAGES: readonly PartnerPage[] = ["partners", "opportunities"];
+/** One stamps array per page, fixed: where a page's fields sit in its card does not depend on the draft. */
+const PAGE_STAMPS = partnersPageStampsByCard();
+const NO_STAMPS: readonly never[] = [];
 const REFUSED = "Review the fields. Each partner needs a name, each page a heading, and the button link must be an HTTPS URL, email or site page.";
 
 async function retireUploads(ids: string[]) {
@@ -282,6 +286,8 @@ export default function CinematicPartnersEditor() {
   const changedPageSet = useMemo(() => new Set(draft && snapshot ? changedPages(draft, saved) : []), [draft, snapshot, saved]);
   const changedPartners = useMemo(() => (draft && snapshot ? changedPartnerIds(draft, saved) : new Set<string>()), [draft, snapshot, saved]);
   const loading = !draft || !snapshot || loadedClubId !== club.id;
+  // Click-to-field: one stamps array per partner card, built once per deferred draft (a new array restarts that card's stamp watcher).
+  const partnerStamps = useMemo(() => partnerStampsByCard(deferred?.partners ?? []), [deferred]);
 
   if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={PAGE} breadcrumb={CRUMBS} description="This page is unavailable for the current website design. Sponsor logos are managed in Sponsors.">{null}</PageFrame>;
 
@@ -332,7 +338,8 @@ export default function CinematicPartnersEditor() {
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
         <PreviewCards sections={pageItems} label="Partner pages" renderPreview={previewOf} previewScale={0.46}
-          onEdit={(id, event) => dialog.openSection(id as PartnersDialogId, event)} />
+          stamps={id => PAGE_STAMPS.get(id) ?? NO_STAMPS} ownsTarget={partnersOwnsTarget}
+          onEdit={(id, event, target) => { dialog.openSection(id as PartnersDialogId, event); dialog.focusField(target); }} />
         {draft && <section className={styles.listSection} aria-labelledby="partners-list-heading">
           <div className={styles.listHead}>
             <h2 id="partners-list-heading">Partners</h2>
@@ -342,7 +349,8 @@ export default function CinematicPartnersEditor() {
           {draft.partners.length === 0 && <p className={styles.empty}>No partners yet. The pages hide the partner grid until one is added.</p>}
           <ItemPreviewCards items={partnerItems} noun="partner" label="Partners" disabled={locked} previewClassName={card.single}
             renderPreview={id => partnerPreviewOf(id)}
-            onEdit={(id, event) => dialog.openSection(id as PartnersDialogId, event)}
+            stamps={id => partnerStamps.get(id) ?? NO_STAMPS} ownsTarget={partnersOwnsTarget}
+            onEdit={(id, event, target) => { dialog.openSection(id as PartnersDialogId, event); dialog.focusField(target); }}
             onMove={(id, delta) => { const index = draft.partners.findIndex(partner => partnerDialogId(partner.id) === id); if (index >= 0) move(index, delta, false); }}
             add={{ label: draft.partners.length >= MAX_PARTNERS ? "List is full" : "Add partner", count: `${draft.partners.length} of ${MAX_PARTNERS}`, disabled: draft.partners.length >= MAX_PARTNERS, onAdd: addNew }}
             addRef={addRef} />
@@ -350,7 +358,7 @@ export default function CinematicPartnersEditor() {
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-partners-status="">{status}</p>
-    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title="Edit Partners" mode="split" returnFocusRef={dialog.returnFocusRef}
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title="Edit Partners" mode="split" returnFocusRef={dialog.returnFocusRef} focusRequest={dialog.focusRequest}
       sections={dialogSections} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as PartnersDialogId)}
       renderSection={id => dialog.open ? <PartnersDialogFields api={api} id={id as PartnersDialogId} /> : null}
       previewHint="How this looks on the page"

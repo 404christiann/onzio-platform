@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
 import { Shimmer } from "../Shimmer";
-import { resolveEditTarget, type EditTargetId } from "@/lib/admin-edit-targets";
+import { resolveEditTarget, type EditTargetId, type ResolvedEditTarget } from "@/lib/admin-edit-targets";
 import { editTargetHitAt, watchEditTargetStamps, type EditTargetStamp } from "./editTargets";
 import { useFitPreviewScale } from "./fitPreviewScale";
 import { KIT_EDIT_PROPS } from "./kitEdit";
@@ -34,6 +34,11 @@ export type PreviewCardsProps = {
    * changes (memoize per draft): a new array restarts that card's stamp watcher.
    */
   stamps?: (sectionId: string) => readonly EditTargetStamp[];
+  /**
+   * Whether a declared field belongs to the card `sectionId` (only with `stamps`). Default: the field's registry section
+   * is the card's id. Needed only when a card id cannot be a registry section name (it has a colon, like `page:partners`).
+   */
+  ownsTarget?: (sectionId: string, target: ResolvedEditTarget) => boolean;
   label?: string;
   /** Natural width the preview is laid out at, in px. Default 780. */
   previewWidth?: number;
@@ -107,18 +112,19 @@ function PreviewBox({ children, width, scale: fallbackScale, lazy, stamps }: { c
 }
 
 /** The declared field under a viewport point inside a card's preview, or null (a field of another section is ignored). */
-function fieldUnder(button: HTMLElement, sectionId: string, x: number, y: number) {
+function fieldUnder(button: HTMLElement, sectionId: string, x: number, y: number, ownsTarget?: PreviewCardsProps["ownsTarget"]) {
   const wrap = button.parentElement;
   const hit = wrap ? editTargetHitAt(wrap, x, y) : null;
-  return hit && resolveEditTarget(hit.id)?.section === sectionId ? hit : null;
+  const target = hit ? resolveEditTarget(hit.id) : null;
+  return hit && target && (ownsTarget ? ownsTarget(sectionId, target) : target.section === sectionId) ? hit : null;
 }
 
 /** The hover outline is moved directly (no React state), so moving the mouse never re-renders the cards. */
-function showFieldHover(button: HTMLElement, sectionId: string, x: number, y: number) {
+function showFieldHover(button: HTMLElement, sectionId: string, x: number, y: number, ownsTarget?: PreviewCardsProps["ownsTarget"]) {
   const clip = button.parentElement?.querySelector<HTMLElement>(":scope > [data-field-hover-clip]");
   const outline = clip?.firstElementChild as HTMLElement | null | undefined;
   if (!clip || !outline) return;
-  const hit = fieldUnder(button, sectionId, x, y);
+  const hit = fieldUnder(button, sectionId, x, y, ownsTarget);
   if (!hit) { outline.hidden = true; delete outline.dataset.target; return; }
   const box = clip.getBoundingClientRect();
   outline.style.left = `${hit.rect.left - box.left}px`;
@@ -153,6 +159,7 @@ export function PreviewCards({
   previewScale = 0.4,
   lazy = true,
   stamps,
+  ownsTarget,
 }: PreviewCardsProps) {
   return (
     <ul className={styles.grid} aria-label={label} data-preview-cards="">
@@ -170,9 +177,9 @@ export function PreviewCards({
                 tabIndex={-1}
                 // A pointer click opens the field under the pointer; Enter or Space (detail 0) opens the section, as before.
                 onClick={(event) => stamps
-                  ? onEdit(section.id, event, event.detail > 0 ? fieldUnder(event.currentTarget, section.id, event.clientX, event.clientY)?.id : undefined)
+                  ? onEdit(section.id, event, event.detail > 0 ? fieldUnder(event.currentTarget, section.id, event.clientX, event.clientY, ownsTarget)?.id : undefined)
                   : onEdit(section.id, event)}
-                onPointerMove={stamps ? (event) => { if (event.pointerType === "mouse") showFieldHover(event.currentTarget, section.id, event.clientX, event.clientY); } : undefined}
+                onPointerMove={stamps ? (event) => { if (event.pointerType === "mouse") showFieldHover(event.currentTarget, section.id, event.clientX, event.clientY, ownsTarget); } : undefined}
                 onPointerLeave={stamps ? (event) => hideFieldHover(event.currentTarget) : undefined}
                 data-preview-button=""
                 {...KIT_EDIT_PROPS}

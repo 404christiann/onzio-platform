@@ -10,6 +10,11 @@
 .previewButton { position: absolute; inset: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .previewButton:disabled { cursor: default; }
 .previewButton:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+/* Click-to-field (only with `stamps`): the outline of the field under a mouse pointer. Moved by script, never animated. */
+.fieldHoverClip { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.fieldHover { position: absolute; z-index: 3; border-radius: 3px; outline: 2px solid hsl(var(--primary)); outline-offset: 2px; background: hsl(var(--primary) / .1); pointer-events: none; }
+.fieldHover[hidden] { display: none; }
+@media (hover: none) { .fieldHover { display: none; } }
 .foot { display: flex; min-block-size: 64px; padding: 10px 12px; align-items: center; justify-content: space-between; gap: 8px; }
 .number { display: flex; min-inline-size: 0; flex-wrap: wrap; align-items: center; gap: 6px 8px; color: hsl(var(--muted-foreground)); font-size: .8125rem; font-weight: 500; }
 .dot { inline-size: 8px; block-size: 8px; flex: none; border-radius: 50%; background: hsl(48 100% 56%); box-shadow: 0 0 0 2px hsl(48 100% 56% / .3); }

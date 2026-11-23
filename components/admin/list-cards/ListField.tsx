@@ -2,19 +2,22 @@
 
 import { useId, type ReactNode } from "react";
 import { kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import { IconCaretDown, IconCaretUp, IconDelete } from "@/components/admin/icons";
 import { ValidationMessage } from "@/components/admin/ui/editor-kit";
 import styles from "./ListEditor.module.css";
 
 /** A labelled text field that says when it reaches the limit the page allows, and shows a save error under it. */
-export function ListField({ label, value, max, disabled, multiline, hint, error, onChange }: {
-  label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: ReactNode; error?: string; onChange: (value: string) => void;
+export function ListField({ label, value, max, disabled, multiline, hint, error, target, onChange }: {
+  label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: ReactNode; error?: string;
+  /** Click-to-field: the id a preview click focuses this field by. Stamped on the field's wrapper only; none, no attribute. */
+  target?: EditTargetId; onChange: (value: string) => void;
 }) {
   const id = useId();
   const atLimit = value.length >= max;
   const described = [hint ? `${id}-hint` : null, atLimit ? `${id}-limit` : null, error ? `${id}-error` : null].filter(Boolean).join(" ") || undefined;
   const props = { id, disabled, value, maxLength: max, "aria-invalid": error ? true : undefined, "aria-describedby": described } as const;
-  return <div className={kit.field}>
+  return <div className={kit.field} {...editTargetProps(target)}>
     <label htmlFor={id}>{label}</label>
     {multiline
       ? <textarea {...props} onChange={event => onChange(event.target.value)} />

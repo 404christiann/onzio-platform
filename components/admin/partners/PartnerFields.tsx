@@ -8,6 +8,8 @@ import { ListField, PositionTools } from "@/components/admin/list-cards/ListFiel
 import styles from "@/components/admin/list-cards/ListEditor.module.css";
 import NativeImage from "@/components/ResilientNativeImage";
 import { PARTNER_LOGO_TONES, PARTNERSHIP_ROUTE, type CinematicPartnersContent, type PartnerLogoMedia, type PartnerLogoTone, type PartnerPage } from "@/lib/cinematic-partners-content";
+import { editTargetProps } from "@/lib/admin-edit-targets";
+import { partnerPageTarget, partnerTarget } from "./partners-edit-targets";
 import { PAGE_ROUTES, TONES, TONE_SHORT, parseDialogId, partnerName, type PartnersDialogId } from "./partners-sections";
 
 export type PartnersFieldsApi = {
@@ -33,17 +35,17 @@ function PageFields({ api, page }: { api: PartnersFieldsApi; page: PartnerPage }
         <IconExternalLink size={14} aria-hidden="true" />Open this page<span className="sr-only"> (opens in a new tab)</span>
       </Link></p>
     <div className={styles.row2}>
-      <ListField label="Heading" value={copy.title} max={80} disabled={locked} error={errors[`pages.${page}.title`]} onChange={value => update(content => { content.pages[page].title = value; })} />
-      <ListField label="Subtitle" value={copy.subtitle} max={120} disabled={locked} onChange={value => update(content => { content.pages[page].subtitle = value; })} />
+      <ListField label="Heading" value={copy.title} max={80} disabled={locked} error={errors[`pages.${page}.title`]} target={partnerPageTarget(page, "title")} onChange={value => update(content => { content.pages[page].title = value; })} />
+      <ListField label="Subtitle" value={copy.subtitle} max={120} disabled={locked} target={partnerPageTarget(page, "subtitle")} onChange={value => update(content => { content.pages[page].subtitle = value; })} />
     </div>
-    <ListField label="Intro" value={copy.intro} max={1200} multiline disabled={locked} onChange={value => update(content => { content.pages[page].intro = value; })} />
+    <ListField label="Intro" value={copy.intro} max={1200} multiline disabled={locked} target={partnerPageTarget(page, "intro")} onChange={value => update(content => { content.pages[page].intro = value; })} />
     <div className={styles.row2}>
-      <ListField label="Bottom bar text" value={copy.ctaPrompt} max={160} disabled={locked} onChange={value => update(content => { content.pages[page].ctaPrompt = value; })} />
-      <ListField label="Button text" value={copy.ctaLabel} max={40} disabled={locked} hint="Leave blank to hide the bottom bar." onChange={value => update(content => { content.pages[page].ctaLabel = value; })} />
+      <ListField label="Bottom bar text" value={copy.ctaPrompt} max={160} disabled={locked} target={partnerPageTarget(page, "ctaPrompt")} onChange={value => update(content => { content.pages[page].ctaPrompt = value; })} />
+      <ListField label="Button text" value={copy.ctaLabel} max={40} disabled={locked} target={partnerPageTarget(page, "ctaLabel")} hint="Leave blank to hide the bottom bar." onChange={value => update(content => { content.pages[page].ctaLabel = value; })} />
     </div>
     {page === "partners"
       ? <p className={styles.note}>The button opens the Partnership Opportunities page ({PARTNERSHIP_ROUTE}).</p>
-      : <ListField label="Button link" value={draft.pages.opportunities.ctaHref} max={2000} disabled={locked} error={errors["pages.opportunities.ctaHref"]}
+      : <ListField label="Button link" value={draft.pages.opportunities.ctaHref} max={2000} disabled={locked} error={errors["pages.opportunities.ctaHref"]} target={partnerPageTarget("opportunities", "ctaHref")}
           hint="A full HTTPS link, a mailto: email address, or a site page starting with /. The bottom bar stays hidden until a link is saved."
           onChange={value => update(content => { content.pages.opportunities.ctaHref = value; })} />}
   </div>;
@@ -53,14 +55,17 @@ function LogoPicker({ api, partnerId, selected }: { api: PartnersFieldsApi; part
   const name = useId(), file = useRef<HTMLInputElement>(null);
   const { locked, uploading, logos, logoUrls, update, upload } = api;
   const set = (logoAssetId: string | null) => update(content => { const row = content.partners.find(partner => partner.id === partnerId); if (row) row.logoAssetId = logoAssetId; });
+  // The stamp sits on the chosen tile, so a click on the logo focuses the radio that is selected (not the first one).
+  const known = !!selected && logos.some(logo => logo.id === selected);
+  const chosen = (isChosen: boolean) => (isChosen ? editTargetProps(partnerTarget(partnerId, "logo")) : {});
   return <fieldset className={styles.picker}>
     <legend>Logo</legend>
     <div className={styles.tiles}>
-      <label className={styles.tile} data-none="">
+      <label className={styles.tile} data-none="" {...chosen(!known)}>
         <input type="radio" name={name} checked={!selected} disabled={locked} onChange={() => set(null)} />
         <span className={styles.tileLabel}>No logo</span>
       </label>
-      {logos.map(logo => <label key={logo.id} className={styles.tile} title={logo.label}>
+      {logos.map(logo => <label key={logo.id} className={styles.tile} title={logo.label} {...chosen(selected === logo.id)}>
         <input type="radio" name={name} checked={selected === logo.id} disabled={locked} onChange={() => set(logo.id)} />
         {logoUrls[logo.id] ? <><NativeImage src={logoUrls[logo.id]} alt="" /><span className="sr-only">{logo.label}</span></> : <span className={styles.tileLabel}>{logo.label}</span>}
       </label>)}
@@ -87,13 +92,13 @@ function PartnerFields({ api, id }: { api: PartnersFieldsApi; id: string }) {
   const set = (change: (row: typeof partner) => void) => update(content => { const row = content.partners.find(candidate => candidate.id === id); if (row) change(row); });
   const toneHint: ReactNode = partner.tone === "original" ? "Use Grey or Black for a white logo, so it shows on the white page." : `A white logo drawn ${partner.tone} on the white Partners pages.`;
   return <div className={styles.fields}>
-    <ListField label="Name" value={partner.name} max={80} disabled={locked} error={errors[`partners.${index}.name`]} onChange={value => set(row => { row.name = value; })} />
-    <ListField label="Role" value={partner.role} max={160} multiline disabled={locked} onChange={value => set(row => { row.role = value; })} />
+    <ListField label="Name" value={partner.name} max={80} disabled={locked} error={errors[`partners.${index}.name`]} target={partnerTarget(id, "name")} onChange={value => set(row => { row.name = value; })} />
+    <ListField label="Role" value={partner.role} max={160} multiline disabled={locked} target={partnerTarget(id, "role")} onChange={value => set(row => { row.role = value; })} />
     <LogoPicker api={api} partnerId={id} selected={partner.logoAssetId} />
     <fieldset className={styles.segmented}>
       <legend>Logo colour on the white page</legend>
       <div className={styles.segs}>
-        {PARTNER_LOGO_TONES.map((tone: PartnerLogoTone) => <label key={tone} className={styles.seg} title={TONES[tone]}>
+        {PARTNER_LOGO_TONES.map((tone: PartnerLogoTone) => <label key={tone} className={styles.seg} title={TONES[tone]} {...(partner.tone === tone ? editTargetProps(partnerTarget(id, "tone")) : {})}>
           <input type="radio" name={toneName} checked={partner.tone === tone} disabled={locked} onChange={() => set(row => { row.tone = tone; })} />
           <span aria-hidden="true">{TONE_SHORT[tone]}</span><span className="sr-only">{TONES[tone]}</span>
         </label>)}
