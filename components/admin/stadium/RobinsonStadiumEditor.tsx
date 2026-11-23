@@ -209,6 +209,9 @@ export default function RobinsonStadiumEditor() {
   const deferred = useDeferredValue(draft);
   const pageState = robinsonPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
   const changed = useMemo(() => new Set(draft && snapshot ? changedRobinsonSections(draft, snapshot.content) : []), [draft, snapshot]);
+  // Click-to-field stamps per section, rebuilt only when the (deferred) draft changes, so each card's stamp watcher restarts
+  // on a draft change and not on every render of the page.
+  const stampsBySection = useMemo(() => new Map(ROBINSON_SECTIONS.map(section => [section.id, deferred ? robinsonPreviewStamps(deferred, section.id) : []])), [deferred]);
   const page = draft ? hydrateRobinsonContent(draft, media) : null;
   const loading = !draft || !page || loadedClubId !== club.id;
 
@@ -244,7 +247,7 @@ export default function RobinsonStadiumEditor() {
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
         <PreviewCards sections={sectionItems} label="Robinson Stadium sections" renderPreview={previewOf} previewScale={0.46}
-          stamps={id => deferred ? robinsonPreviewStamps(deferred, id as RobinsonSectionId) : []}
+          stamps={id => stampsBySection.get(id as RobinsonSectionId) ?? []}
           onEdit={(id, event, target) => { dialog.openSection(id as RobinsonSectionId, event); dialog.focusField(target); }} />
       </PageFrame>
     </ShimmerRegion>

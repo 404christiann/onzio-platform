@@ -105,7 +105,9 @@ describe("Robinson Stadium: the editor and the public page", () => {
   });
 
   it("the cards stamp the draft the preview shows (the deferred one), per section", () => {
-    expect(editor).toMatch(/stamps=\{id => deferred \? robinsonPreviewStamps\(deferred, id as RobinsonSectionId\) : \[\]\}/);
+    expect(editor).toMatch(/const stampsBySection = useMemo\(\(\) => new Map\(ROBINSON_SECTIONS\.map\(section => \[section\.id, deferred \? robinsonPreviewStamps\(deferred, section\.id\) : \[\]\]\)\), \[deferred\]\);/);
+    // One array per section per draft: a new array restarts that card's stamp watcher, so it must not change per render.
+    expect(editor).toMatch(/stamps=\{id => stampsBySection\.get\(id as RobinsonSectionId\) \?\? \[\]\}/);
     expect(editor).toMatch(/const previewOf = \(id: string\) => deferred && <SectionLive/);
   });
 

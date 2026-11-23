@@ -30,7 +30,8 @@ export type PreviewCardsProps = {
   /**
    * Opt in to click-to-field: the edit targets to stamp on the public nodes inside one section's preview (this admin
    * preview only; the public site never gets them). Re-applied whenever the preview's content or these stamps change.
-   * Without it the cards behave and render exactly as before.
+   * Without it the cards behave and render exactly as before. Return the same array for a section until its content
+   * changes (memoize per draft): a new array restarts that card's stamp watcher.
    */
   stamps?: (sectionId: string) => readonly EditTargetStamp[];
   label?: string;

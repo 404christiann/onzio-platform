@@ -249,6 +249,6 @@ describe("Robinson stamps follow the draft", () => {
   it("the card re-stamps whenever the draft or the preview's content changes", () => {
     const kit = readFileSync("components/admin/ui/editor-kit/PreviewCards.tsx", "utf8");
     expect(kit).toMatch(/watchEditTargetStamps\(node, stamps\) : undefined;\s*\}, \[near, stamps\]\);/);
-    expect(readFileSync("components/admin/stadium/RobinsonStadiumEditor.tsx", "utf8")).toMatch(/robinsonPreviewStamps\(deferred, id as RobinsonSectionId\)/);
+    expect(readFileSync("components/admin/stadium/RobinsonStadiumEditor.tsx", "utf8")).toMatch(/robinsonPreviewStamps\(deferred, section\.id\) : \[\]\]\)\), \[deferred\]\);/);
   });
 });
