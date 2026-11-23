@@ -67,7 +67,8 @@ describe("the registry entries", () => {
   it("the registry file spreads the module with one line and imports nothing else new", () => {
     const registry = read("lib/admin-edit-targets.ts");
     expect(registry).toMatch(/^import \{ ABOUT_CONTACT_POLICIES_TARGETS \} from "\.\/edit-targets\/about-contact-policies";$/m);
-    expect(registry).toMatch(/^export const EDIT_TARGET_REGISTRY: EditTargetRegistry = \{\n  \.\.\.ABOUT_CONTACT_POLICIES_TARGETS,$/m);
+    // Exactly one spread line, wherever it sits: other areas' modules and comments share the registry (Schedule, Roster, #240).
+    expect(registry.match(/^  \.\.\.ABOUT_CONTACT_POLICIES_TARGETS,$/gm)).toHaveLength(1);
     expect(read("lib/edit-targets/about-contact-policies.ts")).not.toMatch(/^import(?! type)/m);
   });
 });
