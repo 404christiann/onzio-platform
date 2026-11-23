@@ -2,6 +2,7 @@
 
 import { useId, type ReactNode } from "react";
 import { IconAdd, IconClose } from "@/components/admin/icons";
+import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import { AdminImageField, type AdminImageFieldProps } from "../AdminImageField";
 import { appendItem, appendRow, appendString, patchAt, removeAt as removeItemAt, removeRow, setCell, setStringAt } from "./listOps";
 import { useStableKeys } from "./stableKeys";
@@ -70,6 +71,8 @@ export type StringListFieldProps = {
   placeholder?: string;
   multiline?: boolean;
   disabled?: boolean;
+  /** Click-to-field: the id a preview click focuses item `index` by. Stamped on the item's row only; none, no attribute. */
+  itemTarget?: (index: number) => EditTargetId | undefined;
 };
 
 export function StringListField({
@@ -85,6 +88,7 @@ export function StringListField({
   placeholder,
   multiline,
   disabled = false,
+  itemTarget,
 }: StringListFieldProps) {
   const id = useId();
   const { keys, removeAt } = useStableKeys(items.length);
@@ -97,7 +101,7 @@ export function StringListField({
       {description && <p className={styles.description}>{description}</p>}
       <ul className={styles.rows}>
         {items.map((value, index) => (
-          <li key={keys[index]} className={styles.row}>
+          <li key={keys[index]} className={styles.row} {...editTargetProps(itemTarget?.(index))}>
             {multiline ? (
               <textarea
                 className={styles.input}
@@ -222,6 +226,8 @@ export type TableEditorProps = {
   minRows?: number;
   rowLabel?: string;
   disabled?: boolean;
+  /** Click-to-field: the id a preview click focuses the cell at (`rowIndex`, column `key`) by. Stamped on the cell only; none, no attribute. */
+  cellTarget?: (rowIndex: number, columnKey: string) => EditTargetId | undefined;
 };
 
 /** Text cells in a table of N columns and up to M rows, with add and remove row. */
@@ -235,6 +241,7 @@ export function TableEditor({
   minRows = 0,
   rowLabel = "row",
   disabled = false,
+  cellTarget,
 }: TableEditorProps) {
   const id = useId();
   const { keys, removeAt } = useStableKeys(rows.length);
@@ -258,7 +265,7 @@ export function TableEditor({
             {rows.map((row, rowIndex) => (
               <tr key={keys[rowIndex]}>
                 {columns.map((column, columnIndex) => (
-                  <td key={column.key}>
+                  <td key={column.key} {...editTargetProps(cellTarget?.(rowIndex, column.key))}>
                     <input
                       className={styles.input}
                       aria-label={`${column.label}, ${rowLabel} ${rowIndex + 1}`}

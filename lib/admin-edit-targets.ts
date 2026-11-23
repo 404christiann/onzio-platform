@@ -176,6 +176,33 @@ export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
       directions: { fields: ["directionsHeading", "directionsBody", "parkingHeading", "parkingBody", "parkingNote"] },
     },
   },
+  /**
+   * Rose City (cinematic@2) Season Ticket Membership (/admin/season-membership). Sections are SEASON_SECTIONS ids. Price rows
+   * and benefits are keyed by the row's stable id; the three price columns and the intro's two string lists by position
+   * (`row:<n>.column`, `row:<n>.highlight`, `row:<n>.include`).
+   */
+  seasonMembership: {
+    route: "/admin/season-membership",
+    sections: {
+      heading: { fields: ["title", "subtitle"] },
+      intro: { fields: ["text", "includesHeading"], rowFields: ["highlight", "include"] },
+      pricing: { fields: ["sectionLabel", "footnote"], rowFields: ["column", "name", "price0", "price1", "price2", "badgeAlt"] },
+      button: { fields: ["label", "href"] },
+      benefits: { fields: ["heading"], rowFields: ["label", "iconAlt"] },
+      closing: { fields: ["heading", "ticketImageAlt"] },
+    },
+  },
+  /** Rose City (cinematic@2) Know Before You Go (/admin/know-before-you-go). Sections are KBYG_SECTIONS ids; match-day tiles are keyed by the tile's stable id. */
+  knowBeforeYouGo: {
+    route: "/admin/know-before-you-go",
+    sections: {
+      heading: { fields: ["title", "subtitle"] },
+      match: { fields: ["competition", "watchLabel", "watchHref", "youtubeImageAlt"] },
+      facts: { rowFields: ["label", "iconAlt"] },
+      raffle: { fields: ["heading", "subheading", "imageAlt", "body"] },
+      donor: { fields: ["heading", "name", "imageAlt", "body", "buttonLabel", "buttonHref"] },
+    },
+  },
 };
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);

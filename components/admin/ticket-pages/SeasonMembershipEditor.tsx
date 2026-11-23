@@ -9,6 +9,10 @@ import { addListItem, moveListItem, removeListItem } from "@/lib/cinematic-ticke
 import { AddButton, IMAGE_NOTE, ImageSlot, ReorderTools, ShowRow, TextField } from "./editor-parts";
 import TicketPageEditor, { type TicketPageFieldsApi } from "./TicketPageEditor";
 import { SEASON_SPEC, ticketPageSectionShown, type SeasonSectionId } from "./ticket-page-sections";
+import {
+  SEASON_TARGETS, seasonBadgeAltTarget, seasonBenefitIconAltTarget, seasonBenefitLabelTarget, seasonColumnTarget, seasonHighlightTarget, seasonIncludeTarget,
+  seasonPreviewStamps, seasonPriceNameTarget, seasonPriceTarget,
+} from "./ticket-page-edit-targets";
 import styles from "./ticket-editors.module.css";
 
 const ICON_HINT = "Leave the description empty: the label says what it is. Upload icons on the 752 × 350 canvas (PNG or WebP) so every icon keeps its size and lines up.";
@@ -42,7 +46,7 @@ function PriceTable({ api }: { api: Api }) {
     set({ rows: pricing.rows.map((row, position) => ({ ...row, name: next[position][0], prices: next[position].slice(1, 4) })) });
   }
   return <div className={styles.table}>
-    <div className={styles.three}>{pricing.columns.map((column, index) => <TextField key={index} label={`Column ${index + 1} heading`} value={column} max={120} disabled={locked}
+    <div className={styles.three}>{pricing.columns.map((column, index) => <TextField key={index} label={`Column ${index + 1} heading`} value={column} max={120} disabled={locked} target={seasonColumnTarget(index)}
       hint={index === 0 ? "End a heading with * to show Sam's red star." : undefined} onChange={value => set({ columns: pricing.columns.map((current, position) => position === index ? value : current) })} />)}</div>
     <div onClickCapture={event => {
       const button = (event.target as HTMLElement).closest<HTMLElement>('button[aria-label^="Remove seating section "]');
@@ -50,9 +54,13 @@ function PriceTable({ api }: { api: Api }) {
       if (number) removing.current = Number(number) - 1;
     }}>
       <TableEditor label="Price table" description="One row per seating section. The footnote shows under the table." columns={columns} rows={rows} onChange={onRows}
-        maxRows={MAX_SEASON_PRICE_ROWS} rowLabel="seating section" disabled={locked} />
+        maxRows={MAX_SEASON_PRICE_ROWS} rowLabel="seating section" disabled={locked}
+        cellTarget={(rowIndex, key) => {
+          const row = pricing.rows[rowIndex];
+          return row ? (key === "name" ? seasonPriceNameTarget(row.id) : seasonPriceTarget(row.id, Number(key.slice("price-".length)))) : undefined;
+        }} />
     </div>
-    <TextField label="Footnote" value={pricing.footnote} max={4000} multiline disabled={locked} onChange={footnote => set({ footnote })} />
+    <TextField label="Footnote" value={pricing.footnote} max={4000} multiline disabled={locked} target={SEASON_TARGETS.pricingFootnote} onChange={footnote => set({ footnote })} />
     {pricing.rows.length > 0 && <div className={kit.stack}>
       <p className={styles.note}>Each seating section has its own badge picture.</p>
       <div className={styles.grid}>{pricing.rows.map((row, index) => <fieldset key={row.id} className={styles.tile}>
@@ -69,12 +77,13 @@ function badge(api: Api, slot: string, name: string): ReactNode {
   const { draft, view, locked, uploading, change, upload, removeImage } = api;
   if (!draft.images[slot]) return null;
   return <ImageSlot key={slot} bare label={`Badge for ${name}`} description="PNG or WebP. Sam's round “G” badge for General Seating." size={64} previewUrl={view.images[slot]?.url ?? null} alt={draft.images[slot].alt}
-    hasImage={!!draft.images[slot].assetId} disabled={locked} uploading={uploading === slot} hint="Leave the description empty."
+    hasImage={!!draft.images[slot].assetId} disabled={locked} uploading={uploading === slot} hint="Leave the description empty." altTarget={seasonBadgeAltTarget(slot)}
     onUpload={file => upload(slot, file)} onRemove={() => removeImage(slot)}
     onAlt={alt => change(content => ({ ...content, images: { ...content.images, [slot]: { ...content.images[slot], alt } } }))} />;
 }
 
-function fields(api: Api, id: string): ReactNode {
+/** The dialog body for one card. Exported so the contract tests can render every card's controls. */
+export function fields(api: Api, id: string): ReactNode {
   const { draft, view, locked, uploading, change, setShown, upload, removeImage } = api;
   const section = id as SeasonSectionId, { heading, intro, pricing, button, benefits, closing } = draft;
   const set = <S extends keyof SeasonMembershipContent>(part: S, value: Partial<SeasonMembershipContent[S]>) => change(content => ({ ...content, [part]: { ...content[part], ...value } }));
@@ -83,31 +92,31 @@ function fields(api: Api, id: string): ReactNode {
   let body: ReactNode = null;
   switch (section) {
     case "heading": body = <div className={styles.two}>
-      <TextField label="Title" value={heading.title} max={120} disabled={locked} onChange={value => set("heading", { title: value })} />
-      <TextField label="Subtitle (red line)" value={heading.subtitle} max={120} disabled={locked} onChange={subtitle => set("heading", { subtitle })} />
+      <TextField label="Title" value={heading.title} max={120} disabled={locked} target={SEASON_TARGETS.headingTitle} onChange={value => set("heading", { title: value })} />
+      <TextField label="Subtitle (red line)" value={heading.subtitle} max={120} disabled={locked} target={SEASON_TARGETS.headingSubtitle} onChange={subtitle => set("heading", { subtitle })} />
     </div>; break;
     case "intro": body = <>
-      <TextField label="Introduction" value={intro.text} max={4000} multiline disabled={locked} onChange={text => set("intro", { text })} />
-      <StringListField label="Highlights" itemLabel="highlight" items={intro.highlights} max={MAX_SEASON_HIGHLIGHTS} maxLength={4000} multiline disabled={locked} onChange={highlights => set("intro", { highlights })} />
-      <TextField label="List heading" value={intro.includesHeading} max={120} disabled={locked} onChange={includesHeading => set("intro", { includesHeading })} />
-      <StringListField label="Included items" itemLabel="included item" items={intro.includes} max={MAX_SEASON_INCLUDES} maxLength={4000} multiline disabled={locked} onChange={includes => set("intro", { includes })} />
+      <TextField label="Introduction" value={intro.text} max={4000} multiline disabled={locked} target={SEASON_TARGETS.introText} onChange={text => set("intro", { text })} />
+      <StringListField label="Highlights" itemLabel="highlight" items={intro.highlights} max={MAX_SEASON_HIGHLIGHTS} maxLength={4000} multiline disabled={locked} itemTarget={seasonHighlightTarget} onChange={highlights => set("intro", { highlights })} />
+      <TextField label="List heading" value={intro.includesHeading} max={120} disabled={locked} target={SEASON_TARGETS.introIncludesHeading} onChange={includesHeading => set("intro", { includesHeading })} />
+      <StringListField label="Included items" itemLabel="included item" items={intro.includes} max={MAX_SEASON_INCLUDES} maxLength={4000} multiline disabled={locked} itemTarget={seasonIncludeTarget} onChange={includes => set("intro", { includes })} />
     </>; break;
     case "pricing": body = <>
-      <TextField label="Section heading" value={pricing.sectionLabel} max={120} disabled={locked} onChange={sectionLabel => set("pricing", { sectionLabel })} />
+      <TextField label="Section heading" value={pricing.sectionLabel} max={120} disabled={locked} target={SEASON_TARGETS.pricingSectionLabel} onChange={sectionLabel => set("pricing", { sectionLabel })} />
       <PriceTable api={api} />
     </>; break;
     case "button": body = <div className={styles.two}>
-      <TextField label="Button text" value={button.label} max={60} disabled={locked} onChange={label => set("button", { label })} />
-      <TextField label="Button link" value={button.href} max={2000} disabled={locked} hint={LINK_HINT} onChange={href => set("button", { href })} />
+      <TextField label="Button text" value={button.label} max={60} disabled={locked} target={SEASON_TARGETS.buttonLabel} onChange={label => set("button", { label })} />
+      <TextField label="Button link" value={button.href} max={2000} disabled={locked} hint={LINK_HINT} target={SEASON_TARGETS.buttonHref} onChange={href => set("button", { href })} />
     </div>; break;
     case "benefits": body = <>
-      <TextField label="Heading" value={benefits.heading} max={120} disabled={locked} onChange={value => set("benefits", { heading: value })} />
+      <TextField label="Heading" value={benefits.heading} max={120} disabled={locked} target={SEASON_TARGETS.benefitsHeading} onChange={value => set("benefits", { heading: value })} />
       <p className={styles.note}>Shown 3 across on desktop and phones. Each benefit has its own icon.</p>
       <div className={styles.grid}>{benefits.items.map((item, index) => <fieldset key={item.id} className={styles.tile}>
         <legend>Benefit {index + 1}</legend>
-        <TextField label="Label" value={item.label} max={120} disabled={locked} onChange={label => set("benefits", { items: benefits.items.map((current, position) => position === index ? { ...current, label } : current) })} />
+        <TextField label="Label" value={item.label} max={120} disabled={locked} target={seasonBenefitLabelTarget(item.id)} onChange={label => set("benefits", { items: benefits.items.map((current, position) => position === index ? { ...current, label } : current) })} />
         {draft.images[item.id] && <ImageSlot bare label={`Icon for benefit ${index + 1}`} description="PNG or WebP." size={64} hint={ICON_HINT} previewUrl={view.images[item.id]?.url ?? null} alt={draft.images[item.id].alt}
-          hasImage={!!draft.images[item.id].assetId} disabled={locked} uploading={uploading === item.id} onUpload={file => upload(item.id, file)} onRemove={() => removeImage(item.id)}
+          hasImage={!!draft.images[item.id].assetId} disabled={locked} uploading={uploading === item.id} altTarget={seasonBenefitIconAltTarget(item.id)} onUpload={file => upload(item.id, file)} onRemove={() => removeImage(item.id)}
           onAlt={alt => change(content => ({ ...content, images: { ...content.images, [item.id]: { ...content.images[item.id], alt } } }))} />}
         <ReorderTools index={index} length={benefits.items.length} disabled={locked} noun="benefit" onMove={delta => change(content => moveListItem("season-membership", content, "benefits", index, delta))}
           onRemove={() => change(content => removeListItem("season-membership", content, "benefits", index))} />
@@ -116,10 +125,10 @@ function fields(api: Api, id: string): ReactNode {
       <p className={styles.note}>{benefits.items.length} of {MAX_SEASON_BENEFITS} benefits.</p>
     </>; break;
     case "closing": body = <>
-      <TextField label="Heading" value={closing.heading} max={120} disabled={locked} onChange={value => set("closing", { heading: value })} />
+      <TextField label="Heading" value={closing.heading} max={120} disabled={locked} target={SEASON_TARGETS.closingHeading} onChange={value => set("closing", { heading: value })} />
       <p className={styles.note}>The Buy button under the heading is the one from the Buy button card.</p>
       {draft.images.ticket && <ImageSlot label="Ticket graphic" description="PNG or WebP. Shown under the button." previewUrl={view.images.ticket?.url ?? null} alt={draft.images.ticket.alt} hasImage={!!draft.images.ticket.assetId}
-        disabled={locked} uploading={uploading === "ticket"} hint="Describe what the ticket shows, for people using screen readers." onUpload={file => upload("ticket", file)} onRemove={() => removeImage("ticket")}
+        disabled={locked} uploading={uploading === "ticket"} altTarget={SEASON_TARGETS.closingTicketImageAlt} hint="Describe what the ticket shows, for people using screen readers." onUpload={file => upload("ticket", file)} onRemove={() => removeImage("ticket")}
         onAlt={alt => change(content => ({ ...content, images: { ...content.images, ticket: { ...content.images.ticket, alt } } }))} />}
     </>; break;
   }
@@ -130,8 +139,11 @@ function fields(api: Api, id: string): ReactNode {
   </div>;
 }
 
+/** Module-level, so TicketPageEditor builds each card's stamps once per draft. */
+const stamps = (content: SeasonMembershipContent, id: string) => seasonPreviewStamps(content, id as SeasonSectionId);
+
 export default function SeasonMembershipEditor() {
   return <TicketPageEditor spec={SEASON_SPEC} title="Season Ticket Membership" description="Edit the Season Ticket Membership page in the Tickets menu. Save applies all changes together."
-    openPageHref="/tickets/season-membership" renderFields={fields}
+    openPageHref="/tickets/season-membership" renderFields={fields} stamps={stamps}
     renderLive={view => <CinematicSeasonMembership content={view} placeholders />} />;
 }
