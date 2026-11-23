@@ -301,6 +301,18 @@ describe("Contact stamps on the real public markup", () => {
     expect(nodesFor(root, contactRowTarget("information", "destination"))).toHaveLength(0);
   });
 
+  it("only the button's stamp claims the 'Link pending' box, so it never depends on which stamp runs last", () => {
+    const pending = { ...contact, informationHref: "" };
+    const root = parseStaticMarkup(renderToStaticMarkup(createElement("div", { className: "only", "data-only": "information" }, createElement(CinematicContact, { content: pending }))));
+    const box = [...root.querySelectorAll(".contact-pending")];
+    expect(box).toHaveLength(1);
+    const claims = contactPreviewStamps("information").flatMap(stamp => {
+      const index = [...root.querySelectorAll(stamp.selector)].indexOf(box[0]);
+      return index < 0 ? [] : [stamp.target(box[0] as unknown as Element, index)];
+    }).filter(Boolean);
+    expect(claims).toEqual([contactRowTarget("information", "action")]);
+  });
+
   it("the page always draws five rows in CONTACT_ACTIONS order, even with every text blank, so a row's position is its action's", () => {
     const blank = structuredClone(contact);
     for (const action of CONTACT_ACTIONS) { blank.rows[action].prompt = ""; blank.rows[action].action = ""; }

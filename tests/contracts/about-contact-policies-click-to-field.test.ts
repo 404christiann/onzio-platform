@@ -249,6 +249,12 @@ describe("Policies: a card owns exactly its own fields (the card id has a colon,
     expect(lookalike.filter(card => policiesOwnsTarget(card, resolved(lineTarget("accessibility", 1))))).toEqual([rowDialogId("accessibility")]);
     expect(lookalike.filter(card => policiesOwnsTarget(card, resolved(rowHeadingTarget("accessibility-l1"))))).toEqual([rowDialogId("accessibility-l1")]);
   });
+  it("a line is its row's only when everything after `-l` is digits, so a row whose id starts `<row>-l` keeps its own lines", () => {
+    // "accessibility-lounge-l1" starts with "accessibility-l": only the digits check keeps it off the "accessibility" card.
+    const lookalike = [PAGE_DIALOG_ID, rowDialogId("accessibility"), rowDialogId("accessibility-lounge")];
+    expect(lookalike.filter(card => policiesOwnsTarget(card, resolved(lineTarget("accessibility-lounge", 1))))).toEqual([rowDialogId("accessibility-lounge")]);
+    expect(policiesOwnsTarget(rowDialogId("accessibility"), resolved(lineTarget("accessibility", 12)))).toBe(true);
+  });
   it("a field of another editor, or an id that is no card, is owned by nothing", () => {
     const home = resolveEditTarget("homepage.hero.eyebrow") as ResolvedEditTarget;
     expect(cards.filter(card => policiesOwnsTarget(card, home))).toEqual([]);

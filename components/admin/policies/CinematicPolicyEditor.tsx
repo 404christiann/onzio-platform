@@ -98,10 +98,9 @@ export default function CinematicPolicyEditor() {
   useEffect(() => {
     let active = true;
     setShared(null); setSharedSettled(false);
-    if (club.presentationTemplateKey !== "cinematic@2") return;
     fetchCinematicHomepageContent(club.id).then(content => { if (active) setShared(content); }).catch(() => undefined).finally(() => { if (active) setSharedSettled(true); });
     return () => { active = false; };
-  }, [club.id, club.presentationTemplateKey]);
+  }, [club.id]);
 
   useEffect(() => {
     if (!draft || !snapshot || !recoveryKey.current) return;
