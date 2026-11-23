@@ -18,31 +18,32 @@ export type SponsorField = "name" | "website" | "logo";
 
 export const sponsorTarget = (draftKey: string, field: SponsorField): EditTargetId => editTarget("sponsors", "carousel", field, draftKey);
 
+/** A sponsor in the strip: its draft key and the logo URL the preview draws for it. */
+export type SponsorStripEntry = { key: string; logoUrl: string };
+
 /**
- * Where the carousel's logos show: every image in either `.sponsor-set` (the real set, then its clone), mapped to the sponsor
- * that draws it. `draftKeys` is the keys of the sponsors in the place, in the order the strip draws them.
+ * Where the carousel's logos show: every image in either `.sponsor-set` (the real set, then its looping clone), mapped to
+ * the sponsor whose logo it draws. Matched by the image's URL, never by position: a broken logo is drawn as a fallback
+ * box in the real set and as nothing at all in the clone (ResilientNativeImage returns null for an empty alt), so any
+ * count of images or slots would hand the logos after it to the wrong sponsor. Sponsors that share one URL are told apart
+ * by their order among that URL's images in the same set (they fail or load together, so the order holds).
  */
-export function sponsorStamps(draftKeys: readonly string[]): EditTargetStamp[] {
+export function sponsorStamps(sponsors: readonly SponsorStripEntry[]): EditTargetStamp[] {
   return [{
     selector: ".sponsor-set img",
-    // By the sponsor's own slot in its set, not by image count: a broken logo is drawn as a fallback box (no img), so
-    // counting images would hand every later logo to the wrong sponsor.
     target: element => {
-      const slot = sponsorSlot(element);
-      return slot !== null && slot < draftKeys.length ? sponsorTarget(draftKeys[slot], "logo") : null;
+      const src = element.getAttribute("src");
+      const owners = src ? sponsors.filter(sponsor => sponsor.logoUrl === src) : [];
+      if (owners.length <= 1) return owners[0] ? sponsorTarget(owners[0].key, "logo") : null;
+      const set = element.closest(".sponsor-set");
+      const sameUrl = set ? Array.from(set.querySelectorAll<Element>("img")).filter(image => image.getAttribute("src") === src) : [];
+      const owner = owners[sameUrl.indexOf(element)];
+      return owner ? sponsorTarget(owner.key, "logo") : null;
     },
   }];
 }
 
-/** The position of the sponsor that draws `element` within its `.sponsor-set` (each sponsor is one child: an img or a link). */
-export function sponsorSlot(element: Element): number | null {
-  for (let node: Element | null = element; node?.parentElement; node = node.parentElement) {
-    if (node.parentElement.classList.contains("sponsor-set")) return Array.from(node.parentElement.children).indexOf(node);
-  }
-  return null;
-}
-
 /** One stamps array per place, by the place id (the card's section id). */
-export function sponsorStampsByPlace(draftKeysByPlace: Readonly<Partial<Record<Place, readonly string[]>>>): Map<string, EditTargetStamp[]> {
-  return new Map(Object.entries(draftKeysByPlace).map(([place, keys]) => [place, sponsorStamps(keys ?? [])]));
+export function sponsorStampsByPlace(sponsorsByPlace: Readonly<Partial<Record<Place, readonly SponsorStripEntry[]>>>): Map<string, EditTargetStamp[]> {
+  return new Map(Object.entries(sponsorsByPlace).map(([place, sponsors]) => [place, sponsorStamps(sponsors ?? [])]));
 }

@@ -210,13 +210,16 @@ test.describe("UI-PREVIEW-CLICK-VISITOR-2/3: list rows open their own row's fiel
   test("Tickets: every stamp in every card is on that card's own visible section (none on a node the card's CSS hides)", async ({ page }) => {
     await ready(page, "/admin/tickets", "page");
     for (const section of ["page", "perks", "includes", "transit", "directions"]) {
-      const stamped = await card(page, section).evaluate(element => Array.from(element.querySelectorAll("[data-edit-target]")).map(node => ({
-        id: node.getAttribute("data-edit-target"), shown: node.getClientRects().length > 0 && getComputedStyle(node).visibility !== "hidden" && !node.closest("[hidden]"),
-      })));
-      for (const node of stamped) {
-        expect(node.id?.startsWith(`tickets.${section}.`), `${node.id} is stamped in the ${section} card`).toBe(true);
-        expect(node.shown, `${node.id} is shown in the ${section} card`).toBe(true);
-      }
+      // Cards mount lazily and their images take a moment to get a box: bring each into view and poll until it settles,
+      // instead of reading it once (that read flaked on a slow full run).
+      await card(page, section).scrollIntoViewIfNeeded();
+      await expect.poll(async () => {
+        const stamped = await card(page, section).evaluate(element => Array.from(element.querySelectorAll("[data-edit-target]")).map(node => ({
+          id: node.getAttribute("data-edit-target"), shown: node.getClientRects().length > 0 && getComputedStyle(node).visibility !== "hidden" && !node.closest("[hidden]"),
+        })));
+        if (!stamped.length) return ["no stamps yet"];
+        return stamped.filter(node => !node.id?.startsWith(`tickets.${section}.`) || !node.shown).map(node => `${node.id} (${node.shown ? "other section" : "hidden"})`);
+      }, { message: `stamps in the ${section} card`, timeout: 15_000 }).toEqual([]);
     }
   });
   test("Season Ticket Membership: the second price row's price, keyed by the row's id", async ({ page }) => {

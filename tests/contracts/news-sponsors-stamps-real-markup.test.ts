@@ -21,7 +21,11 @@ import type { SponsorDraft } from "@/lib/sponsor-content";
  * none, and no stamped node is, or is inside, a node the card's CSS hides.
  */
 vi.mock("@/components/ClubContextProvider", () => ({ useClubContext: () => ({ id: "club-1", name: "Rose City FC" }) }));
-vi.mock("@/components/ResilientNativeImage", () => ({ default: ({ src, alt, className }: { src: string; alt: string; className?: string }) => createElement("img", { src, alt, className }) }));
+/** URLs whose image fails to load. The mock then does what ResilientNativeImage does on failure: no alt (the strip's
+ *  looping clone) renders nothing, an alt renders the fallback box instead of an img. */
+const failing = new Set<string>();
+vi.mock("@/components/ResilientNativeImage", () => ({ default: ({ src, alt, className }: { src: string; alt: string; className?: string }) =>
+  failing.has(src) ? (alt ? createElement("div", { role: "img", "aria-label": `${alt} unavailable`, className: "image-fallback" }) : null) : createElement("img", { src, alt, className }) }));
 vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 vi.mock("next/link", () => ({ default: ({ href, className, style, children }: { href: string; className?: string; style?: object; children: ReactNode }) => createElement("a", { href, className, style }, children) }));
 import { CinematicNewsList } from "@/components/cinematic/CinematicNews";
@@ -140,10 +144,10 @@ const rowsOf = (drafts: readonly SponsorDraft[]): DBSiteSponsorLogo[] => drafts.
   id: draft.id ?? `draft-${draft.key}`, placement: "carousel", name: draft.name.trim() || `Sponsor ${index + 1}`, logo_url: draft.logo_url, sort_order: index,
   show_on_homepage: true, show_in_footer: false, website_url: null, created_at: "",
 }));
-function stripRoot(drafts: readonly SponsorDraft[], keys = drafts.map(draft => draft.key)) {
+function stripRoot(drafts: readonly SponsorDraft[], strip = drafts.map(draft => ({ key: draft.key, logoUrl: draft.logo_url ?? "" }))) {
   const root = parseStaticMarkup(renderToStaticMarkup(createElement("div", null,
     createElement(CinematicSponsors, { sponsors: rowsOf(drafts), treatments: {}, heading: "Powered by our partners" }))));
-  applyEditTargetStamps(root as unknown as ParentNode, sponsorStampsByPlace({ carousel: keys }).get("carousel")!);
+  applyEditTargetStamps(root as unknown as ParentNode, sponsorStampsByPlace({ carousel: strip }).get("carousel")!);
   return root;
 }
 
@@ -191,7 +195,7 @@ describe("Rose City Sponsors: the carousel stamps on the real public markup", ()
     unstamped(root, ".partners > h2");
     unstamped(root, ".sponsor-set");
     expect(stampedIds(stripRoot([], []))).toEqual([]);
-    expect(sponsorStamps([])[0].target(null as never, 0)).toBeNull();
+    expect(sponsorStamps([])[0].target({ getAttribute: () => "https://media.test/any.webp" } as never, 0)).toBeNull();
   });
 
   it("the declared fields with no node on the preview are exactly the name and the website", () => {
@@ -206,16 +210,33 @@ describe("Rose City Sponsors: the carousel stamps on the real public markup", ()
   });
 });
 
-describe("sponsor logos map by their slot, not by image count", () => {
-  it("a broken logo drawn as a fallback box (no img) does not shift the later sponsors", async () => {
-    const { parseStaticMarkup } = await import("../helpers/static-dom");
-    const { sponsorStamps } = await import("@/components/admin/sponsors/rose-city/sponsors-edit-targets");
-    const { applyEditTargetStamps } = await import("@/components/admin/ui/editor-kit/editTargets");
-    // Real set: a, b's broken logo drawn as a fallback span (no img), c inside its link; the clone set has the same three slots.
-    const root = parseStaticMarkup('<div class="sponsor-set"><img src="a.png" alt="A"/><span class="fallback">B unavailable</span><a href="/r/c"><img src="c.png" alt="C"/></a></div>'
-      + '<div class="sponsor-set" aria-hidden="true"><img src="a.png" alt=""/><span></span><a href="/r/c"><img src="c.png" alt=""/></a></div>');
-    applyEditTargetStamps(root as unknown as ParentNode, sponsorStamps(["key-a", "key-b", "key-c"]));
-    const ids = root.querySelectorAll("img").map(img => img.getAttribute("data-edit-target"));
-    expect(ids).toEqual(["sponsors.carousel.row:key-a.logo", "sponsors.carousel.row:key-c.logo", "sponsors.carousel.row:key-a.logo", "sponsors.carousel.row:key-c.logo"]);
+describe("sponsor logos map by URL, so a failed logo never shifts the others (real CinematicSponsors)", () => {
+  const cases: [string, number[]][] = [["the first logo fails", [0]], ["a middle logo fails", [1]], ["the first and last logos fail", [0, 2]]];
+  it.each(cases)("%s: every logo still drawn opens its own sponsor, in the real set and the looping clone", (_, failed) => {
+    const drafts = sponsorDraftsFixture();
+    failed.forEach(index => failing.add(drafts[index].logo_url!));
+    try {
+      const root = stripRoot(drafts);
+      const sets = root.querySelectorAll(".sponsor-set");
+      expect(sets).toHaveLength(2);
+      // The real component: the clone drew nothing for a failed logo, the real set drew a fallback box.
+      expect(sets[1].querySelectorAll("img")).toHaveLength(drafts.length - failed.length);
+      for (const image of root.querySelectorAll(".sponsor-set img")) {
+        const owner = drafts.find(draft => draft.logo_url === image.getAttribute("src"))!;
+        expect(image.getAttribute(EDIT_TARGET_ATTRIBUTE)).toBe(sponsorTarget(owner.key, "logo"));
+      }
+    } finally {
+      failing.clear();
+    }
+  });
+
+  it("two sponsors sharing one logo URL are told apart by their order in each set", () => {
+    const drafts = sponsorDraftsFixture();
+    drafts[2] = { ...drafts[2], logo_url: drafts[0].logo_url };
+    const root = stripRoot(drafts);
+    for (const set of root.querySelectorAll(".sponsor-set")) {
+      const shared = set.querySelectorAll("img").filter(image => image.getAttribute("src") === drafts[0].logo_url);
+      expect(shared.map(image => image.getAttribute(EDIT_TARGET_ATTRIBUTE))).toEqual([sponsorTarget(drafts[0].key, "logo"), sponsorTarget(drafts[2].key, "logo")]);
+    }
   });
 });

@@ -364,10 +364,12 @@ export default function RoseCitySponsorsEditor() {
 
   const loading = loadedClubId !== clubId;
   const deferred = useDeferredValue(drafts);
-  // Click-to-field: the sponsors' keys in the order the preview draws them, from the draft the preview shows (the deferred one).
-  // A string so typing a name (same keys) does not rebuild the stamps and restart the preview's watcher.
-  const carouselKeys = inPlace(deferred, "carousel").map((draft) => draft.key).join("\n");
-  const placeStamps = useMemo(() => sponsorStampsByPlace({ carousel: carouselKeys ? carouselKeys.split("\n") : [] }), [carouselKeys]);
+  // Click-to-field: the sponsors the preview draws (the deferred draft), matched to their logos by URL.
+  // One line per sponsor (key, then logo URL), so typing a name does not rebuild the stamps and restart the preview's watcher.
+  const carouselStrip = inPlace(deferred, "carousel").map((draft) => `${draft.key}\t${draft.logo_url}`).join("\n");
+  const placeStamps = useMemo(() => sponsorStampsByPlace({
+    carousel: carouselStrip ? carouselStrip.split("\n").map((line) => { const [key, logoUrl = ""] = line.split("\t"); return { key, logoUrl }; }) : [],
+  }), [carouselStrip]);
   const pageState = uploading ? "saving" : derivePageSaveState(saveAction.state, failure);
   const changedPlaces = useMemo(() => new Set(PLACES.filter((place) =>
     JSON.stringify(inPlace(drafts, place)) !== JSON.stringify(inPlace(baseDrafts, place)))), [drafts, baseDrafts]);

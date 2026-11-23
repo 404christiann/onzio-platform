@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { NEWS_IDS, NEWS_NEW_KEY, SPONSOR_KEYS, newsDraftFixture, sponsorDraftsFixture } from "../fixtures/visitor-click-fixtures";
+import { NEWS_IDS, NEWS_NEW_KEY, SPONSOR_KEYS, newsDraftFixture, sponsorDraftsFixture, sponsorLogoUrl } from "../fixtures/visitor-click-fixtures";
 import { EDIT_TARGET_ATTRIBUTE, EDIT_TARGET_REGISTRY, resolveEditTarget } from "@/lib/admin-edit-targets";
 import { NewsArticleFields, type NewsFieldsApi } from "@/components/admin/news/NewsArticleFields";
 import { NEWS_FIELD_SECTION, newsOwnsTarget, newsSectionOf, newsStampsByCard, newsTarget, type NewsField } from "@/components/admin/news/news-edit-targets";
@@ -179,14 +179,12 @@ describe("Sponsors: every declared field has its control in the dialog", () => {
     expect(markup.indexOf(se(SPONSOR_KEYS[2], "name"))).toBeLessThan(markup.indexOf(se(SPONSOR_KEYS[0], "name")));
   });
 
-  it("the stamps map holds one array per place, built from the keys alone", () => {
-    const stamps = sponsorStampsByPlace({ carousel: SPONSOR_KEYS });
+  it("the stamps map holds one array per place, matching a logo to its sponsor by URL", () => {
+    const stamps = sponsorStampsByPlace({ carousel: SPONSOR_KEYS.map((key, index) => ({ key, logoUrl: sponsorLogoUrl(index) })) });
     expect([...stamps.keys()]).toEqual(["carousel"]);
-    // The second sponsor's slot in a set: <div class="sponsor-set"><img/><img/></div>.
-    const set = { classList: { contains: (name: string) => name === "sponsor-set" }, children: [] as unknown[], parentElement: null };
-    const logos = [0, 1].map(() => ({ parentElement: set }));
-    set.children.push(...logos);
-    expect(stamps.get("carousel")![0].target(logos[1] as never, 0)).toBe(sponsorTarget(SPONSOR_KEYS[1], "logo"));
+    const logo = (src: string) => ({ getAttribute: (name: string) => (name === "src" ? src : null) });
+    expect(stamps.get("carousel")![0].target(logo(sponsorLogoUrl(1)) as never, 0)).toBe(sponsorTarget(SPONSOR_KEYS[1], "logo"));
+    expect(stamps.get("carousel")![0].target(logo("https://media.test/other.webp") as never, 1)).toBeNull();
   });
 });
 
@@ -199,15 +197,16 @@ describe("the Rose City Sponsors editor", () => {
     expect(editor).toMatch(/focusRequest=\{dialog\.focusRequest\}/);
   });
 
-  it("the card stamps the draft the preview shows (the deferred one), rebuilt only when the sponsors' keys change", () => {
-    expect(editor).toMatch(/const carouselKeys = inPlace\(deferred, "carousel"\)\.map\(\(draft\) => draft\.key\)\.join\("\\n"\);/);
-    expect(editor).toMatch(/const placeStamps = useMemo\(\(\) => sponsorStampsByPlace\(\{ carousel: carouselKeys \? carouselKeys\.split\("\\n"\) : \[\] \}\), \[carouselKeys\]\);/);
+  it("the card stamps the draft the preview shows (the deferred one), rebuilt only when the sponsors' keys or logos change", () => {
+    expect(editor).toMatch(/const carouselStrip = inPlace\(deferred, "carousel"\)\.map\(\(draft\) => `\$\{draft\.key\}\\t\$\{draft\.logo_url\}`\)\.join\("\\n"\);/);
+    expect(editor).toMatch(/const placeStamps = useMemo\(\(\) => sponsorStampsByPlace\(\{[\s\S]*?\}\), \[carouselStrip\]\);/);
     expect(editor).toMatch(/stamps=\{\(id\) => placeStamps\.get\(id\) \?\? NO_STAMPS\}/);
   });
 
-  it("the preview is stamped on both sets, each logo mapped by its sponsor's slot in its own set (clone and real alike)", () => {
+  it("the preview is stamped on both sets, each logo matched to its sponsor by URL (never by position)", () => {
     expect(targets).toMatch(/selector: "\.sponsor-set img"/);
-    expect(targets).toMatch(/const slot = sponsorSlot\(element\);\s*return slot !== null && slot < draftKeys\.length \? sponsorTarget\(draftKeys\[slot\], "logo"\) : null;/);
+    expect(targets).toMatch(/const owners = src \? sponsors\.filter\(sponsor => sponsor\.logoUrl === src\) : \[\];/);
+    expect(targets).not.toMatch(/index %|sponsorSlot/);
   });
 
   it("the dialog's own sections stay as they were, and the public strip gains nothing", () => {

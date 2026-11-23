@@ -531,6 +531,34 @@ test.describe("UI-PREVIEW-CLICK-LIST-2: Rose City Sponsors", () => {
     await expect(dialog(page).locator(`[data-sponsor-row="${rowKey(target)}"] :focus`)).toHaveCount(1);
   });
 
+  test("a logo that fails to load (fallback box in the strip, nothing in its clone) never shifts the other logos to the wrong sponsor", async ({ page }) => {
+    await openSponsors(page);
+    const card = strip(page);
+    // Each logo's URL and its sponsor's id, from a normal load.
+    const owners = await card.locator(".sponsor-set").first().locator("img[data-edit-target]").evaluateAll(nodes =>
+      nodes.map(node => [node.getAttribute("src") as string, node.getAttribute("data-edit-target") as string] as const));
+    expect(owners.length).toBeGreaterThan(1);
+    const idBySrc = new Map(owners);
+    const [failedSrc] = owners[0];
+    // Make the first logo fail for real, so ResilientNativeImage takes its failure path.
+    await page.route(failedSrc, route => route.fulfill({ status: 404, body: "" }));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(strip(page)).toBeVisible({ timeout: 60_000 });
+    await expect.poll(() => card.locator(".sponsor-set").nth(1).locator("img").count(), { timeout: 30_000 }).toBe(owners.length - 1);
+    await expect.poll(() => card.locator(".sponsor-set").first().locator("img").count()).toBe(owners.length - 1);
+    // Every logo still drawn, in the strip and its clone, carries its own sponsor's id.
+    await expect.poll(async () => (await card.locator(".sponsor-set img").evaluateAll(nodes =>
+      nodes.map(node => [node.getAttribute("src"), node.getAttribute("data-edit-target")]))).every(([src, id]) => id === idBySrc.get(src as string))).toBe(true);
+    // The clone's first logo is now the second sponsor's: a click opens that sponsor's row, not the failed one's.
+    await holdStrip(page, "clone");
+    const target = owners[1][1];
+    const { x, y } = await pointIn(card, `.sponsor-set[aria-hidden="true"] img${stamped(target)}`);
+    await page.mouse.click(x, y);
+    await expect(panel(page, "carousel")).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe(target);
+    await expect(dialog(page).locator(`[data-sponsor-row="${rowKey(target)}"] :focus`)).toHaveCount(1);
+  });
+
   test("the strip's heading, a click away, the footer Edit and the keyboard open the card with no field focused", async ({ page }) => {
     await openSponsors(page);
     const card = strip(page);
