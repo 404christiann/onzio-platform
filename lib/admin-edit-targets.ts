@@ -11,6 +11,7 @@
  */
 
 import { SCHEDULE_EDIT_TARGETS } from "@/lib/edit-targets/schedule";
+import { ROSE_CITY_ROSTER_EDIT_TARGETS } from "@/lib/edit-targets/roster";
 
 export const EDIT_TARGET_ATTRIBUTE = "data-edit-target";
 export const EDIT_TARGET_SELECTOR = `[${EDIT_TARGET_ATTRIBUTE}]`;
@@ -281,6 +282,7 @@ export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
     },
   },
   ...SCHEDULE_EDIT_TARGETS,
+  ...ROSE_CITY_ROSTER_EDIT_TARGETS,
 };
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);

@@ -5,7 +5,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubId } from "@/components/ClubContextProvider";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
-import { EditorDialog, PageSaveButton, derivePageSaveState, type EditorDialogSection } from "@/components/admin/ui/editor-kit";
+import { EditorDialog, PageSaveButton, derivePageSaveState, type EditorDialogFocusRequest, type EditorDialogSection } from "@/components/admin/ui/editor-kit";
 import { createClient } from "@/lib/admin-client";
 import { getRosterImageSrc, isRosterPlaceholderLogo } from "@/lib/roster-images";
 import { emptyPlayer, type Player, type PlayerForm } from "../roster-model";
@@ -23,6 +23,8 @@ export type PlayerDialogProps = {
   activeId: string | null;
   onActiveChange: (id: PlayerSectionId) => void;
   returnFocusRef: RefObject<HTMLElement | null>;
+  /** From useEditorDialog().focusRequest: the field a preview click asked for, focused once its section shows. */
+  focusRequest?: EditorDialogFocusRequest | null;
   onSaved: (player: Player, previous: Player | null, warning?: string) => Promise<void>;
   onClose: () => void;
 };
@@ -55,7 +57,7 @@ function ActivityFieldset({ saving, onActivity, onPicker, children }: {
  * classic editor's player dialog (rose-city-roster-save.ts), in the same order. Season stats and Save player go
  * together; action photos still write straight away.
  */
-export function RoseCityPlayerDialog({ original, open, activeId, onActiveChange, returnFocusRef, onSaved, onClose }: PlayerDialogProps) {
+export function RoseCityPlayerDialog({ original, open, activeId, onActiveChange, returnFocusRef, focusRequest, onSaved, onClose }: PlayerDialogProps) {
   const clubId = useClubId();
   const { clubLogoUrl } = useClubBranding();
   const [persisted, setPersisted] = useState<Player | null>(original);
@@ -200,13 +202,13 @@ export function RoseCityPlayerDialog({ original, open, activeId, onActiveChange,
   function renderSection(id: string): ReactNode {
     const body = (() => {
       switch (id as PlayerSectionId) {
-        case "basics": return <PlayerBasicsFields form={form} onChange={change} problems={problems} photoPreview={shownPhoto} uploading={saving}
+        case "basics": return <PlayerBasicsFields playerId={persisted?.id} form={form} onChange={change} problems={problems} photoPreview={shownPhoto} uploading={saving}
           onPhotoChange={file => { noteActivity(); setPhoto(file); setError(""); setFailed(false); }} onPhotoPendingChange={photoPendingChanged} />;
-        case "details": return <PlayerDetailsFields form={form} onChange={change} problems={problems} />;
-        case "background": return <PlayerBackgroundFields form={form} onChange={change} />;
-        case "stats": return persisted ? <RosterStatsSection keeper={form.position === "Goalkeeper"} state={stats} /> : null;
+        case "details": return <PlayerDetailsFields playerId={persisted?.id} form={form} onChange={change} problems={problems} />;
+        case "background": return <PlayerBackgroundFields playerId={persisted?.id} form={form} onChange={change} />;
+        case "stats": return persisted ? <RosterStatsSection playerId={persisted.id} keeper={form.position === "Goalkeeper"} state={stats} /> : null;
         case "photos": return persisted ? <RosterActionPhotos playerId={persisted.id} /> : null;
-        case "visibility": return <PlayerVisibilityFields active={active} disabled={saving} onChange={next => { setActive(next); setError(""); setFailed(false); }} />;
+        case "visibility": return <PlayerVisibilityFields playerId={persisted?.id} active={active} disabled={saving} onChange={next => { setActive(next); setError(""); setFailed(false); }} />;
         default: return null;
       }
     })();
@@ -229,6 +231,6 @@ export function RoseCityPlayerDialog({ original, open, activeId, onActiveChange,
   return (
     <EditorDialog open={open} onClose={close} title={persisted ? `Edit ${form.name.trim() || "player"}` : "Add player"}
       sections={sections} activeId={activeId} onActiveChange={id => onActiveChange(id as PlayerSectionId)} renderSection={renderSection}
-      returnFocusRef={returnFocusRef} footer={footer} />
+      returnFocusRef={returnFocusRef} focusRequest={focusRequest} footer={footer} />
   );
 }

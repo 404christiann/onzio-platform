@@ -10,12 +10,14 @@ import { useAdminToast } from "@/components/admin/ui/AdminToast";
 import { PageFrame, useEditorDialog } from "@/components/admin/ui/editor-kit";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/admin-client";
+import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { fetchActiveSeason } from "@/lib/queries";
 import type { Player, Position } from "../roster-model";
 import classic from "../classic-roster.module.css";
 import { RoseCityPlayerDialog } from "./RoseCityPlayerDialog";
 import { RosterPlayerCard } from "./RosterPlayerCard";
 import type { PlayerSectionId } from "./RosterPlayerFields";
+import { rosterSectionOf } from "./roster-edit-targets";
 import {
   DEFAULT_ROSTER_FILTERS, ROSTER_POSITIONS, ROSTER_POSITION_ABBR, groupPlayers, type RosterFilters, type SeasonLine,
 } from "./rose-city-roster-model";
@@ -86,9 +88,12 @@ export default function RoseCityRosterPage({ StaffComponent }: { StaffComponent:
   const counts = useMemo(() => Object.fromEntries(ROSTER_POSITIONS.map(position => [position, players.filter(player => player.position === position).length])) as Record<Position, number>, [players]);
   const activeCount = players.filter(player => player.active).length;
 
-  function openPlayer(player: Player | null, event?: MouseEvent<HTMLElement>) {
+  /** `target` is the field clicked on the player's card: its section opens, not always Basics, and the field is focused. */
+  function openPlayer(player: Player | null, event?: MouseEvent<HTMLElement>, target?: EditTargetId) {
+    const section = player ? rosterSectionOf(target, player.id) : undefined;
     setEditor({ key: ++editorKey.current, player });
-    dialog.openSection("basics", event);
+    dialog.openSection(section ?? "basics", event);
+    if (section) dialog.focusField(target);
   }
 
   async function saved(player: Player, previous: Player | null, warning?: string) {
@@ -177,7 +182,7 @@ export default function RoseCityRosterPage({ StaffComponent }: { StaffComponent:
                 <ul className={styles.grid} aria-label={`${group.position}s`}>
                   {group.players.map(player => (
                     <RosterPlayerCard key={player.id} player={player} totals={totals ? (player.position === "Goalkeeper" ? totals.keeper : totals.field)[player.id] ?? {} : undefined} flash={flash === player.id}
-                      switching={switching.has(player.id)} onEdit={event => openPlayer(player, event)} onVisibleChange={active => void toggleCard(player, active)} />
+                      switching={switching.has(player.id)} onEdit={(event, target) => openPlayer(player, event, target)} onVisibleChange={active => void toggleCard(player, active)} />
                   ))}
                 </ul>
               </section>
@@ -211,7 +216,7 @@ export default function RoseCityRosterPage({ StaffComponent }: { StaffComponent:
       </PageFrame>
       {editor && (
         <RoseCityPlayerDialog key={editor.key} original={editor.player} open={dialog.open} activeId={dialog.activeId}
-          onActiveChange={dialog.switchTo} returnFocusRef={dialog.returnFocusRef} onSaved={saved} onClose={closeEditor} />
+          onActiveChange={dialog.switchTo} returnFocusRef={dialog.returnFocusRef} focusRequest={dialog.focusRequest} onSaved={saved} onClose={closeEditor} />
       )}
     </>
   );
