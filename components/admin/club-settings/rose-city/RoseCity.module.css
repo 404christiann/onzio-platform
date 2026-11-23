@@ -1,6 +1,5 @@
 .fields { display: grid; gap: 16px; min-inline-size: 0; }
 .notice { display: grid; gap: 8px; min-inline-size: 0; }
-.livePreview { border: 1px solid hsl(var(--border)); border-radius: 12px; overflow: hidden; min-inline-size: 0; }
 .operatorNote { margin: 12px 2px 0; font-size: 13px; color: hsl(var(--muted-foreground)); }
 .card { border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--card)); padding: 18px 20px; min-inline-size: 0; }
 .card h2 { margin: 0 0 4px; font-size: 17px; font-weight: 600; }

@@ -365,6 +365,26 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           >
             <Menu className="size-5" aria-hidden="true" />
           </button>
+          {/* Under lg the sidebar is a drawer, so its crest is out of sight: the bar shows the club's own logo, from the
+              same branding source as the public site and the sidebar. */}
+          <Link
+            href="/admin"
+            data-admin-header-logo=""
+            className="flex h-11 min-w-0 max-w-20 shrink items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-w-28 lg:hidden"
+          >
+            {clubLogoUrl ? (
+              <Image
+                src={clubLogoUrl}
+                alt={club.name}
+                width={112}
+                height={32}
+                className="h-8 w-auto max-w-full rounded-md bg-white object-contain p-0.5"
+                fallback={<span className="truncate text-sm font-semibold text-foreground">{club.name}</span>}
+              />
+            ) : (
+              <span className="truncate text-sm font-semibold text-foreground">{club.name}</span>
+            )}
+          </Link>
           {/* A framed page keeps the slot and its content but invisible (no box, no landmark, no focus), so the search box and
               theme button never move when the page registers its frame after first paint. */}
           <div className={topTrail === "none" ? "invisible hidden min-w-0 xl:block" : "hidden min-w-0 xl:block"} aria-hidden={topTrail === "none" || undefined}>

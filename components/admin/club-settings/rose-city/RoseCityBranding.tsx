@@ -5,7 +5,6 @@ import Image from "@/components/ResilientImage";
 import Footer from "@/components/Footer";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider, useClubBranding } from "@/components/ClubBrandingProvider";
-import ScaledPagePreview from "@/components/admin/ScaledPagePreview";
 import { DISCARD_CONFIRM } from "@/components/admin/editor-copy";
 import { kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ListField } from "@/components/admin/list-cards/ListField";
@@ -28,13 +27,18 @@ import {
   draftFromRows, type BrandingDraft, type BrandingSaveProgress,
 } from "../branding-draft";
 import { roseCityBrandingErrors, roseCityBrandingInvalid, roseCityTaglineFromBranding } from "./rose-city-branding";
+import { RoseCityFooterPreview } from "./RoseCityFooterPreview";
 import { RoseCityFrame } from "./RoseCityFrame";
+import { CinematicContentProvider, useCinematicContent } from "@/components/cinematic/CinematicContent";
 import classic from "../ClubSettings.module.css";
 import styles from "./RoseCity.module.css";
 
 type SectionId = "logo" | "footer";
 
 const where = ["Website navigation", "Website footer", "Next match card", "Admin login and menu", "Players without a photo", "Browser tab icon"];
+const FOOTER_LOGO_NOTE = "Your footer shows its own footer logo, set by Onzio, so this logo isn’t in the footer.";
+const NO_LOGO_NOTE = "No logo yet. The footer shows your club name instead.";
+const FOOTER_LOGO_TAGLINE_HINT = "Your footer shows its own footer logo in place of the club name and tagline, so this line isn’t shown there right now.";
 const graphicTypes = ["image/png", "image/webp"] as const;
 const errorText = (error: unknown) => error instanceof Error ? error.message : "The change could not be completed.";
 const TAGLINE_HINT = "Shown under the club name in the footer. Press Enter for a second line.";
@@ -42,6 +46,9 @@ const TAGLINE_HINT = "Shown under the club name in the footer. Press Enter for a
 export function RoseCityBranding() {
   const club = useClubContext();
   const { setClubLogoPath, refreshClubBranding } = useClubBranding();
+  // Loaded once here and handed to the preview's footer, so the note and the preview agree and nothing fetches twice.
+  const cinematic = useCinematicContent();
+  const footerHasOwnLogo = Boolean(cinematic.content?.footerLogo?.url);
   const [draft, setDraft] = useState<BrandingDraft | null>(null);
   const [confirmed, setConfirmed] = useState<BrandingDraft | null>(null);
   const [inversePath, setInversePath] = useState("");
@@ -320,13 +327,13 @@ export function RoseCityBranding() {
   ] : [];
 
   const footerPreview = draft ? (
-    <div className={styles.livePreview} aria-label="Footer preview">
-      <ScaledPagePreview>
+    <RoseCityFooterPreview loading={cinematic.loading}>
+      <CinematicContentProvider initialContent={cinematic.content}>
         <ClubBrandingProvider key={draft.logoPath} initialBranding={{ logoPath: draft.logoPath, inverseLogoPath: inversePath, footerTagline: resolveFooterTagline(draft.tagline) }}>
           <Footer overrides={preview} />
         </ClubBrandingProvider>
-      </ScaledPagePreview>
-    </div>
+      </CinematicContentProvider>
+    </RoseCityFooterPreview>
   ) : null;
 
   function renderSection(id: string) {
@@ -343,7 +350,8 @@ export function RoseCityBranding() {
             ))}
           </div>
           {inversePath && <p className={classic.hint}>The dark preview uses the club’s existing inverse logo.</p>}
-          <ul className={classic.where} aria-label="Where the logo appears">{where.map((place) => <li key={place}>{place}</li>)}</ul>
+          <ul className={classic.where} aria-label="Where the logo appears">{where.filter((place) => !footerHasOwnLogo || place !== "Website footer").map((place) => <li key={place}>{place}</li>)}</ul>
+          {footerHasOwnLogo ? <p className={classic.hint}>{FOOTER_LOGO_NOTE}</p> : !draft.logoPath && <p className={classic.hint}>{NO_LOGO_NOTE}</p>}
           <div ref={mediaField} className={classic.upload}>
             <AdminImageField
               label="Club logo" previewUrl={clubLogoUrl(draft.logoPath)} initials="?" shape="square" size={64}
@@ -362,7 +370,7 @@ export function RoseCityBranding() {
       <div className={styles.fields}>
         <ListField
           label="Footer tagline" value={draft.tagline} max={FOOTER_TAGLINE_LIMIT} multiline disabled={locked} error={shown.tagline}
-          hint={draft.tagline.trim() ? TAGLINE_HINT : `${TAGLINE_HINT} Not set: the footer shows Onzio’s standard wording until you add a line.`}
+          hint={footerHasOwnLogo ? FOOTER_LOGO_TAGLINE_HINT : draft.tagline.trim() ? TAGLINE_HINT : `${TAGLINE_HINT} Not set: the footer shows Onzio’s standard wording until you add a line.`}
           onChange={(value) => updateDraft({ ...latest.current!, tagline: value })}
         />
         <p className={classic.hint}>The links behind the social icons in the public website footer. Leave a link empty to hide its icon.</p>
@@ -409,7 +417,7 @@ export function RoseCityBranding() {
         open={dialog.open} onClose={dialog.close} title="Edit branding" mode="split" returnFocusRef={dialog.returnFocusRef}
         sections={sections} activeId={dialog.activeId} onActiveChange={(id) => dialog.switchTo(id as SectionId)}
         renderSection={(id) => dialog.open ? renderSection(id) : null}
-        previewHint="How the website footer looks" renderPreview={() => dialog.open ? footerPreview : null}
+        previewHint="Website footer, desktop" renderPreview={() => dialog.open ? footerPreview : null}
       />}
       <AdminConfirmDialog
         open={confirmDiscard} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive

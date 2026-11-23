@@ -604,6 +604,7 @@ describe("the shared preview link guard", () => {
     "components/admin/contact/ContactPageCanvas.tsx",
     "components/admin/ProgramCanvasFrame.tsx",
     "components/admin/TryoutsPreviewFrame.tsx",
+    "components/admin/club-settings/rose-city/RoseCityFooterPreview.tsx",
   ];
   it("lives in the kit and is exported from its index", () => {
     expect(read("components/admin/ui/editor-kit/index.ts")).toMatch(/usePreviewLinkGuard[^}]*\}\s*from "\.\/previewLinkGuard"/);
