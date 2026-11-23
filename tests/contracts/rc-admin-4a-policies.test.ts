@@ -135,7 +135,7 @@ describe("Policies dialog fields", () => {
 describe("Policies editor source", () => {
   const source = readFileSync("components/admin/policies/CinematicPolicyEditor.tsx", "utf8");
   it("is built on the editor kit and keeps one POST to the same endpoint and the same recovery key", () => {
-    for (const piece of ["PageFrame", "SectionCards", "EditorDialog", "useSaveState", "useUnsavedGuard"]) expect(source).toContain(piece);
+    for (const piece of ["PageFrame", "PreviewCards", "EditorDialog", "useSaveState", "useUnsavedGuard"]) expect(source).toContain(piece);
     expect(source).not.toContain("EditorSaveBar");
     expect(source).toContain("onzio:cinematic-policies:v1:");
     expect(readFileSync("lib/cinematic-policies-editor.ts", "utf8")).toContain('fetch("/api/admin/cinematic-policies", { method: "POST"');

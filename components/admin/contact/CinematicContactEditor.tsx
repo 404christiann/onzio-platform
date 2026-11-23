@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
@@ -9,9 +9,13 @@ import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import {
-  EditorDialog, PageFrame, PageFrameSkeleton, SectionCards, SectionCardsSkeleton, ValidationMessage, useEditorDialog,
+  EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
 } from "@/components/admin/ui/editor-kit";
+import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
+import CinematicContact from "@/components/cinematic/CinematicContact";
+import CinematicShell from "@/components/cinematic/CinematicShell";
 import { createClient } from "@/lib/admin-client";
+import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import {
   cinematicContactDraftSchema, cinematicContactSaveSchema, starterCinematicContactContent,
   type CinematicContactContent, type CinematicContactSave, type CinematicContactSnapshot,
@@ -20,8 +24,9 @@ import { loadCinematicContactEditor, saveCinematicContactEditor } from "@/lib/ci
 import { DISCARD_CONFIRM } from "../editor-copy";
 import styles from "./ContactEditor.module.css";
 import { ContactSectionFields, type ContactFieldsApi } from "./ContactSectionFields";
+import { contactPreviewStamps } from "./contact-edit-targets";
 import {
-  CONTACT_SECTIONS, buildContactSaveInput, changedContactSections, contactFieldErrors, contactPageState, contactSectionOfPath, contactSectionSummary,
+  CONTACT_SECTIONS, buildContactSaveInput, changedContactSections, contactFieldErrors, contactPageState, contactSectionSlice, contactSectionSummary,
   firstContactErrorSection, type ContactSectionId,
 } from "./contact-sections";
 
@@ -32,6 +37,14 @@ const recoverySchema = z.object({
 const PAGE = "Contact";
 const CRUMBS = [{ label: "Website" }, { label: "Pages", href: "/admin/website-pages" as const }];
 const DESCRIPTION = "The heading and five contact rows on your Contact page. Save applies all changes together.";
+
+/** The real public Contact page, fed the draft, with the heading and the other rows hidden by CSS. Re-renders only when its own slice changes. */
+const SectionLive = memo(function SectionLive({ id, content, shared }: { id: ContactSectionId; content: CinematicContactContent; shared: CinematicHomepageContent | null; slice: string }) {
+  return <div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}><CinematicContact content={content} /></CinematicShell></div>;
+}, (a, b) => a.id === b.id && a.slice === b.slice && a.shared === b.shared);
+
+/** One stamps array per card, fixed: where a card's fields sit on the public page does not depend on the draft. */
+const STAMPS = new Map<string, ReturnType<typeof contactPreviewStamps>>(CONTACT_SECTIONS.map(section => [section.id, contactPreviewStamps(section.id)]));
 
 export default function CinematicContactEditor() {
   const club = useClubContext();
@@ -48,6 +61,7 @@ export default function CinematicContactEditor() {
   const [showErrors, setShowErrors] = useState(false);
   const [loadedClubId, setLoadedClubId] = useState<string | null>(null);
   const [confirmReload, setConfirmReload] = useState(false);
+  const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [sharedSettled, setSharedSettled] = useState(false);
   const recoveryKey = useRef<string | null>(null), epoch = useRef(0), keepRef = useRef<HTMLButtonElement>(null);
   const dialog = useEditorDialog<ContactSectionId>();
   const dirty = !!snapshot && !!draft && JSON.stringify(snapshot.content ?? starterCinematicContactContent()) !== JSON.stringify(draft);
@@ -84,6 +98,14 @@ export default function CinematicContactEditor() {
     }).catch(error => { if (active) { setMessage(error instanceof Error ? error.message : "Unable to load Contact."); setFailed(true); } });
     return () => { active = false; epoch.current += 1; };
   }, [club.id, club.presentationTemplateKey]);
+
+  // The previews' site shell reads the Homepage content once here, so no card or dialog preview fetches it on its own.
+  useEffect(() => {
+    let active = true;
+    setShared(null); setSharedSettled(false);
+    fetchCinematicHomepageContent(club.id).then(content => { if (active) setShared(content); }).catch(() => undefined).finally(() => { if (active) setSharedSettled(true); });
+    return () => { active = false; };
+  }, [club.id]);
 
   useEffect(() => {
     if (!draft || !snapshot || !recoveryKey.current) return;
@@ -180,18 +202,12 @@ export default function CinematicContactEditor() {
   const changed = useMemo(() => new Set(draft && snapshot ? changedContactSections(draft, snapshot.content) : []), [draft, snapshot]);
   const errors = useMemo(() => showErrors && draft ? contactFieldErrors(draft) : {}, [showErrors, draft]);
   const loading = !draft || loadedClubId !== club.id;
+  const deferred = useDeferredValue(draft);
 
   if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={PAGE} breadcrumb={CRUMBS} description="This Contact editor is unavailable for this website design.">{null}</PageFrame>;
 
-  const errorSections = new Set(Object.keys(errors).map(contactSectionOfPath));
-  const sectionItems = draft ? CONTACT_SECTIONS.map(section => ({
-    id: section.id, title: section.title, disabled: locked,
-    summary: <>
-      {contactSectionSummary(draft, section.id)}
-      {changed.has(section.id) && <span className={styles.srOnly}> (unsaved changes)</span>}
-      {errorSections.has(section.id) && <span className={styles.srOnly}> (needs attention)</span>}
-    </>,
-  })) : [];
+  const sectionItems = draft ? CONTACT_SECTIONS.map(section => ({ id: section.id, title: section.title, disabled: locked, changed: changed.has(section.id) })) : [];
+  const previewOf = (id: string) => deferred && sharedSettled && <SectionLive id={id as ContactSectionId} content={deferred} shared={shared} slice={contactSectionSlice(deferred, id as ContactSectionId)} />;
   const api: ContactFieldsApi | null = draft ? { draft, locked, errors, update } : null;
   const starter = !!snapshot && snapshot.content === null;
 
@@ -213,19 +229,25 @@ export default function CinematicContactEditor() {
 
   return <>
     <ShimmerRegion loading={loading} loadingLabel="Loading Contact…" minHeight={480}
-      skeleton={<div><PageFrameSkeleton cardCount={0} description /><SectionCardsSkeleton count={CONTACT_SECTIONS.length} /></div>}>
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={CONTACT_SECTIONS.length} /></div>}>
       <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/contact" description={DESCRIPTION} state={pageState}
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
-        <SectionCards sections={sectionItems} label="Contact sections" onEdit={(id, event) => dialog.openSection(id as ContactSectionId, event)} />
+        <PreviewCards sections={sectionItems} label="Contact sections" renderPreview={previewOf} previewScale={0.46}
+          stamps={id => STAMPS.get(id) ?? []}
+          onEdit={(id, event, target) => { dialog.openSection(id as ContactSectionId, event); dialog.focusField(target); }} />
         <p className={styles.fixed}>The five rows and their order are fixed by the Contact page design.</p>
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-contact-status="">{status}</p>
-    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE}`} returnFocusRef={dialog.returnFocusRef}
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE}`} mode="split" returnFocusRef={dialog.returnFocusRef} focusRequest={dialog.focusRequest}
       sections={CONTACT_SECTIONS.map(section => ({ id: section.id, title: section.title, summary: draft && contactSectionSummary(draft, section.id) }))}
       activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as ContactSectionId)}
-      renderSection={id => dialog.open ? <ContactSectionFields api={api} id={id as ContactSectionId} /> : null} />}
+      renderSection={id => dialog.open ? <ContactSectionFields api={api} id={id as ContactSectionId} /> : null}
+      renderPreview={id => dialog.open ? <div className={styles.livePreview}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="Contact section">
+          <div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}><CinematicContact content={api.draft} /></CinematicShell></div>
+        </HomepagePreviewFrame></div> : null} />}
     <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {PAGE} edits and load the saved page?

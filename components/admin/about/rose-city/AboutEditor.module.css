@@ -21,3 +21,27 @@
 .hint { color: hsl(var(--muted-foreground)); font-size: .8125rem; }
 .fixed { margin: 14px 2px 0; color: hsl(var(--muted-foreground)); font-size: .8125rem; line-height: 1.5; }
 @media (max-width: 767px) { .switch button { min-block-size: 44px; } }
+
+/* One card's part of the page. The public components own their markup, so the cards a section does not show are hidden here, never in the components.
+   Card previews are not in an iframe, so the page's own media queries see the admin window: hiding the other cards is absolute by intent. */
+.livePreview :global(.hp-preview-frame) { block-size: min(560px, calc(100dvh - 260px)); min-block-size: 320px; }
+.only { min-inline-size: 0; }
+.only[data-only="hero"] [data-about-editor-section="story"],
+.only[data-only="hero"] [data-about-editor-section="values"],
+.only[data-only="hero"] [data-about-editor-section="closing"],
+.only[data-only="story"] [data-about-editor-section="hero"],
+.only[data-only="story"] [data-about-editor-section="values"],
+.only[data-only="story"] [data-about-editor-section="closing"],
+.only[data-only="values"] [data-about-editor-section="hero"],
+.only[data-only="values"] [data-about-editor-section="story"],
+.only[data-only="values"] [data-about-editor-section="closing"],
+.only[data-only="closing"] [data-about-editor-section="hero"],
+.only[data-only="closing"] [data-about-editor-section="story"],
+.only[data-only="closing"] [data-about-editor-section="values"],
+.only[data-only="images"] :global(.identity-features),
+.only[data-only="images"] :global(.identity-colors),
+.only[data-only="features"] :global(.identity-intro),
+.only[data-only="features"] :global(.identity-place),
+.only[data-only="colors"] :global(.identity-intro),
+.only[data-only="colors"] :global(.identity-features),
+.only[data-only="colors"] :global(.identity-map) { display: none !important; }

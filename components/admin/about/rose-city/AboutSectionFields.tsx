@@ -4,9 +4,11 @@ import { useId, type ReactNode } from "react";
 import { EditorField, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { IconCaretDown, IconCaretUp } from "@/components/admin/icons";
 import { ImageFieldWithDescription, ObjectListField, StringListField, ValidationMessage } from "@/components/admin/ui/editor-kit";
+import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import type { SiteRouteOption } from "@/lib/site-routes";
 import { newLogoColorCard, newLogoFeature } from "@/lib/about-editor/collections";
 import styles from "./AboutEditor.module.css";
+import { ABOUT_TARGETS, colorTarget, featureTarget, storyParagraphTarget, valueTarget } from "./about-edit-targets";
 import {
   ABOUT_LIMITS, moveCard, newCardId,
   type AboutDraft, type AboutDrafts, type AboutErrors, type KeyedColorCard, type KeyedFeature, type KeyedValue, type LogoDraft, type SectionId,
@@ -34,13 +36,13 @@ export type AboutFieldsApi = {
 const IMAGE_RULES = { allowedTypes: ["image/jpeg", "image/png", "image/webp"], maxBytes: 15 * 1024 * 1024 } as const;
 
 /** A text field with its limit and, once a save was refused, the message the rules give for it. */
-function Field({ label, value, max, locked, error, hint, multiline, onChange }: {
-  label: string; value: string; max: number; locked: boolean; error?: string; hint?: ReactNode; multiline?: boolean; onChange: (value: string) => void;
+function Field({ label, value, max, locked, error, hint, multiline, target, onChange }: {
+  label: string; value: string; max: number; locked: boolean; error?: string; hint?: ReactNode; multiline?: boolean; target?: EditTargetId; onChange: (value: string) => void;
 }) {
   const base = useId(), errorId = `${base}-error`, limitId = `${base}-limit`;
   const atLimit = value.length >= max;
   const described = [error ? errorId : null, atLimit ? limitId : null].filter(Boolean).join(" ") || undefined;
-  return <div className={styles.fieldWrap}>
+  return <div className={styles.fieldWrap} {...editTargetProps(target)}>
     <EditorField label={label} value={value} max={max} disabled={locked} hint={hint} multiline={multiline} invalid={!!error || atLimit} describedBy={described} onChange={onChange} />
     {error && <ValidationMessage id={errorId} live="polite">{error}</ValidationMessage>}
     {atLimit && <ValidationMessage id={limitId} live="polite">{label} is at its limit of {max} characters.</ValidationMessage>}
@@ -55,9 +57,9 @@ function MoveTools({ index, length, name, locked, onMove }: { index: number; len
   </div>;
 }
 
-function NumberField({ label, value, min, max, step, locked, onChange }: { label: string; value: number; min: number; max: number; step: number; locked: boolean; onChange: (value: number) => void }) {
+function NumberField({ label, value, min, max, step, locked, target, onChange }: { label: string; value: number; min: number; max: number; step: number; locked: boolean; target?: EditTargetId; onChange: (value: number) => void }) {
   const id = useId();
-  return <div className={kit.field}>
+  return <div className={kit.field} {...editTargetProps(target)}>
     <label htmlFor={id}>{label}</label>
     <input id={id} type="number" inputMode="decimal" min={min} max={max} step={step} disabled={locked} value={Number.isFinite(value) ? value : ""}
       onChange={event => { const next = Number(event.target.value); if (event.target.value !== "" && Number.isFinite(next)) onChange(next); }}
@@ -69,7 +71,7 @@ function NumberField({ label, value, min, max, step, locked, onChange }: { label
 function Destination({ api, error }: { api: AboutFieldsApi; error?: string }) {
   const id = useId(), { drafts, locked, destinations } = api;
   const href = drafts.about.closing_cta_href;
-  return <div className={styles.fieldWrap}>
+  return <div className={styles.fieldWrap} {...editTargetProps(ABOUT_TARGETS.closingDestination)}>
     <div className={kit.field}>
       <label htmlFor={id}>Button goes to</label>
       <select id={id} value={href} disabled={locked || !destinations.loaded} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined}
@@ -91,41 +93,41 @@ export function AboutSectionFields({ api, id }: { api: AboutFieldsApi; id: Secti
   const { about, logo } = drafts;
 
   if (id === "hero") return <div className={styles.stack}>
-    <Field label="Page heading" value={about.hero_title} max={ABOUT_LIMITS.hero} locked={locked} error={errors.hero} hint="Shown at the top of the About page." onChange={value => api.setAbout(draft => ({ ...draft, hero_title: value }))} />
+    <Field label="Page heading" value={about.hero_title} max={ABOUT_LIMITS.hero} locked={locked} error={errors.hero} hint="Shown at the top of the About page." target={ABOUT_TARGETS.heroHeading} onChange={value => api.setAbout(draft => ({ ...draft, hero_title: value }))} />
   </div>;
 
   if (id === "story") return <div className={styles.stack}>
     <StringListField label="Story paragraphs" description="Each paragraph is its own block on the page. Empty paragraphs are left out when you save." items={about.story_paragraphs} max={ABOUT_LIMITS.paragraphs}
-      itemLabel="paragraph" maxLength={ABOUT_LIMITS.paragraph} multiline disabled={locked} onChange={items => api.setAbout(draft => ({ ...draft, story_paragraphs: items }))} />
-    <ImageFieldWithDescription label="Feature image" description="Shown beside the story. Leave it empty and the story runs full width." previewUrl={about.feature_image_url} initials="Add a feature image" size={96} {...IMAGE_RULES}
+      itemLabel="paragraph" maxLength={ABOUT_LIMITS.paragraph} multiline disabled={locked} itemTarget={storyParagraphTarget} onChange={items => api.setAbout(draft => ({ ...draft, story_paragraphs: items }))} />
+    <ImageFieldWithDescription label="Feature image" description="Shown beside the story. Leave it empty and the story runs full width." previewUrl={about.feature_image_url} initials="Add a feature image" size={96} {...IMAGE_RULES} target={ABOUT_TARGETS.storyImage}
       disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending}
       onUpload={files => api.upload({ kind: "aboutFeature" }, files[0])}
       onRemove={() => { api.retire("about", about.feature_image_url); api.setAbout(draft => ({ ...draft, feature_image_url: "" })); }} />
   </div>;
 
   if (id === "values") return <div className={styles.stack}>
-    <Field label="Values heading" value={about.values_heading} max={ABOUT_LIMITS.heading} locked={locked} hint="Leave blank to use “Our Values”." onChange={value => api.setAbout(draft => ({ ...draft, values_heading: value }))} />
+    <Field label="Values heading" value={about.values_heading} max={ABOUT_LIMITS.heading} locked={locked} hint="Leave blank to use “Our Values”." target={ABOUT_TARGETS.valuesHeading} onChange={value => api.setAbout(draft => ({ ...draft, values_heading: value }))} />
     <ObjectListField<KeyedValue> label="Values" description="The Values section is hidden on the page while there are none." items={about.values} max={ABOUT_LIMITS.values} getId={value => value._id}
       createItem={() => ({ _id: newCardId(), title: "", description: "" })} itemLabel="value" disabled={locked}
       onChange={items => api.setAbout(draft => ({ ...draft, values: items }))}
       renderItem={(value, index, update) => <>
         <MoveTools index={index} length={about.values.length} name={`value ${index + 1}`} locked={locked} onMove={delta => api.setAbout(draft => ({ ...draft, values: moveCard(draft.values, value._id, delta) }))} />
-        <Field label="Title" value={value.title} max={ABOUT_LIMITS.valueTitle} locked={locked} error={errors[`values.${value._id}`]} onChange={title => update({ title })} />
-        <Field label="Description" value={value.description} max={ABOUT_LIMITS.valueDescription} locked={locked} multiline onChange={description => update({ description })} />
+        <Field label="Title" value={value.title} max={ABOUT_LIMITS.valueTitle} locked={locked} error={errors[`values.${value._id}`]} target={valueTarget(value._id, "title")} onChange={title => update({ title })} />
+        <Field label="Description" value={value.description} max={ABOUT_LIMITS.valueDescription} locked={locked} multiline target={valueTarget(value._id, "description")} onChange={description => update({ description })} />
       </>} />
   </div>;
 
   if (id === "closing") return <div className={styles.stack}>
-    <Field label="Closing text" value={about.closing_text} max={ABOUT_LIMITS.closing} locked={locked} multiline onChange={value => api.setAbout(draft => ({ ...draft, closing_text: value }))} />
-    <Field label="Button text" value={about.closing_cta_label} max={ABOUT_LIMITS.cta} locked={locked} hint="Leave blank to hide the button." onChange={value => api.setAbout(draft => ({ ...draft, closing_cta_label: value }))} />
+    <Field label="Closing text" value={about.closing_text} max={ABOUT_LIMITS.closing} locked={locked} multiline target={ABOUT_TARGETS.closingText} onChange={value => api.setAbout(draft => ({ ...draft, closing_text: value }))} />
+    <Field label="Button text" value={about.closing_cta_label} max={ABOUT_LIMITS.cta} locked={locked} hint="Leave blank to hide the button." target={ABOUT_TARGETS.closingButtonLabel} onChange={value => api.setAbout(draft => ({ ...draft, closing_cta_label: value }))} />
     <Destination api={api} error={errors.href} />
     <p className={styles.note}>The Closing section is hidden on the page when the text and the button text are both empty.</p>
   </div>;
 
   if (id === "images") return <div className={styles.stack}>
-    <ImageFieldWithDescription label="Annotated crest image" description="Shown large at the top of the Club Logo page." previewUrl={logo.annotated_image_url} initials="Add the annotated crest" size={96} {...IMAGE_RULES}
+    <ImageFieldWithDescription label="Annotated crest image" description="Shown large at the top of the Club Logo page." previewUrl={logo.annotated_image_url} initials="Add the annotated crest" size={96} {...IMAGE_RULES} target={ABOUT_TARGETS.imagesAnnotated}
       disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoAnnotated" }, files[0])} />
-    <ImageFieldWithDescription label="Map image" description="Shown above the color cards." previewUrl={logo.map_image_url} initials="Add the map image" size={96} {...IMAGE_RULES}
+    <ImageFieldWithDescription label="Map image" description="Shown above the color cards." previewUrl={logo.map_image_url} initials="Add the map image" size={96} {...IMAGE_RULES} target={ABOUT_TARGETS.imagesMap}
       disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoMap" }, files[0])} />
   </div>;
 
@@ -139,17 +141,17 @@ export function AboutSectionFields({ api, id }: { api: AboutFieldsApi; id: Secti
       }}
       renderItem={(feature, index, update) => <>
         <MoveTools index={index} length={logo.features.length} name={`crest feature ${index + 1}`} locked={locked} onMove={delta => api.setLogo(draft => ({ ...draft, features: moveCard(draft.features, feature._id, delta) }))} />
-        <Field label="Title" value={feature.title} max={ABOUT_LIMITS.featureTitle} locked={locked} onChange={title => update({ title })} />
-        <Field label="Description" value={feature.description} max={ABOUT_LIMITS.featureDescription} locked={locked} multiline onChange={description => update({ description })} />
+        <Field label="Title" value={feature.title} max={ABOUT_LIMITS.featureTitle} locked={locked} target={featureTarget(feature._id, "title")} onChange={title => update({ title })} />
+        <Field label="Description" value={feature.description} max={ABOUT_LIMITS.featureDescription} locked={locked} multiline target={featureTarget(feature._id, "description")} onChange={description => update({ description })} />
         <div className={styles.row2}>
-          <ImageFieldWithDescription label="Patch" description="The patch picture beside the text." previewUrl={feature.patch_url} initials="Add a patch" size={72} {...IMAGE_RULES}
+          <ImageFieldWithDescription label="Patch" description="The patch picture beside the text." previewUrl={feature.patch_url} initials="Add a patch" size={72} {...IMAGE_RULES} target={featureTarget(feature._id, "patch")}
             disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoFeaturePatch", id: feature._id }, files[0])} />
-          <ImageFieldWithDescription label="Icon" description="The small icon on the crest." previewUrl={feature.icon_url} initials="Add an icon" size={72} {...IMAGE_RULES}
+          <ImageFieldWithDescription label="Icon" description="The small icon on the crest." previewUrl={feature.icon_url} initials="Add an icon" size={72} {...IMAGE_RULES} target={featureTarget(feature._id, "icon")}
             disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoFeatureIcon", id: feature._id }, files[0])} />
         </div>
         <div className={styles.row2}>
-          <NumberField label="Icon size" value={feature.icon_size} min={24} max={140} step={1} locked={locked} onChange={icon_size => update({ icon_size })} />
-          <NumberField label="Icon scale" value={feature.icon_scale} min={0.5} max={4} step={0.05} locked={locked} onChange={icon_scale => update({ icon_scale })} />
+          <NumberField label="Icon size" value={feature.icon_size} min={24} max={140} step={1} locked={locked} target={featureTarget(feature._id, "iconSize")} onChange={icon_size => update({ icon_size })} />
+          <NumberField label="Icon scale" value={feature.icon_scale} min={0.5} max={4} step={0.05} locked={locked} target={featureTarget(feature._id, "iconScale")} onChange={icon_scale => update({ icon_scale })} />
         </div>
       </>} />
   </div>;
@@ -163,8 +165,8 @@ export function AboutSectionFields({ api, id }: { api: AboutFieldsApi; id: Secti
       }}
       renderItem={(card, index, update) => <>
         <MoveTools index={index} length={logo.color_cards.length} name={`color card ${index + 1}`} locked={locked} onMove={delta => api.setLogo(draft => ({ ...draft, color_cards: moveCard(draft.color_cards, card._id, delta) }))} />
-        <Field label="Color label" value={card.label} max={ABOUT_LIMITS.colorLabel} locked={locked} onChange={label => update({ label })} />
-        <ImageFieldWithDescription label="Swatch image" description="The picture of this color." previewUrl={card.image_url} initials="Add a swatch" size={72} {...IMAGE_RULES}
+        <Field label="Color label" value={card.label} max={ABOUT_LIMITS.colorLabel} locked={locked} target={colorTarget(card._id, "label")} onChange={label => update({ label })} />
+        <ImageFieldWithDescription label="Swatch image" description="The picture of this color." previewUrl={card.image_url} initials="Add a swatch" size={72} {...IMAGE_RULES} target={colorTarget(card._id, "image")}
           disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoColorCard", id: card._id }, files[0])} />
       </>} />
   </div>;

@@ -12,6 +12,7 @@
 
 import { SCHEDULE_EDIT_TARGETS } from "@/lib/edit-targets/schedule";
 import { ROSE_CITY_ROSTER_EDIT_TARGETS } from "@/lib/edit-targets/roster";
+import { ABOUT_CONTACT_POLICIES_TARGETS } from "./edit-targets/about-contact-policies";
 
 export const EDIT_TARGET_ATTRIBUTE = "data-edit-target";
 export const EDIT_TARGET_SELECTOR = `[${EDIT_TARGET_ATTRIBUTE}]`;
@@ -106,6 +107,7 @@ export function createEditTargets(registry: EditTargetRegistry) {
  * nodes, and adds a render test that every declared field has a stamped control.
  */
 export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
+  ...ABOUT_CONTACT_POLICIES_TARGETS,
   /** Rose City (cinematic@2) Homepage Overview. Sections are the Overview's part ids (components/admin/homepage/homepage-parts.ts). */
   homepage: {
     route: "/admin/homepage",

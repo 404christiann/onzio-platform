@@ -8,3 +8,22 @@
 .route code { overflow-wrap: anywhere; }
 .start, .fixed { margin: 0; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
 .fixed { margin-block-start: 14px; padding-inline: 2px; }
+
+/* One card's part of the page. The public component owns its markup, so the heading and the rows a card does not show are hidden here.
+   Card previews are not in an iframe, so hiding is absolute by intent. CinematicContact always draws the five rows in CONTACT_ACTIONS order. */
+.livePreview :global(.hp-preview-frame) { block-size: min(560px, calc(100dvh - 260px)); min-block-size: 320px; }
+.only { min-inline-size: 0; }
+.only[data-only="heading"] :global(.contact-actions),
+.only[data-only="media"] :global(.contact-heading),
+.only[data-only="media"] :global(.contact-row:nth-child(n+2)),
+.only[data-only="tryouts"] :global(.contact-heading),
+.only[data-only="tryouts"] :global(.contact-row:nth-child(1)),
+.only[data-only="tryouts"] :global(.contact-row:nth-child(n+3)),
+.only[data-only="tickets"] :global(.contact-heading),
+.only[data-only="tickets"] :global(.contact-row:nth-child(-n+2)),
+.only[data-only="tickets"] :global(.contact-row:nth-child(n+4)),
+.only[data-only="information"] :global(.contact-heading),
+.only[data-only="information"] :global(.contact-row:nth-child(-n+3)),
+.only[data-only="information"] :global(.contact-row:nth-child(n+5)),
+.only[data-only="partnerships"] :global(.contact-heading),
+.only[data-only="partnerships"] :global(.contact-row:nth-child(-n+4)) { display: none !important; }

@@ -171,3 +171,19 @@ describe("PreviewCards with stamps: source pins", () => {
     for (const hook of ['data-preview-button=""', 'data-preview-edit=""', "KIT_EDIT_PROPS", "aria-label={`Edit ${section.title}`}", "aria-label={`Edit ${section.title} section`}"]) expect(source).toContain(hook);
   });
 });
+
+describe("PreviewCards status chip (About Values and Closing follow their content)", () => {
+  it("shows a card's chip in place of 'Always shown', and 'Always shown' for a card without one", () => {
+    const html = plain(renderToStaticMarkup(createElement(PreviewCards, {
+      sections: [{ id: "values", title: "Values", chip: "Hidden while empty" }, { id: "hero", title: "Hero" }],
+      lazy: false, renderPreview, onEdit: noop,
+    })));
+    expect(html).toContain("Hidden while empty");
+    expect(html.match(/data-status-chip/g)).toHaveLength(1);
+    expect(html.match(/data-always-shown/g)).toHaveLength(1);
+    expect(html.match(/Always shown/g)).toHaveLength(1);
+  });
+  it("the About editor passes sectionChip to its cards", () => {
+    expect(read("components/admin/about/rose-city/RoseCityAboutEditor.tsx")).toMatch(/chip: sectionChip\(drafts, section\.id\)/);
+  });
+});

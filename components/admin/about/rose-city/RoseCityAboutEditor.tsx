@@ -1,14 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { heldSaveState, EditorNotice, EditorSecondaryButton } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import {
-  EditorDialog, PageFrame, PageFrameSkeleton, SectionCards, SectionCardsSkeleton, ValidationMessage, useEditorDialog,
+  EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
 } from "@/components/admin/ui/editor-kit";
+import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
+import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
+import CinematicAbout from "@/components/cinematic/CinematicAbout";
+import CinematicCrest from "@/components/cinematic/CinematicCrest";
+import CinematicShell from "@/components/cinematic/CinematicShell";
+import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { aboutStoragePathFromPublicUrl } from "@/lib/about-content";
 import type { AboutEditorSaveRequest, AboutEditorSnapshot } from "@/lib/about-editor/contract";
 import { loadAboutEditor, saveAboutEditor } from "@/lib/about-editor/recovery";
@@ -17,9 +24,10 @@ import type { SiteRouteOption } from "@/lib/site-routes";
 import { DISCARD_CONFIRM } from "../../editor-copy";
 import styles from "./AboutEditor.module.css";
 import { AboutSectionFields, type AboutFieldsApi, type UploadTarget } from "./AboutSectionFields";
+import { aboutPreviewStamps } from "./about-edit-targets";
 import {
-  PAGE_LABELS, PAGE_PATHS, SECTIONS, aboutFieldErrors, aboutPageState, acceptedDestinations, buildAboutSaveRequest, changedSections, draftFromSnapshot,
-  errorSection, firstErrorSection, pageFingerprint, pageOfSection, sectionChip, sectionSummary,
+  PAGE_LABELS, PAGE_PATHS, SECTIONS, aboutFieldErrors, aboutPageState, acceptedDestinations, buildAboutSaveRequest, changedSections, contentOfAbout, contentOfLogo, draftFromSnapshot,
+  firstErrorSection, pageFingerprint, pageOfSection, sectionChip, sectionSlice, sectionSummary,
   type AboutDraft, type AboutDrafts, type AboutErrors, type AboutPageId, type LogoDraft, type SectionId,
 } from "./about-sections";
 
@@ -29,6 +37,25 @@ const DESCRIPTION = "Your About page and your Club Logo page. Save publishes the
 const blank = (): AboutDrafts => ({ about: draftFromSnapshot(undefined) as AboutDraft, logo: draftFromSnapshot({ page: "logo", revision: "0", designRevision: "", content: null }) as LogoDraft });
 const none = <T,>(): Record<AboutPageId, T | undefined> => ({ about: undefined, logo: undefined });
 const flags = (): Record<AboutPageId, boolean> => ({ about: false, logo: false });
+const ALL_SECTIONS = [...SECTIONS.about, ...SECTIONS.logo];
+
+/** The pictures a card shows, so its preview stays hidden until they have loaded. */
+const sectionImages = (drafts: AboutDrafts, id: SectionId): string[] => {
+  const { about, logo } = drafts;
+  const urls = { hero: [], story: [about.feature_image_url], values: [], closing: [], images: [logo.annotated_image_url, logo.map_image_url], features: logo.features.flatMap(feature => [feature.patch_url, feature.icon_url]), colors: logo.color_cards.map(card => card.image_url) }[id];
+  return urls.filter(Boolean);
+};
+
+type PreviewProps = { id: SectionId; drafts: AboutDrafts; shared: CinematicHomepageContent | null; slice: string };
+/** The real public page for this card's section (About or Club Logo), with the other cards hidden by CSS. Re-renders only when its own slice changes. */
+function SectionPage({ id, drafts }: { id: SectionId; drafts: AboutDrafts }) {
+  const about = useMemo(() => contentOfAbout(drafts.about), [drafts.about]);
+  const logo = useMemo(() => contentOfLogo(drafts.logo), [drafts.logo]);
+  return pageOfSection(id) === "about" ? <CinematicAbout content={about} editorEmptySections /> : <CinematicCrest content={logo} editorEmptySections />;
+}
+const SectionLive = memo(function SectionLive({ id, drafts, shared }: PreviewProps) {
+  return <SettledPreview urls={sectionImages(drafts, id)}><div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}><SectionPage id={id} drafts={drafts} /></CinematicShell></div></SettledPreview>;
+}, (a, b) => a.id === b.id && a.slice === b.slice && a.shared === b.shared);
 
 /**
  * Rose City's About editor: the About page and the Club Logo page as section cards, one two-pane dialog, one Save.
@@ -36,6 +63,8 @@ const flags = (): Record<AboutPageId, boolean> => ({ about: false, logo: false }
  * body is the one the classic editor sent.
  */
 export default function RoseCityAboutEditor() {
+  const club = useClubContext();
+  const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [sharedSettled, setSharedSettled] = useState(false);
   const [page, setPage] = useState<AboutPageId>("about");
   const [snapshots, setSnapshots] = useState<Record<AboutPageId, AboutEditorSnapshot | undefined>>(none);
   const [drafts, setDrafts] = useState<AboutDrafts | null>(null);
@@ -86,6 +115,14 @@ export default function RoseCityAboutEditor() {
     }).catch(error => { if (active) { setMessage(error instanceof Error ? error.message : "Unable to load the About pages."); setFailed(true); setLoadFailed(true); } });
     return () => { active = false; };
   }, [loadAttempt]);
+
+  // The previews' site shell reads the Homepage content once here, so no card or dialog preview fetches it on its own.
+  useEffect(() => {
+    let active = true;
+    setShared(null); setSharedSettled(false);
+    fetchCinematicHomepageContent(club.id).then(content => { if (active) setShared(content); }).catch(() => undefined).finally(() => { if (active) setSharedSettled(true); });
+    return () => { active = false; };
+  }, [club.id]);
 
   useEffect(() => {
     let active = true;
@@ -275,15 +312,13 @@ export default function RoseCityAboutEditor() {
 
   const pageState = aboutPageState({ base: heldSaveState(saveAction.state, uploading || mediaPending), busy, pending: !!pending[page], conflict: conflict[page], saveFailed: saveFailed[page] });
   const changed = useMemo(() => new Set(drafts ? changedSections(drafts, saved) : []), [drafts, saved]);
-  const errorSections = useMemo(() => new Set<SectionId>(Object.keys(errors).map(path => errorSection(path))), [errors]);
+  // Click-to-field stamps per section, built once per (deferred) draft: the draft the previews show, never the live one.
+  const deferred = useDeferredValue(drafts);
+  const stampsBySection = useMemo(() => new Map(ALL_SECTIONS.map(section => [section.id, deferred ? aboutPreviewStamps(deferred, section.id) : []])), [deferred]);
   const items = drafts ? SECTIONS[page].map(section => ({
-    id: section.id, title: section.title, disabled: locked, chip: sectionChip(drafts, section.id),
-    summary: <>
-      {sectionSummary(drafts, section.id)}
-      {changed.has(section.id) && <span className={styles.srOnly}> (unsaved changes)</span>}
-      {errorSections.has(section.id) && <span className={styles.srOnly}> (needs attention)</span>}
-    </>,
+    id: section.id, title: section.title, disabled: locked, changed: changed.has(section.id), chip: sectionChip(drafts, section.id),
   })) : [];
+  const previewOf = (id: string) => deferred && sharedSettled && <SectionLive id={id as SectionId} drafts={deferred} shared={shared} slice={sectionSlice(deferred, id as SectionId)} />;
   const api: AboutFieldsApi | null = drafts ? {
     drafts, locked, uploading, errors, setAbout, setLogo, retire, upload, onMediaPending: setMediaPending,
     destinations: { options, loaded: optionsLoaded, available: destinationAvailable, error: optionsError, retry: () => setOptionsAttempt(current => current + 1) },
@@ -307,7 +342,7 @@ export default function RoseCityAboutEditor() {
 
   return <>
     <ShimmerRegion loading={loading} loadingLabel="Loading About…" minHeight={480}
-      skeleton={<div><PageFrameSkeleton cardCount={0} description /><SectionCardsSkeleton count={SECTIONS.about.length} /></div>}>
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={SECTIONS.about.length} /></div>}>
       <PageFrame title="About" breadcrumb={CRUMBS} openPageHref={PAGE_PATHS[page]} description={DESCRIPTION} state={pageState}
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
@@ -320,15 +355,21 @@ export default function RoseCityAboutEditor() {
           </div>
           <span className={styles.hint}>Save publishes the page you are on.</span>
         </div>
-        <SectionCards sections={items} label={`${PAGE_LABELS[page]} sections`} onEdit={(id, event) => dialog.openSection(id as SectionId, event)} />
+        <PreviewCards sections={items} label={`${PAGE_LABELS[page]} sections`} renderPreview={previewOf} previewScale={0.46}
+          stamps={id => stampsBySection.get(id as SectionId) ?? []}
+          onEdit={(id, event, target) => { dialog.openSection(id as SectionId, event); dialog.focusField(target); }} />
         <p className={styles.fixed}>{page === "about" ? "The order of the sections is fixed by the page design." : "The Club Logo page heading and the order of its sections are fixed by the page design."}</p>
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-about-status="">{status}</p>
-    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE_LABELS[page]}`} returnFocusRef={dialog.returnFocusRef}
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE_LABELS[page]}`} mode="split" returnFocusRef={dialog.returnFocusRef} focusRequest={dialog.focusRequest}
       sections={SECTIONS[page].map(section => ({ id: section.id, title: section.title, summary: drafts && sectionSummary(drafts, section.id) }))}
       activeId={dialog.activeId && pageOfSection(dialog.activeId) === page ? dialog.activeId : SECTIONS[page][0].id} onActiveChange={id => dialog.switchTo(id as SectionId)}
-      renderSection={id => dialog.open ? <AboutSectionFields api={api} id={id as SectionId} /> : null} />}
+      renderSection={id => dialog.open ? <AboutSectionFields api={api} id={id as SectionId} /> : null}
+      renderPreview={id => dialog.open ? <div className={styles.livePreview}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE_LABELS[pageOfSection(id as SectionId)]} section`}>
+          <div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}><SectionPage id={id as SectionId} drafts={api.drafts} /></CinematicShell></div>
+        </HomepagePreviewFrame></div> : null} />}
     <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Discard unsaved {PAGE_LABELS[page]} edits and load the saved page?

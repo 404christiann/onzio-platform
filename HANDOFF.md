@@ -1,3 +1,10 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-ABOUT-CONTACT-POLICIES: Rose City About, Contact and Policies preview and click-to-field
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-about-contact-policies` off main `c5ef8f59`, PR open, not merged. Rose City `/admin/about`, `/admin/contact`, `/admin/policies` only; no payload, query, gate, `app/api/**`, `supabase/**`, kit or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-ABOUT-CONTACT-POLICIES).
+- **What:** the three editors now show the real public page as live preview cards (`PreviewCards`, dialog in split mode) instead of title-and-summary cards, and clicking a field in a card opens that card's dialog with the control focused and ringed. Values, crest features and color cards use the draft's in-memory card id (`card-<n>`, new after save, reload or discard); policy rows use their own id, answer lines `<row id>-l<n>` matched through the page's own blank-line filter.
+- **Evidence:** 91 new contract tests on the real public components; 29 breaks each caught; browser spec 25/25 on a production build, plus one break caught on a rebuild.
+- **Review follow-up (grokbot #241):** the Contact and Policies shared-content effects dropped their template check (it pushed the architecture template-selector cap over, so CI `unit` was red) and use `[club.id]` like About; the "Link pending" and digits-only line guards are now tested, each red when removed. Record: `STATUS.md`.
+- **Exact next step:** Christian reviews; then the Diverse City About, Contact, Programs and Tryouts gaps.
 ## 2026-11-22 - UI-PREVIEW-LINK-GUARD: one link and submit guard for the admin preview iframes
 
 - **Status:** `ready for review`, branch `claude/preview-shared-link-guard-9b0f15` off main `1fdfc9cb` (rebased onto `33643828`, after #239), PR open, not merged. Kit `previewLinkGuard.ts` (`usePreviewLinkGuard`) on the iframe body, capture phase, installed in both Shop frames, `HomepagePreviewFrame`, the Overview `PageFrame`, and the About, Contact, Program and Tryouts frames; all per-site `a`/submit guards deleted. Record: `STATUS.md` (UI-PREVIEW-LINK-GUARD).

@@ -6,6 +6,7 @@ import { ListField, PositionTools } from "@/components/admin/list-cards/ListFiel
 import lists from "@/components/admin/list-cards/ListEditor.module.css";
 import { POLICY_LIMITS, type CinematicPolicyDraft, type PolicyPageKey } from "@/lib/cinematic-policies-content";
 import { POLICY_PAGE_NAMES, type PolicyDraftAction } from "@/lib/cinematic-policies-draft";
+import { POLICY_TARGETS, lineTarget, rowHeadingTarget } from "./policies-edit-targets";
 import { parseDialogId, type PolicyDialogId } from "./policies-sections";
 import styles from "./policies.module.css";
 
@@ -26,9 +27,9 @@ function PageFields({ api }: { api: PolicyFieldsApi }) {
   const current = draft[page];
   const set = (field: "title" | "subtitle" | "heading") => (value: string) => edit({ type: "set-page", page, field, value });
   return <div className={lists.fields}>
-    <ListField label="Title" value={current.title} max={POLICY_LIMITS.title} disabled={locked} error={errors[`${page}.title`]} onChange={set("title")} />
-    <ListField label="Red line under the title" value={current.subtitle} max={POLICY_LIMITS.title} disabled={locked} hint="Leave blank to hide it." onChange={set("subtitle")} />
-    <ListField label="Section heading" value={current.heading} max={POLICY_LIMITS.title} disabled={locked} hint="Shown above the rows. Leave blank to hide it." onChange={set("heading")} />
+    <ListField label="Title" value={current.title} max={POLICY_LIMITS.title} disabled={locked} error={errors[`${page}.title`]} target={POLICY_TARGETS.title} onChange={set("title")} />
+    <ListField label="Red line under the title" value={current.subtitle} max={POLICY_LIMITS.title} disabled={locked} hint="Leave blank to hide it." target={POLICY_TARGETS.subtitle} onChange={set("subtitle")} />
+    <ListField label="Section heading" value={current.heading} max={POLICY_LIMITS.title} disabled={locked} hint="Shown above the rows. Leave blank to hide it." target={POLICY_TARGETS.heading} onChange={set("heading")} />
   </div>;
 }
 
@@ -42,7 +43,7 @@ function RowFields({ api, rowId }: { api: PolicyFieldsApi; rowId: string }) {
   const name = row.heading.trim() || `Row ${index + 1}`;
   const full = row.blocks.length >= POLICY_LIMITS.blocks;
   return <div className={lists.fields}>
-    <ListField label="Row heading" value={row.heading} max={POLICY_LIMITS.heading} disabled={locked} error={errors[`${page}.${row.id}.heading`]}
+    <ListField label="Row heading" value={row.heading} max={POLICY_LIMITS.heading} disabled={locked} error={errors[`${page}.${row.id}.heading`]} target={rowHeadingTarget(row.id)}
       hint="The line visitors tap to open the answer." onChange={value => edit({ type: "set-heading", page, row: index, value })} />
     <div className={styles.section}>
       <h3 className={styles.answerHead}>Answer · {row.blocks.length} of {POLICY_LIMITS.blocks} lines</h3>
@@ -67,7 +68,7 @@ function RowFields({ api, rowId }: { api: PolicyFieldsApi; rowId: string }) {
                 </span>
               </div>
               <ListField label={`Line ${number} ${subheading ? "subheading" : "paragraph"}`} value={line.text} max={subheading ? POLICY_LIMITS.subheading : POLICY_LIMITS.paragraph} multiline={!subheading} disabled={locked}
-                hint={line.text.trim() ? undefined : "Empty lines are left out when you save."} onChange={text => edit({ type: "set-line", page, row: index, line: lineIndex, text })} />
+                hint={line.text.trim() ? undefined : "Empty lines are left out when you save."} target={lineTarget(row.id, lineIndex)} onChange={text => edit({ type: "set-line", page, row: index, line: lineIndex, text })} />
             </li>;
           })}
         </ul>}
