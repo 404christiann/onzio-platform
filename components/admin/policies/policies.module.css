@@ -21,3 +21,13 @@
 .limit { color: hsl(var(--muted-foreground)); font-size: .8125rem; }
 .removeRow { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid hsl(var(--destructive) / .5); border-radius: 12px; }
 .removeRow p { margin: 0; font-size: .875rem; }
+
+/* One card's part of the page. The public component owns its markup, so what a card does not show is hidden here. Card previews are not
+   in an iframe, so the page's own vw-based widths see the admin window: a card (data-card) lays the body out as the page does on a narrow screen. */
+.livePreview :global(.hp-preview-frame) { block-size: min(560px, calc(100dvh - 260px)); min-block-size: 320px; }
+.only { min-inline-size: 0; }
+.only[data-only="page"] :global(.policy-empty),
+.only[data-only="row"] :global(.policy-heading),
+.only[data-only="row"] :global(.policy-body > h2) { display: none !important; }
+.only[data-card] :global(.policy-body) { inline-size: calc(100% - 64px); }
+.only[data-only="row"] :global(.policy-body) { margin-block-start: 0; }

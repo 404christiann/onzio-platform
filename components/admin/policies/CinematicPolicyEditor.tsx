@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
@@ -8,7 +8,11 @@ import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { EditorNotice, EditorSecondaryButton, EditorSegmented } from "@/components/admin/cinematic-editor/CinematicEditorKit";
-import { EditorDialog, PageFrame, PageFrameSkeleton, SectionCards, SectionCardsSkeleton, ValidationMessage, useEditorDialog } from "@/components/admin/ui/editor-kit";
+import { EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog } from "@/components/admin/ui/editor-kit";
+import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
+import CinematicPolicyPage from "@/components/cinematic/CinematicPolicyPage";
+import CinematicShell from "@/components/cinematic/CinematicShell";
+import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { IconAdd } from "@/components/admin/icons";
 import { useMoveFocus } from "@/components/admin/list-cards/useMoveFocus";
 import lists from "@/components/admin/list-cards/ListEditor.module.css";
@@ -18,8 +22,9 @@ import { POLICY_PAGE_NAMES, policyDraftReducer, preparePolicySave, type PolicyDr
 import { loadCinematicPolicyEditor, saveCinematicPolicyEditor } from "@/lib/cinematic-policies-editor";
 import { DISCARD_CONFIRM } from "../editor-copy";
 import { PolicyDialogFields, type PolicyFieldsApi } from "./PolicyDialogFields";
+import { cardSlice, policiesOwnsTarget, policiesStampsByCard, policyCardContent } from "./policies-edit-targets";
 import {
-  PAGE_DIALOG_ID, buildPolicySaveRequest, changedPolicyPages, firstPageWithError, pageSummary, policiesDirty, policiesPageState, policyFieldErrors, rowDialogId, rowSummary, savedPolicies,
+  PAGE_DIALOG_ID, buildPolicySaveRequest, changedPolicyPages, firstPageWithError, pageSummary, parseDialogId, policiesDirty, policiesPageState, policyFieldErrors, rowDialogId, rowSummary, savedPolicies,
   type PolicyDialogId,
 } from "./policies-sections";
 import styles from "./policies.module.css";
@@ -30,8 +35,18 @@ const TITLE = "Stadium Guidelines & Fan Code";
 const CRUMBS = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Tickets and stadium" }];
 const DESCRIPTION = "Edit both accordion pages. Save applies all changes to both pages together.";
 
+type PolicyPageContent = CinematicPolicyDraft[PolicyPageKey];
+type CardPreviewProps = { id: string; page: PolicyPageContent; shared: CinematicHomepageContent | null; slice: string; card: boolean };
+
+/** The real public accordion page for one card. Re-renders only when its own slice changes. */
+const CardLive = memo(function CardLive({ id, page, shared, card }: CardPreviewProps) {
+  const only = parseDialogId(id)?.kind === "row" ? "row" : "page";
+  return <div className={styles.only} data-only={only} data-card={card || undefined}><CinematicShell contentOnly initialContent={shared}><CinematicPolicyPage page={policyCardContent(page, id)} /></CinematicShell></div>;
+}, (a, b) => a.id === b.id && a.slice === b.slice && a.shared === b.shared && a.card === b.card);
+
 export default function CinematicPolicyEditor() {
   const club = useClubContext();
+  const [shared, setShared] = useState<CinematicHomepageContent | null>(null), [sharedSettled, setSharedSettled] = useState(false);
   const [snapshot, setSnapshot] = useState<CinematicPolicySnapshot | null>(null);
   const [draft, setDraft] = useState<CinematicPolicyDraft | null>(null);
   const [pending, setPending] = useState<CinematicPolicySave | null>(null);
@@ -77,6 +92,15 @@ export default function CinematicPolicyEditor() {
       if (recovered) setMessage(recovered.pending ? "An earlier save needs confirmation. Retry the same save." : "Your unsaved draft has been restored.");
     }).catch(error => { if (active) { setMessage(error instanceof Error ? error.message : "Unable to load the policy pages."); setFailed(true); } });
     return () => { active = false; epoch.current += 1; };
+  }, [club.id, club.presentationTemplateKey]);
+
+  // The previews' site shell reads the Homepage content once here, so no card or dialog preview fetches it on its own.
+  useEffect(() => {
+    let active = true;
+    setShared(null); setSharedSettled(false);
+    if (club.presentationTemplateKey !== "cinematic@2") return;
+    fetchCinematicHomepageContent(club.id).then(content => { if (active) setShared(content); }).catch(() => undefined).finally(() => { if (active) setSharedSettled(true); });
+    return () => { active = false; };
   }, [club.id, club.presentationTemplateKey]);
 
   useEffect(() => {
@@ -200,6 +224,9 @@ export default function CinematicPolicyEditor() {
   const changedPages = useMemo(() => new Set(draft && snapshot ? changedPolicyPages(draft, saved) : []), [draft, snapshot, saved]);
   const loading = !draft || !snapshot || loadedClubId !== club.id;
   const other = POLICY_PAGES.find(key => key !== page)!;
+  // Click-to-field stamps per card, built once per (deferred) draft and page: the draft the previews show, never the live one.
+  const deferred = useDeferredValue(draft);
+  const stampsByCard = useMemo(() => policiesStampsByCard(deferred?.[page].rows ?? [], rowDialogId), [deferred, page]);
   const otherHasError = Object.keys(errors).some(key => key.startsWith(`${other}.`));
 
   if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={TITLE} breadcrumb={CRUMBS} description="This editor is unavailable for this website design.">{null}</PageFrame>;
@@ -207,10 +234,13 @@ export default function CinematicPolicyEditor() {
   const current = draft?.[page];
   const rowCards = current ? current.rows.map((row, index) => {
     const error = errors[`${page}.${row.id}.heading`];
-    return { id: rowDialogId(row.id), title: row.heading.trim() || `Row ${index + 1}`, summary: error ? <span className={styles.needed}>{error}</span> : rowSummary(row), disabled: locked };
+    return { id: rowDialogId(row.id), title: row.heading.trim() || `Row ${index + 1}`, disabled: locked, error };
   }) : [];
   const headingError = errors[`${page}.title`];
-  const headingCard = current ? [{ id: PAGE_DIALOG_ID, title: "Page heading", summary: headingError ? <span className={styles.needed}>{headingError}</span> : pageSummary(current), disabled: locked }] : [];
+  const headingCard = current ? [{ id: PAGE_DIALOG_ID, title: "Page heading", disabled: locked }] : [];
+  const previewOf = (id: string) => { const live = deferred?.[page]; return live && sharedSettled && <CardLive id={id} page={live} shared={shared} slice={cardSlice(live, id)} card />; };
+  const onEdit = (id: string, event: React.MouseEvent<HTMLButtonElement>, target?: Parameters<typeof dialog.focusField>[0]) => { dialog.openSection(id as PolicyDialogId, event); dialog.focusField(target); };
+  const needing = rowCards.filter(card => card.error);
   const dialogSections = current ? [
     { id: PAGE_DIALOG_ID, title: "Page heading", summary: pageSummary(current) },
     ...current.rows.map((row, index) => ({ id: rowDialogId(row.id), title: row.heading.trim() || `Row ${index + 1}`, summary: rowSummary(row) })),
@@ -235,7 +265,7 @@ export default function CinematicPolicyEditor() {
 
   return <>
     <ShimmerRegion loading={loading} loadingLabel={`Loading ${PAGE}…`} minHeight={480}
-      skeleton={<div><PageFrameSkeleton cardCount={0} description /><SectionCardsSkeleton count={5} /></div>}>
+      skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={5} /></div>}>
       <PageFrame title={TITLE} breadcrumb={CRUMBS} openPageHref={POLICY_PAGE_PATHS[page]} description={DESCRIPTION} state={pageState}
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
@@ -244,7 +274,9 @@ export default function CinematicPolicyEditor() {
             <EditorSegmented label="Page to edit" value={page} onChange={setPage} options={POLICY_PAGES.map(key => ({ value: key, label: POLICY_PAGE_NAMES[key] }))} />
             {changedPages.has(other) && <span className={styles.otherEdited} role="status">{POLICY_PAGE_NAMES[other]} has unsaved edits</span>}
           </div>
-          <SectionCards sections={headingCard} label={`${POLICY_PAGE_NAMES[page]} heading`} onEdit={(id, event) => dialog.openSection(id as PolicyDialogId, event)} />
+          <PreviewCards sections={headingCard} label={`${POLICY_PAGE_NAMES[page]} heading`} renderPreview={previewOf} previewScale={0.46}
+            stamps={id => stampsByCard.get(id) ?? []} ownsTarget={policiesOwnsTarget} onEdit={onEdit} />
+          {headingError && <p className={styles.needed} role="status">{headingError}</p>}
           <section className={styles.section} aria-labelledby="policies-rows-heading">
             <div className={styles.sectionHead}>
               <h2 id="policies-rows-heading">Rows<span className={styles.count}>{current.rows.length} of {POLICY_LIMITS.rows}</span></h2>
@@ -252,17 +284,23 @@ export default function CinematicPolicyEditor() {
             </div>
             <p className={lists.note}>Each row opens to show its answer. Every row with an answer starts open on the page. A row without an answer shows “Details coming soon.” Up to {POLICY_LIMITS.rows} rows, {POLICY_LIMITS.blocks} lines per answer.</p>
             {rowCards.length
-              ? <SectionCards sections={rowCards} label={`${POLICY_PAGE_NAMES[page]} rows`} onEdit={(id, event) => dialog.openSection(id as PolicyDialogId, event)} />
+              ? <PreviewCards sections={rowCards} label={`${POLICY_PAGE_NAMES[page]} rows`} renderPreview={previewOf} previewScale={0.46}
+                stamps={id => stampsByCard.get(id) ?? []} ownsTarget={policiesOwnsTarget} onEdit={onEdit} />
               : <div className={styles.empty}><p>No rows yet. Add the first question visitors can open.</p></div>}
+            {needing.length > 0 && <p className={styles.needed} role="status">{needing.map(card => `${card.title}: ${card.error}`).join(" ")}</p>}
             {full && <p className={lists.note}>{POLICY_LIMITS.rows} rows is the most a page can hold.</p>}
           </section>
         </>}
       </PageFrame>
     </ShimmerRegion>
     <p className={lists.srOnly} role="status" data-policies-status="">{status}</p>
-    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${POLICY_PAGE_NAMES[page]}`} returnFocusRef={dialog.returnFocusRef}
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${POLICY_PAGE_NAMES[page]}`} mode="split" returnFocusRef={dialog.returnFocusRef} focusRequest={dialog.focusRequest}
       sections={dialogSections} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as PolicyDialogId)}
-      renderSection={id => dialog.open ? <PolicyDialogFields api={api} id={id as PolicyDialogId} /> : null} />}
+      renderSection={id => dialog.open ? <PolicyDialogFields api={api} id={id as PolicyDialogId} /> : null}
+      renderPreview={id => dialog.open ? <div className={styles.livePreview}>
+        <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${POLICY_PAGE_NAMES[page]} ${parseDialogId(id)?.kind === "row" ? "row" : "heading"}`}>
+          <div className={styles.only} data-only={parseDialogId(id)?.kind === "row" ? "row" : "page"}><CinematicShell contentOnly initialContent={shared}><CinematicPolicyPage page={policyCardContent(api.draft[page], id)} /></CinematicShell></div>
+        </HomepagePreviewFrame></div> : null} />}
     <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive
       onCancel={() => setConfirmReload(false)} onConfirm={() => { setConfirmReload(false); void reload(); }}>
       Your unsaved edits to both pages will be discarded and the saved pages loaded.
