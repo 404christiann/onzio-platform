@@ -26,6 +26,7 @@ import "@/components/admin/homepage/homepage-editor.css";
 import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import { partnerPageState } from "@/components/admin/stadium/partner-page-state";
 import styles from "@/components/admin/stadium/PartnerPageParts.module.css";
+import { PageVisibilityControl } from "@/components/admin/stadium/PageVisibilityControl";
 import { ChickFilASectionFields } from "./ChickFilASectionFields";
 import { chickFilAPreviewStamps } from "./chick-fil-a-edit-targets";
 import { DISCARD_CONFIRM } from "../editor-copy";
@@ -237,7 +238,7 @@ export default function ChickFilAEditor() {
       skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={CHICK_FIL_A_CARDS.length} /></div>}>
       <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/stadium/chick-fil-a" description={DESCRIPTION} state={pageState}
         onSave={() => { void saveAction.save().catch(() => undefined); }}
-        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={<><PageVisibilityControl pageKey="chick-fil-a" />{notice}</>}>
         <PreviewCards sections={cardItems} label="Chick-fil-A sections" renderPreview={previewOf} previewScale={0.46}
           stamps={id => stampsByCard.get(id as ChickFilACardId) ?? []}
           onEdit={(id, event, target) => { dialog.openSection(id as ChickFilACardId, event); dialog.focusField(target); }} />

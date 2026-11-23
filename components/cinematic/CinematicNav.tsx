@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
+import { usePublicPageVisibility } from "@/components/PublicPageVisibilityProvider";
 import NativeImage from "@/components/ResilientNativeImage";
 import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { CINEMATIC_NAV_ITEMS } from "@/lib/cinematic-homepage-content";
+import { pageVisible, withoutHiddenPageLinks } from "@/lib/public-page-visibility";
 import { useCinematicContent } from "./CinematicContent";
 import { useNavIndicator } from "./nav-indicator";
 
@@ -37,6 +39,7 @@ function currentNavGroup(items: NavItem[], pathname: string): string | null {
 
 export default function CinematicNav({ editing = false }: { editing?: boolean }) {
   const club = useClubContext();
+  const visibility = usePublicPageVisibility();
   const navigationPiece = useHomepagePiece("revamp.navigation");
   const { clubLogoUrl } = useClubBranding();
   const { content } = useCinematicContent();
@@ -65,7 +68,9 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
   const prefix = useId().replaceAll(":", "");
   const partner = content?.presentation.headerPartner;
   const foothillPartner = club.slug === "rose-city" && partner?.alt.trim().toLowerCase() === "foothill transit";
-  const items: NavItem[] = CINEMATIC_NAV_ITEMS.filter(item => item.id !== "shop" || club.storeEnabled);
+  // The owner's "Visible to visitors" switch hides the partner mark with the Foothill Transit page it advertises.
+  const shownPartner = foothillPartner && !pageVisible({ publicPageVisibility: visibility }, "foothill-transit") ? undefined : partner;
+  const items: NavItem[] = withoutHiddenPageLinks<NavItem>(CINEMATIC_NAV_ITEMS.filter(item => item.id !== "shop" || club.storeEnabled), { publicPageVisibility: visibility });
   const selectedGroup = items.find(item => item.id === mobileGroup);
   const isCurrent = (href?: string) => preview ? href === "/" : pathname === href;
   const currentGroup = preview ? null : currentNavGroup(items, pathname);
@@ -225,7 +230,7 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
         </div> : <Link key={item.id} data-nav-id={item.id} className={`nav-item${isCurrent(item.href) ? " active" : ""}`} href={item.href ?? "/"} aria-current={isCurrent(item.href) ? "page" : undefined}>{label(item.id, item.label)}</Link>)}
         <span ref={indicator} className="nav-indicator" aria-hidden="true" />
       </nav>
-      {partner?.url && <div className="header-partner" data-transparent-mark={foothillPartner || undefined}><NativeImage src={foothillPartner ? "/images/cinematic/foothill-going-good-places.png" : partner.url} alt={partner.alt} /></div>}
+      {shownPartner?.url && <div className="header-partner" data-transparent-mark={foothillPartner || undefined}><NativeImage src={foothillPartner ? "/images/cinematic/foothill-going-good-places.png" : shownPartner.url} alt={shownPartner.alt} /></div>}
       <button ref={menuButton} type="button" className="menu-toggle" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls={`${prefix}-drawer`} onClick={openPhone}><span className="menu-word">Menu</span><NavIcon name="menu" /></button>
     </header>
     <dialog ref={drawer} id={`${prefix}-drawer`} className="mobile-drawer" aria-label={`${club.name} navigation`} data-keyboard-input={keyboardInput || undefined} onCancel={event => { event.preventDefault(); closePhone(true); }} onClose={() => {
@@ -235,7 +240,7 @@ export default function CinematicNav({ editing = false }: { editing?: boolean })
       <header className="phone-menu-head">
         <div className="phone-brand">
           {clubLogoUrl && <NativeImage src={clubLogoUrl} alt={`${club.name} crest`} />}
-          {partner?.url && <NativeImage className="phone-partner" src={foothillPartner ? "/images/cinematic/foothill-going-good-places.png" : partner.url} alt={partner.alt} />}
+          {shownPartner?.url && <NativeImage className="phone-partner" src={foothillPartner ? "/images/cinematic/foothill-going-good-places.png" : shownPartner.url} alt={shownPartner.alt} />}
         </div>
         <button type="button" className="close-menu" aria-label="Close navigation" autoFocus onClick={() => closePhone()}><NavIcon name="close" /></button>
       </header>

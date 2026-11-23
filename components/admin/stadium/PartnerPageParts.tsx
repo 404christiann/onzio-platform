@@ -35,10 +35,10 @@ export function TextField({ label, value, max, disabled, multiline, hint, target
 }
 
 /** A row with the section's own show/hide switch. */
-export function ShowRow({ label, switchLabel, checked, disabled, onChange }: { label: string; switchLabel: string; checked: boolean; disabled: boolean; onChange: (next: boolean) => void }) {
+export function ShowRow({ label, switchLabel, checked, disabled, onChange, describedBy }: { label: string; switchLabel: string; checked: boolean; disabled: boolean; onChange: (next: boolean) => void; describedBy?: string }) {
   return <div className={styles.showRow}>
     <span aria-hidden="true">{label}</span>
-    <AdminSwitch label={switchLabel} checked={checked} disabled={disabled} onCheckedChange={onChange} />
+    <AdminSwitch label={switchLabel} checked={checked} disabled={disabled} onCheckedChange={onChange} aria-describedby={describedBy} />
   </div>;
 }
 

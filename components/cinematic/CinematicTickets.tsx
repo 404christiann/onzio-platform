@@ -8,11 +8,17 @@ import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { fetchSchedule } from "@/lib/queries";
 import { isTicketPurchaseUrl, isTicketSectionShown, type TicketsPageContent, type TicketsArtwork } from "@/lib/tickets-content";
+import { pageVisible, type PublicPageVisibility } from "@/lib/public-page-visibility";
 import { useCinematicContent } from "./CinematicContent";
 import { cinematicMatchDate, cinematicMatchTime, nextHomeFixture } from "./next-home-fixture";
 import "./tickets.css";
-export default function CinematicTickets({ content }: {
+/**
+ * `pageVisibility` is the club's "Visible to visitors" map, passed by the public page only: the transit section follows the Foothill
+ * Transit page (and its own transitVisible flag). The editor previews leave it out, so the Transit card stays editable.
+ */
+export default function CinematicTickets({ content, pageVisibility }: {
     content: TicketsPageContent;
+    pageVisibility?: PublicPageVisibility | null;
 }) {
     const club = useClubContext(), branding = useClubBranding(), timeZone = useClubTimeZone();
     const { content: shared } = useCinematicContent();
@@ -49,7 +55,7 @@ export default function CinematicTickets({ content }: {
  </article>
  {isTicketSectionShown(content, "includesVisible") && <div className="tickets-includes"><h2>{content.includesHeading}</h2>{content.benefits.map((benefit, index) => <div key={index}><h3>{benefit.title}</h3><p>{benefit.detail}</p></div>)}{content.benefitsNote && <p className="tickets-footnote"><i aria-hidden="true"/><em>{content.benefitsNote}</em></p>}</div>}
  </section>
- {isTicketSectionShown(content, "transitVisible") && (content.transitHeading || bus.url || map.url) && <section className="tickets-transit" aria-labelledby="transit-title"><div className="tickets-transit-heading"><div><h2 id="transit-title">{content.transitHeading}</h2><p>{content.transitSubtitle}</p></div>{art(bus, undefined, true)}</div>{art(map, "tickets-map", true)}</section>}
+ {isTicketSectionShown(content, "transitVisible") && pageVisible({ publicPageVisibility: pageVisibility }, "foothill-transit") && (content.transitHeading || bus.url || map.url) && <section className="tickets-transit" aria-labelledby="transit-title"><div className="tickets-transit-heading"><div><h2 id="transit-title">{content.transitHeading}</h2><p>{content.transitSubtitle}</p></div>{art(bus, undefined, true)}</div>{art(map, "tickets-map", true)}</section>}
  {isTicketSectionShown(content, "directionsVisible") && <section className="tickets-directions" aria-label="Getting to the stadium">{(content.directionsHeading || content.directionsBody) && <div><h3>{content.directionsHeading}</h3><p>{content.directionsBody}</p></div>}{(content.parkingHeading || content.parkingBody || content.parkingNote) && <div><h3>{content.parkingHeading}</h3><p>{content.parkingBody}</p>{content.parkingNote && <p className="parking-note"><em>{content.parkingNote}</em></p>}</div>}</section>}
  </div>;
 }

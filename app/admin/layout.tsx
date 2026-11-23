@@ -1,7 +1,9 @@
 import { headers } from "next/headers";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
+import { PublicPageVisibilityProvider } from "@/components/PublicPageVisibilityProvider";
 import { getClubContext } from "@/lib/club-context";
+import { fetchPublicPageVisibility } from "@/lib/public-page-visibility-query";
 import { createClient } from "@/lib/supabase-server";
 
 export default async function AdminLayout({
@@ -22,9 +24,14 @@ export default async function AdminLayout({
 
   if (!club) return <>{children}</>;
 
+  // Fail-open read of the "Visible to visitors" switches; PageVisibilityControl shows it.
+  const pageVisibility = await fetchPublicPageVisibility(club.id);
+
   return (
     <ClubContextProvider club={club}>
-      <ClubBrandingProvider>{children}</ClubBrandingProvider>
+      <PublicPageVisibilityProvider visibility={pageVisibility}>
+        <ClubBrandingProvider>{children}</ClubBrandingProvider>
+      </PublicPageVisibilityProvider>
     </ClubContextProvider>
   );
 }
