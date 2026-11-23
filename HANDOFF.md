@@ -3,7 +3,8 @@
 - **Status:** production operations done and verified (`F1`, `F2`, `D1`), each on Christian's "go". No code change. Record: `STATUS.md` (RC-LAUNCH billing + domain).
 - **What:** live Stripe price `price_1UezJqK6WajTkwHYV67VmH8p` ($150/month, product `prod_VgM14vuaVAbJ6M`); Rose City is now `kind = customer` on that price with July's cancelled subscription row removed (audits 1246-1247); `rosecityfutbolclub.com` is the primary domain with `www` active and `onzio-platform.vercel.app` kept active non-primary (audit 1248); Vercel's 302 redirects are gone and Auth allows both new hosts.
 - **Evidence:** read-backs in Stripe and production; both hosts serve the hold 404 and a 200 Rose City sign-in, certs valid to 2027-02-01.
-- **Exact next step:** `F3` Sam's owner invite (needs "go"), then Sam pays from Payments → Start plan; the public-site hold stays until Phase 5.
+- **F3:** Sam (handle `info`) is an active owner (audits 1249-1250), invited with `scripts/invite-rose-city-owner-production.ts`.
+- **Exact next step:** Sam pays from Payments → Start plan; the public-site hold stays until Phase 5.
 
 ## 2026-11-22 - UI-PREVIEW-OVERVIEW-OVERLAY-FIX: Homepage Overview overlays sit on their own sections; no blank sections
 
