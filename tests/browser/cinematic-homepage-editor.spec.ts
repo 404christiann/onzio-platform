@@ -433,6 +433,21 @@ test.describe("UI-PREVIEW-CLICK-HOMEPAGE: click a preview field to edit it", () 
     await expect(partDialog(page).locator("[data-edit-target-flash]")).toHaveCount(0, { timeout: 3_000 });
   });
 
+  test("a stamped link (the hero's second button, a Next Link) opens its field and never opens a tab or leaves the admin", async ({ page }) => {
+    const target = "homepage.hero.secondaryCtaLabel";
+    const isLink = await overviewFrame(page).locator(`[data-edit-target="${target}"]`).first().evaluate(node => node.closest("a[href]") !== null);
+    expect(isLink, `${target} is a link`).toBe(true);
+    const { x, y } = await fieldPoint(page, target);
+    const before = page.url();
+    const popup = page.context().waitForEvent("page", { timeout: 1_500 }).catch(() => null);
+    await page.mouse.click(x, y);
+    expect(await popup, "clicking a stamped link opened a new tab").toBeNull();
+    await expect(partDialog(page).locator('[data-editor-dialog-panel="hero"]')).toBeVisible();
+    await expect.poll(() => focusedTarget(page)).toBe(target);
+    expect(page.url()).toBe(before);
+    expect(page.context().pages()).toHaveLength(1);
+  });
+
   test("a ticket price opens Ticket prices with that row's Price or offer focused", async ({ page }) => {
     const rows = (await snapshot(page)).content.revamp!.prices.rows;
     // The last option that shows a price (a row whose price is blank has no price on the page), not the first.

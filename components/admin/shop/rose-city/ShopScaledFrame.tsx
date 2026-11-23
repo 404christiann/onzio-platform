@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { EDIT_TARGET_ATTRIBUTE, EDIT_TARGET_SELECTOR, resolveEditTarget, type EditTargetId } from "@/lib/admin-edit-targets";
 import { watchEditTargetStamps, type EditTargetStamp } from "@/components/admin/ui/editor-kit/editTargets";
+import { usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import styles from "./ShopScaledFrame.module.css";
 
 export type ShopFrameTarget = "copy" | "cta" | "photos" | "photoRows" | "editions" | "purchase" | "details" | "attributes" | "sizeChart" | "map" | "sponsors" | string;
@@ -48,6 +49,7 @@ export function ShopScaledFrame({ naturalWidth, naturalHeight, css, onSelect, ch
 }) {
   const { ref: box, near } = useNearViewport();
   const frame = useRef<HTMLIFrameElement>(null);
+  usePreviewLinkGuard(frame, near);
   const [scale, setScale] = useState<number | null>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
   // The skeleton-shaped box (naturalHeight) holds until the page inside is measured; after that the box is as tall as the page.
@@ -150,13 +152,11 @@ export function ShopScaledFrame({ naturalWidth, naturalHeight, css, onSelect, ch
         aria-hidden="true"
         onClickCapture={event => {
           const target = event.target as HTMLElement;
-          if (target.closest("a")) { event.preventDefault(); }
           const hotspot = target.closest<HTMLElement>("[data-shop-editor-target]");
           // Only a pointer click names a field (detail 0 is the keyboard or a script); an undeclared id names none.
           const field = event.detail > 0 ? resolveEditTarget(target.closest(EDIT_TARGET_SELECTOR)?.getAttribute(EDIT_TARGET_ATTRIBUTE))?.id : undefined;
           if (hotspot || field) onSelect(hotspot?.dataset.shopEditorTarget ?? "copy", field);
         }}
-        onSubmitCapture={event => event.preventDefault()}
       >
         <style>{`
           html { scroll-behavior:auto !important; overflow:hidden; }
