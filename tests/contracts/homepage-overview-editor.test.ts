@@ -10,7 +10,7 @@ import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities"
 import { createHomepageEditorState, getDirtyHomepageSections, getHomepageSaveBlocker, reduceHomepageEditor, type HomepageDraft } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PARTS, PREVIEW_PIECES, homepagePartTitle, type PartId } from "@/components/admin/homepage/homepage-parts";
 import { chooseSplit, layoutPartButtons, measureParts, numberParts, watchFrameLayout } from "@/components/admin/homepage/HomepageOverviewPreview";
-import { loadPreviewMediaNow, preparePreviewDocument, PREVIEW_DOCUMENT_ATTRIBUTE, PREVIEW_DOCUMENT_STYLE } from "@/components/admin/homepage/preview-document";
+import { loadPreviewMediaNow, preparePreviewDocument, PREVIEW_DOCUMENT_ATTRIBUTE, PREVIEW_DOCUMENT_STYLE, PREVIEW_STATIC_ATTRIBUTE, setPreviewStatic } from "@/components/admin/homepage/preview-document";
 import { EDIT_TARGET_REGISTRY } from "@/lib/admin-edit-targets";
 import HomepagePartFields, { type HomepagePartEditor } from "@/components/admin/homepage/HomepagePartFields";
 
@@ -335,6 +335,7 @@ describe("Preview frames load every picture and show every section", () => {
     const { doc, root, head, observers } = fakeDocument(body);
     const cleanup = preparePreviewDocument(doc);
     expect(root.getAttribute(PREVIEW_DOCUMENT_ATTRIBUTE)).toBe("true");
+    expect(root.getAttribute(PREVIEW_STATIC_ATTRIBUTE)).toBe("true");
     expect(lazy.getAttribute("loading")).toBe("eager");
     expect(embed.getAttribute("loading")).toBe("eager");
     expect(head.nodes).toHaveLength(1);
@@ -348,8 +349,31 @@ describe("Preview frames load every picture and show every section", () => {
     expect(lazy.getAttribute("loading")).toBe("eager");
     cleanup();
     expect(root.getAttribute(PREVIEW_DOCUMENT_ATTRIBUTE)).toBeNull();
+    expect(root.getAttribute(PREVIEW_STATIC_ATTRIBUTE)).toBeNull();
     expect(head.nodes).toHaveLength(0);
     expect(observers[0].disconnected).toBe(true);
+  });
+
+  it("a playback frame is marked and loads pictures now but is never frozen; the toggle freezes and unfreezes it", () => {
+    const lazy = fakeElement("img", "lazy");
+    const { doc, root } = fakeDocument(fakeElement("body", undefined, [lazy]));
+    const cleanup = preparePreviewDocument(doc, { playback: true });
+    expect(root.getAttribute(PREVIEW_DOCUMENT_ATTRIBUTE)).toBe("true");
+    expect(root.getAttribute(PREVIEW_STATIC_ATTRIBUTE)).toBeNull();
+    expect(lazy.getAttribute("loading")).toBe("eager");
+    setPreviewStatic(doc, true);
+    expect(root.getAttribute(PREVIEW_STATIC_ATTRIBUTE)).toBe("true");
+    setPreviewStatic(doc, false);
+    expect(root.getAttribute(PREVIEW_STATIC_ATTRIBUTE)).toBeNull();
+    cleanup();
+  });
+
+  it("HomepagePreviewFrame prepares its frame in its own mode and follows the Playback toggle; the Overview is always static", () => {
+    const frame = read("components/admin/homepage/HomepagePreviewFrame.tsx");
+    expect(frame).toMatch(/unprepare = preparePreviewDocument\(doc, \{ playback: playbackRef\.current \}\)/);
+    expect(frame).toMatch(/playbackRef\.current = playback;/);
+    expect(frame).toMatch(/useEffect\(\(\) => \{ if \(body\) setPreviewStatic\(body\.ownerDocument, !playback\); \}, \[body, playback\]\);/);
+    expect(read("components/admin/homepage/HomepageOverviewPreview.tsx")).toMatch(/unprepare = preparePreviewDocument\(doc\);/);
   });
 
   it("loadPreviewMediaNow reports what it changed and leaves eager pictures alone", () => {
@@ -358,9 +382,10 @@ describe("Preview frames load every picture and show every section", () => {
     expect(loadPreviewMediaNow(body as unknown as Element)).toBe(0);
   });
 
-  it("the preview style only applies inside a preview document and shows entrance effects in their final state", () => {
+  it("the preview style only applies inside a static preview document and shows entrance effects in their final state", () => {
     const rules = PREVIEW_DOCUMENT_STYLE.split("}").map(rule => rule.trim()).filter(Boolean);
-    for (const rule of rules) for (const selector of rule.slice(0, rule.indexOf("{")).split(",")) expect(selector.trim()).toMatch(/^html\[data-preview="true"\] /);
+    // Every freeze or reveal rule needs a static preview: a playback preview keeps the page's motion.
+    for (const rule of rules) for (const selector of rule.slice(0, rule.indexOf("{")).split(",")) expect(selector.trim()).toMatch(/^html\[data-preview="true"\]\[data-preview-static="true"\] /);
     expect(PREVIEW_DOCUMENT_STYLE).toMatch(/\[style\*="opacity: 0"\]\[style\*="transform"\][^{]*\{ opacity: 1 !important; transform: none !important; visibility: visible !important; \}/);
     expect(PREVIEW_DOCUMENT_STYLE).toContain("animation: none !important; transition: none !important;");
   });
@@ -370,7 +395,7 @@ describe("Preview frames load every picture and show every section", () => {
     // neither cause; it is left to the Shop click-to-field work.
     for (const file of ["components/admin/homepage/HomepageOverviewPreview.tsx", "components/admin/homepage/HomepagePreviewFrame.tsx"]) {
       const source = read(file);
-      expect(source, file).toMatch(/unprepare = preparePreviewDocument\(doc\)/);
+      expect(source, file).toMatch(/unprepare = preparePreviewDocument\(doc[,)]/);
       expect(source, file).toMatch(/unprepare\?\.\(\)/);
     }
     for (const file of ["components/cinematic/CinematicHome.tsx", "components/cinematic/CinematicEpisode.tsx", "components/cinematic/CinematicSponsors.tsx", "components/cinematic/CinematicPhotos.tsx"]) {

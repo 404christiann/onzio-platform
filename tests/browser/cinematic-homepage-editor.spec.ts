@@ -899,3 +899,66 @@ test.describe("UI-PREVIEW-OVERVIEW-OVERLAY-FIX: overlays sit on their own sectio
   });
 
 });
+
+/**
+ * UI-PREVIEW-OVERVIEW-OVERLAY-FIX review follow-up: only static (editing) previews are frozen. A playback preview exists to
+ * show the page as visitors see it, so its animations, transitions and reveal effects keep running.
+ */
+test.describe("UI-PREVIEW-OVERVIEW-OVERLAY-FIX: playback previews keep their motion", () => {
+  test("real CSS: a static frame is frozen, a playback frame keeps animations, transitions and reveals; switching modes follows", async ({ page }) => {
+    const root = path.resolve(__dirname, "..", "..");
+    const bundle = (await build({
+      stdin: { contents: 'import * as preview from "@/components/admin/homepage/preview-document"; (window as unknown as { previewDocument: typeof preview }).previewDocument = preview;', resolveDir: root, loader: "ts", sourcefile: "preview-document-entry.ts" },
+      bundle: true, write: false, format: "iife", tsconfig: path.join(root, "tsconfig.json"),
+    })).outputFiles[0].text;
+    const frameDocument = `<!doctype html><html><head><style>@keyframes spin{to{transform:rotate(360deg)}}.spin{width:20px;height:20px;animation:spin 1s linear infinite}.fade{transition:opacity .6s ease}</style></head><body><div class="spin"></div><div class="fade"></div><div class="reveal" style="opacity: 0; transform: translateY(40px);">Revealed</div><img class="lazy" loading="lazy" alt=""></body></html>`;
+    await page.setContent(`<!doctype html><html><body><iframe id="static" srcdoc="${frameDocument.replace(/"/g, "&quot;")}"></iframe><iframe id="playback" srcdoc="${frameDocument.replace(/"/g, "&quot;")}"></iframe></body></html>`);
+    await page.addScriptTag({ content: bundle });
+    await expect.poll(() => page.evaluate(() => ["static", "playback"].every(id => (document.getElementById(id) as HTMLIFrameElement).contentDocument?.querySelector(".spin")))).toBe(true);
+    const motion = () => page.evaluate(() => {
+      return Object.fromEntries(["static", "playback"].map(id => {
+        const doc = (document.getElementById(id) as HTMLIFrameElement).contentDocument!;
+        const style = (selector: string) => doc.defaultView!.getComputedStyle(doc.querySelector(selector)!);
+        return [id, { preview: doc.documentElement.getAttribute("data-preview"), animation: style(".spin").animationName, running: doc.getAnimations().length, transition: style(".fade").transitionDuration, reveal: style(".reveal").opacity, lazy: doc.querySelector(".lazy")!.getAttribute("loading") }];
+      }));
+    });
+    await page.evaluate(() => {
+      const api = (window as unknown as { previewDocument: typeof import("@/components/admin/homepage/preview-document") }).previewDocument;
+      api.preparePreviewDocument((document.getElementById("static") as HTMLIFrameElement).contentDocument!);
+      api.preparePreviewDocument((document.getElementById("playback") as HTMLIFrameElement).contentDocument!, { playback: true });
+    });
+    expect(await motion()).toEqual({
+      static: { preview: "true", animation: "none", running: 0, transition: "0s", reveal: "1", lazy: "eager" },
+      playback: { preview: "true", animation: "spin", running: 1, transition: "0.6s", reveal: "0", lazy: "eager" },
+    });
+    // The editor's Playback toggle: the same frames switch modes without being rebuilt.
+    await page.evaluate(() => {
+      const api = (window as unknown as { previewDocument: typeof import("@/components/admin/homepage/preview-document") }).previewDocument;
+      api.setPreviewStatic((document.getElementById("static") as HTMLIFrameElement).contentDocument!, false);
+      api.setPreviewStatic((document.getElementById("playback") as HTMLIFrameElement).contentDocument!, true);
+    });
+    const switched = await motion();
+    expect(switched.static).toMatchObject({ animation: "spin", running: 1, transition: "0.6s" });
+    expect(switched.playback).toMatchObject({ animation: "none", running: 0, transition: "0s", reveal: "1" });
+  });
+
+  test("Diverse City classic homepage: the editing frame is frozen, the 'Preview of your homepage' playback frame is not", async ({ page, baseURL }) => {
+    const origin = new URL(baseURL!);
+    origin.hostname = "diverse-city.localhost";
+    await page.goto(new URL("/admin/homepage", origin).href, { waitUntil: "domcontentloaded" });
+    const frames = page.locator('iframe[title="Homepage preview"]');
+    await expect(frames.first()).toBeVisible({ timeout: 60_000 });
+    const modes = () => frames.evaluateAll(list => list.map(frame => {
+      const doc = (frame as HTMLIFrameElement).contentDocument!;
+      const playback = doc.querySelector("[data-homepage-preview]")?.getAttribute("data-playback");
+      const transitions = Array.from(doc.querySelectorAll("body *")).filter(node => doc.defaultView!.getComputedStyle(node).transitionDuration.split(",").some(value => parseFloat(value) > 0)).length;
+      return { playback, preview: doc.documentElement.getAttribute("data-preview"), frozen: doc.documentElement.getAttribute("data-preview-static"), transitions };
+    }));
+    await expect.poll(async () => (await modes())[0]).toMatchObject({ playback: "false", preview: "true", frozen: "true", transitions: 0 });
+    await page.getByRole("button", { name: "Preview of your homepage" }).click();
+    await expect(frames).toHaveCount(2, { timeout: 30_000 });
+    await expect.poll(async () => (await modes()).find(mode => mode.playback === "true")).toMatchObject({ preview: "true", frozen: null });
+    expect((await modes()).find(mode => mode.playback === "true")!.transitions).toBeGreaterThan(0);
+    expect((await modes()).find(mode => mode.playback === "false")).toMatchObject({ frozen: "true", transitions: 0 });
+  });
+});

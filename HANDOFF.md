@@ -4,6 +4,8 @@
 - **Why it broke:** the right column showed the second frame but its buttons came from the first frame's layout; clipped lazy pictures (the raffle art, no size) stayed unloaded in one frame, shifting it 1590px; and the column split was fixed before that picture arrived.
 - **What:** one measurement per frame, part names and boxes from one part id (labels now in `EDIT_TARGET_REGISTRY.homepage`), a split that rebalances when the page really changes shape, and preview documents that load every picture now and show entrance effects finished (`html[data-preview="true"]`).
 - **Evidence:** 16 new contract tests, 22 mutations each red; 5 new browser tests red on main with the reported symptoms, green on the fix; checked in Christian's Chrome (IoU 1.000 for all 11 parts in both modes).
+- **Review follow-up (2026-11-22):** the Medium (Playback preview lost its animations) is fixed: only static frames are frozen (`data-preview-static`), playback frames keep their motion; proven in real Chromium CSS and in the Diverse City editor, regression and wiring breaks each red.
+- **Exact next step:** Christian re-reviews.
 
 ## 2026-11-22 - UI-PREVIEW-CLICK-ABOUT-CONTACT-POLICIES: Rose City About, Contact and Policies preview and click-to-field
 

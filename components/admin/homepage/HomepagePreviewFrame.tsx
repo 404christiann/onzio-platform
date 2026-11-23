@@ -6,7 +6,7 @@ import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
 import { PREVIEW_LINK_SELECTOR, usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import type { PieceId } from "@/lib/homepage-editor/model";
-import { preparePreviewDocument } from "./preview-document";
+import { preparePreviewDocument, setPreviewStatic } from "./preview-document";
 
 const DECORATIONS = ["hp-piece-corners", "hp-piece-tag"];
 const isDecoration = (node: Node) => node.nodeType === 1 && DECORATIONS.some(name => (node as HTMLElement).classList.contains(name));
@@ -25,6 +25,11 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
   const tagsOn = !!tags;
   const delayed = useDelayedLoading(loading || !body);
   const initialDocument = useRef(classic ? classicLoadingDocument(theme) : "<!doctype html><html lang='en'><head></head><body></body></html>");
+  // Read by the mount effect (which runs once), so a document replaced on load still starts in the right mode.
+  const playbackRef = useRef(playback);
+  playbackRef.current = playback;
+  // Playback shows the page as visitors see it: its motion keeps running. Editing (static) freezes it.
+  useEffect(() => { if (body) setPreviewStatic(body.ownerDocument, !playback); }, [body, playback]);
   useEffect(() => {
     const placeholder = iframe.current?.contentDocument?.getElementById("homepage-frame-loading");
     if (!placeholder || !classic) return;
@@ -125,7 +130,7 @@ export default function HomepagePreviewFrame({ children, host, playback = false,
       doc.documentElement.className = document.documentElement.className.replace(/\bdark\b/g, "");
       // Scaled and clipped, the frame would leave lazy pictures unloaded and entrance effects unplayed (preview-document.ts).
       unprepare?.();
-      unprepare = preparePreviewDocument(doc);
+      unprepare = preparePreviewDocument(doc, { playback: playbackRef.current });
       const syncStyles = () => {
         const generation = ++styleGeneration;
         const pending: Promise<void>[] = [];
