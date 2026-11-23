@@ -18,6 +18,7 @@ import {
 import previewCards from "@/components/admin/ui/editor-kit/PreviewCards.module.css";
 import { DISCARD_CONFIRM } from "@/components/admin/editor-copy";
 import { createClient } from "@/lib/admin-client";
+import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { clubToday } from "@/lib/club-time";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { useSeasons } from "@/lib/use-seasons";
@@ -35,6 +36,8 @@ import {
 import { RoseCityMatchFields } from "./RoseCityMatchFields";
 import { anchorAfterQuick, anchorStamps, rebaseForm, saveMatches, type Anchor, type MatchesApi, type PendingWrite, type SavedMatchRow } from "./rose-city-schedule-save";
 import { MatchLive, MatchThumb, fixturesSignature, THUMB_SIZE } from "./MatchPreview";
+import { hideMatchFieldHover, matchFieldUnder, showMatchFieldHover } from "./match-card-hover";
+import { matchSectionOf } from "./match-edit-targets";
 import { matchPreviewFixtures } from "./match-preview-fixtures";
 import styles from "./RoseCityScheduleEditor.module.css";
 
@@ -124,13 +127,15 @@ export default function RoseCityScheduleEditor() {
 
   // ── the match dialog ───────────────────────────────────────────────
 
-  function openMatch(key: string, event?: React.MouseEvent<HTMLElement>) {
+  /** `target` is the field clicked in the card's preview: its section opens with that field focused. Edit and the keyboard pass none. */
+  function openMatch(key: string, event?: React.MouseEvent<HTMLElement>, target?: EditTargetId) {
     setEditingKey(key);
     if (!drafts[key] && allBaselines[key]) {
       setDrafts(current => ({ ...current, [key]: structuredClone(allBaselines[key]) }));
       setAnchors(current => ({ ...current, [key]: { stamp: stamps.current[key], baseline: structuredClone(allBaselines[key]) } }));
     }
-    dialog.openSection("match", event);
+    dialog.openSection(matchSectionOf(target) ?? "match", event);
+    dialog.focusField(target);
   }
   function openNew(event: React.MouseEvent<HTMLElement>) {
     const key = `${NEW_KEY_PREFIX}${++newCounter.current}`;
@@ -477,7 +482,12 @@ export default function RoseCityScheduleEditor() {
                         <div className={previewCards.previewWrap}>
                           <MatchThumb ownId={key} fixtures={row} timeZone={timeZone} shared={shared} signature={fixturesSignature(row)}
                             urls={[form.opponent_logo_url, form.league_logo_url, form.sponsor_logo_url].filter((url): url is string => Boolean(url))} />
-                          <button type="button" className={`admin-press ${previewCards.previewButton}`} aria-label={label} tabIndex={-1} onClick={event => openMatch(key, event)} {...KIT_EDIT_PROPS} />
+                          <button type="button" className={`admin-press ${previewCards.previewButton}`} aria-label={label} tabIndex={-1}
+                            // A pointer click opens the field under the pointer; Enter or Space (detail 0) opens the match, as before.
+                            onClick={event => openMatch(key, event, event.detail > 0 ? matchFieldUnder(event.currentTarget, key, event.clientX, event.clientY)?.id : undefined)}
+                            onPointerMove={event => { if (event.pointerType === "mouse") showMatchFieldHover(event.currentTarget, key, event.clientX, event.clientY); }}
+                            onPointerLeave={event => hideMatchFieldHover(event.currentTarget)} {...KIT_EDIT_PROPS} />
+                          <span className={previewCards.fieldHoverClip} data-field-hover-clip="" aria-hidden="true"><span className={previewCards.fieldHover} data-field-hover="" hidden /></span>
                         </div>
                         <div className={styles.foot}>
                           <div className={styles.footRow}>
@@ -525,13 +535,13 @@ export default function RoseCityScheduleEditor() {
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-schedule-status="">{status}</p>
-    <EditorDialog open={dialog.open} onClose={closeDialog} mode="split" returnFocusRef={dialog.returnFocusRef}
+    <EditorDialog open={dialog.open} onClose={closeDialog} mode="split" returnFocusRef={dialog.returnFocusRef} focusRequest={dialog.focusRequest}
       title={active ? (isNewKey(editingKey!) ? "New match" : `Edit ${matchTitle(active)}`) : "Edit match"}
       sections={sectionList} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as MatchSectionId)}
       previewHint="How this match looks on the Schedule"
       renderSection={id => dialog.open && editingKey && active ? (
         <fieldset className={styles.lock} disabled={saving || locked}>
-          <RoseCityMatchFields key={editingKey} section={id as MatchSectionId} form={active} onChange={formChange(editingKey)} seasons={seasons} clubName={club.name}
+          <RoseCityMatchFields key={editingKey} matchKey={editingKey} section={id as MatchSectionId} form={active} onChange={formChange(editingKey)} seasons={seasons} clubName={club.name}
             isNew={isNewKey(editingKey)} onUploadBusyChange={uploadBusy} onMediaActivity={() => { setFailure(current => current === "error" ? null : current); }}
             onDelete={() => { const key = editingKey; closeDialog(); setDeleteError(null); setDeleteKey(key); }} />
         </fieldset>

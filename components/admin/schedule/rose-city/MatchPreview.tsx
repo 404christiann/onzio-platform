@@ -3,6 +3,7 @@
 import { memo, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Shimmer } from "@/components/admin/ui/Shimmer";
 import previewCards from "@/components/admin/ui/editor-kit/PreviewCards.module.css";
+import { watchEditTargetStamps } from "@/components/admin/ui/editor-kit/editTargets";
 import { SCOPED_PREVIEW_ATTRIBUTES, scopePreviewIds } from "@/components/admin/ui/editor-kit/scopePreviewIds";
 import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
@@ -10,6 +11,7 @@ import CinematicShell from "@/components/cinematic/CinematicShell";
 import CinematicSchedule from "@/components/cinematic/CinematicSchedule";
 import type { CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import type { Fixture } from "@/lib/data";
+import { matchThumbStamps } from "./match-edit-targets";
 import styles from "./RoseCityScheduleEditor.module.css";
 
 const CSS_ESCAPE = (value: string) => value.replace(/["\\]/g, "");
@@ -84,12 +86,19 @@ export const MatchThumb = memo(function MatchThumb({ fixtures, timeZone, shared,
     observer.observe(node, { subtree: true, childList: true, attributes: true, attributeFilter: SCOPED_PREVIEW_ATTRIBUTES });
     return () => observer.disconnect();
   }, [ref, near, scope]);
+  // Click-to-field: this match's fields on its own row. Built from the key alone, so typing never restarts the watcher.
+  const stamps = useMemo(() => matchThumbStamps(ownId), [ownId]);
+  const scaledRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = scaledRef.current;
+    return node && near ? watchEditTargetStamps(node, stamps) : undefined;
+  }, [near, stamps]);
   return (
     <div ref={ref} className={`${previewCards.box} ${styles.thumb}`} aria-hidden="true" inert data-preview-box="" data-preview-mounted={near}
       style={{ "--thumb-ratio": `${size.width} / ${size.height}` } as CSSProperties}>
       <Shimmer className={previewCards.placeholder} data-preview-placeholder="" />
       {near && (
-        <div className={previewCards.scaled} style={{ "--preview-width": `${size.width}px`, "--preview-scale": scale } as CSSProperties}>
+        <div ref={scaledRef} className={previewCards.scaled} style={{ "--preview-width": `${size.width}px`, "--preview-scale": scale } as CSSProperties}>
           <SettledPreview urls={urls}><div data-own-row={ownId}><style>{hidePublicChrome(ownId)}</style><PublicRow fixtures={fixtures} timeZone={timeZone} shared={shared} /></div></SettledPreview>
         </div>
       )}

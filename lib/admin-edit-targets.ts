@@ -10,6 +10,8 @@
  * Pure module: no React, no DOM. The DOM half lives in components/admin/ui/editor-kit/editTargets.ts.
  */
 
+import { SCHEDULE_EDIT_TARGETS } from "@/lib/edit-targets/schedule";
+
 export const EDIT_TARGET_ATTRIBUTE = "data-edit-target";
 export const EDIT_TARGET_SELECTOR = `[${EDIT_TARGET_ATTRIBUTE}]`;
 
@@ -278,6 +280,7 @@ export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
       labels: { fields: ["homeLabel", "awayLabel", "photoRowLabel", "emptyMessage", "imageWidth", "imageTop"] },
     },
   },
+  ...SCHEDULE_EDIT_TARGETS,
 };
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);
