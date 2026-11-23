@@ -256,6 +256,28 @@ export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
       carousel: { rowFields: ["name", "website", "logo"] },
     },
   },
+  /**
+   * Shop (/admin/shop): Rose City (cinematic@2, the kit EditorDialog) and Diverse City (classic, AdminDialog) share the one
+   * editor id because the fields and ids are the same data. Sections are RoseCityShopFields' ShopSectionId values; Diverse City's
+   * one dialog per region uses `kitText` (kit text) and `purchase`. The dialog edits one kit at a time, so every kit field is keyed
+   * by the kit (`home`, `away`, `third`); jersey options are keyed by their kit too (option i is kit i). Detail cards and Jersey
+   * details tiles and size chart measurements are keyed by position (a measurement's `value<n>` is its cell under size n), because the dialog and the public page both list every one of them in order.
+   * The kit photos and the photo row declare nothing: they hold photos only, so a click on them opens the list as it always has.
+   */
+  shop: {
+    route: "/admin/shop",
+    sections: {
+      editions: { fields: ["heading"], rowFields: ["label", "price", "line", "link"] },
+      kitText: { rowFields: ["eyebrow", "title", "description", "bullets", "storeNote", "buttonLabel", "buyLink"] },
+      purchase: { fields: ["heading", "footerLabel", "footerText", "buttonLabel", "buttonLink"], rowFields: ["label", "title", "body", "icon"] },
+      details: { fields: ["heading"], rowFields: ["photoAlt", "title", "text"] },
+      care: { fields: ["care"] },
+      sizes: { fields: ["heading", "sizes", "note"], rowFields: ["label", "value0", "value1", "value2", "value3", "value4", "value5", "value6", "value7"] },
+      map: { fields: ["visible", "heading", "description", "wholeImage", "crop"] },
+      partners: { fields: ["visible", "heading"] },
+      labels: { fields: ["homeLabel", "awayLabel", "photoRowLabel", "emptyMessage", "imageWidth", "imageTop"] },
+    },
+  },
 };
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);

@@ -8,6 +8,8 @@ import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { EditorDialog, PageFrame, ValidationMessage, derivePageSaveState, useEditorDialog, type EditorDialogSection, type PageSaveFailure } from "@/components/admin/ui/editor-kit";
 import { useClubContext } from "@/components/ClubContextProvider";
+import type { EditTargetStamp } from "@/components/admin/ui/editor-kit/editTargets";
+import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { createClient } from "@/lib/admin-client";
 import type { CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import { submitPageSave } from "@/lib/page-editor-save";
@@ -19,6 +21,7 @@ import { KIT_NAMES, KitPicker, RoseCityShopFields, type ShopSectionId } from "./
 import { HomeFeaturePreview, KIT_PART_CSS, SHARED_LEFT_CSS, SHARED_RIGHT_CSS, ShopPagePreview, kitContentFromDraft, useShopSponsorLogos } from "./ShopPreviewParts";
 import { ShopScaledFrame } from "./ShopScaledFrame";
 import { editionsForKit, nextKitToAdd, visibleKits } from "./shop-fields-model";
+import { ROSE_CITY_LEFT_STAMPS, ROSE_CITY_RIGHT_STAMPS, roseCityKitStamps, shopKitSectionStamps, shopSectionOf } from "../shop-edit-targets";
 import styles from "./RoseCityShopEditor.module.css";
 import { DISCARD_CONFIRM } from "../../editor-copy";
 
@@ -41,6 +44,10 @@ const TARGET_SECTION: Record<string, ShopSectionId> = {
   photos: "kitPhotos", copy: "kitText", cta: "kitText", photoRows: "photoRow", editions: "editions", purchase: "purchase", details: "details",
   attributes: "care", sizeChart: "sizes", map: "map", sponsors: "partners",
 };
+
+/** The stamps for each frame. They depend on the kit and the surface only (never the draft), so each array is built once and keeps its identity. */
+const KIT_FRAME_STAMPS: Record<ShopVariant, readonly EditTargetStamp[]> = { home: roseCityKitStamps("home"), away: roseCityKitStamps("away"), third: roseCityKitStamps("third") };
+const HOME_FEATURE_STAMPS: readonly EditTargetStamp[] = shopKitSectionStamps("home");
 
 function markVariant(draft: ShopPageDraft, variant: ShopVariant): ShopPageDraft {
   return { ...draft, changedVariants: draft.changedVariants.includes(variant) ? draft.changedVariants : [...draft.changedVariants, variant] };
@@ -332,13 +339,17 @@ function ShopEditor() {
   const sections: EditorDialogSection[] = (surface === "shop" ? (Object.keys(SECTION_TITLES) as ShopSectionId[]) : (["kitPhotos", "kitText"] as ShopSectionId[]))
     .map((id) => ({ id, title: SECTION_TITLES[id], summary: sectionSummary(id, draft, activeKit) }));
 
-  function openSection(id: ShopSectionId, kit: ShopVariant | null, event?: MouseEvent<HTMLElement>) {
+  function openSection(id: ShopSectionId, kit: ShopVariant | null, event?: MouseEvent<HTMLElement>, field?: EditTargetId) {
     if (kit) setActiveKit(kit);
     dialog.openSection(id, event);
+    dialog.focusField(field);
   }
-  function selectFromPreview(target: string, kit: ShopVariant | null) {
-    const id = TARGET_SECTION[target];
-    if (id) openSection(id, KIT_SECTIONS.includes(id) ? kit : null);
+  /** A click on a field opens the field's own section on the frame's kit and focuses it; a click on a part alone, or anywhere else in it, opens the part's section as before. */
+  function selectFromPreview(target: string, kit: ShopVariant | null, field?: EditTargetId) {
+    const fieldSection = shopSectionOf(field);
+    const named = sections.find(section => section.id === fieldSection)?.id as ShopSectionId | undefined;
+    const id = named ?? TARGET_SECTION[target];
+    if (id) openSection(id, KIT_SECTIONS.includes(id) ? kit : null, undefined, named ? field : undefined);
   }
 
   const nextKit = nextKitToAdd(KIT_ORDER, kitsOnPage);
@@ -404,7 +415,7 @@ function ShopEditor() {
                   </button>}
                 </div>
                 <div className={styles.previewBox}>
-                  <ShopScaledFrame naturalWidth={KIT_PREVIEW.width} naturalHeight={KIT_PREVIEW.height} label={`${KIT_NAMES[kitId]} preview`} css={surface === "shop" ? KIT_PART_CSS : ""} onSelect={(target) => selectFromPreview(target, kitId)}>
+                  <ShopScaledFrame naturalWidth={KIT_PREVIEW.width} naturalHeight={KIT_PREVIEW.height} label={`${KIT_NAMES[kitId]} preview`} css={surface === "shop" ? KIT_PART_CSS : ""} stamps={surface === "shop" ? KIT_FRAME_STAMPS[kitId] : HOME_FEATURE_STAMPS} onSelect={(target, field) => selectFromPreview(target, kitId, field)}>
                     {presentation.renderPreview(kits, surface, () => undefined, surface === "shop"
                       ? <ShopPagePreview draft={draft} kits={kits} kit={kitId} sponsors={sponsors} />
                       : <HomeFeaturePreview kits={kits} maxBulletPoints={maxBulletPoints} />)}
@@ -431,12 +442,12 @@ function ShopEditor() {
             <h2 id="shop-shared-heading" className={styles.sharedHeading}>Shared by all kits</h2>
             <div className={styles.sharedGrid}>
               <div className={styles.sharedBox}>
-                <ShopScaledFrame naturalWidth={SHARED_PREVIEW.width} naturalHeight={SHARED_PREVIEW.height} label="Purchase and jersey details preview" css={SHARED_LEFT_CSS} onSelect={(target) => selectFromPreview(target, null)}>
+                <ShopScaledFrame naturalWidth={SHARED_PREVIEW.width} naturalHeight={SHARED_PREVIEW.height} label="Purchase and jersey details preview" css={SHARED_LEFT_CSS} stamps={ROSE_CITY_LEFT_STAMPS} onSelect={(target, field) => selectFromPreview(target, null, field)}>
                   {presentation.renderPreview(kits, surface, () => undefined, <ShopPagePreview draft={draft} kits={kits} kit={activeKit} sponsors={sponsors} />)}
                 </ShopScaledFrame>
               </div>
               <div className={styles.sharedBox}>
-                <ShopScaledFrame naturalWidth={SHARED_PREVIEW.width} naturalHeight={SHARED_PREVIEW.height} label="Size chart, route map and partner strip preview" css={SHARED_RIGHT_CSS} onSelect={(target) => selectFromPreview(target, null)}>
+                <ShopScaledFrame naturalWidth={SHARED_PREVIEW.width} naturalHeight={SHARED_PREVIEW.height} label="Size chart, route map and partner strip preview" css={SHARED_RIGHT_CSS} stamps={ROSE_CITY_RIGHT_STAMPS} onSelect={(target, field) => selectFromPreview(target, null, field)}>
                   {presentation.renderPreview(kits, surface, () => undefined, <ShopPagePreview draft={draft} kits={kits} kit={activeKit} sponsors={sponsors} />)}
                 </ShopScaledFrame>
               </div>
@@ -457,6 +468,7 @@ function ShopEditor() {
       activeId={dialog.activeId}
       onActiveChange={(id) => dialog.switchTo(id as ShopSectionId)}
       returnFocusRef={dialog.returnFocusRef}
+      focusRequest={dialog.focusRequest}
       loading={loading}
       renderSection={(id) => draft ? <fieldset disabled={locked} className={styles.fieldset}>
         {KIT_SECTIONS.includes(id as ShopSectionId) && <KitPicker value={activeKit} kits={kitsOnPage} onChange={setActiveKit} />}
