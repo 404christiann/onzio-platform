@@ -24,7 +24,10 @@ export class StaticElement {
 
   get children() { return this.childNodes.filter((node): node is StaticElement => node instanceof StaticElement); }
   get textContent(): string { return this.childNodes.map(node => node instanceof StaticText ? node.text : node.textContent).join(""); }
-  get classList() { return (this.attributes.get("class") ?? "").split(/\s+/).filter(Boolean); }
+  get classList() {
+    const names = (this.attributes.get("class") ?? "").split(/\s+/).filter(Boolean);
+    return Object.assign(names, { contains: (name: string) => names.includes(name) });
+  }
   getAttribute(name: string) { return this.attributes.get(name) ?? null; }
   hasAttribute(name: string) { return this.attributes.has(name); }
   setAttribute(name: string, value: string) { this.attributes.set(name, value); }

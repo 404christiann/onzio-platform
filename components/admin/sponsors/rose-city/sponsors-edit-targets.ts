@@ -25,8 +25,21 @@ export const sponsorTarget = (draftKey: string, field: SponsorField): EditTarget
 export function sponsorStamps(draftKeys: readonly string[]): EditTargetStamp[] {
   return [{
     selector: ".sponsor-set img",
-    target: (_element, index) => (draftKeys.length ? sponsorTarget(draftKeys[index % draftKeys.length], "logo") : null),
+    // By the sponsor's own slot in its set, not by image count: a broken logo is drawn as a fallback box (no img), so
+    // counting images would hand every later logo to the wrong sponsor.
+    target: element => {
+      const slot = sponsorSlot(element);
+      return slot !== null && slot < draftKeys.length ? sponsorTarget(draftKeys[slot], "logo") : null;
+    },
   }];
+}
+
+/** The position of the sponsor that draws `element` within its `.sponsor-set` (each sponsor is one child: an img or a link). */
+export function sponsorSlot(element: Element): number | null {
+  for (let node: Element | null = element; node?.parentElement; node = node.parentElement) {
+    if (node.parentElement.classList.contains("sponsor-set")) return Array.from(node.parentElement.children).indexOf(node);
+  }
+  return null;
 }
 
 /** One stamps array per place, by the place id (the card's section id). */

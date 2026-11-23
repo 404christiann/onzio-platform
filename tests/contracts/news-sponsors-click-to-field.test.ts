@@ -182,7 +182,11 @@ describe("Sponsors: every declared field has its control in the dialog", () => {
   it("the stamps map holds one array per place, built from the keys alone", () => {
     const stamps = sponsorStampsByPlace({ carousel: SPONSOR_KEYS });
     expect([...stamps.keys()]).toEqual(["carousel"]);
-    expect(stamps.get("carousel")![0].target(null as never, 1)).toBe(sponsorTarget(SPONSOR_KEYS[1], "logo"));
+    // The second sponsor's slot in a set: <div class="sponsor-set"><img/><img/></div>.
+    const set = { classList: { contains: (name: string) => name === "sponsor-set" }, children: [] as unknown[], parentElement: null };
+    const logos = [0, 1].map(() => ({ parentElement: set }));
+    set.children.push(...logos);
+    expect(stamps.get("carousel")![0].target(logos[1] as never, 0)).toBe(sponsorTarget(SPONSOR_KEYS[1], "logo"));
   });
 });
 
@@ -201,9 +205,9 @@ describe("the Rose City Sponsors editor", () => {
     expect(editor).toMatch(/stamps=\{\(id\) => placeStamps\.get\(id\) \?\? NO_STAMPS\}/);
   });
 
-  it("the preview is stamped on both sets, the clone mapped back to its sponsor with a modulo, never by position alone", () => {
+  it("the preview is stamped on both sets, each logo mapped by its sponsor's slot in its own set (clone and real alike)", () => {
     expect(targets).toMatch(/selector: "\.sponsor-set img"/);
-    expect(targets).toMatch(/draftKeys\[index % draftKeys\.length\]/);
+    expect(targets).toMatch(/const slot = sponsorSlot\(element\);\s*return slot !== null && slot < draftKeys\.length \? sponsorTarget\(draftKeys\[slot\], "logo"\) : null;/);
   });
 
   it("the dialog's own sections stay as they were, and the public strip gains nothing", () => {

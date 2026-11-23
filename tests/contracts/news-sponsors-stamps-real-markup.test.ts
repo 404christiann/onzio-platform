@@ -205,3 +205,17 @@ describe("Rose City Sponsors: the carousel stamps on the real public markup", ()
     expect(stampedIds(root)).toEqual([]);
   });
 });
+
+describe("sponsor logos map by their slot, not by image count", () => {
+  it("a broken logo drawn as a fallback box (no img) does not shift the later sponsors", async () => {
+    const { parseStaticMarkup } = await import("../helpers/static-dom");
+    const { sponsorStamps } = await import("@/components/admin/sponsors/rose-city/sponsors-edit-targets");
+    const { applyEditTargetStamps } = await import("@/components/admin/ui/editor-kit/editTargets");
+    // Real set: a, b's broken logo drawn as a fallback span (no img), c inside its link; the clone set has the same three slots.
+    const root = parseStaticMarkup('<div class="sponsor-set"><img src="a.png" alt="A"/><span class="fallback">B unavailable</span><a href="/r/c"><img src="c.png" alt="C"/></a></div>'
+      + '<div class="sponsor-set" aria-hidden="true"><img src="a.png" alt=""/><span></span><a href="/r/c"><img src="c.png" alt=""/></a></div>');
+    applyEditTargetStamps(root as unknown as ParentNode, sponsorStamps(["key-a", "key-b", "key-c"]));
+    const ids = root.querySelectorAll("img").map(img => img.getAttribute("data-edit-target"));
+    expect(ids).toEqual(["sponsors.carousel.row:key-a.logo", "sponsors.carousel.row:key-c.logo", "sponsors.carousel.row:key-a.logo", "sponsors.carousel.row:key-c.logo"]);
+  });
+});
