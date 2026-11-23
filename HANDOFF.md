@@ -1,3 +1,9 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-HOMEPAGE: click a Homepage Overview field to edit it
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-homepage` off main `8a44dde2`, PR open, not merged. Classic Rose City Overview only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-HOMEPAGE).
+- **What:** clicking a field in the Overview preview opens its part with that field focused and ringed (hero heading → Line one; a ticket price → that row's Price or offer); keyboard and Schedule-owned text open the part as before; mouse-only field hover. Diverse City classic homepage audited, no change needed.
+- **Exact next step:** Christian reviews; then PR D (kit visitor pages).
+
 ## 2026-11-22 - UI-PREVIEW-TARGETS: shared click-to-field targets + EditorDialog field focus
 
 - **Status:** `ready for review`, branch `claude/ui-preview-targets` rebased onto main `7946d711` (after #228), PR open, not merged. Infrastructure only (no editor wired yet); no payload, query, gate, `app/api/**` or `supabase/**` change. Record: `STATUS.md` (UI-PREVIEW-TARGETS).

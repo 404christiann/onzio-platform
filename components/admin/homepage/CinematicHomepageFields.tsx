@@ -7,10 +7,12 @@ import type { PieceId } from "@/lib/homepage-editor/model";
 import { IconUpload } from "@/components/admin/icons";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { EditorActionButton, EditorGroup, EditorReorderButtons, EditorRemoveButton, EditorSwitch, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
+import { ARTWORK_TARGETS, HOMEPAGE_TARGETS, priceRowTarget } from "./homepage-edit-targets";
 
 /** One labelled text field. The wrapping label keeps the field's accessible name equal to its visible label. */
-function TextField({ label, value, maximum, disabled, multiline, onChange }: { label: string; value: string; maximum: number; disabled: boolean; multiline: boolean; onChange: (value: string) => void }) {
-  return <label className={kit.field}><span className={kit.fieldLabel}>{label}</span>{multiline
+function TextField({ label, value, maximum, disabled, multiline, target, onChange }: { label: string; value: string; maximum: number; disabled: boolean; multiline: boolean; target?: EditTargetId; onChange: (value: string) => void }) {
+  return <label className={kit.field} {...editTargetProps(target)}><span className={kit.fieldLabel}>{label}</span>{multiline
     ? <textarea value={value} maxLength={maximum} disabled={disabled} onChange={event => onChange(event.target.value)} />
     : <input value={value} maxLength={maximum} disabled={disabled} onChange={event => onChange(event.target.value)} />}</label>;
 }
@@ -51,8 +53,8 @@ export default function CinematicHomepageFields({ piece, part, content, disabled
   retryArtwork: (slot: CinematicArtworkSlot) => void;
 }) {
   const update = (edit: (draft: CinematicHomepageContent) => void) => { const draft = structuredClone(content); edit(draft); change(draft); };
-  const text = (label: string, value: string, maximum: number, edit: (draft: CinematicHomepageContent, value: string) => void, multiline = false) =>
-    <TextField label={label} value={value} maximum={maximum} disabled={disabled} multiline={multiline} onChange={next => update(draft => edit(draft, next))} />;
+  const text = (label: string, value: string, maximum: number, edit: (draft: CinematicHomepageContent, value: string) => void, multiline = false, target?: EditTargetId) =>
+    <TextField label={label} value={value} maximum={maximum} disabled={disabled} multiline={multiline} target={target} onChange={next => update(draft => edit(draft, next))} />;
   const art = (slot: CinematicArtworkSlot, options: { legend?: string; help?: string; removeLabel?: string } = {}) => {
     const item = cinematicArtwork(content, slot);
     const uploading = item.upload === "uploading";
@@ -60,39 +62,39 @@ export default function CinematicHomepageFields({ piece, part, content, disabled
       removeLabel={options.removeLabel && (item.assetId || item.url) && !uploading ? options.removeLabel : undefined}
       onFile={file => replaceArtwork(slot, file)} onRetry={() => retryArtwork(slot)}
       onRemove={() => update(draft => { const art = cinematicArtwork(draft, slot); art.assetId = null; art.url = null; art.alt = ""; delete art.upload; delete art.localFileKey; delete art.error; })}>
-      {text("Describe this image", item.alt, 1000, (draft, value) => { cinematicArtwork(draft, slot).alt = value; }, true)}
+      {text("Describe this image", item.alt, 1000, (draft, value) => { cinematicArtwork(draft, slot).alt = value; }, true, ARTWORK_TARGETS[slot])}
     </ArtworkField>;
   };
   const menuBody = <>{art("footerLogo", { legend: "Footer logo", help: "Optional. When set, this logo appears alone in the footer instead of the club crest and name.", removeLabel: "Remove footer logo" })}<p className={kit.hint}>Rename the tabs and menu links. The footer uses the same names.</p>{CINEMATIC_NAV_ITEMS.flatMap(item => [item, ...("children" in item ? item.children ?? [] : [])]).map(item => <div key={item.id}>{text(item.label, content.navigation.labels[item.id] ?? item.label, 60, (draft, value) => { if (value.trim()) draft.navigation.labels[item.id] = value.trim(); else delete draft.navigation.labels[item.id]; })}</div>)}</>;
   const formsBody = <EditorGroup legend="External forms"><p className={kit.hint}>Tryouts, Media credentials, and National anthem request open these forms. Leave a destination blank to show the page placeholder.</p>{text("Tryouts form URL", content.navigation.destinations.tryouts, 2000, (draft, value) => { draft.navigation.destinations.tryouts = value; })}{text("Media credentials form URL", content.navigation.destinations.mediaCredentials, 2000, (draft, value) => { draft.navigation.destinations.mediaCredentials = value; })}{text("National anthem request form URL", content.navigation.destinations.nationalAnthem, 2000, (draft, value) => { draft.navigation.destinations.nationalAnthem = value; })}</EditorGroup>;
-  if (piece === "revamp.sponsors") return <div className={kit.stack}>{text("Heading", content.sponsors.heading, 120, (draft, value) => { draft.sponsors.heading = value; })}<p className={kit.hint}>Partner logos are managed in Branding.</p></div>;
+  if (piece === "revamp.sponsors") return <div className={kit.stack}>{text("Heading", content.sponsors.heading, 120, (draft, value) => { draft.sponsors.heading = value; }, false, HOMEPAGE_TARGETS.sponsorsHeading)}<p className={kit.hint}>Partner logos are managed in Branding.</p></div>;
   if (piece === "revamp.raffle") return art("raffle");
   if (piece === "revamp.ticket") return <div className={kit.stack}><EditorSwitch checked={content.ticket.visible} label="Show ticket and map on homepage" disabled={disabled} onChange={visible => update(draft => { draft.ticket.visible = visible; })} />{art("ticket")}</div>;
   if (piece === "revamp.match") return <div className={kit.stack}>
     <p className={kit.hint}>The next home match, opponent, date, time and venue come from Schedule.</p>
-    {text("Heading", content.match.heading, 120, (draft, value) => { draft.match.heading = value; })}
-    {text("Button text", content.match.buttonLabel, 60, (draft, value) => { draft.match.buttonLabel = value; })}
+    {text("Heading", content.match.heading, 120, (draft, value) => { draft.match.heading = value; }, false, HOMEPAGE_TARGETS.matchHeading)}
+    {text("Button text", content.match.buttonLabel, 60, (draft, value) => { draft.match.buttonLabel = value; }, false, HOMEPAGE_TARGETS.matchButton)}
     <label className={kit.field}><span className={kit.fieldLabel}>Where the button goes</span><NativeSelect className="min-h-11 rounded-[10px] text-base" disabled={disabled} value={content.match.buttonHref} onChange={event => update(draft => { draft.match.buttonHref = event.target.value; })}>{[{ href: "/tickets", label: "Tickets" }, { href: "/schedule", label: "Schedule" }, ...(!["/tickets", "/schedule"].includes(content.match.buttonHref) ? [{ href: content.match.buttonHref, label: "Current destination" }] : [])].map(item => <NativeSelectOption key={item.href} value={item.href}>{item.label}</NativeSelectOption>)}</NativeSelect></label>
-    {text("When no home match is scheduled", content.match.emptyMessage, 1200, (draft, value) => { draft.match.emptyMessage = value; }, true)}
+    {text("When no home match is scheduled", content.match.emptyMessage, 1200, (draft, value) => { draft.match.emptyMessage = value; }, true, HOMEPAGE_TARGETS.matchEmpty)}
   </div>;
   if (piece === "revamp.prices") return <div className={kit.stack}>
-    {text("Heading", content.prices.heading, 120, (draft, value) => { draft.prices.heading = value; })}
+    {text("Heading", content.prices.heading, 120, (draft, value) => { draft.prices.heading = value; }, false, HOMEPAGE_TARGETS.pricesHeading)}
     {content.prices.rows.map((row, index) => <EditorGroup key={row.id} legend={`Ticket option ${index + 1}`}>
-      {text("Name", row.label, 120, (draft, value) => { draft.prices.rows[index].label = value; })}
-      {text("Price or offer", row.price, 60, (draft, value) => { draft.prices.rows[index].price = value; })}
-      {text("Description", row.description, 1200, (draft, value) => { draft.prices.rows[index].description = value; }, true)}
-      {text("Small print", row.note, 1200, (draft, value) => { draft.prices.rows[index].note = value; }, true)}
+      {text("Name", row.label, 120, (draft, value) => { draft.prices.rows[index].label = value; }, false, priceRowTarget(row.id, "label"))}
+      {text("Price or offer", row.price, 60, (draft, value) => { draft.prices.rows[index].price = value; }, false, priceRowTarget(row.id, "price"))}
+      {text("Description", row.description, 1200, (draft, value) => { draft.prices.rows[index].description = value; }, true, priceRowTarget(row.id, "description"))}
+      {text("Small print", row.note, 1200, (draft, value) => { draft.prices.rows[index].note = value; }, true, priceRowTarget(row.id, "note"))}
       <label className={kit.field}><span className={kit.fieldLabel}>Price color</span><NativeSelect className="min-h-11 rounded-[10px] text-base" value={row.accent} disabled={disabled} onChange={event => update(draft => { draft.prices.rows[index].accent = event.target.value as typeof row.accent; })}><NativeSelectOption value="none">Standard</NativeSelectOption><NativeSelectOption value="aqua">Aqua</NativeSelectOption><NativeSelectOption value="lime">Green</NativeSelectOption></NativeSelect></label>
       <EditorReorderButtons index={index} length={content.prices.rows.length} disabled={disabled} noun="ticket option" onMove={delta => update(draft => { [draft.prices.rows[index], draft.prices.rows[index + delta]] = [draft.prices.rows[index + delta], draft.prices.rows[index]]; })} onRemove={() => update(draft => { draft.prices.rows.splice(index, 1); })} />
     </EditorGroup>)}
     <div><EditorActionButton disabled={disabled || content.prices.rows.length >= 10} onClick={() => update(draft => { draft.prices.rows.push({ id: crypto.randomUUID(), label: "", price: "", description: "", note: "", accent: "none" }); })}>Add ticket option</EditorActionButton></div>
-    {text("Footnote", content.prices.footnote, 1200, (draft, value) => { draft.prices.footnote = value; }, true)}
+    {text("Footnote", content.prices.footnote, 1200, (draft, value) => { draft.prices.footnote = value; }, true, HOMEPAGE_TARGETS.pricesFootnote)}
   </div>;
   if (piece === "revamp.championship") return <div className={kit.stack}>
-    {text("League or conference", content.championship.league, 120, (draft, value) => { draft.championship.league = value; })}
-    {text("Year", content.championship.year, 20, (draft, value) => { draft.championship.year = value; })}
-    {text("Heading", content.championship.title, 120, (draft, value) => { draft.championship.title = value; })}
-    {text("Paragraph", content.championship.body, 1200, (draft, value) => { draft.championship.body = value; }, true)}
+    {text("League or conference", content.championship.league, 120, (draft, value) => { draft.championship.league = value; }, false, HOMEPAGE_TARGETS.championshipLeague)}
+    {text("Year", content.championship.year, 20, (draft, value) => { draft.championship.year = value; }, false, HOMEPAGE_TARGETS.championshipYear)}
+    {text("Heading", content.championship.title, 120, (draft, value) => { draft.championship.title = value; }, false, HOMEPAGE_TARGETS.championshipTitle)}
+    {text("Paragraph", content.championship.body, 1200, (draft, value) => { draft.championship.body = value; }, true, HOMEPAGE_TARGETS.championshipBody)}
     {art("trophy")}
   </div>;
   if (piece === "revamp.navigation") return <div className={kit.stack}>{part !== "forms" && menuBody}{part !== "menu" && formsBody}</div>;

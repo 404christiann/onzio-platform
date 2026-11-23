@@ -25,6 +25,11 @@
 .part:active { background: hsl(var(--primary) / .14); }
 @media (hover: hover) { .part:hover { outline-color: hsl(var(--primary)); background: hsl(var(--primary) / .07); } .part:hover .chip { opacity: 1; transform: none; } }
 .part:focus-visible .chip { opacity: 1; transform: none; }
+/* Click-to-field: the field under the mouse gets a tighter version of the part's hover. Mouse only; touch and keyboard
+   open the part as before. No transition, so it never lags behind the pointer. */
+.fieldHover { position: absolute; z-index: 3; border-radius: 3px; outline: 2px solid hsl(var(--primary)); outline-offset: 2px; background: hsl(var(--primary) / .1); pointer-events: none; }
+.fieldHover[hidden] { display: none; }
+@media (hover: none) { .fieldHover { display: none; } }
 
 .num { position: absolute; inset-block-start: 4px; inset-inline-start: 4px; display: grid; place-items: center; inline-size: 26px; block-size: 26px; border-radius: 999px; background: hsl(var(--primary)); color: hsl(var(--part-num-ink)); font-size: .8125rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 1px 3px #0003; }
 /* The portal forces --primary-foreground to white, which fails on the dark-mode blue (about 2.3:1). Own ink, like the kit's Save and Done. */

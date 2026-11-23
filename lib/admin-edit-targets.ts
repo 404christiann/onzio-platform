@@ -102,7 +102,22 @@ export function createEditTargets(registry: EditTargetRegistry) {
  * The registry. Each rollout PR (C onwards) adds its editor here, stamps the same ids on its controls and preview
  * nodes, and adds a render test that every declared field has a stamped control.
  */
-export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {};
+export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
+  /** Rose City (cinematic@2) Homepage Overview. Sections are the Overview's part ids (components/admin/homepage/homepage-parts.ts). */
+  homepage: {
+    route: "/admin/homepage",
+    sections: {
+      hero: { fields: ["eyebrow", "intro", "headlineLineOne", "headlineLineTwo", "primaryCtaLabel", "secondaryCtaLabel"] },
+      raffle: { fields: ["imageAlt"] },
+      match: { fields: ["heading", "buttonLabel", "emptyMessage"] },
+      prices: { fields: ["heading", "footnote"], rowFields: ["label", "price", "description", "note"] },
+      ticket: { fields: ["imageAlt"] },
+      championship: { fields: ["league", "year", "title", "body", "imageAlt"] },
+      video: { fields: ["eyebrow", "title", "description"] },
+      sponsors: { fields: ["heading"] },
+    },
+  },
+};
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);
 export const resolveEditTarget = shared.resolve;
