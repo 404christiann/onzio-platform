@@ -1,3 +1,9 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-SCHEDULE: click a Rose City Schedule match card field to edit it
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-schedule` off main `1fdfc9cb` (after #237), PR open, not merged. Rose City `/admin/schedule` match cards only; no payload, query, gate, `app/api/**`, `supabase/**`, kit or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-SCHEDULE).
+- **What:** clicking a field in a match card's thumbnail opens that match on the section holding the field (Match, Result and stream, Match summary, Presented by) with the control focused and ringed; Edit, keyboard and blank space open Match as before. Fields are keyed by the match key; Match Summary list rows by match plus index (the draft has no row ids). Every dialog control is stamped.
+- **Evidence:** contract tests run the real stamps on the real server-rendered `CinematicSchedule`; 28 breaks each caught; browser spec 9/9 on a production build (7 of 9 red with a click break on a rebuilt build). Needs a small kit change (see STATUS) before the dialog's live card can be clicked.
+- **Exact next step:** Christian reviews; orchestrator ships the kit change, then `MatchLive` is wired.
 ## 2026-11-22 - UI-PREVIEW-CLICK-SHOP: click a Shop preview field to edit it
 
 - **Status:** `ready for review`, branch `claude/ui-preview-click-shop` off main `c5ef8f59`, PR open, not merged. Rose City `/admin/shop` (all frames) and Diverse City classic Shop only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change; the reimagined Shop editor is untouched. Record: `STATUS.md` (UI-PREVIEW-CLICK-SHOP).
