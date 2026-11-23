@@ -69,7 +69,10 @@ describe("Schedule registry", () => {
     expect(new Set(all).size).toBe(all.length);
   });
   it("the registry gets the module through one spread and nothing else of the shared registry moved", () => {
-    expect(read("lib/admin-edit-targets.ts")).toMatch(/\n  \.\.\.SCHEDULE_EDIT_TARGETS,\n\};/);
+    // One spread line, wherever it sits: other areas' modules spread into the same registry (Roster after #238).
+    const shared = read("lib/admin-edit-targets.ts");
+    expect(shared.match(/^  \.\.\.SCHEDULE_EDIT_TARGETS,$/gm)).toHaveLength(1);
+    expect(shared).toContain('import { SCHEDULE_EDIT_TARGETS } from "@/lib/edit-targets/schedule";');
     expect(Object.keys(EDIT_TARGET_REGISTRY)).toContain("sponsors");
   });
 });

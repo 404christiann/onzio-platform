@@ -286,7 +286,7 @@ describe("RC-ADMIN-4b-roster: rendered pieces", () => {
     expect(html).toContain('role="switch"');
     expect(html).toContain('aria-label="Show Andre Walker on the public roster"');
     expect(html).toContain("<strong>3</strong>");
-    expect(html).toContain("FW · Altadena, CA");
+    expect(html.replace(/<[^>]+>/g, "")).toContain("FW · Altadena, CA");
   });
 
   it("dims a hidden player and shows its flag; keeps the stats strip out until totals load", () => {

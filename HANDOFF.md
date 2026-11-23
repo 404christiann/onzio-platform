@@ -1,3 +1,9 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-ROSTER: click a Rose City Roster player-card field to edit it
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-roster` off main `c5ef8f59` (rebased onto `1fdfc9cb`), PR open, not merged. Rose City kit Roster only (`/admin/roster`); no payload, query, gate, `app/api/**`, `supabase/**`, kit or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-ROSTER).
+- **What:** clicking a field on a player card (photo, number, flag, name, position, hometown, a season stat) opens that player's dialog on the section holding the field with the control focused and ringed; Edit, Enter/Space and a click away from every field open Basics as before; mouse-only field outline. Targets are keyed by the player's uuid (registry editor `roseCityRoster`, own module `lib/edit-targets/roster.ts`); the card stamps its own markup directly.
+- **Evidence:** contract tests run the real card and dialog fields; 24 breaks each caught; browser spec 7/7 on a production build (not mutation-tested).
+- **Exact next step:** Christian reviews.
 ## 2026-11-22 - UI-PREVIEW-CLICK-SCHEDULE: click a Rose City Schedule match card field to edit it
 
 - **Status:** `ready for review`, branch `claude/ui-preview-click-schedule` off main `1fdfc9cb` (after #237), PR open, not merged. Rose City `/admin/schedule` match cards only; no payload, query, gate, `app/api/**`, `supabase/**`, kit or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-SCHEDULE).
