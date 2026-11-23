@@ -1,3 +1,10 @@
+## 2026-11-23 - RC-LAUNCH (billing + domain): Rose City bills at $150/month on rosecityfutbolclub.com
+
+- **Status:** production operations done and verified (`F1`, `F2`, `D1`), each on Christian's "go". No code change. Record: `STATUS.md` (RC-LAUNCH billing + domain).
+- **What:** live Stripe price `price_1UezJqK6WajTkwHYV67VmH8p` ($150/month, product `prod_VgM14vuaVAbJ6M`); Rose City is now `kind = customer` on that price with July's cancelled subscription row removed (audits 1246-1247); `rosecityfutbolclub.com` is the primary domain with `www` active and `onzio-platform.vercel.app` kept active non-primary (audit 1248); Vercel's 302 redirects are gone and Auth allows both new hosts.
+- **Evidence:** read-backs in Stripe and production; both hosts serve the hold 404 and a 200 Rose City sign-in, certs valid to 2027-02-01.
+- **Exact next step:** `F3` Sam's owner invite (needs "go"), then Sam pays from Payments → Start plan; the public-site hold stays until Phase 5.
+
 ## 2026-11-22 - UI-PREVIEW-OVERVIEW-OVERLAY-FIX: Homepage Overview overlays sit on their own sections; no blank sections
 
 - **Status:** `ready for review`, branch `claude/homepage-overlay-fix-6ad0aa`, PR open, not merged. Overview preview and `HomepagePreviewFrame` only; no payload, query, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-OVERVIEW-OVERLAY-FIX).
