@@ -27,6 +27,7 @@ import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import { partnerPageState } from "@/components/admin/stadium/partner-page-state";
 import styles from "@/components/admin/stadium/PartnerPageParts.module.css";
 import { ChickFilASectionFields } from "./ChickFilASectionFields";
+import { chickFilAPreviewStamps } from "./chick-fil-a-edit-targets";
 import { DISCARD_CONFIRM } from "../editor-copy";
 import {
   CHICK_FIL_A_CARDS, buildChickFilASaveInput, changedChickFilACards, chickFilACardOnly, chickFilACardSummary, chickFilADirty,
@@ -198,6 +199,9 @@ export default function ChickFilAEditor() {
   const deferred = useDeferredValue(draft);
   const pageState = partnerPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
   const changed = useMemo(() => new Set(draft && snapshot ? changedChickFilACards(draft, snapshot.content) : []), [draft, snapshot]);
+  // Click-to-field stamps per card. They name nodes by their place in the page (no row follows the draft here), so they are
+  // built once: a new array would restart that card's stamp watcher, and the watcher already re-stamps when the preview changes.
+  const stampsByCard = useMemo(() => new Map(CHICK_FIL_A_CARDS.map(card => [card.id, chickFilAPreviewStamps(card.id)])), []);
   const page = draft ? hydrateChickFilAContent(draft, media, false) : null;
   const loading = !draft || !page || loadedClubId !== club.id;
 
@@ -235,7 +239,8 @@ export default function ChickFilAEditor() {
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
         <PreviewCards sections={cardItems} label="Chick-fil-A sections" renderPreview={previewOf} previewScale={0.46}
-          onEdit={(id, event) => dialog.openSection(id as ChickFilACardId, event)} />
+          stamps={id => stampsByCard.get(id as ChickFilACardId) ?? []}
+          onEdit={(id, event, target) => { dialog.openSection(id as ChickFilACardId, event); dialog.focusField(target); }} />
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-chick-fil-a-status="">{status}</p>
@@ -244,7 +249,7 @@ export default function ChickFilAEditor() {
         const flag = chickFilAFlag(card.id);
         return { id: card.id, title: card.title, summary: draft && (flag && !draft.sections[flag] ? "Hidden on the page" : chickFilACardSummary(draft, card.id)) };
       })}
-      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as ChickFilACardId)}
+      focusRequest={dialog.focusRequest} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as ChickFilACardId)}
       renderSection={id => dialog.open ? <ChickFilASectionFields api={api} id={id as ChickFilACardId} /> : null}
       renderPreview={id => dialog.open ? <div className={styles.livePreview}>
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>

@@ -5,6 +5,7 @@ import { IconAdd, IconCaretDown, IconCaretUp, IconDelete } from "@/components/ad
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
 import { EditorField } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ValidationMessage } from "@/components/admin/ui/editor-kit";
+import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import styles from "./PartnerPageParts.module.css";
 
 /** The small pieces the Foothill Transit and Chick-fil-A dialogs share. Same look as the Stadium dialog. */
@@ -23,11 +24,11 @@ export function ActionButton({ disabled, onClick, children }: { disabled?: boole
   return <button type="button" className={`admin-press ${styles.tool}`} disabled={disabled} onClick={onClick}><IconAdd size={16} aria-hidden="true" />{children}</button>;
 }
 
-/** A text field that tells the person when they have reached the limit the page allows. */
-export function TextField({ label, value, max, disabled, multiline, hint, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: string; onChange: (value: string) => void }) {
+/** A text field that tells the person when they have reached the limit the page allows. `target` is the click-to-field id a preview click focuses it by. */
+export function TextField({ label, value, max, disabled, multiline, hint, target, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: string; target?: EditTargetId; onChange: (value: string) => void }) {
   const limitId = useId();
   const atLimit = value.length >= max;
-  return <div className={styles.fieldWithLimit}>
+  return <div className={styles.fieldWithLimit} {...editTargetProps(target)}>
     <EditorField label={label} value={value} max={max} disabled={disabled} multiline={multiline} hint={hint} invalid={atLimit} describedBy={atLimit ? limitId : undefined} onChange={onChange} />
     {atLimit && <ValidationMessage id={limitId} live="polite">{label} is at its limit of {max} characters.</ValidationMessage>}
   </div>;

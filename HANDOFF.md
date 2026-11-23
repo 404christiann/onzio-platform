@@ -1,3 +1,10 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-VISITOR-2: click a Foothill Transit, Chick-fil-A or Tickets preview field to edit it
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-visitor-pages-2` off main `cf8acfec`, PR open, not merged. Foothill Transit, Chick-fil-A and Tickets only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change, kit API unchanged. Record: `STATUS.md` (UI-PREVIEW-CLICK-VISITOR-2).
+- **What:** clicking a field inside one of these cards' previews opens that card with the field focused and ringed (a heading title, a benefit's title, a step's label, the Buy button -> purchase link); footer Edit and keyboard open the card as before. Schedule-, Homepage- and Tickets-owned text stays unstamped. Tickets stamps never reach the sections its card hides with CSS.
+- **Evidence:** contract tests run the real stamps on the real server-rendered public components; 40 breaks each caught; browser spec 13/13 on a production build.
+- **Exact next step:** Christian reviews; then PR D3 (Season Membership + Know Before You Go).
+
 ## 2026-11-22 - UI-PREVIEW-CLICK-VISITOR-1: click a Robinson Stadium preview field to edit it
 
 - **Status:** `ready for review`, branch `claude/ui-preview-click-visitor-pages` off main `5d16fb12`, PR open, not merged. Kit `PreviewCards` opt-in `stamps` plus Robinson Stadium only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-VISITOR-1).
