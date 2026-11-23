@@ -543,6 +543,21 @@ describe("EditorDialog split mode and focus wrap", () => {
     expect(markup).toContain('aria-label="Sections"');
   });
 
+  it("lets a preview scroll on its own when asked: not inert, takes the pointer, still a separate column", () => {
+    const markup = html(createElement(EditorDialogBody, {
+      open: true, onClose: noop, title: "Edit", sections, activeId: "two", onActiveChange: noop, labelId: "d",
+      mode: "split", scrollablePreview: true, renderSection: (id: string) => createElement("p", { "data-fields": id }),
+      renderPreview: (id: string) => createElement("p", { "data-live": id }),
+    }));
+    expect(markup).toMatch(/data-scrollable=""[^>]*><p data-live="two"/);
+    expect(markup).not.toContain("inert");
+    expect(readFileSync("components/admin/ui/editor-kit/EditorDialog.module.css", "utf8")).toMatch(/\.previewBox\[data-scrollable\] \{ pointer-events: auto; \}/);
+    // The Rose City About dialog opts in, and its frame never hands the scroll on to the editor.
+    const about = readFileSync("components/admin/about/rose-city/RoseCityAboutEditor.tsx", "utf8");
+    expect(about).toMatch(/\n\s+scrollablePreview\n/);
+    expect(about).toContain('const PREVIEW_SCROLL_CSS = "html{overscroll-behavior:contain}');
+  });
+
   it("stays fields-only without renderPreview", () => {
     const markup = html(createElement(EditorDialogBody, {
       open: true, onClose: noop, title: "Edit", sections, activeId: "two", onActiveChange: noop, labelId: "d",
@@ -605,6 +620,7 @@ describe("the shared preview link guard", () => {
     "components/admin/ProgramCanvasFrame.tsx",
     "components/admin/TryoutsPreviewFrame.tsx",
     "components/admin/club-settings/rose-city/RoseCityFooterPreview.tsx",
+    "components/admin/about/rose-city/CrestIconSizing.tsx",
   ];
   it("lives in the kit and is exported from its index", () => {
     expect(read("components/admin/ui/editor-kit/index.ts")).toMatch(/usePreviewLinkGuard[^}]*\}\s*from "\.\/previewLinkGuard"/);

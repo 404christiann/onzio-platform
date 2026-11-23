@@ -38,6 +38,8 @@ const blank = (): AboutDrafts => ({ about: draftFromSnapshot(undefined) as About
 const none = <T,>(): Record<AboutPageId, T | undefined> => ({ about: undefined, logo: undefined });
 const flags = (): Record<AboutPageId, boolean> => ({ about: false, logo: false });
 const ALL_SECTIONS = [...SECTIONS.about, ...SECTIONS.logo];
+/** Inside the dialog's page preview: it scrolls by itself and never hands the scroll on to the editor; its links stay still. */
+const PREVIEW_SCROLL_CSS = "html{overscroll-behavior:contain}a,button{pointer-events:none}";
 
 /** The pictures a card shows, so its preview stays hidden until they have loaded. */
 const sectionImages = (drafts: AboutDrafts, id: SectionId): string[] => {
@@ -366,8 +368,10 @@ export default function RoseCityAboutEditor() {
       sections={SECTIONS[page].map(section => ({ id: section.id, title: section.title, summary: drafts && sectionSummary(drafts, section.id) }))}
       activeId={dialog.activeId && pageOfSection(dialog.activeId) === page ? dialog.activeId : SECTIONS[page][0].id} onActiveChange={id => dialog.switchTo(id as SectionId)}
       renderSection={id => dialog.open ? <AboutSectionFields api={api} id={id as SectionId} /> : null}
+      scrollablePreview
       renderPreview={id => dialog.open ? <div className={styles.livePreview}>
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE_LABELS[pageOfSection(id as SectionId)]} section`}>
+          <style>{PREVIEW_SCROLL_CSS}</style>
           <div className={styles.only} data-only={id}><CinematicShell contentOnly initialContent={shared}><SectionPage id={id as SectionId} drafts={api.drafts} /></CinematicShell></div>
         </HomepagePreviewFrame></div> : null} />}
     <AdminConfirmDialog open={confirmReload} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive

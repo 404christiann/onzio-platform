@@ -1,0 +1,139 @@
+.slider {
+  --slider-thumb: 24px;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-inline-size: 0;
+}
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.label { color: hsl(var(--muted-foreground)); font-size: 13px; font-weight: 500; line-height: 18px; }
+.value {
+  color: hsl(var(--foreground));
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The whole 44px band takes the pointer. Sideways is the slider's; up and down stay with the page. */
+.rail {
+  position: relative;
+  block-size: 44px;
+  touch-action: pan-y;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.slider[data-disabled] .rail { cursor: not-allowed; opacity: .55; }
+
+/* The native input stays for the keyboard and screen readers; the pointer is handled by the band around it. */
+.input {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.track {
+  position: absolute;
+  inset-inline: calc(var(--slider-thumb) / 2);
+  inset-block-start: 50%;
+  block-size: 6px;
+  margin-block-start: -3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+}
+.fill {
+  position: absolute;
+  inset: 0;
+  background: hsl(var(--primary));
+  transform: scaleX(var(--slider-fraction));
+  transform-origin: left center;
+}
+
+/* The default's detent: a short notch across the track. It fades when the thumb sits on it. */
+.tick {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: calc(var(--slider-thumb) / 2 + var(--slider-default) * (100% - var(--slider-thumb)));
+  inline-size: 2px;
+  block-size: 14px;
+  margin: -7px 0 0 -1px;
+  border-radius: 1px;
+  background: hsl(var(--muted-foreground) / .55);
+  transition: opacity 120ms ease;
+}
+.tick[data-at-default] { opacity: 0; }
+
+/* The lane is the thumb's travel; its width is the container the slot is translated across. */
+.thumbLane {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: 0 var(--slider-thumb);
+  container-type: inline-size;
+  pointer-events: none;
+}
+.thumbSlot {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 0;
+  inline-size: var(--slider-thumb);
+  block-size: var(--slider-thumb);
+  margin-block-start: calc(var(--slider-thumb) / -2);
+  transform: translateX(calc(var(--slider-fraction) * 100cqw));
+}
+.thumb {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 2px hsl(220 20% 10% / .18), 0 2px 6px hsl(220 20% 10% / .12);
+  transition: transform 140ms ease-out;
+}
+.slider[data-dragging] .thumb { transform: scale(1.18); box-shadow: 0 2px 4px hsl(220 20% 10% / .2), 0 4px 12px hsl(220 20% 10% / .16); }
+.input:focus-visible ~ .thumbLane .thumb { box-shadow: 0 0 0 3px hsl(var(--background)), 0 0 0 5px hsl(var(--primary)); }
+
+/* Only Reset glides. A drag or a key press moves the thumb at once. */
+.slider[data-settling] .thumbSlot,
+.slider[data-settling] .fill { transition: transform 180ms ease-out; }
+
+.foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-block-start: -4px; }
+.hint { padding-block-start: 6px; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.45; text-wrap: pretty; }
+.reset {
+  flex: none;
+  min-block-size: 32px;
+  margin-inline-end: -10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: hsl(var(--primary));
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.reset:disabled { color: hsl(var(--muted-foreground)); opacity: .6; cursor: default; }
+.reset[data-hidden] { visibility: hidden; }
+.reset:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .reset:not(:disabled):hover { background: hsl(var(--secondary)); }
+}
+@media (pointer: coarse) {
+  .reset { min-block-size: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb, .tick, .slider[data-settling] .thumbSlot, .slider[data-settling] .fill { transition: none; }
+  .slider[data-dragging] .thumb { transform: none; }
+}
