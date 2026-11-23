@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { runBillingDriftAlert } from "@/lib/billing-drift";
 import {
   runBillingLifecycle,
   signalLifecycleHeartbeat,
@@ -22,6 +23,10 @@ export async function GET(request: Request) {
   ) {
     return unauthorized();
   }
+
+  // Independent of the lifecycle run: a lifecycle config error must not hide
+  // drift, and a drift failure (it never throws) must not change the response.
+  await runBillingDriftAlert();
 
   try {
     const result = await runBillingLifecycle();
