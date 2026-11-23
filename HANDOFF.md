@@ -2,6 +2,7 @@
 
 - cinematic@2 owners/admins can hide Robinson Stadium, Chick-fil-A and Foothill Transit with a "Visible to visitors" switch on each editor (new `onzio.clubs.public_page_visibility`, absent/true = shown). Hidden pages 404 and leave the nav/footer; embedded Robinson/Tickets blocks and Rose City's Foothill header mark follow at render time. The map is read in a separate fail-open query (`lib/public-page-visibility-query.ts`), never in tenant resolution, so code deployed before the migration shows every page instead of breaking sites. Migration applied to production 2026-11-23 on Christian's "Go" (backup taken, ledger 98/98 after); code not yet merged or deployed, waiting on "merge 230". Branch `codex/rc-public-page-visibility`, PR open, not merged. Record: `STATUS.md` (RC-PAGE-VISIBILITY).
 - Rebased onto main `cf8acfec` after #232: the only code conflict (both PRs' imports in `RobinsonStadiumEditor.tsx`) is resolved by keeping both; full unit suite green.
+- Rebased again onto `d7730c01` after #233/#234 (same Foothill editor import conflict, both kept; 5755 unit tests green). The 9 local `test:db` failures also fail on clean main: a leftover seeded Rose City club in the shared local DB, not this PR.
 
 ## 2026-11-22 - UI-PREVIEW-CLICK-VISITOR-3: click a Season Ticket Membership or Know Before You Go preview field to edit it
 
