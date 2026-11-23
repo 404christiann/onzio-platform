@@ -8,6 +8,7 @@ import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import type { SiteRouteOption } from "@/lib/site-routes";
 import { newLogoColorCard, newLogoFeature } from "@/lib/about-editor/collections";
 import styles from "./AboutEditor.module.css";
+import { CrestIconSizing } from "./CrestIconSizing";
 import { ABOUT_TARGETS, colorTarget, featureTarget, storyParagraphTarget, valueTarget } from "./about-edit-targets";
 import {
   ABOUT_LIMITS, moveCard, newCardId,
@@ -54,17 +55,6 @@ function MoveTools({ index, length, name, locked, onMove }: { index: number; len
   return <div className={styles.tools} role="group" aria-label={`Order of ${name}`}>
     <button type="button" className={`admin-press ${styles.tool}`} aria-label={`Move ${name} earlier`} data-move-earlier="" disabled={locked || index === 0} onClick={() => onMove(-1)}><IconCaretUp size={16} aria-hidden="true" />Earlier</button>
     <button type="button" className={`admin-press ${styles.tool}`} aria-label={`Move ${name} later`} data-move-later="" disabled={locked || index === length - 1} onClick={() => onMove(1)}><IconCaretDown size={16} aria-hidden="true" />Later</button>
-  </div>;
-}
-
-function NumberField({ label, value, min, max, step, locked, target, onChange }: { label: string; value: number; min: number; max: number; step: number; locked: boolean; target?: EditTargetId; onChange: (value: number) => void }) {
-  const id = useId();
-  return <div className={kit.field} {...editTargetProps(target)}>
-    <label htmlFor={id}>{label}</label>
-    <input id={id} type="number" inputMode="decimal" min={min} max={max} step={step} disabled={locked} value={Number.isFinite(value) ? value : ""}
-      onChange={event => { const next = Number(event.target.value); if (event.target.value !== "" && Number.isFinite(next)) onChange(next); }}
-      onBlur={event => { const next = Math.min(max, Math.max(min, Number(event.target.value) || value)); event.target.value = String(next); onChange(next); }} />
-    <span className={kit.hint}>{min} to {max}</span>
   </div>;
 }
 
@@ -149,10 +139,10 @@ export function AboutSectionFields({ api, id }: { api: AboutFieldsApi; id: Secti
           <ImageFieldWithDescription label="Icon" description="The small icon on the crest." previewUrl={feature.icon_url} initials="Add an icon" size={72} {...IMAGE_RULES} target={featureTarget(feature._id, "icon")}
             disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoFeatureIcon", id: feature._id }, files[0])} />
         </div>
-        <div className={styles.row2}>
-          <NumberField label="Icon size" value={feature.icon_size} min={24} max={140} step={1} locked={locked} target={featureTarget(feature._id, "iconSize")} onChange={icon_size => update({ icon_size })} />
-          <NumberField label="Icon scale" value={feature.icon_scale} min={0.5} max={4} step={0.05} locked={locked} target={featureTarget(feature._id, "iconScale")} onChange={icon_scale => update({ icon_scale })} />
-        </div>
+        {/* By id and from the latest draft: a drag commits at low priority, so this card's render may be a frame behind. */}
+        <CrestIconSizing features={logo.features} index={index} locked={locked}
+          sizeTarget={featureTarget(feature._id, "iconSize")} scaleTarget={featureTarget(feature._id, "iconScale")}
+          onChange={patch => api.setLogo(draft => ({ ...draft, features: draft.features.map(item => item._id === feature._id ? { ...item, ...patch } : item) }))} />
       </>} />
   </div>;
 

@@ -180,6 +180,10 @@
   overscroll-behavior: contain;
 }
 
+/* A slider is dragged in place: on the first edit the editor re-renders and Chrome's scroll anchoring shifted the panel
+   50px under the pointer. Panels with a slider keep their scroll position. */
+.panel:has([data-range-slider]) { overflow-anchor: none; }
+
 .panelTitle {
   margin: 0 0 14px;
   font-size: 1rem;
@@ -276,6 +280,8 @@
   .done {
     min-block-size: 44px;
   }
+
+  .body:has([data-range-slider]) { overflow-anchor: none; }
 
   .body {
     display: block;
@@ -382,6 +388,8 @@
   background: #fff;
   pointer-events: none;
 }
+
+.previewBox[data-scrollable] { pointer-events: auto; }
 
 .viewSwitch {
   display: inline-flex;

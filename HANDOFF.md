@@ -1,3 +1,11 @@
+## 2026-11-23 - UI-SLIDERS-ICON-SIZE-SCALE: crest icon size and scale sliders with a live preview
+
+- **Status:** `ready for review`, branch `claude/icon-sliders-live-preview` off main `a3418e0e`, PR open, not merged. Rose City classic About editor (Club Logo → Crest features) plus a kit slider and an opt-in scrollable dialog preview; no server action, data loading, gate, `app/api/**`, `supabase/**`, dependency or public component change. Record: `STATUS.md` (UI-SLIDERS-ICON-SIZE-SCALE).
+- **Why it never showed:** the dialog's page preview is ~300px wide, where `crest.css` gives the icon box a fixed phone width, so `icon_size` had no effect there; only scale did.
+- **What:** kit `RangeSlider` (native range for keyboard/AT, drawn track, units, default detent, Reset, 44px band, `pan-y`); per-feature `CrestIconSizing` frame rendering the real `CinematicCrest` at 1440px, cropped to the card, following every move; drafts catch up per frame at transition priority. Slider dialogs turn off scroll anchoring (it moved the panel 50px under the thumb on the first edit). Per Christian, the dialog's page preview now scrolls on its own (kit opt-in `scrollablePreview`, `overscroll-behavior: contain`) and follows the feature being sized.
+- **Evidence:** unit 6192/6192, architecture 432; contract test proves preview = public icon style for a 5×5 (size, scale) grid and that 1440px is in the desktop block; browser spec 4/4 then 12/12 over 3 repeats (live drag, no layout shift, Save persists then restored, page preview scrolls without moving the editor); scroll-anchoring and scrollable-preview breaks each caught; Sonnet break-ui review findings fixed.
+- **Exact next step:** Christian reviews.
+
 ## 2026-11-23 - UI-FIX-LOGO-FOOTER-PREVIEW: branding footer preview, phone header logo, pinned sidebar
 
 - **Status:** `ready for review`, branch `claude/logo-footer-preview` off main `b603f1e1`, PR open, not merged. Classic admin only; no upload/storage, server action, gate, `app/api/**`, `supabase/**`, dependency or public component change. Record: `STATUS.md` (UI-FIX-LOGO-FOOTER-PREVIEW).

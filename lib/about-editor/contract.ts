@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { DBAboutPageContent, DBClubLogoPageContent } from "@/lib/db-types";
+import { CREST_ICON_SCALE, CREST_ICON_SIZE } from "./crest-icon";
 
 const imageUrl = z.string().max(2048).refine((value) => value === "" || value.startsWith("/images/") || /^https?:\/\//i.test(value), "Use a published image.");
 export const aboutContentSchema = z.object({
@@ -11,7 +12,7 @@ export const aboutContentSchema = z.object({
 export const logoContentSchema = z.object({
   annotated_image_url: imageUrl, map_image_url: imageUrl,
   features: z.array(z.object({ title: z.string().max(500), description: z.string().max(10000),
-    patch_url: imageUrl, icon_url: imageUrl, icon_size: z.number().min(24).max(140), icon_scale: z.number().min(0.5).max(4),
+    patch_url: imageUrl, icon_url: imageUrl, icon_size: z.number().min(CREST_ICON_SIZE.min).max(CREST_ICON_SIZE.max), icon_scale: z.number().min(CREST_ICON_SCALE.min).max(CREST_ICON_SCALE.max),
   }).strict()).max(24),
   color_cards: z.array(z.object({ label: z.string().max(500), image_url: imageUrl }).strict()).max(6),
 }).strict();

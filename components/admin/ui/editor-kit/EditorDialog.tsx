@@ -111,6 +111,11 @@ export type EditorDialogProps = {
   renderPreview?: (id: string) => ReactNode;
   previewHint?: ReactNode;
   /**
+   * The preview scrolls on its own (wheel, trackpad, touch, and the keyboard once it has focus) without moving the
+   * editor, instead of being inert. The frame keeps its links and forms inactive (usePreviewLinkGuard).
+   */
+  scrollablePreview?: boolean;
+  /**
    * Replaces the default "Edits stay on the page" note and Done footer, on desktop and on a phone (where the default
    * footer is not shown). For an editor that saves one item from its own dialog: status on the left, Cancel and Save on
    * the right. Left out, the footer is unchanged.
@@ -169,6 +174,7 @@ export function EditorDialogBody({
   mode = "fields",
   renderPreview,
   previewHint = "How this section looks on the page",
+  scrollablePreview = false,
   footer,
   focusRequest,
   labelId,
@@ -313,7 +319,7 @@ export function EditorDialogBody({
               {split && (!phone || tab === "preview") && (
                 <div className={styles.previewColumn} data-editor-dialog-preview="">
                   <p className={styles.previewHint}>{previewHint}</p>
-                  <div className={styles.previewBox} aria-hidden="true" inert>{renderPreview?.(active.id)}</div>
+                  <div className={styles.previewBox} {...(scrollablePreview ? { "data-scrollable": "" } : { "aria-hidden": true, inert: true })}>{renderPreview?.(active.id)}</div>
                 </div>
               )}
             </div>
