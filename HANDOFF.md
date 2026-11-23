@@ -1,3 +1,10 @@
+## 2026-11-23 - PAID-LAUNCH-AUTOMATION: paying opens the public site and emails the operator
+
+- **Status:** `ready for review`, branch `claude/paid-launch-automation`, PR open, not merged. No migration or production change. Record: `STATUS.md` (PAID-LAUNCH-AUTOMATION).
+- **What:** the Rose City hold list is gone; `publicSiteState`/`isPublicSiteOpen` (lib/club-access.ts) alone decide public visibility from `public_access`; the Stripe webhook emails the operator on first activation and on past_due/grace/suspended; the daily lifecycle cron emails billing drift. Also records F3 (Sam is an active owner), which #243 merged without.
+- **Before merge:** Rose City must be set to `public_access = 'preview'` (SQL with its own "go"), or the site opens on deploy. Env to add in Vercel: `RESEND_API_KEY`, `OPERATOR_NOTIFY_EMAIL`, `LIFECYCLE_SUSPENSION_ENABLED`, `LIFECYCLE_RECONCILIATION_ENABLED`.
+- **Exact next step:** Christian reviews the PR.
+
 ## 2026-11-23 - UI-SLIDERS-ICON-SIZE-SCALE: crest icon size and scale sliders with a live preview
 
 - **Status:** `ready for review`, branch `claude/icon-sliders-live-preview` off main `a3418e0e`, PR open, not merged. Rose City classic About editor (Club Logo → Crest features) plus a kit slider and an opt-in scrollable dialog preview; no server action, data loading, gate, `app/api/**`, `supabase/**`, dependency or public component change. Record: `STATUS.md` (UI-SLIDERS-ICON-SIZE-SCALE).
