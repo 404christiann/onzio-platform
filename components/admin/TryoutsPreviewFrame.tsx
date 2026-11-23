@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import { markPageEditorFocusTarget } from "@/lib/page-editor-focus";
 
 /** A real responsive CSS viewport, isolated from admin styles and navigation. */
@@ -13,6 +14,7 @@ export default function TryoutsPreviewFrame({ children, phone, host, onSelect }:
 }) {
   const outer = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
+  usePreviewLinkGuard(frame);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const [available, setAvailable] = useState(0);
   const width = phone ? 390 : 1280;
@@ -91,11 +93,11 @@ export default function TryoutsPreviewFrame({ children, phone, host, onSelect }:
           onSelect(editorTarget.dataset.tryoutsEditorTarget);
           return;
         }
-        if (target.closest("a,button:not([aria-pressed]),form")) {
+        if (target.closest("button:not([aria-pressed])")) {
           event.preventDefault();
           event.stopPropagation();
         }
-      }} onSubmitCapture={(event) => event.preventDefault()}>
+      }}>
         <style>{`html { scroll-behavior:auto !important; } body { margin:0; } [data-tryouts-preview] { min-height:100%; } [data-tryouts-preview] a,[data-tryouts-preview] button:not([aria-pressed]) { pointer-events:none; } [data-tryouts-preview] * { animation:none !important; }`}</style>
         {children}
       </div>, body)}

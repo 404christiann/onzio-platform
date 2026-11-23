@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
 import { EditableRegion } from "@/components/admin/ui/EditableRegion";
 import AcademyAboutPage from "@/components/sites/diverse-city/AcademyAboutPage";
@@ -52,6 +53,7 @@ function Frame({ children, phone, selected, onSelect, host, classic, loading, in
 }) {
   const delayed = useDelayedLoading(Boolean(loading));
   const iframe = useRef<HTMLIFrameElement>(null);
+  usePreviewLinkGuard(iframe);
   const viewport = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const [targets, setTargets] = useState<HTMLElement[]>([]);
@@ -209,7 +211,7 @@ function Frame({ children, phone, selected, onSelect, host, classic, loading, in
           event.preventDefault();
           event.stopPropagation();
         }
-      }} onSubmitCapture={(event) => event.preventDefault()}>
+      }}>
         <style>{`
           html { scroll-behavior:auto !important; }
           body { margin:0; }

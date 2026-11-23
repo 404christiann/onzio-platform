@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import AcademyContactPage from "@/components/sites/diverse-city/AcademyContactPage";
 import { useClubContext } from "@/components/ClubContextProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
@@ -25,6 +26,7 @@ function Frame({ children, phone, selected, onSelect, host, classic = false }: {
   classic?: boolean;
 }) {
   const iframe = useRef<HTMLIFrameElement>(null);
+  usePreviewLinkGuard(iframe);
   const viewport = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const [availableWidth, setAvailableWidth] = useState(0);
@@ -155,7 +157,7 @@ function Frame({ children, phone, selected, onSelect, host, classic = false }: {
       if ((event.key === "Enter" || event.key === " ") && selectFrom(event.target)) {
         event.preventDefault(); event.stopPropagation();
       }
-    }} onSubmitCapture={(event) => event.preventDefault()}>
+    }}>
       <style>{`
         html { scroll-behavior:auto !important; }
         body { margin:0; }

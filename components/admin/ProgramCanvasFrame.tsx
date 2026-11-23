@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { usePreviewLinkGuard } from "@/components/admin/ui/editor-kit/previewLinkGuard";
 import { markPageEditorFocusTarget } from "@/lib/page-editor-focus";
 
 /** A real, responsive public viewport. It never requests the live public URL. */
@@ -33,6 +34,7 @@ export default function ProgramCanvasFrame({
   onEscape?: () => void;
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
+  usePreviewLinkGuard(frameRef);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const content = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number>();
@@ -200,7 +202,7 @@ export default function ProgramCanvasFrame({
         markPageEditorFocusTarget(section);
         onSelect(section.dataset.programEditorSection, section);
       }
-    }} onSubmitCapture={(event) => event.preventDefault()}>
+    }}>
       <style>{`html{scroll-behavior:auto!important}body{margin:0}[data-program-editor-section]{cursor:pointer;outline:1px solid #867ad8;outline-offset:-2px;position:relative}[data-program-editor-section]:hover,[data-program-editor-section]:focus-visible{outline:3px solid #655be7;outline-offset:-3px}[data-program-editor-preview] *{animation:none!important;transition:none!important}` + classicStyle}</style>
       {children}
     </div>, body)}

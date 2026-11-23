@@ -1,6 +1,6 @@
 ## 2026-11-22 - UI-PREVIEW-LINK-GUARD: one link and submit guard for the admin preview iframes
 
-- **Status:** `ready for review`, branch `claude/preview-shared-link-guard-9b0f15` off main `1fdfc9cb`, not pushed. Kit `previewLinkGuard.ts` (`usePreviewLinkGuard`) on the iframe body, capture phase, installed in both Shop frames, `HomepagePreviewFrame` and the Overview `PageFrame`; all per-site `a`/submit guards deleted. Record: `STATUS.md` (UI-PREVIEW-LINK-GUARD).
+- **Status:** `ready for review`, branch `claude/preview-shared-link-guard-9b0f15` off main `1fdfc9cb`, not pushed. Kit `previewLinkGuard.ts` (`usePreviewLinkGuard`) on the iframe body, capture phase, installed in both Shop frames, `HomepagePreviewFrame`, the Overview `PageFrame`, and the About, Contact, Program and Tryouts frames; all per-site `a`/submit guards deleted. Record: `STATUS.md` (UI-PREVIEW-LINK-GUARD).
 - **What:** a stamped link (Buy now, hero CTA, partner button) in any preview opens its field and never opens a tab, runs a Next Link router push, or leaves the admin; `window.open` and form submits are blocked too. Homepage piece selection under a clicked link now runs in the capture phase.
 - **Evidence:** 14 unit tests on the guard (propagation order modelled), contract pins for the module and each frame, 18 breaks each caught; browser assertions added to four specs, unrun until the integration build.
 - **Exact next step:** orchestrator runs the browser specs and opens the PR.

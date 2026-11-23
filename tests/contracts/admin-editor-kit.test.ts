@@ -600,16 +600,11 @@ describe("the shared preview link guard", () => {
     "components/admin/shop/rose-city/ShopScaledFrame.tsx",
     "components/admin/homepage/HomepagePreviewFrame.tsx",
     "components/admin/homepage/HomepageOverviewPreview.tsx",
-  ];
-  // Frames that still carry their own click/submit handling and are not moved to the guard yet (About and Contact have
-  // PRs in flight, Program and Tryouts route their own links). Move one over, then delete it from this list.
-  const LEGACY_FRAMES = [
     "components/admin/about/AboutPageCanvas.tsx",
     "components/admin/contact/ContactPageCanvas.tsx",
     "components/admin/ProgramCanvasFrame.tsx",
     "components/admin/TryoutsPreviewFrame.tsx",
   ];
-
   it("lives in the kit and is exported from its index", () => {
     expect(read("components/admin/ui/editor-kit/index.ts")).toMatch(/usePreviewLinkGuard[^}]*\}\s*from "\.\/previewLinkGuard"/);
   });
@@ -640,7 +635,7 @@ describe("the shared preview link guard", () => {
   it.each(GUARDED_FRAMES)("%s installs the guard on its iframe", path => {
     const source = read(path);
     expect(source).toMatch(/import \{[^}]*usePreviewLinkGuard[^}]*\} from "@\/components\/admin\/ui\/editor-kit\/previewLinkGuard";/);
-    expect(source).toMatch(/usePreviewLinkGuard\((?:iframe|frame)(?:, near)?\);/);
+    expect(source).toMatch(/usePreviewLinkGuard\((?:iframe|frame|frameRef)(?:, near)?\);/);
   });
 
   // The pieces on the homepage are selected by a bubble-phase onClick that the guard halts for a link; the frame selects the piece first.
@@ -659,12 +654,16 @@ describe("the shared preview link guard", () => {
     const source = read(path);
     return /createPortal\(/.test(source) && /contentDocument/.test(source);
   });
+  // The files that own an <iframe> (the editors that merely reach into one are scanned for guard copies, not for the install).
+  const iframeOwners = previewFrames.filter(path => /<iframe\b/.test(read(path)));
 
   it("finds the frames it is meant to scan", () => {
-    for (const path of [...GUARDED_FRAMES, ...LEGACY_FRAMES]) expect(previewFrames, path).toContain(path);
+    for (const path of GUARDED_FRAMES) expect(previewFrames, path).toContain(path);
+    // No exceptions: every portal-into-iframe frame is guarded, so a new one cannot ship without the install.
+    expect(iframeOwners.filter(path => !GUARDED_FRAMES.includes(path))).toEqual([]);
   });
 
-  it.each(previewFrames.filter(path => !LEGACY_FRAMES.includes(path)))("%s has no guard of its own", path => {
+  it.each(previewFrames)("%s has no guard of its own", path => {
     const source = read(path);
     expect(source).not.toMatch(/onSubmitCapture\s*=/);
     // closest("a"), closest("a,button"), closest<HTMLElement>('a[href]') ... answered by preventDefault or stopPropagation.
