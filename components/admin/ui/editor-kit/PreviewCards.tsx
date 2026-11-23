@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
 import { Shimmer } from "../Shimmer";
+import { resolveEditTarget, type EditTargetId } from "@/lib/admin-edit-targets";
+import { editTargetHitAt, watchEditTargetStamps, type EditTargetStamp } from "./editTargets";
 import { useFitPreviewScale } from "./fitPreviewScale";
 import { KIT_EDIT_PROPS } from "./kitEdit";
 import { SCOPED_PREVIEW_ATTRIBUTES, scopePreviewIds } from "./scopePreviewIds";
@@ -19,8 +21,18 @@ export type PreviewCardsProps = {
   sections: readonly PreviewCardItem[];
   /** The section as it looks on the public page. Rendered inert, so it never takes focus or clicks. */
   renderPreview: (id: string) => ReactNode;
-  /** The event's currentTarget is the pressed button: pass it to useEditorDialog().openSection so focus returns to it. */
-  onEdit: (id: string, event: MouseEvent<HTMLButtonElement>) => void;
+  /**
+   * The event's currentTarget is the pressed button: pass it to useEditorDialog().openSection so focus returns to it.
+   * `target` is the field under the pointer when the preview itself was clicked with a mouse or touch (only with `stamps`):
+   * call useEditorDialog().focusField(target) after openSection. The footer Edit button and the keyboard pass none.
+   */
+  onEdit: (id: string, event: MouseEvent<HTMLButtonElement>, target?: EditTargetId) => void;
+  /**
+   * Opt in to click-to-field: the edit targets to stamp on the public nodes inside one section's preview (this admin
+   * preview only; the public site never gets them). Re-applied whenever the preview's content or these stamps change.
+   * Without it the cards behave and render exactly as before.
+   */
+  stamps?: (sectionId: string) => readonly EditTargetStamp[];
   label?: string;
   /** Natural width the preview is laid out at, in px. Default 780. */
   previewWidth?: number;
@@ -61,7 +73,7 @@ function useNearViewport(enabled: boolean) {
   return { ref, near };
 }
 
-function PreviewBox({ children, width, scale: fallbackScale, lazy }: { children: ReactNode; width: number; scale: number; lazy: boolean }) {
+function PreviewBox({ children, width, scale: fallbackScale, lazy, stamps }: { children: ReactNode; width: number; scale: number; lazy: boolean; stamps?: readonly EditTargetStamp[] }) {
   const { ref, near } = useNearViewport(lazy);
   const scale = useFitPreviewScale(ref, width, fallbackScale);
   const scope = `pv${useId().replace(/[^a-zA-Z0-9]/g, "")}-`;
@@ -74,17 +86,51 @@ function PreviewBox({ children, width, scale: fallbackScale, lazy }: { children:
     observer.observe(node, { subtree: true, childList: true, attributes: true, attributeFilter: SCOPED_PREVIEW_ATTRIBUTES });
     return () => observer.disconnect();
   }, [ref, near, scope]);
+  const scaledRef = useRef<HTMLDivElement>(null);
+  // Click-to-field: card previews are inert, non-iframe divs, so the stamps go straight onto their nodes.
+  useEffect(() => {
+    const node = scaledRef.current;
+    return node && near && stamps ? watchEditTargetStamps(node, stamps) : undefined;
+  }, [near, stamps]);
   return (
     <div ref={ref} className={styles.box} aria-hidden="true" inert data-preview-box="" data-preview-mounted={near}>
       {/* Placeholder under the preview: shown until it mounts, and while a consumer marks its mounted content data-preview-settling="true" until it settles (see the CSS). */}
       <Shimmer className={styles.placeholder} data-preview-placeholder="" />
       {near && (
-        <div className={styles.scaled} style={{ "--preview-width": `${width}px`, "--preview-scale": scale } as CSSProperties}>
+        <div ref={scaledRef} className={styles.scaled} style={{ "--preview-width": `${width}px`, "--preview-scale": scale } as CSSProperties}>
           {children}
         </div>
       )}
     </div>
   );
+}
+
+/** The declared field under a viewport point inside a card's preview, or null (a field of another section is ignored). */
+function fieldUnder(button: HTMLElement, sectionId: string, x: number, y: number) {
+  const wrap = button.parentElement;
+  const hit = wrap ? editTargetHitAt(wrap, x, y) : null;
+  return hit && resolveEditTarget(hit.id)?.section === sectionId ? hit : null;
+}
+
+/** The hover outline is moved directly (no React state), so moving the mouse never re-renders the cards. */
+function showFieldHover(button: HTMLElement, sectionId: string, x: number, y: number) {
+  const clip = button.parentElement?.querySelector<HTMLElement>(":scope > [data-field-hover-clip]");
+  const outline = clip?.firstElementChild as HTMLElement | null | undefined;
+  if (!clip || !outline) return;
+  const hit = fieldUnder(button, sectionId, x, y);
+  if (!hit) { outline.hidden = true; delete outline.dataset.target; return; }
+  const box = clip.getBoundingClientRect();
+  outline.style.left = `${hit.rect.left - box.left}px`;
+  outline.style.top = `${hit.rect.top - box.top}px`;
+  outline.style.width = `${hit.rect.width}px`;
+  outline.style.height = `${hit.rect.height}px`;
+  outline.dataset.target = hit.id;
+  outline.hidden = false;
+}
+
+function hideFieldHover(button: HTMLElement) {
+  const outline = button.parentElement?.querySelector<HTMLElement>(":scope > [data-field-hover-clip] > [data-field-hover]");
+  if (outline) { outline.hidden = true; delete outline.dataset.target; }
 }
 
 /**
@@ -105,6 +151,7 @@ export function PreviewCards({
   previewWidth = 780,
   previewScale = 0.4,
   lazy = true,
+  stamps,
 }: PreviewCardsProps) {
   return (
     <ul className={styles.grid} aria-label={label} data-preview-cards="">
@@ -114,16 +161,22 @@ export function PreviewCards({
         return (
           <li key={section.id} className={styles.card} data-hidden={hidden || undefined} data-preview-card={section.id}>
             <div className={styles.previewWrap}>
-              <PreviewBox width={previewWidth} scale={previewScale} lazy={lazy}>{renderPreview(section.id)}</PreviewBox>
+              <PreviewBox width={previewWidth} scale={previewScale} lazy={lazy} stamps={stamps?.(section.id)}>{renderPreview(section.id)}</PreviewBox>
               <button
                 type="button"
                 className={`admin-press ${styles.previewButton}`}
                 aria-label={`Edit ${section.title}`}
                 tabIndex={-1}
-                onClick={(event) => onEdit(section.id, event)}
+                // A pointer click opens the field under the pointer; Enter or Space (detail 0) opens the section, as before.
+                onClick={(event) => stamps
+                  ? onEdit(section.id, event, event.detail > 0 ? fieldUnder(event.currentTarget, section.id, event.clientX, event.clientY)?.id : undefined)
+                  : onEdit(section.id, event)}
+                onPointerMove={stamps ? (event) => { if (event.pointerType === "mouse") showFieldHover(event.currentTarget, section.id, event.clientX, event.clientY); } : undefined}
+                onPointerLeave={stamps ? (event) => hideFieldHover(event.currentTarget) : undefined}
                 data-preview-button=""
                 {...KIT_EDIT_PROPS}
               />
+              {stamps && <span className={styles.fieldHoverClip} data-field-hover-clip="" aria-hidden="true"><span className={styles.fieldHover} data-field-hover="" hidden /></span>}
             </div>
             <div className={styles.foot}>
               <h2 className={styles.title}>
