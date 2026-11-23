@@ -136,6 +136,46 @@ export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
       directions: { rowFields: ["heading", "note", "closing", "paragraph", "bullet"] },
     },
   },
+  /**
+   * Rose City (cinematic@2) Foothill Transit (/admin/foothill-transit). Sections are FOOTHILL_SECTIONS ids. Benefits are keyed by
+   * position; page sections by their stable id (`<sectionId>` for heading, body and note, `<sectionId>-b<n>` for bullets).
+   * The Phone map card edits only a layout choice and crop numbers, none of which is text on the page, so it declares nothing.
+   */
+  foothill: {
+    route: "/admin/foothill-transit",
+    sections: {
+      heading: { fields: ["title", "subtitle"] },
+      images: { fields: ["busImageAlt", "mapImageAlt"] },
+      map: {},
+      match: { fields: ["partnerImageAlt"] },
+      benefits: { fields: ["heading", "footnote"], rowFields: ["title", "detail"] },
+      sections: { rowFields: ["heading", "body", "note", "bullet"] },
+    },
+  },
+  /** Rose City (cinematic@2) Chick-fil-A (/admin/chick-fil-a). Sections are CHICK_FIL_A_CARDS ids; the three steps are keyed by position. */
+  chickFilA: {
+    route: "/admin/chick-fil-a",
+    sections: {
+      heading: { fields: ["title", "subtitle"] },
+      details: { fields: ["heading", "body", "mealPassImageAlt"] },
+      steps: { rowFields: ["label", "number", "iconAlt"] },
+      map: { fields: ["imageAlt"] },
+      match: { fields: ["partnerImageAlt"] },
+      restaurant: { fields: ["imageAlt"] },
+      background: { fields: ["imageAlt"] },
+    },
+  },
+  /** Rose City (cinematic@2) Tickets (/admin/tickets). Sections are TICKETS_SECTIONS ids; perks and benefits are keyed by position. */
+  tickets: {
+    route: "/admin/tickets",
+    sections: {
+      page: { fields: ["title", "subtitle", "purchaseUrl", "missingPurchaseLabel", "bannerImageAlt", "partnerImageAlt"] },
+      perks: { fields: ["heading"], rowFields: ["label"] },
+      includes: { fields: ["heading", "footnote"], rowFields: ["title", "detail"] },
+      transit: { fields: ["heading", "subtitle", "busImageAlt", "mapImageAlt"] },
+      directions: { fields: ["directionsHeading", "directionsBody", "parkingHeading", "parkingBody", "parkingNote"] },
+    },
+  },
 };
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);

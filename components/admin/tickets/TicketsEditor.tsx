@@ -25,6 +25,7 @@ import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import styles from "@/components/admin/ticket-pages/ticket-editors.module.css";
 import "@/components/admin/homepage/homepage-editor.css";
 import { TicketsSectionFields, type TicketsFieldsApi } from "./TicketsSectionFields";
+import { ticketsPreviewStamps } from "./tickets-edit-targets";
 import { DISCARD_CONFIRM } from "../editor-copy";
 import {
   TICKETS_SECTIONS, TICKETS_SECTION_IMAGES, buildTicketsSaveInput, changedTicketsSections, editorPageState, setTicketsFlag,
@@ -208,6 +209,9 @@ export default function TicketsEditor() {
   const deferred = useDeferredValue(draft);
   const pageState = editorPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
   const changed = useMemo(() => new Set(draft && snapshot ? changedTicketsSections(draft, snapshot.content) : []), [draft, snapshot]);
+  // Click-to-field stamps per section, rebuilt only when the (deferred) draft changes, so each card's stamp watcher restarts
+  // on a draft change and not on every render of the page.
+  const stampsBySection = useMemo(() => new Map(TICKETS_SECTIONS.map(section => [section.id, deferred ? ticketsPreviewStamps(deferred, section.id) : []])), [deferred]);
   const page = draft ? hydrateTicketsContent(draft, media, false) : null;
   const loading = !draft || !page || loadedClubId !== club.id;
 
@@ -245,13 +249,14 @@ export default function TicketsEditor() {
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
         <PreviewCards sections={sectionItems} label="Tickets sections" renderPreview={previewOf} previewScale={0.46}
-          onEdit={(id, event) => dialog.openSection(id as TicketsSectionId, event)} />
+          stamps={id => stampsBySection.get(id as TicketsSectionId) ?? []}
+          onEdit={(id, event, target) => { dialog.openSection(id as TicketsSectionId, event); dialog.focusField(target); }} />
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-tickets-status="">{status}</p>
     {api && <EditorDialog open={dialog.open} onClose={dialog.close} title={`Edit ${PAGE}`} mode="split" returnFocusRef={dialog.returnFocusRef}
       sections={TICKETS_SECTIONS.map(section => ({ id: section.id, title: section.title, summary: draft && (ticketsSectionShown(draft, section.id) === false ? "Hidden on the page" : ticketsSectionSummary(draft, section.id)) }))}
-      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as TicketsSectionId)}
+      focusRequest={dialog.focusRequest} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as TicketsSectionId)}
       renderSection={id => dialog.open ? <TicketsSectionFields api={api} id={id as TicketsSectionId} /> : null}
       renderPreview={id => dialog.open ? <div className={styles.livePreview}>
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>

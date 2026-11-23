@@ -6,6 +6,7 @@ import NativeImage from "@/components/ResilientNativeImage";
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
 import { EditorField, EditorGroup } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
+import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import styles from "./ticket-editors.module.css";
 
 export const IMAGE_RULES = { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 } as const;
@@ -26,10 +27,10 @@ export function AddButton({ disabled, onClick, children }: { disabled?: boolean;
 }
 
 /** A text field that tells the person when they have reached the limit the page allows. */
-export function TextField({ label, value, max, disabled, multiline, hint, invalid, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: ReactNode; invalid?: boolean; onChange: (value: string) => void }) {
+export function TextField({ label, value, max, disabled, multiline, hint, invalid, target, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: ReactNode; invalid?: boolean; target?: EditTargetId; onChange: (value: string) => void }) {
   const limitId = useId();
   const atLimit = value.length >= max;
-  return <div className={styles.fieldWithLimit}>
+  return <div className={styles.fieldWithLimit} {...editTargetProps(target)}>
     <EditorField label={label} value={value} max={max} disabled={disabled} multiline={multiline} hint={hint} invalid={invalid || atLimit} describedBy={atLimit ? limitId : undefined} onChange={onChange} />
     {atLimit && <ValidationMessage id={limitId} live="polite">{label} is at its limit of {max} characters.</ValidationMessage>}
   </div>;
@@ -45,17 +46,17 @@ export function ShowRow({ label, title = "Show on the page", checked, disabled, 
 
 export type ImageSlotProps = {
   label: string; description: ReactNode; previewUrl: string | null; alt: string; hasImage: boolean; disabled: boolean; uploading: boolean;
-  hint?: string; size?: 64 | 72 | 96; /** Inside a card that already has its own legend. */ bare?: boolean; /** Show the picture on a dark tile too (white artwork). */ dark?: boolean;
+  hint?: string; /** The click-to-field id of the image description. */ altTarget?: EditTargetId; size?: 64 | 72 | 96; /** Inside a card that already has its own legend. */ bare?: boolean; /** Show the picture on a dark tile too (white artwork). */ dark?: boolean;
   onUpload: (file: File) => Promise<boolean>; onRemove: () => void; onAlt: (alt: string) => void;
 };
 
 /** One picture: upload or replace, remove, and its description. */
-export function ImageSlot({ label, description, previewUrl, alt, hasImage, disabled, uploading, hint, size, bare, dark, onUpload, onRemove, onAlt }: ImageSlotProps) {
+export function ImageSlot({ label, description, previewUrl, alt, hasImage, disabled, uploading, hint, altTarget, size, bare, dark, onUpload, onRemove, onAlt }: ImageSlotProps) {
   const inner = <>
     <ImageFieldWithDescription label={label} description={description} previewUrl={previewUrl} initials="" size={size} disabled={disabled} uploading={uploading} {...IMAGE_RULES}
       onUpload={async files => { const file = files[0]; return file ? onUpload(file) : false; }} onRemove={hasImage ? onRemove : undefined} />
     {dark && previewUrl && <div className={styles.darkTile}><NativeImage src={previewUrl} alt="" /></div>}
-    <TextField label="Image description" value={alt} max={1000} disabled={disabled} hint={hint} onChange={onAlt} />
+    <TextField label="Image description" value={alt} max={1000} disabled={disabled} hint={hint} target={altTarget} onChange={onAlt} />
   </>;
   return bare ? inner : <EditorGroup legend={label}>{inner}</EditorGroup>;
 }

@@ -7,6 +7,8 @@ import NativeImage from "@/components/ResilientNativeImage";
 import { EditorGroup, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import type { StadiumArtworkSlot, StadiumContent, StadiumCrop, StadiumPageContent } from "@/lib/stadium-content";
+import type { EditTargetId } from "@/lib/admin-edit-targets";
+import { FOOTHILL_TARGETS, benefitDetailTarget, benefitTitleTarget, sectionBodyTarget, sectionBulletTarget, sectionHeadingTarget, sectionNoteTarget } from "./foothill-edit-targets";
 import { applyFoothillCrop, cropPercentLabel, foothillSectionTitle, FOOTHILL_FLAGS, type FoothillSectionId } from "./foothill-sections";
 import { ActionButton, AlwaysShownRow, ReorderButtons, ShowRow, TextField } from "./PartnerPageParts";
 import styles from "./PartnerPageParts.module.css";
@@ -34,6 +36,9 @@ export type FoothillFieldsApi = {
   removeImage: (slot: StadiumArtworkSlot) => void;
 };
 
+/** The image description each picture's click-to-field id points at. */
+const ALT_TARGETS: Record<StadiumArtworkSlot, EditTargetId> = { bus: FOOTHILL_TARGETS.imagesBusImageAlt, map: FOOTHILL_TARGETS.imagesMapImageAlt, partner: FOOTHILL_TARGETS.matchPartnerImageAlt };
+
 function ImageSlot({ api, slot }: { api: FoothillFieldsApi; slot: StadiumArtworkSlot }) {
   const { draft, page, locked, uploading, update, upload, removeImage } = api;
   const label = ART_LABELS[slot];
@@ -41,7 +46,7 @@ function ImageSlot({ api, slot }: { api: FoothillFieldsApi; slot: StadiumArtwork
     <ImageFieldWithDescription label={label} description={ART_DESCRIPTIONS[slot]} previewUrl={page.artwork[slot].url} initials="" disabled={locked} uploading={uploading === slot}
       {...IMAGE_RULES} onUpload={async files => { const file = files[0]; return file ? upload(slot, file) : false; }}
       onRemove={draft.artwork[slot].assetId ? () => removeImage(slot) : undefined} />
-    <TextField label="Image description" value={draft.artwork[slot].alt} max={1000} disabled={locked} onChange={alt => update(content => { content.artwork[slot].alt = alt; })} />
+    <TextField label="Image description" value={draft.artwork[slot].alt} max={1000} disabled={locked} target={ALT_TARGETS[slot]} onChange={alt => update(content => { content.artwork[slot].alt = alt; })} />
   </EditorGroup>;
 }
 
@@ -106,8 +111,8 @@ export function FoothillSectionFields({ api, id }: { api: FoothillFieldsApi; id:
   let body: ReactNode = null;
   switch (id) {
     case "heading": body = <div className="grid gap-5 md:grid-cols-2">
-      <TextField label="Page heading" value={draft.title} max={120} disabled={locked} onChange={value => update(content => { content.title = value; })} />
-      <TextField label="Subtitle" value={draft.subtitle} max={120} disabled={locked} onChange={value => update(content => { content.subtitle = value; })} />
+      <TextField label="Page heading" value={draft.title} max={120} disabled={locked} target={FOOTHILL_TARGETS.headingTitle} onChange={value => update(content => { content.title = value; })} />
+      <TextField label="Subtitle" value={draft.subtitle} max={120} disabled={locked} target={FOOTHILL_TARGETS.headingSubtitle} onChange={value => update(content => { content.subtitle = value; })} />
     </div>; break;
     case "images": body = <>
       <p className={styles.note}>PNG or WebP, up to 5 MB and 3000 pixels per side. Words inside artwork change when you replace its image.</p>
@@ -119,11 +124,11 @@ export function FoothillSectionFields({ api, id }: { api: FoothillFieldsApi; id:
       <ImageSlot api={api} slot="partner" />
     </>; break;
     case "benefits": body = <>
-      <TextField label="Benefits heading" value={draft.includesHeading} max={120} disabled={locked} onChange={value => update(content => { content.includesHeading = value; })} />
+      <TextField label="Benefits heading" value={draft.includesHeading} max={120} disabled={locked} target={FOOTHILL_TARGETS.benefitsHeading} onChange={value => update(content => { content.includesHeading = value; })} />
       {draft.benefits.map((benefit, index) => <EditorGroup key={index} legend={`Benefit ${index + 1}`}>
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
-          <TextField label="Title" value={benefit.title} max={120} disabled={locked} onChange={value => update(content => { content.benefits[index].title = value; })} />
-          <TextField label="Details" value={benefit.detail} max={4000} multiline disabled={locked} onChange={value => update(content => { content.benefits[index].detail = value; })} />
+          <TextField label="Title" value={benefit.title} max={120} disabled={locked} target={benefitTitleTarget(index)} onChange={value => update(content => { content.benefits[index].title = value; })} />
+          <TextField label="Details" value={benefit.detail} max={4000} multiline disabled={locked} target={benefitDetailTarget(index)} onChange={value => update(content => { content.benefits[index].detail = value; })} />
         </div>
         <ReorderButtons index={index} length={draft.benefits.length} disabled={locked} noun="benefit"
           onMove={delta => update(content => { const next = index + delta; [content.benefits[index], content.benefits[next]] = [content.benefits[next], content.benefits[index]]; })}
@@ -131,17 +136,17 @@ export function FoothillSectionFields({ api, id }: { api: FoothillFieldsApi; id:
       </EditorGroup>)}
       <div><ActionButton disabled={locked || draft.benefits.length >= 10} onClick={() => update(content => { content.benefits.push({ title: "", detail: "" }); })}>Add benefit</ActionButton></div>
       <p className={styles.note}>{draft.benefits.length >= 10 ? "Maximum of 10 benefits reached." : `${draft.benefits.length} of 10 benefits.`}</p>
-      <TextField label="Benefits footnote" value={draft.benefitsNote} max={4000} multiline disabled={locked} onChange={value => update(content => { content.benefitsNote = value; })} />
+      <TextField label="Benefits footnote" value={draft.benefitsNote} max={4000} multiline disabled={locked} target={FOOTHILL_TARGETS.benefitsFootnote} onChange={value => update(content => { content.benefitsNote = value; })} />
     </>; break;
     case "sections": body = <>
       <p className={styles.note}>The switch above hides all of these. Each block also has its own switch.</p>
       {draft.sections.map((section, index) => <EditorGroup key={section.id} legend={`Section ${index + 1}`}>
         <ShowRow label={`Show section ${index + 1}`} switchLabel={`Show section ${index + 1}`} checked={section.visible} disabled={locked} onChange={next => update(content => { content.sections[index].visible = next; })} />
-        <TextField label="Heading" value={section.heading} max={120} disabled={locked} onChange={value => update(content => { content.sections[index].heading = value; })} />
-        <TextField label="Information" value={section.body} max={4000} multiline disabled={locked} onChange={value => update(content => { content.sections[index].body = value; })} />
-        <TextField label="Footnote" value={section.note} max={4000} multiline disabled={locked} onChange={value => update(content => { content.sections[index].note = value; })} />
+        <TextField label="Heading" value={section.heading} max={120} disabled={locked} target={sectionHeadingTarget(section.id)} onChange={value => update(content => { content.sections[index].heading = value; })} />
+        <TextField label="Information" value={section.body} max={4000} multiline disabled={locked} target={sectionBodyTarget(section.id)} onChange={value => update(content => { content.sections[index].body = value; })} />
+        <TextField label="Footnote" value={section.note} max={4000} multiline disabled={locked} target={sectionNoteTarget(section.id)} onChange={value => update(content => { content.sections[index].note = value; })} />
         {section.bullets.map((bullet, bulletIndex) => <div key={bulletIndex} className="grid min-w-0 gap-2">
-          <TextField label={`Bullet ${bulletIndex + 1}`} value={bullet} max={4000} multiline disabled={locked} onChange={value => update(content => { content.sections[index].bullets[bulletIndex] = value; })} />
+          <TextField label={`Bullet ${bulletIndex + 1}`} value={bullet} max={4000} multiline disabled={locked} target={sectionBulletTarget(section.id, bulletIndex)} onChange={value => update(content => { content.sections[index].bullets[bulletIndex] = value; })} />
           <div className={styles.tools}><button type="button" className={`admin-press ${styles.tool}`} disabled={locked} onClick={() => update(content => { content.sections[index].bullets.splice(bulletIndex, 1); })}><IconDelete size={16} aria-hidden="true" />Remove bullet {bulletIndex + 1}</button></div>
         </div>)}
         <div><ActionButton disabled={locked || section.bullets.length >= 20} onClick={() => update(content => { content.sections[index].bullets.push(""); })}>Add bullet</ActionButton></div>

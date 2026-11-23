@@ -26,6 +26,7 @@ import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/
 import "@/components/admin/homepage/homepage-editor.css";
 import { SettledPreview } from "./SettledPreview";
 import { FoothillSectionFields } from "./FoothillSectionFields";
+import { foothillPreviewStamps } from "./foothill-edit-targets";
 import {
   FOOTHILL_FLAGS, FOOTHILL_PREVIEW_IMAGES, FOOTHILL_SECTIONS, buildFoothillSaveInput, changedFoothillSections, foothillDirty,
   foothillPreviewSlice, foothillSectionOnly, foothillSectionSummary, type FoothillSectionId,
@@ -220,6 +221,9 @@ export default function StadiumEditor() {
   const deferred = useDeferredValue(draft);
   const pageState = partnerPageState({ base: saveAction.state, busy, uploading: !!uploading, pending: !!pending, conflict, saveFailed });
   const changed = useMemo(() => new Set(draft && snapshot ? changedFoothillSections(draft, snapshot.content) : []), [draft, snapshot]);
+  // Click-to-field stamps per section, rebuilt only when the (deferred) draft changes, so each card's stamp watcher restarts
+  // on a draft change and not on every render of the page.
+  const stampsBySection = useMemo(() => new Map(FOOTHILL_SECTIONS.map(section => [section.id, deferred ? foothillPreviewStamps(deferred, section.id) : []])), [deferred]);
   const page = draft ? hydrateStadiumContent(draft, media) : null;
   const loading = !draft || !page || loadedClubId !== club.id;
 
@@ -257,7 +261,8 @@ export default function StadiumEditor() {
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
         <PreviewCards sections={sectionItems} label="Foothill Transit sections" renderPreview={previewOf} previewScale={0.46}
-          onEdit={(id, event) => dialog.openSection(id as FoothillSectionId, event)} />
+          stamps={id => stampsBySection.get(id as FoothillSectionId) ?? []}
+          onEdit={(id, event, target) => { dialog.openSection(id as FoothillSectionId, event); dialog.focusField(target); }} />
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-foothill-status="">{status}</p>
@@ -266,7 +271,7 @@ export default function StadiumEditor() {
         const flag = FOOTHILL_FLAGS[section.id];
         return { id: section.id, title: section.title, summary: draft && (flag && !draft[flag] ? "Hidden on the page" : foothillSectionSummary(draft, section.id)) };
       })}
-      activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as FoothillSectionId)}
+      focusRequest={dialog.focusRequest} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as FoothillSectionId)}
       renderSection={id => dialog.open ? <FoothillSectionFields api={api} id={id as FoothillSectionId} /> : null}
       renderPreview={id => dialog.open ? <div className={styles.livePreview}>
         <HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label={`${PAGE} section`}>

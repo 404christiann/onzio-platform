@@ -8,6 +8,8 @@ import { AddButton, IMAGE_NOTE, ImageSlot, ReorderTools, ShowRow, TextField } fr
 import styles from "@/components/admin/ticket-pages/ticket-editors.module.css";
 import { isTicketPurchaseUrl, type TicketArtworkSlot, type TicketVisibilityKey, type TicketsContent, type TicketsPageContent } from "@/lib/tickets-content";
 import { moveItem } from "@/lib/cinematic-robinson-editor";
+import type { EditTargetId } from "@/lib/admin-edit-targets";
+import { TICKETS_TARGETS, benefitDetailTarget, benefitTitleTarget, perkLabelTarget } from "./tickets-edit-targets";
 import { ticketsSectionFlag, ticketsSectionShown, ticketsSectionTitle, type TicketsSectionId } from "./tickets-sections";
 
 export type TicketsFieldsApi = {
@@ -43,8 +45,8 @@ function Benefits({ api }: { api: TicketsFieldsApi }) {
   return <div className={kit.stack}>
     {draft.benefits.map((benefit, index) => <EditorGroup key={keys[index]} legend={`Benefit ${index + 1}`}>
       <div className={styles.two}>
-        <TextField label="Title" value={benefit.title} max={120} disabled={locked} onChange={value => update(v => { v.benefits[index].title = value; })} />
-        <TextField label="Details" value={benefit.detail} max={4000} multiline disabled={locked} onChange={value => update(v => { v.benefits[index].detail = value; })} />
+        <TextField label="Title" value={benefit.title} max={120} disabled={locked} target={benefitTitleTarget(index)} onChange={value => update(v => { v.benefits[index].title = value; })} />
+        <TextField label="Details" value={benefit.detail} max={4000} multiline disabled={locked} target={benefitDetailTarget(index)} onChange={value => update(v => { v.benefits[index].detail = value; })} />
       </div>
       <ReorderTools index={index} length={draft.benefits.length} disabled={locked} noun="benefit"
         onMove={delta => update(v => { v.benefits = moveItem(v.benefits, index, delta); })}
@@ -60,9 +62,9 @@ export function TicketsSectionFields({ api, id }: { api: TicketsFieldsApi; id: T
   const { draft, page, locked, uploading, update, setFlag, upload, removeImage } = api;
   const title = ticketsSectionTitle(id), flag = ticketsSectionFlag(id), shown = ticketsSectionShown(draft, id);
   const urlId = useId();
-  const text = (label: string, key: "title" | "subtitle" | "perksHeading" | "includesHeading" | "benefitsNote" | "transitHeading" | "transitSubtitle" | "directionsHeading" | "directionsBody" | "parkingHeading" | "parkingBody" | "parkingNote" | "missingPurchaseLabel", multiline = false, hint?: string) =>
-    <TextField label={label} value={draft[key]} max={multiline ? 4000 : 120} multiline={multiline} disabled={locked} hint={hint} onChange={value => update(v => { v[key] = value; })} />;
-  const picture = (slot: TicketArtworkSlot, label: string, description: ReactNode, extra?: { dark?: boolean; hint?: string; size?: 64 | 72 | 96 }) =>
+  const text = (label: string, key: "title" | "subtitle" | "perksHeading" | "includesHeading" | "benefitsNote" | "transitHeading" | "transitSubtitle" | "directionsHeading" | "directionsBody" | "parkingHeading" | "parkingBody" | "parkingNote" | "missingPurchaseLabel", target?: EditTargetId, multiline = false, hint?: string) =>
+    <TextField label={label} value={draft[key]} max={multiline ? 4000 : 120} multiline={multiline} disabled={locked} hint={hint} target={target} onChange={value => update(v => { v[key] = value; })} />;
+  const picture = (slot: TicketArtworkSlot, label: string, description: ReactNode, extra?: { dark?: boolean; hint?: string; size?: 64 | 72 | 96; altTarget?: EditTargetId }) =>
     <ImageSlot key={slot} label={label} description={description} previewUrl={page.artwork[slot].url} alt={draft.artwork[slot].alt} hasImage={!!draft.artwork[slot].assetId}
       disabled={locked} uploading={uploading === slot} {...extra} onUpload={file => upload(slot, file)} onRemove={() => removeImage(slot)}
       onAlt={alt => update(v => { v.artwork[slot].alt = alt; })} />;
@@ -73,43 +75,43 @@ export function TicketsSectionFields({ api, id }: { api: TicketsFieldsApi; id: T
       <ShowRow label="Show the Buy button on the Tickets page" title="Show the Buy button on the Tickets page" checked={draft.purchaseVisible !== false} disabled={locked} onChange={next => setFlag("purchaseVisible", next)}
         copy="Hides the Buy button and its “coming soon” note on the Tickets page only. The Stadium and Chick-fil-A buy buttons are not affected." />
       <p className={styles.note}>Prices, ticket button text and the next-match announcement are shared with <Link className={kit.inlineLink} href="/admin/homepage">Homepage</Link>. Fixtures come from <Link className={kit.inlineLink} href="/admin/schedule">Schedule</Link>.</p>
-      <div className={styles.two}>{text("Page heading", "title")}{text("Subtitle", "subtitle")}</div>
+      <div className={styles.two}>{text("Page heading", "title", TICKETS_TARGETS.pageTitle)}{text("Subtitle", "subtitle", TICKETS_TARGETS.pageSubtitle)}</div>
       <div className={styles.two}>
         <div className={styles.fieldWithLimit}>
-          <TextField label="External ticket purchase URL" value={draft.purchaseUrl} max={2000} disabled={locked} invalid={urlInvalid} hint="Use the club’s full HTTPS purchase link. Leave empty to keep Buy Tickets inactive."
+          <TextField label="External ticket purchase URL" value={draft.purchaseUrl} max={2000} disabled={locked} invalid={urlInvalid} target={TICKETS_TARGETS.pagePurchaseUrl} hint="Use the club’s full HTTPS purchase link. Leave empty to keep Buy Tickets inactive."
             onChange={value => update(v => { v.purchaseUrl = value; })} />
           {urlInvalid && <ValidationMessage id={urlId} live="polite">Use a full HTTPS ticket purchase link, for example https://tickets.example.com/match.</ValidationMessage>}
         </div>
-        {text("Message until a purchase link is available", "missingPurchaseLabel")}
+        {text("Message until a purchase link is available", "missingPurchaseLabel", TICKETS_TARGETS.pageMissingPurchaseLabel)}
       </div>
-      {picture("banner", "Banner", "PNG or WebP. Shown across the top of the page, with the title.")}
+      {picture("banner", "Banner", "PNG or WebP. Shown across the top of the page, with the title.", { altTarget: TICKETS_TARGETS.pageBannerImageAlt })}
       <BannerHeight value={draft.bannerHeightFraction} disabled={locked} onChange={fraction => update(v => { v.bannerHeightFraction = fraction; })} />
-      {picture("partner", "Partner logo", "PNG or WebP. Shown under the next home match, beside the Buy button.")}
+      {picture("partner", "Partner logo", "PNG or WebP. Shown under the next home match, beside the Buy button.", { altTarget: TICKETS_TARGETS.pagePartnerImageAlt })}
     </>; break;
     case "perks": body = <>
-      {text("Perks heading", "perksHeading")}
+      {text("Perks heading", "perksHeading", TICKETS_TARGETS.perksHeading)}
       <div className={styles.perk}>
         {(["seat", "card", "raffle"] as const).map((slot, index) => <EditorGroup key={slot} legend={`Perk ${index + 1}`}>
-          <TextField label="Label" value={draft.perkLabels[index]} max={120} disabled={locked} onChange={value => update(v => { v.perkLabels[index] = value; })} />
+          <TextField label="Label" value={draft.perkLabels[index]} max={120} disabled={locked} target={perkLabelTarget(index)} onChange={value => update(v => { v.perkLabels[index] = value; })} />
           {picture(slot, `Perk ${index + 1} image`, slot === "seat" ? "PNG or WebP. White artwork: it sits on a dark tile on the page." : "PNG or WebP. A small icon above the label.", { dark: slot === "seat", size: 64 })}
         </EditorGroup>)}
       </div></>; break;
     case "includes": body = <>
-      {text("Benefits heading", "includesHeading")}
+      {text("Benefits heading", "includesHeading", TICKETS_TARGETS.includesHeading)}
       <Benefits api={api} />
-      {text("Benefits footnote", "benefitsNote", true)}
+      {text("Benefits footnote", "benefitsNote", TICKETS_TARGETS.includesFootnote, true)}
     </>; break;
     case "transit": body = <>
-      <div className={styles.two}>{text("Bus section heading", "transitHeading")}{text("Bus section subtitle", "transitSubtitle")}</div>
+      <div className={styles.two}>{text("Bus section heading", "transitHeading", TICKETS_TARGETS.transitHeading)}{text("Bus section subtitle", "transitSubtitle", TICKETS_TARGETS.transitSubtitle)}</div>
       <div className={styles.two}>
-        {picture("bus", "Bus", "PNG or WebP. The bus illustration.")}
-        {picture("map", "Bus and parking map", "PNG or WebP. Shown full width under the bus.")}
+        {picture("bus", "Bus", "PNG or WebP. The bus illustration.", { altTarget: TICKETS_TARGETS.transitBusImageAlt })}
+        {picture("map", "Bus and parking map", "PNG or WebP. Shown full width under the bus.", { altTarget: TICKETS_TARGETS.transitMapImageAlt })}
       </div></>; break;
     case "directions": body = <>
-      <div className={styles.two}>{text("Directions heading", "directionsHeading")}{text("Parking heading", "parkingHeading")}</div>
-      {text("Directions", "directionsBody", true)}
-      {text("Parking information", "parkingBody", true)}
-      {text("Parking footnote", "parkingNote", true)}
+      <div className={styles.two}>{text("Directions heading", "directionsHeading", TICKETS_TARGETS.directionsHeading)}{text("Parking heading", "parkingHeading", TICKETS_TARGETS.directionsParkingHeading)}</div>
+      {text("Directions", "directionsBody", TICKETS_TARGETS.directionsBody, true)}
+      {text("Parking information", "parkingBody", TICKETS_TARGETS.directionsParkingBody, true)}
+      {text("Parking footnote", "parkingNote", TICKETS_TARGETS.directionsParkingNote, true)}
     </>; break;
   }
   return <div className={styles.fields}>
