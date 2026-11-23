@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { guardPreviewBody, installPreviewLinkGuard } from "@/components/admin/ui/editor-kit";
@@ -186,5 +188,21 @@ describe("the preview link guard", () => {
   it("does nothing, and does not throw, before the iframe has a body", () => {
     const frame = { contentDocument: null, addEventListener: vi.fn(), removeEventListener: vi.fn() };
     expect(() => installPreviewLinkGuard(frame as never)()).not.toThrow();
+  });
+});
+
+describe("window.open in a preview", () => {
+  // The guard swaps `open` on the iframe's own window only. A portal preview's handlers run in the admin's JS context, so a
+  // public component calling `window.open` would use the admin window's `open`, which the guard never touches. Nothing calls
+  // it today; this fails the day something does, so that call gets its own guard instead of slipping past this one.
+  const sources = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const path = join(dir, entry.name);
+    return entry.isDirectory() ? sources(path) : /\.(ts|tsx)$/.test(entry.name) ? [path] : [];
+  });
+  it("no component or lib module calls window.open (outside the guard itself)", () => {
+    const callers = [...sources("components"), ...sources("lib")]
+      .filter(path => !path.endsWith("previewLinkGuard.ts"))
+      .filter(path => /\bwindow\s*\.\s*open\s*\(|\bglobalThis\s*\.\s*open\s*\(/.test(readFileSync(path, "utf8")));
+    expect(callers).toEqual([]);
   });
 });

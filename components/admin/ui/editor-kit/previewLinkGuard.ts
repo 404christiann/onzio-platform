@@ -52,7 +52,8 @@ export function guardPreviewBody(body: GuardBody): () => void {
     event.stopPropagation();
   };
   GUARDED_EVENTS.forEach(type => body.addEventListener(type, listener, { capture: true }));
-  // target=_blank is covered by preventDefault; a script (or a handler) calling window.open is not.
+  // target=_blank is covered by preventDefault. A script running in the frame's own window calling window.open is covered here;
+  // a portal component's handler runs in the admin window, which is not swapped (a contract keeps window.open out of components).
   let restore: (() => void) | undefined;
   try {
     const win = body.ownerDocument.defaultView;
