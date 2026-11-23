@@ -14,6 +14,8 @@ import styles from "./PreviewCards.module.css";
 export type PreviewCardItem = SectionCardItem & {
   /** This section has edits that are not saved yet. Shows a dot next to the title. */
   changed?: boolean;
+  /** Replaces the "Always shown" chip on a card with no switch, for a card whose visibility follows its content ("Hidden while empty"), as in SectionCards. */
+  chip?: ReactNode;
 };
 
 export type PreviewCardsProps = {
@@ -207,7 +209,7 @@ export function PreviewCards({
                     />
                   </span>
                 ) : (
-                  <span className={styles.chip} data-always-shown="">Always shown</span>
+                  <span className={styles.chip} data-always-shown={section.chip == null ? "" : undefined} data-status-chip={section.chip == null ? undefined : ""}>{section.chip ?? "Always shown"}</span>
                 )}
                 <button
                   type="button"

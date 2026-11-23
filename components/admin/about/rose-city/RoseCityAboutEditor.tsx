@@ -27,7 +27,7 @@ import { AboutSectionFields, type AboutFieldsApi, type UploadTarget } from "./Ab
 import { aboutPreviewStamps } from "./about-edit-targets";
 import {
   PAGE_LABELS, PAGE_PATHS, SECTIONS, aboutFieldErrors, aboutPageState, acceptedDestinations, buildAboutSaveRequest, changedSections, contentOfAbout, contentOfLogo, draftFromSnapshot,
-  firstErrorSection, pageFingerprint, pageOfSection, sectionSlice, sectionSummary,
+  firstErrorSection, pageFingerprint, pageOfSection, sectionChip, sectionSlice, sectionSummary,
   type AboutDraft, type AboutDrafts, type AboutErrors, type AboutPageId, type LogoDraft, type SectionId,
 } from "./about-sections";
 
@@ -316,7 +316,7 @@ export default function RoseCityAboutEditor() {
   const deferred = useDeferredValue(drafts);
   const stampsBySection = useMemo(() => new Map(ALL_SECTIONS.map(section => [section.id, deferred ? aboutPreviewStamps(deferred, section.id) : []])), [deferred]);
   const items = drafts ? SECTIONS[page].map(section => ({
-    id: section.id, title: section.title, disabled: locked, changed: changed.has(section.id),
+    id: section.id, title: section.title, disabled: locked, changed: changed.has(section.id), chip: sectionChip(drafts, section.id),
   })) : [];
   const previewOf = (id: string) => deferred && sharedSettled && <SectionLive id={id as SectionId} drafts={deferred} shared={shared} slice={sectionSlice(deferred, id as SectionId)} />;
   const api: AboutFieldsApi | null = drafts ? {
