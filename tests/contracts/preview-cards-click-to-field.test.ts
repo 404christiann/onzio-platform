@@ -105,6 +105,17 @@ describe("PreviewCards with stamps: clicks", () => {
     expect(press("Edit Seating map", 1, 10, 10, [{ id: CAPTION, left: 0, top: 0, width: 100, height: 20 }])?.[2]).toBe(CAPTION);
   });
 
+  it("ownsTarget replaces the section rule for a card whose id cannot be a registry section (page:partners)", () => {
+    onEdit.mockClear();
+    const owned = PreviewCards({ sections: [{ id: "page:partners", title: "Club Partners page" }], lazy: false, renderPreview, onEdit, stamps: () => [], ownsTarget: (id, target) => id === "page:partners" && target.section === "heading" }) as ReactElement;
+    const button = findElement(owned, element => element.props["data-preview-button"] !== undefined);
+    call(button, "onClick", { currentTarget: { parentElement: wrapper([{ id: TITLE, left: 0, top: 0, width: 100, height: 20 }]) }, detail: 1, clientX: 10, clientY: 10 });
+    expect(onEdit.mock.calls[0][2]).toBe(TITLE);
+    onEdit.mockClear();
+    call(button, "onClick", { currentTarget: { parentElement: wrapper([{ id: CAPTION, left: 0, top: 0, width: 100, height: 20 }]) }, detail: 1, clientX: 10, clientY: 10 });
+    expect(onEdit.mock.calls[0][2]).toBeUndefined();
+  });
+
   it("the footer Edit button never passes a target", () => {
     onEdit.mockClear();
     const footer = findElement(tree(), element => element.props["data-preview-edit"] !== undefined);
@@ -135,8 +146,8 @@ describe("PreviewCards with stamps: source pins", () => {
   const css = read("components/admin/ui/editor-kit/PreviewCards.module.css");
 
   it("only a pointer click (detail > 0) looks for a field, and the section guard stays", () => {
-    expect(source).toMatch(/onEdit\(section\.id, event, event\.detail > 0 \? fieldUnder\(event\.currentTarget, section\.id, event\.clientX, event\.clientY\)\?\.id : undefined\)/);
-    expect(source).toMatch(/return hit && resolveEditTarget\(hit\.id\)\?\.section === sectionId \? hit : null;/);
+    expect(source).toMatch(/onEdit\(section\.id, event, event\.detail > 0 \? fieldUnder\(event\.currentTarget, section\.id, event\.clientX, event\.clientY, ownsTarget\)\?\.id : undefined\)/);
+    expect(source).toMatch(/return hit && target && \(ownsTarget \? ownsTarget\(sectionId, target\) : target\.section === sectionId\) \? hit : null;/);
   });
 
   it("the footer Edit button passes the event alone", () => {

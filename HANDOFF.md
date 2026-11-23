@@ -1,3 +1,10 @@
+## 2026-11-22 - UI-PREVIEW-CLICK-LIST-1: click a Partners or Injury Report preview field to edit it
+
+- **Status:** `ready for review`, branch `claude/ui-preview-click-list-pages` off main `d7730c01`, PR open, not merged. Kit `ItemPreviewCards` opt-in `stamps` plus Partners and Injury Report only; no payload, query, gate, `app/api/**`, `supabase/**` or public component change. Record: `STATUS.md` (UI-PREVIEW-CLICK-LIST-1).
+- **What:** clicking a field inside a page or item card's preview opens that card with the field focused and ringed (a page heading, a partner's role or name, an injury's injury, timeline or note, the rehab heading, the video box, the photo band); footer Edit, move buttons and keyboard open the card as before; the player's name, number, position and photo stay Roster's and unstamped. Items are keyed by uuid in the registry (one `partner` / `entry` section with uuid rows), so reordering moves no id. Editors that do not pass `stamps` (News, Sponsors) are unchanged (markup pinned).
+- **Evidence:** contract tests run the real stamps on the real server-rendered public components; 40 breaks each caught; browser spec 36/36 (12 new) on a production build.
+- **Exact next step:** Christian reviews; then PR E2 (News + Rose City Sponsors item cards).
+
 ## 2026-11-22 - RC-PAGE-VISIBILITY
 
 - cinematic@2 owners/admins can hide Robinson Stadium, Chick-fil-A and Foothill Transit with a "Visible to visitors" switch on each editor (new `onzio.clubs.public_page_visibility`, absent/true = shown). Hidden pages 404 and leave the nav/footer; embedded Robinson/Tickets blocks and Rose City's Foothill header mark follow at render time. The map is read in a separate fail-open query (`lib/public-page-visibility-query.ts`), never in tenant resolution, so code deployed before the migration shows every page instead of breaking sites. Migration applied to production 2026-11-23 on Christian's "Go" (backup taken, ledger 98/98 after); code not yet merged or deployed, waiting on "merge 230". Branch `codex/rc-public-page-visibility`, PR open, not merged. Record: `STATUS.md` (RC-PAGE-VISIBILITY).

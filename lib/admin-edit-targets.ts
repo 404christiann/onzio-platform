@@ -203,6 +203,33 @@ export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
       donor: { fields: ["heading", "name", "imageAlt", "body", "buttonLabel", "buttonHref"] },
     },
   },
+  /**
+   * Rose City (cinematic@2) Partners (/admin/partners). The dialog ids are `page:partners`, `page:opportunities` and
+   * `partner:<uuid>`; a target id cannot contain a colon, so the two pages are the sections `partners` and `opportunities`
+   * and every partner is the one section `partner` with its fields keyed by the partner's row uuid
+   * (`partners.partner.row:<uuid>.name`): the registry is static, a partner's section id is not.
+   */
+  partners: {
+    route: "/admin/partners",
+    sections: {
+      partners: { fields: ["title", "subtitle", "intro", "ctaPrompt", "ctaLabel"] },
+      opportunities: { fields: ["title", "subtitle", "intro", "ctaPrompt", "ctaLabel", "ctaHref"] },
+      partner: { rowFields: ["name", "role", "logo", "tone"] },
+    },
+  },
+  /**
+   * Rose City (cinematic@2) Injury Report (/admin/injury-report). `presenter` and `rehab` are the page-part cards; every
+   * injury is the one section `entry` (dialog id `entry:<uuid>`) with its fields keyed by the entry's row uuid. The player's
+   * name, number, position and photo belong to Roster and declare nothing.
+   */
+  injuryReport: {
+    route: "/admin/injury-report",
+    sections: {
+      presenter: { fields: ["name", "logo"] },
+      rehab: { fields: ["band", "bandAlt", "heading", "quote", "quoteAttribution", "videoUrl"] },
+      entry: { rowFields: ["injury", "timeline", "note"] },
+    },
+  },
 };
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);

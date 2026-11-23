@@ -34,6 +34,7 @@ import { fetchInjuryPreviewRoster, type InjuryAsset, type InjuryPlayerRow } from
 import { supabase } from "@/lib/supabase";
 import "@/components/admin/homepage/homepage-editor.css";
 import { DISCARD_CONFIRM } from "../editor-copy";
+import { injuryBlockStampsByCard, injuryOwnsTarget, injuryStampsByCard } from "./injury-edit-targets";
 import { InjuryDialogFields, type InjuryFieldsApi, type InjurySlot } from "./InjuryFields";
 import {
   BLOCK_TITLES, changedBlocks, changedEntryIds, entryDialogId, injuryDirty, mediaUrl, mergeMedia, parseInjuryDialogId, playerLabel, reportFor, savedContent,
@@ -56,6 +57,9 @@ const UPLOADS: Record<InjurySlot, { bucket: string; folder: string; kind: Injury
   logo: { bucket: "sponsors", folder: "injury-report-logo", kind: "graphic", label: "logo" },
   band: { bucket: "news", folder: "injury-report-band", kind: "photograph", label: "photo" },
 };
+/** One stamps array per page part, fixed: where a part's fields sit in its card does not depend on the draft. */
+const BLOCK_STAMPS = injuryBlockStampsByCard();
+const NO_STAMPS: readonly never[] = [];
 const NO_ROSTER = { players: [] as InjuryPlayerRow[], assets: [] as InjuryAsset[] };
 
 async function retireUploads(ids: string[]) {
@@ -302,6 +306,8 @@ export default function CinematicInjuryReportEditor() {
   const changedBlockSet = useMemo(() => new Set(draft && snapshot ? changedBlocks(draft, saved) : []), [draft, snapshot, saved]);
   const changedEntries = useMemo(() => (draft && snapshot ? changedEntryIds(draft, saved) : new Set<string>()), [draft, snapshot, saved]);
   const loading = !draft || !snapshot || loadedClubId !== club.id;
+  // Click-to-field: one stamps array per injury card, built once per deferred draft (a new array restarts that card's stamp watcher).
+  const entryStamps = useMemo(() => injuryStampsByCard(deferred?.entries ?? []), [deferred]);
 
   if (club.presentationTemplateKey !== "cinematic@2") return <PageFrame title={PAGE} breadcrumb={CRUMBS} description="The Injury Report is part of the cinematic website design and is unavailable for this design.">{null}</PageFrame>;
 
@@ -356,7 +362,8 @@ export default function CinematicInjuryReportEditor() {
         onSave={() => { void saveAction.save().catch(() => undefined); }}
         onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
         <PreviewCards sections={blockItems} label="Injury Report page parts" renderPreview={blockPreview} previewScale={0.4}
-          onEdit={(id, event) => dialog.openSection(id as InjuryDialogId, event)} />
+          stamps={id => BLOCK_STAMPS.get(id) ?? NO_STAMPS} ownsTarget={injuryOwnsTarget}
+          onEdit={(id, event, target) => { dialog.openSection(id as InjuryDialogId, event); dialog.focusField(target); }} />
         {draft && <section className={styles.listSection} aria-labelledby="injuries-list-heading">
           <div className={styles.listHead}>
             <h2 id="injuries-list-heading">Injuries</h2>
@@ -366,7 +373,8 @@ export default function CinematicInjuryReportEditor() {
           {draft.entries.length === 0 && <p className={styles.empty}>No injuries. The page shows “No current injuries”.</p>}
           <ItemPreviewCards items={entryItems} noun="injury" label="Injuries" disabled={locked} previewScale={0.44} previewClassName={preview.single}
             renderPreview={entryPreview}
-            onEdit={(id, event) => dialog.openSection(id as InjuryDialogId, event)}
+            stamps={id => entryStamps.get(id) ?? NO_STAMPS} ownsTarget={injuryOwnsTarget}
+            onEdit={(id, event, target) => { dialog.openSection(id as InjuryDialogId, event); dialog.focusField(target); }}
             onMove={(id, delta) => { const index = draft.entries.findIndex(entry => entryDialogId(entry.id) === id); if (index >= 0) move(index, delta, false); }}
             add={{ label: "Add injury", count: `${draft.entries.length} of ${MAX_INJURY_ENTRIES}`, disabled: !!noRoomReason, onAdd: addNew, hint: noRoomReason || undefined }}
             addRef={addRef} />
@@ -374,7 +382,7 @@ export default function CinematicInjuryReportEditor() {
       </PageFrame>
     </ShimmerRegion>
     <p className={styles.srOnly} role="status" data-injury-status="">{status}</p>
-    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title="Edit Injury Report" mode="split" returnFocusRef={dialog.returnFocusRef}
+    {api && <EditorDialog open={dialog.open} onClose={dialog.close} title="Edit Injury Report" mode="split" returnFocusRef={dialog.returnFocusRef} focusRequest={dialog.focusRequest}
       sections={dialogSections} activeId={dialog.activeId} onActiveChange={id => dialog.switchTo(id as InjuryDialogId)}
       renderSection={id => dialog.open ? <InjuryDialogFields api={api} id={id as InjuryDialogId} /> : null}
       previewHint="How this looks on the page"
