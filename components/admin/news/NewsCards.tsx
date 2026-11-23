@@ -6,6 +6,9 @@ import { IconEdit, IconMore } from "@/components/admin/icons";
 import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { KIT_EDIT_PROPS } from "@/components/admin/ui/editor-kit/kitEdit";
 import { SCOPED_PREVIEW_ATTRIBUTES, scopePreviewIds } from "@/components/admin/ui/editor-kit/scopePreviewIds";
+import { watchEditTargetStamps, type EditTargetStamp } from "@/components/admin/ui/editor-kit/editTargets";
+import { fieldUnder, hideFieldHover, showFieldHover } from "@/components/admin/list-cards/ItemPreviewCards";
+import type { EditTargetId, ResolvedEditTarget } from "@/lib/admin-edit-targets";
 import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
 import { CinematicNewsList } from "@/components/cinematic/CinematicNews";
 import CinematicShell from "@/components/cinematic/CinematicShell";
@@ -39,10 +42,10 @@ function useNearViewport(enabled: boolean) {
   return { ref, near };
 }
 
-type ThumbProps = { card: NewsCardItem; shared: CinematicHomepageContent | null; lazy: boolean };
+type ThumbProps = { card: NewsCardItem; shared: CinematicHomepageContent | null; lazy: boolean; stamps?: readonly EditTargetStamp[] };
 
 /** The real public News card (CinematicNewsList with one article), fed the draft. Re-renders only when its own draft changes. */
-const Thumb = memo(function Thumb({ card, shared, lazy }: ThumbProps) {
+const Thumb = memo(function Thumb({ card, shared, lazy, stamps }: ThumbProps) {
   const { ref, near } = useNearViewport(lazy);
   const scale = useFitPreviewScale(ref, PREVIEW_WIDTH, PREVIEW_SCALE);
   const scope = `nv${useId().replace(/[^a-zA-Z0-9]/g, "")}-`;
@@ -54,19 +57,25 @@ const Thumb = memo(function Thumb({ card, shared, lazy }: ThumbProps) {
     observer.observe(node, { subtree: true, childList: true, attributes: true, attributeFilter: SCOPED_PREVIEW_ATTRIBUTES });
     return () => observer.disconnect();
   }, [ref, near, scope]);
+  const scaledRef = useRef<HTMLDivElement>(null);
+  // Click-to-field: the thumbnail is an inert, non-iframe div, so the stamps go straight onto its nodes.
+  useEffect(() => {
+    const node = scaledRef.current;
+    return node && near && stamps ? watchEditTargetStamps(node, stamps) : undefined;
+  }, [near, stamps]);
   const article = useMemo(() => previewArticle(card, card.slug ?? "preview") as NewsPublicArticle,
     // The draft's fingerprint stands for the draft: saved articles rebuild theirs on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [card.key, draftFingerprint(card.draft), card.publishedAt, card.slug]);
   return <div ref={ref} className={styles.box} aria-hidden="true" inert data-news-thumb="" data-preview-mounted={near}>
     <Shimmer className={styles.placeholder} data-preview-placeholder="" />
-    {near && <div className={styles.scaled} style={{ "--preview-width": `${PREVIEW_WIDTH}px`, "--preview-scale": scale } as CSSProperties}>
+    {near && <div ref={scaledRef} className={styles.scaled} style={{ "--preview-width": `${PREVIEW_WIDTH}px`, "--preview-scale": scale } as CSSProperties}>
       <SettledPreview urls={article.cover ? [article.cover.url] : []}>
         <CinematicShell contentOnly initialContent={shared}><CinematicNewsList articles={[article]} /></CinematicShell>
       </SettledPreview>
     </div>}
   </div>;
-}, (a, b) => a.shared === b.shared && a.lazy === b.lazy && a.card.key === b.card.key && a.card.publishedAt === b.card.publishedAt && a.card.slug === b.card.slug && draftFingerprint(a.card.draft) === draftFingerprint(b.card.draft));
+}, (a, b) => a.shared === b.shared && a.lazy === b.lazy && a.stamps === b.stamps && a.card.key === b.card.key && a.card.publishedAt === b.card.publishedAt && a.card.slug === b.card.slug && draftFingerprint(a.card.draft) === draftFingerprint(b.card.draft));
 
 export type NewsCardsProps = {
   cards: readonly NewsCardItem[];
@@ -74,7 +83,19 @@ export type NewsCardsProps = {
   timeZone: string;
   /** Holds every control while a save or an upload runs. */
   locked: boolean;
-  onEdit: (card: NewsCardItem, event: MouseEvent<HTMLButtonElement>) => void;
+  /**
+   * The event's currentTarget is the pressed button. `target` is the field under the pointer when the preview itself was
+   * clicked with a mouse or touch (only with `stamps`); the footer Edit button, the menu and the keyboard pass none.
+   */
+  onEdit: (card: NewsCardItem, event: MouseEvent<HTMLButtonElement>, target?: EditTargetId) => void;
+  /**
+   * Opt in to click-to-field: the edit targets to stamp on the public nodes inside one article's card (this admin preview
+   * only). Return the same array for an article until its id changes: a new array restarts that card's stamp watcher.
+   * Without it the cards render and behave exactly as before.
+   */
+  stamps?: (cardKey: string) => readonly EditTargetStamp[];
+  /** Whether a declared field belongs to the card for `cardKey` (only with `stamps`); another article's field is ignored. Default: every declared field in the card's own preview. */
+  ownsTarget?: (cardKey: string, target: ResolvedEditTarget) => boolean;
   onRemove: (card: NewsCardItem) => void;
   onRestore: (card: NewsCardItem) => void;
   onDiscard: (card: NewsCardItem) => void;
@@ -102,16 +123,23 @@ function CardMenu({ card, locked, onRemove, onDiscard }: { card: NewsCardItem; l
 }
 
 /** One card per article: the real News card as a mini preview, a Live / Removed marker, Edit and a more menu. */
-export function NewsCards({ cards, shared, timeZone, locked, onEdit, onRemove, onRestore, onDiscard, lazy = true }: NewsCardsProps) {
+export function NewsCards({ cards, shared, timeZone, locked, onEdit, onRemove, onRestore, onDiscard, lazy = true, stamps, ownsTarget }: NewsCardsProps) {
   return <ul className={styles.grid} aria-label="Articles" data-news-cards="">
     {cards.map(card => {
       const kind = newsCategory(card.draft.category);
       const status = card.removed ? "Removed" : card.isNew ? "Not saved yet" : "Live";
       return <li key={card.key} className={styles.card} data-removed={card.removed || undefined} data-news-card={card.key}>
         <div className={styles.previewWrap}>
-          <Thumb card={card} shared={shared} lazy={lazy} />
+          <Thumb card={card} shared={shared} lazy={lazy} stamps={stamps?.(card.key)} />
           {!card.removed && <button type="button" className={`admin-press ${styles.previewButton}`} tabIndex={-1} aria-label={`Edit ${card.title}`} disabled={locked}
-            onClick={event => onEdit(card, event)} data-preview-button="" {...KIT_EDIT_PROPS} />}
+            // A pointer click opens the field under the pointer; Enter or Space (detail 0) opens the article, as before.
+            onClick={event => stamps
+              ? onEdit(card, event, event.detail > 0 ? fieldUnder(event.currentTarget, card.key, event.clientX, event.clientY, ownsTarget)?.id : undefined)
+              : onEdit(card, event)}
+            onPointerMove={stamps ? event => { if (event.pointerType === "mouse") showFieldHover(event.currentTarget, card.key, event.clientX, event.clientY, ownsTarget); } : undefined}
+            onPointerLeave={stamps ? event => hideFieldHover(event.currentTarget) : undefined}
+            data-preview-button="" {...KIT_EDIT_PROPS} />}
+          {stamps && !card.removed && <span className={styles.fieldHoverClip} data-field-hover-clip="" aria-hidden="true"><span className={styles.fieldHover} data-field-hover="" hidden /></span>}
         </div>
         <div className={styles.foot}>
           <div className={styles.text}>

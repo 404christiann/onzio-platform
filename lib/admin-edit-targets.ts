@@ -230,6 +230,32 @@ export const EDIT_TARGET_REGISTRY: EditTargetRegistry = {
       entry: { rowFields: ["injury", "timeline", "note"] },
     },
   },
+  /**
+   * Rose City (cinematic@2) News (/admin/news). Sections are NEWS_SECTIONS ids (the dialog edits one article at a time);
+   * every field is keyed by the article's id (a saved article's uuid, or `new-N` for an unsaved one), because the registry is
+   * static and the article is not. The article's card on the page shows its card heading, title, cover photo and category band;
+   * the other fields (date, subtitle, photo description, article text, button) are only on the article page.
+   */
+  news: {
+    route: "/admin/news",
+    sections: {
+      details: { rowFields: ["category", "cardHeading", "publishedLocal", "title", "subtitle"] },
+      photo: { rowFields: ["cover", "coverAlt"] },
+      article: { rowFields: ["body", "actionLabel", "actionHref"] },
+    },
+  },
+  /**
+   * Rose City (cinematic@2) Sponsors (/admin/sponsors). The one section is the homepage carousel card (`carousel`, the sponsor
+   * place id); each sponsor's fields are keyed by its stable draft key (a saved sponsor's uuid, or the key a new upload gets).
+   * The strip draws only the logo pictures: the name is the picture's description and the website is its link, so those two
+   * have a control and no node on the preview. The strip's heading is the Homepage's (`homepage.sponsors.heading`).
+   */
+  sponsors: {
+    route: "/admin/sponsors",
+    sections: {
+      carousel: { rowFields: ["name", "website", "logo"] },
+    },
+  },
 };
 
 const shared = createEditTargets(EDIT_TARGET_REGISTRY);

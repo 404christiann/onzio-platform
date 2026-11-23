@@ -102,7 +102,7 @@ function PreviewBox({ children, scale, lazy, className, stamps }: { children: Re
 }
 
 /** The declared field under a viewport point inside an item card's preview, or null (a field the item does not own is ignored). */
-function fieldUnder(button: HTMLElement, itemId: string, x: number, y: number, ownsTarget?: ItemPreviewCardsProps["ownsTarget"]) {
+export function fieldUnder(button: HTMLElement, itemId: string, x: number, y: number, ownsTarget?: ItemPreviewCardsProps["ownsTarget"]) {
   const wrap = button.parentElement;
   const hit = wrap ? editTargetHitAt(wrap, x, y) : null;
   const target = hit ? resolveEditTarget(hit.id) : null;
@@ -110,7 +110,7 @@ function fieldUnder(button: HTMLElement, itemId: string, x: number, y: number, o
 }
 
 /** The hover outline is moved directly (no React state), so moving the mouse never re-renders the cards. */
-function showFieldHover(button: HTMLElement, itemId: string, x: number, y: number, ownsTarget?: ItemPreviewCardsProps["ownsTarget"]) {
+export function showFieldHover(button: HTMLElement, itemId: string, x: number, y: number, ownsTarget?: ItemPreviewCardsProps["ownsTarget"]) {
   const clip = button.parentElement?.querySelector<HTMLElement>(":scope > [data-field-hover-clip]");
   const outline = clip?.firstElementChild as HTMLElement | null | undefined;
   if (!clip || !outline) return;
@@ -125,7 +125,7 @@ function showFieldHover(button: HTMLElement, itemId: string, x: number, y: numbe
   outline.hidden = false;
 }
 
-function hideFieldHover(button: HTMLElement) {
+export function hideFieldHover(button: HTMLElement) {
   const outline = button.parentElement?.querySelector<HTMLElement>(":scope > [data-field-hover-clip] > [data-field-hover]");
   if (outline) { outline.hidden = true; delete outline.dataset.target; }
 }

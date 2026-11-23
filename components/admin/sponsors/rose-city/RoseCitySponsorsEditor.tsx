@@ -33,7 +33,10 @@ import {
   rowsFingerprint, websiteProblems, type Place,
 } from "./rose-city-sponsors-model";
 import { RoseCitySponsorFields, type SponsorFieldsApi } from "./RoseCitySponsorFields";
+import { sponsorStampsByPlace } from "./sponsors-edit-targets";
 import styles from "./RoseCitySponsorsEditor.module.css";
+
+const NO_STAMPS: readonly never[] = [];
 
 const PAGE = "Sponsors";
 const CRUMBS = [{ label: "Website", href: "/admin/website-pages" as const }, { label: "Partners" }];
@@ -361,6 +364,10 @@ export default function RoseCitySponsorsEditor() {
 
   const loading = loadedClubId !== clubId;
   const deferred = useDeferredValue(drafts);
+  // Click-to-field: the sponsors' keys in the order the preview draws them, from the draft the preview shows (the deferred one).
+  // A string so typing a name (same keys) does not rebuild the stamps and restart the preview's watcher.
+  const carouselKeys = inPlace(deferred, "carousel").map((draft) => draft.key).join("\n");
+  const placeStamps = useMemo(() => sponsorStampsByPlace({ carousel: carouselKeys ? carouselKeys.split("\n") : [] }), [carouselKeys]);
   const pageState = uploading ? "saving" : derivePageSaveState(saveAction.state, failure);
   const changedPlaces = useMemo(() => new Set(PLACES.filter((place) =>
     JSON.stringify(inPlace(drafts, place)) !== JSON.stringify(inPlace(baseDrafts, place)))), [drafts, baseDrafts]);
@@ -447,7 +454,8 @@ export default function RoseCitySponsorsEditor() {
             renderPreview={(id) => <PlacePreview place={id as Place} drafts={deferred} shared={shared} />}
             previewWidth={PREVIEW.width}
             previewScale={PREVIEW.scale}
-            onEdit={(id, event: MouseEvent<HTMLButtonElement>) => dialog.openSection(id as Place, event)}
+            stamps={(id) => placeStamps.get(id) ?? NO_STAMPS}
+            onEdit={(id, event: MouseEvent<HTMLButtonElement>, target) => { dialog.openSection(id as Place, event); dialog.focusField(target); }}
           />
         </PageFrame>
       </ShimmerRegion>
@@ -458,6 +466,7 @@ export default function RoseCitySponsorsEditor() {
           onClose={dialog.close}
           title="Edit sponsors"
           returnFocusRef={dialog.returnFocusRef}
+          focusRequest={dialog.focusRequest}
           sections={sections}
           activeId={dialog.activeId}
           onActiveChange={(id) => dialog.switchTo(id as Place)}
