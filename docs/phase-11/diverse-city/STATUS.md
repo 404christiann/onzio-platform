@@ -1,5 +1,20 @@
 # Diverse City FC Status
 
+## 2026-11-24 - RC-SAM-TEARDOWN: the rc-sam preview is gone; heartbeat URL set
+
+- **Agent / package:** Claude Code (Opus 5.5), the three `rc-sam` teardown actions from the RC-LAUNCH entry, each on its own "go" from Christian. Plus a read-only check that the lifecycle heartbeat is configured.
+- **Status:** `done`. Nothing in the repo changed except this record.
+- **Completed:**
+  - **Shareable link revoked** (21:3x UTC). The Share-button link was stored on the alias `onzio-platform-git-rc-sam-404christianns-projects.vercel.app` (scope `shareable-link`, created 2026-11-19, due to expire 2026-12-03). Revoked through `PATCH /aliases/{id}/protection-bypass` without printing the key. A re-read shows no bypass entries; an unauthenticated GET returns 302 to the Vercel login. The project-level `automation-bypass` entry was not touched.
+  - **Branch deleted:** `git push origin --delete rc-sam` (tip `e78d259d`, the same commit as the newest of its 18 deployments). Restore: `git push origin e78d259d:refs/heads/rc-sam`.
+  - **Six branch-scoped Preview env vars deleted by id**, each re-checked as `target=preview`, `gitBranch=rc-sam` right before deletion: `RC_PREVIEW_HOST` (`UU2KmBUwAqMwt9sv`), `RC_PREVIEW_UNHOLD` (`HlKF3vTYhbzmDy7C`), `NEXT_PUBLIC_FONT_BASE_URL` (`j1F6C1nj08Ojs2ut`), `NEXT_PUBLIC_SUPABASE_URL` (`CTNNT36AnBJOPHfv`), `NEXT_PUBLIC_SUPABASE_ANON_KEY` (`X9iKhB3qZ4B19nzx`), `ONZIO_ENVIRONMENT` (`C99UDsmAhaUkCpEm`). Kept, as intended: the shared Preview entries for `NEXT_PUBLIC_SUPABASE_URL` (`3lyLbIzBnSP7R7Zd`), `NEXT_PUBLIC_SUPABASE_ANON_KEY` (`kDuCjaqrXVe4sYS3`) and `ONZIO_ENVIRONMENT` (`PF0RFwBdr1mh6WVp`), and every Production entry. Values were never read.
+  - The 18 `rc-sam` deployments are kept. They now sit behind deployment protection, and with the vars gone the middleware preview-host bypass is inert on any rebuild.
+  - **Heartbeat (read-only):** `LIFECYCLE_CRON_HEARTBEAT_URL` exists in Production (name only, value encrypted), added about 21:25 UTC. Production deployment `fnv69m7gd` (created 21:26:21 UTC) is Ready and aliases `rosecityfutbolclub.com`, `www.`, `diversecityfc.com` and `www.`. Christian tests the `/fail` and success pings himself.
+- **Files changed:** this file, `HANDOFF.md`.
+- **Verification:** alias re-read via `vercel api` (no bypass scopes); `curl` 302 on the rc-sam alias; `git ls-remote origin rc-sam` empty; env list re-read after deletion (only shared Preview and Production entries remain for the six names); `vercel env ls production`, `vercel ls --prod`, `vercel inspect`.
+- **Blockers / decisions:** none.
+- **Exact next step:** the morning cron check after 12:00 UTC on 2026-11-25 (read-only DB evidence for the seven crons, and the lifecycle success ping), then a proposal for a heartbeat on each cron.
+
 ## 2026-11-23 - RC-LAUNCH (paid): Sam paid; Rose City's public site is live
 
 - **Agent / package:** Claude Code (Opus 5.5), Phase 3 payment verification for the Rose City launch, read-only. No production write, SQL, Stripe write or deploy.
