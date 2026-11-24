@@ -59,8 +59,22 @@ export function currentAdminTab(): string {
   return typeof window === "undefined" ? "other" : adminTabForPath(window.location.pathname);
 }
 
-let ready = false;
+/** Classic admin pages only: /admin and its children, never the login or auth callback pages. */
+export function isClassicAdminPath(pathname: string): boolean {
+  if (pathname !== "/admin" && !pathname.startsWith("/admin/")) return false;
+  return !/^\/admin\/(login|auth)(\/|$)/.test(pathname);
+}
+
+// `initialized`: posthog.init has run (once per page load). `active`: the classic admin is mounted and
+// capture is allowed. Leaving the admin (logout, an expired session, any soft navigation) clears it.
+let initialized = false;
+let active = false;
 let clubContext: ClubContextProps | null = null;
+
+/** Last line of defence: nothing (events, $pageleave, replay snapshots) is sent off a classic admin page. */
+function onlyOnClassicAdmin<T>(event: T): T | null {
+  return active && typeof window !== "undefined" && isClassicAdminPath(window.location.pathname) ? event : null;
+}
 
 export function resolveAdminAnalyticsConfig(env: AdminAnalyticsEnv): AdminAnalyticsConfig | null {
   const key = env.key?.trim();
@@ -69,10 +83,15 @@ export function resolveAdminAnalyticsConfig(env: AdminAnalyticsEnv): AdminAnalyt
 }
 
 export function initAdminAnalytics(env: AdminAnalyticsEnv): boolean {
-  if (ready) return true;
+  if (active) return true;
   if (typeof window === "undefined") return false;
   const config = resolveAdminAnalyticsConfig(env);
   if (!config) return false;
+  active = true;
+  if (initialized) {
+    posthog.startSessionRecording();
+    return true;
+  }
   posthog.init(config.key, {
     api_host: config.host,
     person_profiles: "identified_only",
@@ -83,23 +102,33 @@ export function initAdminAnalytics(env: AdminAnalyticsEnv): boolean {
       element_attribute_ignorelist: ["value"],
     },
     session_recording: { maskAllInputs: true },
+    before_send: onlyOnClassicAdmin,
   });
-  ready = true;
+  initialized = true;
   return true;
 }
 
 /** Copies only the four opaque fields, so an email, name or billing field passed in by mistake never leaves. */
 export function identifyAdminSession(identity: AdminSessionIdentity): void {
-  if (!ready) return;
+  if (!active) return;
   const { userId, clubId, clubSlug, role } = identity;
   clubContext = { club_id: clubId, club_slug: clubSlug, role };
   posthog.identify(userId, { ...clubContext });
   posthog.register({ ...clubContext });
 }
 
+/** Stops replay and capture when the classic admin unmounts; the next init resumes. */
+export function pauseAdminAnalytics(): void {
+  if (!active) return;
+  active = false;
+  posthog.stopSessionRecording();
+}
+
+/** Logout: stop capture first, then forget the identity. */
 export function resetAdminAnalytics(): void {
   clubContext = null;
-  if (!ready) return;
+  if (!initialized) return;
+  pauseAdminAnalytics();
   posthog.reset();
 }
 
@@ -107,7 +136,6 @@ export function trackAdminEvent<E extends AdminEvent>(
   event: E,
   ...props: AdminEventProps[E] extends Record<string, never> ? [] : [AdminEventProps[E]]
 ): void {
-  if (!ready) return;
+  if (!active) return;
   posthog.capture(event, { ...props[0], ...clubContext });
 }
-

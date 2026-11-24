@@ -1,6 +1,6 @@
 ## 2026-11-24 - ADMIN-POSTHOG: PostHog analytics + masked replay in the classic admin (PR open)
 
-`lib/admin-analytics.ts` (the only `posthog-js` importer) and a classic-only, render-nothing provider in the protected admin layout. Nine typed admin events, masked inputs, `ph-no-capture` on billing, members, registrants and dialog titles. Silent no-op unless `VERCEL_ENV=production` and `NEXT_PUBLIC_POSTHOG_KEY` are set. No migration, no deploy. Unit suite 6925/6925, `next build` passes, and an architecture test proves no public route reaches PostHog. Next: onzio-bot review, then Christian sets the key in Vercel Production and decides the merge. Record: `docs/phase-11/diverse-city/STATUS.md`.
+`lib/admin-analytics.ts` (the only `posthog-js` importer) and a classic-only, render-nothing provider in the protected admin layout. Nine typed admin events, masked inputs, `ph-no-capture` on billing, members, registrants and dialog titles. Silent no-op unless `VERCEL_ENV=production` and `NEXT_PUBLIC_POSTHOG_KEY` are set. No migration, no deploy. Unit suite 6925/6925, `next build` passes, and an architecture test proves no public route reaches PostHog. Review loop 1 fixed (capture now stops when the classic admin is left; masking and logout pinned by a contract test). Next: onzio-bot re-review, then Christian sets the key in Vercel Production and decides the merge. Record: `docs/phase-11/diverse-city/STATUS.md`.
 
 ## 2026-11-24 - UPLOAD-FIX: large admin graphics are downscaled; finalize errors reach the field
 

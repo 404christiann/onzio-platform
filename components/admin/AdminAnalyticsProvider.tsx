@@ -7,6 +7,7 @@ import {
   adminTabForPath,
   identifyAdminSession,
   initAdminAnalytics,
+  pauseAdminAnalytics,
   trackAdminEvent,
   type AdminAnalyticsEnv,
   type AdminSessionIdentity,
@@ -28,6 +29,8 @@ export function AdminAnalyticsProvider({
     if (initAdminAnalytics({ vercelEnv, key, host })) {
       identifyAdminSession({ userId, clubId, clubSlug, role });
     }
+    // Leaving the classic admin by a soft navigation (logout, an expired session) stops capture.
+    return pauseAdminAnalytics;
   }, [vercelEnv, key, host, userId, clubId, clubSlug, role]);
 
   useEffect(() => {

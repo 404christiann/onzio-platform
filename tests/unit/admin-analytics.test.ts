@@ -6,6 +6,8 @@ const posthog = vi.hoisted(() => ({
   register: vi.fn(),
   capture: vi.fn(),
   reset: vi.fn(),
+  startSessionRecording: vi.fn(),
+  stopSessionRecording: vi.fn(),
 }));
 vi.mock("posthog-js", () => ({ default: posthog }));
 
@@ -22,8 +24,11 @@ function postHogCalls() {
   return Object.values(posthog).reduce((count, fn) => count + fn.mock.calls.length, 0);
 }
 
+const browser = { location: { pathname: "/admin/homepage" } };
+
 beforeEach(() => {
-  vi.stubGlobal("window", {});
+  browser.location.pathname = "/admin/homepage";
+  vi.stubGlobal("window", browser);
 });
 
 afterEach(() => {
@@ -91,6 +96,7 @@ describe("initAdminAnalytics", () => {
       capture_pageleave: true,
       autocapture: { dom_event_allowlist: ["click"], element_attribute_ignorelist: ["value"] },
       session_recording: { maskAllInputs: true },
+      before_send: expect.any(Function),
     });
   });
 });
@@ -122,16 +128,62 @@ describe("identifyAdminSession", () => {
   });
 });
 
-describe("resetAdminAnalytics", () => {
-  it("resets PostHog and drops the club context from later events", async () => {
+describe("leaving the classic admin", () => {
+  it("logout stops replay, resets PostHog and makes later calls no-ops", async () => {
     const analytics = await load();
     analytics.initAdminAnalytics(PRODUCTION);
     analytics.identifyAdminSession(IDENTITY);
     analytics.resetAdminAnalytics();
 
+    expect(posthog.stopSessionRecording).toHaveBeenCalledTimes(1);
     expect(posthog.reset).toHaveBeenCalledTimes(1);
+    expect(posthog.stopSessionRecording.mock.invocationCallOrder[0]).toBeLessThan(posthog.reset.mock.invocationCallOrder[0]);
     analytics.trackAdminEvent("admin_tab_viewed", { tab: "dashboard" });
-    expect(posthog.capture).toHaveBeenLastCalledWith("admin_tab_viewed", { tab: "dashboard" });
+    analytics.identifyAdminSession(IDENTITY);
+    expect(posthog.capture).not.toHaveBeenCalled();
+    expect(posthog.identify).toHaveBeenCalledTimes(1);
+  });
+
+  it("an unmount pauses capture; coming back resumes replay without a second init and with a fresh identity", async () => {
+    const analytics = await load();
+    analytics.initAdminAnalytics(PRODUCTION);
+    analytics.identifyAdminSession(IDENTITY);
+    analytics.pauseAdminAnalytics();
+    expect(posthog.stopSessionRecording).toHaveBeenCalledTimes(1);
+    analytics.trackAdminEvent("admin_tab_viewed", { tab: "dashboard" });
+    expect(posthog.capture).not.toHaveBeenCalled();
+
+    expect(analytics.initAdminAnalytics(PRODUCTION)).toBe(true);
+    expect(posthog.init).toHaveBeenCalledTimes(1);
+    expect(posthog.startSessionRecording).toHaveBeenCalledTimes(1);
+    analytics.trackAdminEvent("admin_tab_viewed", { tab: "dashboard" });
+    expect(posthog.capture).toHaveBeenCalledTimes(1);
+  });
+
+  it("before_send drops everything (events, $pageleave, replay snapshots) off a classic admin page or while paused", async () => {
+    const analytics = await load();
+    analytics.initAdminAnalytics(PRODUCTION);
+    const beforeSend = posthog.init.mock.calls[0][1].before_send as (event: unknown) => unknown;
+    const event = { event: "$snapshot" };
+
+    expect(beforeSend(event)).toBe(event);
+    for (const pathname of ["/admin/login", "/admin/login?error=session_expired", "/admin/auth/callback", "/", "/schedule"]) {
+      browser.location.pathname = pathname.split("?")[0];
+      expect(beforeSend(event)).toBeNull();
+    }
+    browser.location.pathname = "/admin/homepage";
+    analytics.pauseAdminAnalytics();
+    expect(beforeSend(event)).toBeNull();
+  });
+});
+
+describe("isClassicAdminPath", () => {
+  it("accepts /admin pages and rejects login, auth and public pages", async () => {
+    const { isClassicAdminPath } = await load();
+    for (const path of ["/admin", "/admin/homepage", "/admin/seasons/totals", "/admin/login-help"]) expect(isClassicAdminPath(path)).toBe(true);
+    for (const path of ["/admin/login", "/admin/login/verify", "/admin/auth", "/admin/auth/callback", "/", "/administrator", "/news"]) {
+      expect(isClassicAdminPath(path)).toBe(false);
+    }
   });
 });
 
