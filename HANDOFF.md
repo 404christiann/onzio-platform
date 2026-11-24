@@ -1,6 +1,6 @@
 ## 2026-11-24 - DCFC-D134: indexing approval recorded
 
-`DECISIONS.md` now has `DCFC-D134`. It supersedes `DCFC-D117` (noindex through launch) and `DCFC-D129` (unconditional noindex), and it is the `DCFC-1003` indexing approval. A club is indexed only on production, when it is `live`, on its primary verified domain, for a public page. `grace` stays noindex. Christian approved this through #252 (merged 2026-11-24), before Rose City's 7-day observation ends on 2026-11-30. The `lib/robots.ts` comment now cites D134. Open: the ID `DCFC-D129` is also used for Diverse City's $85 price in `lib/stripe-price.ts`. Christian's heartbeat test passed (red, email, green), and he kept the ping URL. Record: `docs/phase-11/diverse-city/STATUS.md`.
+`DECISIONS.md` now has `DCFC-D134`. It supersedes `DCFC-D117` (noindex through launch) and `DCFC-D135` (unconditional noindex), and it is the `DCFC-1003` indexing approval. A club is indexed only on production, when it is `live`, on its primary verified domain, for a public page. `grace` stays noindex. Christian approved this through #252 (merged 2026-11-24), before Rose City's 7-day observation ends on 2026-11-30. The `lib/robots.ts` comment now cites D134. The duplicate ID is fixed: `DCFC-D129` stays Diverse City's $85 price, and the old unconditional-noindex row, also numbered D129, is now `DCFC-D135`. Christian's heartbeat test passed (red, email, green), and he kept the ping URL. Record: `docs/phase-11/diverse-city/STATUS.md`.
 
 ## 2026-11-24 - RC-SAM-TEARDOWN: the rc-sam preview is gone
 

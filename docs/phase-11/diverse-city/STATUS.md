@@ -1,15 +1,15 @@
 # Diverse City FC Status
 
-## 2026-11-24 - DCFC-D134: indexing approval recorded; D117 and D129 superseded
+## 2026-11-24 - DCFC-D134: indexing approval recorded; D117 and D135 superseded
 
 - **Agent / package:** Claude Code (Opus 5.5), the decision-log update for `DCFC-1003`, asked for by Christian. Docs and one code comment only.
 - **Status:** `ready for review` (docs PR, not merged).
-- **Completed:** `DECISIONS.md` gains `DCFC-D134`. It records the indexing rule from #252 (`lib/robots.ts`): `index, follow` only for production, `live`, the primary verified domain and a public page; everything else, `grace` included, is noindex. It records Christian's approval: #252 was merged 2026-11-24 19:48 UTC as squash `615599cb` by onzio-coder, and Christian asked for `DCFC-D117` to be recorded as superseded. The approval came before Rose City's 7-day observation ends (2026-11-30). `DCFC-D117` and `DCFC-D129` are marked superseded, and `Last updated` is 2026-11-24. The `lib/robots.ts` header comment now cites `DCFC-D134` instead of "DCFC-D117 open decision". No behaviour change.
-- **Noticed, not changed:** the ID `DCFC-D129` is used twice. In `DECISIONS.md` it is the unconditional-noindex decision. `lib/stripe-price.ts:53` and an older `HANDOFF.md` entry use it for Diverse City's $85 price. Which one should be renamed is Christian's call.
+- **Completed:** `DECISIONS.md` gains `DCFC-D134`. It records the indexing rule from #252 (`lib/robots.ts`): `index, follow` only for production, `live`, the primary verified domain and a public page; everything else, `grace` included, is noindex. It records Christian's approval: #252 was merged 2026-11-24 19:48 UTC as squash `615599cb` by onzio-coder, and Christian asked for `DCFC-D117` to be recorded as superseded. The approval came before Rose City's 7-day observation ends (2026-11-30). `DCFC-D117` and `DCFC-D135` (the unconditional-noindex decision) are marked superseded, and `Last updated` is 2026-11-24. The `lib/robots.ts` header comment now cites `DCFC-D134` instead of "DCFC-D117 open decision". No behaviour change.
+- **Duplicate ID fixed:** `DECISIONS.md` had two rows numbered `DCFC-D129`: Diverse City's $85 price and the 2026-08-07 unconditional-noindex decision. The price keeps `DCFC-D129`; `lib/stripe-price.ts:53`, an older `HANDOFF.md` entry and a STATUS entry already cite it for the price. The noindex row is renumbered `DCFC-D135`, with a note on the row. Today's PUBLIC-ROBOTS D117 finding in this file now cites `DCFC-D135`. No other file cited the noindex row.
 - **Also recorded (2026-11-24):** Christian ran the lifecycle heartbeat test himself. A POST to `<url>/fail` turned the Healthchecks check red and sent the down email; a success POST turned it green. He chose to keep the current ping URL, which had been pasted in chat, rather than rotate it.
 - **Files changed:** `docs/phase-11/diverse-city/DECISIONS.md`, `lib/robots.ts` (comment only), this file, `HANDOFF.md`.
 - **Verification:** `npx tsc --noEmit` clean; `npx vitest run tests/contracts/tenant-robots.test.ts tests/contracts/robots-middleware.test.ts` 2 files / 35 tests pass.
-- **Blockers / decisions:** the duplicate `DCFC-D129` ID (above).
+- **Blockers / decisions:** none.
 - **Exact next step:** Christian's "go" to merge. Then the morning cron check on 2026-11-25.
 
 ## 2026-11-24 - RC-SAM-TEARDOWN: the rc-sam preview is gone; heartbeat URL set
@@ -77,7 +77,7 @@ Merging main deploys production: waits for Christian's "go".
 
 **D117 finding.** `DCFC-D117` (`DECISIONS.md`, Christian 2026-08-03): *"The production site retains `noindex, nofollow` through
 launch. Indexing remains a separate later approval after observation closes,"* carried by `DCFC-1003`. `DCFC-D116` sets the
-observation at 7 days; `PRODUCTION-CUTOVER-ROLLBACK.md` puts the indexing decision at launch + 7 days. `DCFC-D129`
+observation at 7 days; `PRODUCTION-CUTOVER-ROLLBACK.md` puts the indexing decision at launch + 7 days. `DCFC-D135` (numbered `DCFC-D129` until 2026-11-24)
 (2026-08-07) accepted the unconditional header on Rose City's then-live site. **Launch does not meet D117's conditions as
 written:** Rose City went live 2026-11-23, there is no `DCFC-1003` approval on record, and the observation window would run
 to 2026-11-30. This package implements the lift because the lane brief asked for it; **Christian's "go" on the PR is the
