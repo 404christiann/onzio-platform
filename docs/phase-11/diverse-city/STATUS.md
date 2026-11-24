@@ -1,5 +1,25 @@
 # Diverse City FC Status
 
+## 2026-11-23 - RC-LAUNCH (paid): Sam paid; Rose City's public site is live
+
+- **Agent / package:** Claude Code (Opus 5.5), Phase 3 payment verification for the Rose City launch, read-only. No production write, SQL, Stripe write or deploy.
+- **Status:** `done`. Rose City is live at $150/month; `PAID-LAUNCH-AUTOMATION` (#245, `44340934`) opened the site by itself.
+- **Completed (evidence, all read-only):**
+  - Stripe (live): Sam (handle `info`) signed in at 23:46 UTC and paid at 00:05 UTC on 2026-11-24 (16:05 Pacific, 2026-11-23). Subscription `sub_1Uf7F6K6WajTkwHYZYUo0sSA` is `active` on price `rose-city-monthly-150` ($150.00/month), `cancel_at_period_end` false, current period ends 2026-12-24, metadata `onzio_club_id` = Rose City, `onzio_environment` = production. Invoice paid.
+  - Webhook: every event for the payment (`checkout.session.completed`, `customer.subscription.created`, `invoice.*`, `payment_intent.succeeded`) shows `pending_webhooks: 0`, so the production endpoint answered 2xx to each. Vercel Hobby keeps runtime logs for 1 hour, so the request lines were already gone; the endpoint's earlier smoke (GET 405, unsigned POST 400) and the email below confirm the apply path ran.
+  - Site: `rosecityfutbolclub.com/`, `www.` and `/schedule` return 200 (`no-store`); `/admin` 307 to `/admin/login`. A 200 means `publicSiteState` read `live` or `grace`, i.e. the projection set `public_access` off `preview`.
+  - Operator email: Resend delivered "Rose City Futbol Club is live — subscription active" to the operator at 00:05:56 UTC, 3 seconds after the checkout events.
+- **Noticed, not changed:** the live site still sends `x-robots-tag: noindex, nofollow` (the Phase 6 noindex PR is what lifts it). Three Stripe customers carry Rose City's club id (2026-11-23 16:08 and 22:15 UTC, and the paying one at 00:04): two are left over from checkouts that weren't finished, with no subscription. Diverse City's renewal failed again on 2026-11-23 (attempt 7, $85, next retry 2026-11-25); it is already in grace.
+- **Files changed:** this file, `HANDOFF.md`.
+- **Verification:** curl of the four URLs above; Stripe `GET /v1/events` and `GET /v1/subscriptions/sub_1Uf7F6K6WajTkwHYZYUo0sSA` (live, read-only); Resend sent-email list.
+- **Blockers / decisions:** none for the launch. Optional DB read-back (Christian runs it): `select public_access from clubs where slug = 'rose-city';` and the `club_subscriptions` row for that club.
+- **Post-launch state (2026-11-24, read-only checks):**
+  - #249 (`UI-FIX-MATCH-SUMMARY-SCORERS`) is merged as `17e58214` (2026-11-24 04:44 UTC). onzio-bot's last review was on head `b08b992`, clean, and CI was green on that SHA. The production deploy of `17e58214` is Ready, and `rosecityfutbolclub.com`, `www.rosecityfutbolclub.com` and `diversecityfc.com` all alias it. Nothing waits on a go for #249.
+  - Lanes running (each opens its own PR; nothing below is merged or applied): A, Phase 6 noindex PR (merge waits on Christian's "go"); B, rebase #221 so the crons reach their routes (merge waits on "go", then check cron logs after the first run); C, hero poster steps 3-7 (each production write waits on its own "go"); D, these go packets (read-only).
+  - `rc-sam` teardown (link expires 2026-12-03; needs one "go" per action): revoke the Shareable Link; delete the six branch-scoped Preview env vars (`RC_PREVIEW_UNHOLD`, `RC_PREVIEW_HOST`, `NEXT_PUBLIC_FONT_BASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ONZIO_ENVIRONMENT`); delete branch `rc-sam` (tip `e78d259d`). No code change is needed: the middleware preview-host bypass reads `RC_PREVIEW_UNHOLD`, `RC_PREVIEW_HOST` and `VERCEL_ENV=preview`, never the name `rc-sam`, so without the vars it is inert. No production domain points at an `rc-sam` deployment; the docs list no Supabase redirect URL or Stripe webhook for it.
+  - Old $75 price: **do not archive it.** `price_1TwbmvK6WajTkwHYueLvjhv5` is the shared Onzio Pro Plan price (`prod_UwUmEgeunaSPSI`, DCFC-D128), not a Rose City price, and Production still has `STRIPE_PRICE_ID_PRO` and `STRIPE_PRICE_IDS_PRO_GRANDFATHERED` set (names only; values not read). Archiving could break new Pro Checkout. Rose City's own product `prod_VgM14vuaVAbJ6M` has one price, the $150 one. Its only subscription on the $75 price is cancelled (July). Changing this needs Christian's decision and a check of what those two env vars hold.
+- **Exact next step:** Christian's "go", one per action: noindex PR merge, #221 merge, hero poster steps, the three `rc-sam` teardown actions, and push of this docs branch (`git push -u origin claude/rc-launch-record`, then `gh pr create`).
+
 ## 2026-11-24 - RC-HERO-POSTER-02 to -06: the hero poster follows the hero video (migration applied to production)
 
 - **Agent / package:** Claude Code (Sonnet 5.5), `RC-HERO-POSTER-02`, `-03`, `-04`, `-05` and `-06` (the plan's steps 3-7) in one branch, `claude/lane-c-hero-poster-122c76`, from main `17e58214`. Steps 00 and 01 are already on main (#225); #219 is merged, so 06 is unblocked.
@@ -196,6 +216,7 @@ for 200s on every cron.
 - **Second review fixes:** Medium: `withoutHiddenHomepageSections` now drops only a hidden raffle photo. The match words and ticket prices are the shared shell that Tickets, Chick-fil-A, Robinson Stadium and Know Before You Go show, so the homepage switches no longer blank them (the homepage still hides them at render). Low: a shown Third kit borrows the Away lead photos and the Away photo row separately, and each is kept on its own when Away is hidden. Unit 442 files / 6428 tests pass.
 - **Blockers / decisions:** production migration gate + Christian's "go" before merge.
 - **Exact next step:** confirm the production deploy is Ready, then Sam can use the switches. To bring back the header logo while the Foothill Transit page stays hidden, Sam replaces the logo (a new upload clears the description) or changes its description from "Foothill Transit".
+
 
 ## 2026-11-23 - PAID-LAUNCH-AUTOMATION: paying opens the public site and emails the operator
 

@@ -1,3 +1,7 @@
+## 2026-11-23 - RC-LAUNCH (paid): Rose City's public site is live
+
+Sam paid $150/month at 16:05 Pacific; subscription `sub_1Uf7F6K6WajTkwHYZYUo0sSA` is active through 2026-12-24. Every Stripe event for the payment was delivered to the production webhook (`pending_webhooks: 0`), rosecityfutbolclub.com and www now return 200, and the operator "is live" email was delivered 3 seconds after checkout. No manual step was needed: #245 opened the site from the payment. The site still sends `noindex, nofollow` until the Phase 6 noindex PR merges. Two unused Stripe customers from earlier unfinished checkouts carry Rose City's club id (no subscription). Next: #249 is merged and live (nothing to approve). Waiting on Christian's "go": noindex PR (lane A), rebase of #221 (lane B), hero poster steps 3-7 (lane C), and the `rc-sam` preview teardown by Dec 3 (revoke link, delete six branch env vars, delete branch; no code change). The old $75 Stripe price is the shared Pro price: do not archive it. Full evidence in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## 2026-11-24 - RC-HERO-POSTER-02 to -06: the hero poster follows the hero video
 
 - **Status:** `merged and deployed` 2026-11-24 (#251, squash `86100973`, Vercel production success; `rosecityfutbolclub.com/` and `/admin/login` 200). Migration `20261124120000_hero_video_poster.sql` is applied to production (gate steps 1-7 done). Record: `STATUS.md`.
@@ -37,6 +41,7 @@
 - **Evidence:** contract test (6, all red on main); browser spec 14 worst-case matches x 5 widths, 11 red on main, 14/14 on the fix, plus the homepage strip for 10 cases (8 red on main, 10/10 on the fix); unit 6243, contracts 5182, architecture 432; before/after screenshots in `docs/verification/match-summary-scorers/`.
 - **Left alone:** with many scorers the header row grows above the name on desktop (STATUS finding 1).
 - **Exact next step:** Christian reviews; "go" to merge and deploy.
+
 
 ## 2026-11-23 - PAID-LAUNCH-AUTOMATION: paying opens the public site and emails the operator
 
