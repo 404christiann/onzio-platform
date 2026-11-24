@@ -398,11 +398,17 @@ export function reduceHomepageEditor(
 
   if (action.type === "presentation-refreshed") {
     if (!state.baseline.revamp || !state.draft.revamp) return state;
-    if (JSON.stringify(state.baseline.revamp.presentation) === JSON.stringify(action.presentation)
-      && JSON.stringify(state.draft.revamp.presentation) === JSON.stringify(action.presentation)) return state;
+    // Only the keys a hero video swap or revert writes. Everything else in `presentation`
+    // (header sponsor logo, backgrounds, sponsor treatments) is editable here, so an unsaved
+    // edit to it must survive the refresh and stay dirty.
+    const owned = (presentation: CinematicHomepageContent["presentation"]) => JSON.stringify([presentation.heroPoster, presentation.heroVideoGuid, presentation.heroVideoLibraryId]);
+    const incoming = owned(action.presentation);
+    if (owned(state.baseline.revamp.presentation) === incoming && owned(state.draft.revamp.presentation) === incoming) return state;
     const next = cloneState(state);
-    next.baseline.revamp = { ...next.baseline.revamp!, presentation: structuredClone(action.presentation) };
-    next.draft.revamp = { ...next.draft.revamp!, presentation: structuredClone(action.presentation) };
+    const { heroPoster, heroVideoGuid, heroVideoLibraryId } = structuredClone(action.presentation);
+    const apply = (presentation: CinematicHomepageContent["presentation"]) => ({ ...presentation, heroPoster, heroVideoGuid, heroVideoLibraryId });
+    next.baseline.revamp = { ...next.baseline.revamp!, presentation: apply(next.baseline.revamp!.presentation) };
+    next.draft.revamp = { ...next.draft.revamp!, presentation: apply(next.draft.revamp!.presentation) };
     return next;
   }
 

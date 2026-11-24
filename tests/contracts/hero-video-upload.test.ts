@@ -1104,6 +1104,24 @@ describe("hero poster in the editor: the preview follows a swap or revert withou
       expect(state.draft.revamp?.presentation.heroPoster.assetId).toBe("old-asset");
     });
 
+    it("keeps an unsaved header sponsor logo edit, still dirty, while the hero video and poster refresh", () => {
+      const state = reduceHomepageEditor(stateWith(art("old-asset", "https://cdn.test/old.webp")), {
+        type: "revamp-changed",
+        content: (() => {
+          const revamp = stateWith(art("old-asset", "https://cdn.test/old.webp")).draft.revamp!;
+          return { ...revamp, presentation: { ...revamp.presentation, headerPartner: { ...revamp.presentation.headerPartner, alt: "My unsaved sponsor alt" } } };
+        })(),
+      });
+      expect(getDirtyHomepageSections(state)).toContain("revamp");
+      const server = { ...presentationWith(art("new-asset", "https://cdn.test/new.webp")), headerPartner: art(null, null, "") };
+      const next = reduceHomepageEditor(state, { type: "presentation-refreshed", presentation: server });
+      expect(next.draft.revamp?.presentation.headerPartner.alt).toBe("My unsaved sponsor alt");
+      expect(next.baseline.revamp?.presentation.headerPartner.alt).toBe("");
+      expect(next.draft.revamp?.presentation.heroPoster.assetId).toBe("new-asset");
+      expect(next.draft.revamp?.presentation.heroVideoGuid).toBe("new-guid");
+      expect(getDirtyHomepageSections(next)).toContain("revamp");
+    });
+
     it("returns the same state object when the presentation did not change, or there is no cinematic draft", () => {
       const state = stateWith(art("a", "https://cdn.test/a.webp"));
       expect(reduceHomepageEditor(state, { type: "presentation-refreshed", presentation: state.draft.revamp!.presentation })).toBe(state);
