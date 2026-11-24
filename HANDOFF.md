@@ -1,6 +1,6 @@
 ## 2026-11-23 - UI-FIX-MATCH-SUMMARY-SCORERS: scorer line no longer drawn over a two-line home team name
 
-- **Status:** `ready for review`, branch `claude/match-summary-scorers` off main `44340934`, PR open, not merged. Rose City score header only (`CinematicLatestResult`, also on the homepage); no migration, data or `supabase/**` change. Record: `STATUS.md` (UI-FIX-MATCH-SUMMARY-SCORERS).
+- **Status:** `ready for review`, branch `claude/match-summary-scorers` off main `0b16c5f8`, PR open, not merged. Rose City score header only (`CinematicLatestResult`, also on the homepage); no migration, data or `supabase/**` change. Record: `STATUS.md` (UI-FIX-MATCH-SUMMARY-SCORERS).
 - **Why it broke:** `.result-events{margin-top:-2.2vw}` pulled the scorers up by a fixed amount tuned for a one-line name, so "Rose City Futbol / Club" was drawn over by "J. Hernandez (14')".
 - **What:** name and scorers share one wrapper; on desktop a grid keeps the name on the crest's centre line and hangs the scorers from its real bottom edge; phones unchanged. Long unbreakable names/scorers now wrap instead of widening the page.
 - **Evidence:** contract test (6, all red on main); browser spec 14 worst-case matches x 5 widths, 11 red on main, 14/14 on the fix; unit 6243, contracts 5182, architecture 432; before/after screenshots in `docs/verification/match-summary-scorers/`.
