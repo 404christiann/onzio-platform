@@ -22,12 +22,14 @@ export function CinematicLatestResult({ fixture, clubLabel, crestUrl }: MatchPro
     {fixture.competition && <p className="result-competition">{fixture.competition}</p>}
     <p className="result-meta">{[resultDate(fixture.date), fixture.venue].filter(Boolean).join(" | ")}</p>
     <div className="result-row">
-      <strong className="result-name home">{clubLabel}</strong>
+      <div className="result-side home">
+        <strong className="result-name home">{clubLabel}</strong>
+        {scorers.length > 0 && <p className="result-events">{scorers.map((scorer, index) => <Fragment key={index}><span>{scorer}{index < scorers.length - 1 ? "," : ""}</span>{index < scorers.length - 1 ? " " : ""}</Fragment>)}</p>}
+      </div>
       <div className="result-crest">{crestUrl && <NativeImage src={crestUrl} alt="" />}</div>
       <div className="result-score" aria-hidden="true"><span>{fixture.roseCityScore}</span><b>|</b><span>{fixture.opponentScore}</span></div>
       <div className="result-crest"><OpponentCrest name={fixture.opponent} logoUrl={fixture.opponentLogoUrl} size={140} /></div>
       <strong className="result-name away">{opponent}</strong>
-      {scorers.length > 0 && <p className="result-events">{scorers.map((scorer, index) => <Fragment key={index}><span>{scorer}{index < scorers.length - 1 ? "," : ""}</span>{index < scorers.length - 1 ? " " : ""}</Fragment>)}</p>}
     </div>
   </section>;
 }
