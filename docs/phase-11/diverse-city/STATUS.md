@@ -1,9 +1,27 @@
 # Diverse City FC Status
 
-## 2026-11-21 - CRON-MIDDLEWARE-EXEMPT: Vercel crons bypass tenant host routing (+ TELEMETRY-02 gate record)
+## 2026-11-24 - CRON-MIDDLEWARE-EXEMPT: Vercel crons bypass tenant host routing (rebased on #245; + TELEMETRY-02 gate record)
 
-**Agent/package:** Claude Code (Opus 5.5), CRON-MIDDLEWARE-EXEMPT, branch `claude/cron-middleware-exempt` from main
-`ee21290d`. **Status:** pushed, PR open, not merged. No migration.
+**Agent/package:** Claude Code (Opus 5.5), CRON-MIDDLEWARE-EXEMPT; rebased 2026-11-24 by Claude Code (Sonnet 5.5, POST-LAUNCH-PARALLEL lane B)
+onto main `17e58214`. Branch `claude/cron-middleware-exempt`. **Status:** `ready for review`, PR #221 open, not merged, not
+deployed. No migration. Merging main deploys production: waits for Christian's "go".
+
+**2026-11-24 rebase:** #221 conflicted with #245 (PAID-LAUNCH-AUTOMATION) in `middleware.ts`, the contract test and this
+file. Main's middleware behaviour is kept unchanged (`publicSiteState`/`isPublicSiteOpen` in `lib/club-access.ts` as the
+only visibility decider, 404 `no-store` and `noindex, nofollow` for closed tenants, the suspended-admin redirect, the Rose
+City preview-host bypass). The only change to `middleware.ts` against main is the `isCronPath` helper and its early
+return, placed straight after the two Stripe webhook exemptions and before any tenant, Supabase or visibility logic. New
+test: `reaches every vercel.json cron route untouched on the production host, a custom tenant domain and a *.vercel.app
+host`. It reads `vercel.json`, so a cron added there is covered with no edit, and for each of the 7 paths x 3 hosts
+(`www.diversecityfc.com`, `www.alphafc.example`, `onzio-platform-9p3oxcj5d-team.vercel.app`, `Host` header set) with
+spoofed `x-onzio-*` headers it asserts 200, `x-middleware-next: 1`, no rewrite, no `Location`, no `X-Robots-Tag`, no tenant
+header forwarded and the bearer kept. **Red without the exemption:** with the early return disabled and dummy Supabase
+env, the test fails with `/api/cron/media-cleanup on the production tenant host (www.diversecityfc.com): expected 404 to
+be 200` (the original deployment-URL test fails the same way). Green with it: `tenant-routing` 34/34.
+**Verification (2026-11-24, in the shared verify slot):** `tsc --noEmit` clean; `test:unit` 443 files, 6,437 passed;
+`test:contracts` 358 files, 5,361 passed; `test:architecture` 18 files, 432 passed, 1 skipped. The unit and architecture
+runs print a harmless `fatal: Not a valid object name origin/main` from a git-diff helper in this worktree.
+**Next step (unchanged):** Christian says "go" to merge and deploy; the cron log check (below) follows the deploy.
 
 **TELEMETRY-02 production record (on Christian's "go run the migration gate for 216"):**
 - Linked with `npx supabase@2.122.0 link` in the worktree. The link files were made fresh, not copied, and deleted

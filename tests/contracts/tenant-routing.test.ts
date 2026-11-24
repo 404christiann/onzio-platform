@@ -147,6 +147,55 @@ describe("tenant route resolution contract", () => {
     }
   });
 
+  // Driven by vercel.json, so a cron added there is covered with no edit here.
+  const CRON_HOSTS = [
+    ["the production tenant host", "www.diversecityfc.com"],
+    ["a custom tenant domain", "www.alphafc.example"],
+    ["a *.vercel.app deployment host", "onzio-platform-9p3oxcj5d-team.vercel.app"],
+  ] as const;
+
+  it("reaches every vercel.json cron route untouched on the production host, a custom tenant domain and a *.vercel.app host", async () => {
+    const middleware = await loadContract<Middleware>("@/middleware", "middleware");
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const { crons } = JSON.parse(readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")) as {
+      crons: Array<{ path: string }>;
+    };
+    expect(crons.length).toBeGreaterThan(0);
+    for (const { path } of crons) {
+      for (const [label, host] of CRON_HOSTS) {
+        const where = `${path} on ${label} (${host})`;
+        // Vercel's cron call is a bearer-authenticated GET; the spoofed tenant headers must not survive.
+        const response = await middleware(
+          new NextRequest(`https://${host}${path}`, {
+            method: "GET",
+            headers: {
+              host,
+              authorization: "Bearer cron-contract-test",
+              "x-onzio-club-id": clubs.alpha.id,
+              "x-onzio-club-slug": "spoofed",
+              "x-onzio-user-id": USER_IDS.ownerAal2,
+            },
+          }),
+        );
+        // Passed straight on: not 404'd, redirected or rewritten to a tenant's internal path.
+        expect(response.status, where).toBe(200);
+        expect(response.headers.get("x-middleware-next"), where).toBe("1");
+        expect(response.headers.get("x-middleware-rewrite"), where).toBeNull();
+        expect(response.headers.get("location"), where).toBeNull();
+        expect(response.headers.get("x-robots-tag"), where).toBeNull();
+        // Not resolved as a tenant: none of the tenant headers reach the route.
+        const forwarded = response.headers.get("x-middleware-override-headers") ?? "";
+        expect(forwarded, where).not.toContain("x-onzio-");
+        for (const header of ["club-id", "club-slug", "user-id"]) {
+          expect(response.headers.get(`x-middleware-request-x-onzio-${header}`), `${where}: ${header}`).toBeNull();
+        }
+        // The route keeps its own bearer: middleware does not strip or replace it.
+        expect(forwarded, where).toContain("authorization");
+      }
+    }
+  });
+
   // Middleware lets ANY /api/cron/<name> through, so every route there must be a scheduled cron that
   // authenticates itself. This walks the directory, not vercel.json, so a new route is caught even if
   // nobody schedules it.

@@ -1,3 +1,10 @@
+## 2026-11-24 - CRON-MIDDLEWARE-EXEMPT (#221): Vercel crons bypass tenant routing, rebased on #245
+
+- **Status:** `ready for review`, PR #221 (`claude/cron-middleware-exempt`) rebased onto main `17e58214`, not merged. No migration. Record: `STATUS.md` (CRON-MIDDLEWARE-EXEMPT).
+- **What:** `isCronPath` + one early return in `middleware.ts`, after the Stripe webhook exemptions and before any tenant logic; main's #245 visibility behaviour is untouched. Without it production crons hit `UNKNOWN_TENANT` 404s on the deployment URL.
+- **Evidence:** new contract test iterates every `vercel.json` cron on the production host, a custom tenant domain and a `*.vercel.app` host (200, next, no rewrite/404/tenant headers); red without the exemption (404 on `/api/cron/media-cleanup`), green with it. tsc clean; unit 6437, contracts 5361, architecture 432.
+- **Exact next step:** Christian reviews; "go" merges and deploys. Then check Vercel runtime logs within an hour of each cron's UTC schedule.
+
 ## 2026-11-23 - UI-FIX-MATCH-SUMMARY-SCORERS: scorer line no longer drawn over a two-line home team name
 
 - **Status:** `ready for review`, branch `claude/match-summary-scorers` off main `0b16c5f8`, PR open, not merged. Rose City score header only (`CinematicLatestResult`, also on the homepage); no migration, data or `supabase/**` change. Record: `STATUS.md` (UI-FIX-MATCH-SUMMARY-SCORERS).
