@@ -2,7 +2,7 @@
 
 ## 2026-11-24 - LIFECYCLE-HEARTBEAT-FAIL: a failed lifecycle run pings `<url>/fail` so Healthchecks goes red
 
-- **Agent / package:** Claude Code (Sonnet 5.5), `LIFECYCLE-HEARTBEAT-FAIL`, branch `claude/lifecycle-heartbeat-fail` off main `17e58214`. `lib/billing-lifecycle.ts`, `app/api/cron/lifecycle/route.ts` and two new test files only; no migration, no env or Vercel change.
+- **Agent / package:** Claude Code (Sonnet 5.5), `LIFECYCLE-HEARTBEAT-FAIL`, branch `claude/lifecycle-heartbeat-fail` rebased onto main `9b677cd3` (#221 merged). `lib/billing-lifecycle.ts`, `app/api/cron/lifecycle/route.ts` and two new test files only; no migration, no env or Vercel change.
 - **Status:** `ready for review`, PR open, not merged, not deployed. Merging main deploys production: waits for Christian's "go".
 - **Why:** PLAT-D022 wants an alert on a reported failure as well as a missed run. A Healthchecks-style monitor treats any POST to the base ping URL as success, so `{"status":"failure"}` sent there would not alert. `signalLifecycleHeartbeat("failure", ...)` now POSTs to `<url>/fail`; success is unchanged. The body is the same either way: `{"status":"success"|"failure","detail":"..."}`.
 - **Also in this PR (Christian, 2026-11-24):** the heartbeat can no longer break the run it watches. `signalLifecycleHeartbeat` has a 5s `AbortSignal.timeout`, never throws, and logs `billing.lifecycle_heartbeat_failed` with the HTTP status or an error code (never the URL). The route declares `maxDuration = 60` like the other crons, and `runBillingDriftAlert` now runs inside the try, so a crash there pings `/fail` instead of going silent (it still runs first; a throw skips that day's lifecycle run and answers 500, as an uncaught throw did before).

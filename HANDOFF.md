@@ -1,6 +1,6 @@
 ## 2026-11-24 - LIFECYCLE-HEARTBEAT-FAIL: failed lifecycle runs ping `<url>/fail`
 
-- **Status:** `ready for review`, branch `claude/lifecycle-heartbeat-fail` off main `17e58214`, PR open, not merged. No migration. Record: `STATUS.md` (LIFECYCLE-HEARTBEAT-FAIL).
+- **Status:** `ready for review`, branch `claude/lifecycle-heartbeat-fail` rebased onto main `9b677cd3`, PR open, not merged. No migration. Record: `STATUS.md` (LIFECYCLE-HEARTBEAT-FAIL).
 - **What:** `signalLifecycleHeartbeat("failure", ...)` posts to `<LIFECYCLE_CRON_HEARTBEAT_URL>/fail`; success unchanged. Lets Healthchecks alert on a reported failure and a missed run (PLAT-D022). The heartbeat also has a 5s timeout and never throws, so a slow monitor can't turn a good run into a 500; `maxDuration = 60`; a drift-alert crash now pings `/fail`.
 - **Before it works:** `LIFECYCLE_CRON_HEARTBEAT_URL` is not set in Production yet (Christian adds it; never in chat).
 - **Exact next step:** Christian reviews; "go" merges and deploys.
