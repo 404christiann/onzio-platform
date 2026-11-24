@@ -7,6 +7,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function unauthorized() {
   return NextResponse.json(
@@ -24,11 +25,10 @@ export async function GET(request: Request) {
     return unauthorized();
   }
 
-  // Independent of the lifecycle run: a lifecycle config error must not hide
-  // drift, and a drift failure (it never throws) must not change the response.
-  await runBillingDriftAlert();
-
   try {
+    // Inside the try so a crash here pings `/fail` instead of going silent. The drift alert
+    // never throws in practice and must not change the response, so it runs first and alone.
+    await runBillingDriftAlert();
     const result = await runBillingLifecycle();
     const event = { event: "billing.lifecycle", ...result };
     if (result.divergences > 0) {
@@ -45,11 +45,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ data: result, error: null });
   } catch {
     console.error(JSON.stringify({ event: "billing.lifecycle_failed" }));
-    try {
-      await signalLifecycleHeartbeat("failure", "BILLING_LIFECYCLE_FAILED");
-    } catch {
-      console.error(JSON.stringify({ event: "billing.lifecycle_heartbeat_failed" }));
-    }
+    await signalLifecycleHeartbeat("failure", "BILLING_LIFECYCLE_FAILED");
     return NextResponse.json(
       { error: { code: "BILLING_LIFECYCLE_FAILED" } },
       { status: 500 },
