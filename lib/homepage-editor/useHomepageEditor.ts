@@ -5,7 +5,7 @@ import { createClient } from "@/lib/admin-client";
 import { fetchHomepageRevision } from "./hero-video-client";
 import { applySwapRevision } from "./hero-video-upload";
 import { buildHomepageSaveRequest, type HomepageEditorSnapshot } from "./adapter";
-import { CINEMATIC_ARTWORK_SLOTS, defaultCinematicHomepageContent, cinematicArtwork, type CinematicArtworkSlot } from "@/lib/cinematic-homepage-content";
+import { CINEMATIC_ARTWORK_SLOTS, defaultCinematicHomepageContent, cinematicArtwork, queuedArtwork, type CinematicArtworkSlot } from "@/lib/cinematic-homepage-content";
 import { homepageAllowedPieces, resolveHomepageBindings, resolveHomepageCapabilities, type HomepageBindingIdentity } from "./capabilities";
 import { createHomepageEditorState, getDirtyHomepageSections, reduceHomepageEditor, type HomepageEditorAction, type HomepageEditorState, type HomepagePhoto } from "./model";
 import { currentHomepageBinding, homepageSaveFailureSettlesOperation, overlayHomepageRecovery, parseHomepageRecoveryRecord, resolveHomepageRecovery, type HomepageRecoveryResult } from "./recovery";
@@ -466,7 +466,7 @@ export function useHomepageEditor(clubId: string) {
     const id = crypto.randomUUID(); files.current.set(id, file);
     const key = recoveryKey.current;
     if (key) persistence.current = persistence.current.then(async () => { if (!await writeRecoveryFile(id, key, file)) setRecoveryUnavailable(true); });
-    setArtwork(slot, { upload: "queued", localFileKey: id });
+    setArtwork(slot, queuedArtwork(slot, id));
     void startArtworkUpload(slot, id);
   }
   return {

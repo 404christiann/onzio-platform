@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
-import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { fetchCinematicHomepageContent, withoutHiddenHomepageSections, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 
 const Context = createContext<{ content: CinematicHomepageContent | null; loading: boolean } | null>(null);
 
@@ -23,7 +23,7 @@ function useLoadedContent(enabled: boolean, initialContent: CinematicHomepageCon
     let active = true;
     setState({ clubId: club.id, content: null, loading: true });
     fetchCinematicHomepageContent(club.id)
-      .then(content => { if (active) setState({ clubId: club.id, content, loading: false }); })
+      .then(content => { if (active) setState({ clubId: club.id, content: withoutHiddenHomepageSections(content), loading: false }); })
       .catch(error => { console.error("Cinematic homepage content:", error); if (active) setState({ clubId: club.id, content: null, loading: false }); });
     return () => { active = false; };
   }, [club.id, enabled, preview?.draft.revamp, trustedInitial]);

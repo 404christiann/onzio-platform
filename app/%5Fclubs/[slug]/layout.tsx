@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import CinematicDisplayFont from "@/components/cinematic/CinematicDisplayFont";
-import { fetchCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { fetchCinematicHomepageContent, withoutHiddenHomepageSections } from "@/lib/cinematic-homepage-content";
 import { createClient } from "@/lib/supabase-server";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
@@ -107,7 +107,7 @@ export default async function TenantLayout({
   if (club.presentationTemplateKey === "cinematic@2") {
     // The "Visible to visitors" map is its own fail-open read (never part of tenant resolution).
     const pageVisibilityRead = fetchPublicPageVisibility(club.id);
-    const initialContent = await fetchCinematicHomepageContent(club.id, (await createClient()).schema("onzio")).catch(() => null);
+    const initialContent = await fetchCinematicHomepageContent(club.id, (await createClient()).schema("onzio")).then(withoutHiddenHomepageSections).catch(() => null);
     const pageVisibility = await pageVisibilityRead;
     return <ClubContextProvider club={club}><PublicPageVisibilityProvider visibility={pageVisibility}>{withTelemetry(<><CinematicDisplayFont /><ClubTimeZoneProvider timeZone={timeZone}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubTimeZoneProvider></>)}</PublicPageVisibilityProvider></ClubContextProvider>;
   }

@@ -101,6 +101,17 @@ export const CINEMATIC_ARTWORK_SLOTS: readonly CinematicArtworkSlot[] = ["raffle
 export function isHomepageSectionShown(part: { visible?: boolean }): boolean {
   return part.visible !== false;
 }
+/**
+ * What visitors are sent: a hidden raffle photo, next home match or ticket prices section keeps only its switch, so its
+ * words and image never reach the public page. Editors and previews use the full content.
+ */
+export function withoutHiddenHomepageSections(content: CinematicHomepageContent): CinematicHomepageContent {
+  const next = { ...content };
+  if (!isHomepageSectionShown(content.raffle)) next.raffle = { assetId: null, url: null, alt: "", visible: false };
+  if (!isHomepageSectionShown(content.match)) next.match = { ...content.match, heading: "", buttonLabel: "", emptyMessage: "", visible: false };
+  if (!isHomepageSectionShown(content.prices)) next.prices = { heading: "", rows: [], footnote: "", visible: false };
+  return next;
+}
 /** The save and storage form of a visibility flag: written as false when hidden, and left out when shown. */
 const hiddenFlag = (part: { visible?: boolean }) => part.visible === false ? { visible: false as const } : {};
 
@@ -124,6 +135,13 @@ export function cinematicArtwork(content: CinematicHomepageContent, slot: Cinema
   if (slot === "trophy") return content.championship.trophy;
   if (slot === "headerPartner") return content.presentation.headerPartner;
   return content[slot];
+}
+/**
+ * The change a newly chosen file makes to a slot. A new header sponsor logo also starts with an empty description: the old
+ * one ("Foothill Transit") would otherwise keep the site showing the Foothill Transit mark, tied to that page, instead of it.
+ */
+export function queuedArtwork(slot: CinematicArtworkSlot, localFileKey: string): Partial<CinematicArtwork> {
+  return { upload: "queued", localFileKey, ...(slot === "headerPartner" ? { alt: "" } : {}) };
 }
 export function cinematicHomepageEditableContent(content: CinematicHomepageContent): CinematicHomepageSaveContent {
   const media = ({ assetId, alt }: CinematicArtwork) => ({ assetId, alt });
