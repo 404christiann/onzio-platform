@@ -70,8 +70,11 @@ describe("signalLifecycleHeartbeat", () => {
   });
 
   it("gives the fetch a 5s abort signal", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
     await signalLifecycleHeartbeat("success", "BILLING_LIFECYCLE_CLEAN");
+    expect(timeout).toHaveBeenCalledWith(5000);
     const init = fetchMock.mock.calls[0][1] as RequestInit;
     expect(init.signal).toBeInstanceOf(AbortSignal);
+    timeout.mockRestore();
   });
 });
