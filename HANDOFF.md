@@ -88,7 +88,7 @@
 
 ## 2026-11-23 - SAM-VISIBILITY-AND-HEADER-SPONSOR
 
-- Sam's Rose City feedback: owner-editable header sponsor logo (Homepage > Menu and footer; `header_partner_media_asset_id` unchanged as the source of truth), show/hide switches for the homepage raffle photo, next home match and ticket prices, per-jersey show/hide on the Shop, and page-level "Visible to visitors" for Single match tickets and Season ticket membership (`public_page_visibility` keys `tickets`, `season-membership`). Payloads omit `visible` unless false and `headerPartner` unless changed, so code deployed before the migration keeps saving. Migration `20261123120000_sam_visibility_controls.sql` is local only and needs the production gate and Christian's "go". Branch `claude/sam-visibility-controls`, PR open, not merged. Record: `STATUS.md` (SAM-VISIBILITY-AND-HEADER-SPONSOR).
+- Sam's Rose City feedback: owner-editable header sponsor logo (Homepage > Menu and footer; `header_partner_media_asset_id` unchanged as the source of truth), show/hide switches for the homepage raffle photo, next home match and ticket prices, per-jersey show/hide on the Shop, and page-level "Visible to visitors" for Single match tickets and Season ticket membership (`public_page_visibility` keys `tickets`, `season-membership`). Payloads omit `visible` unless false and `headerPartner` unless changed, so code deployed before the migration keeps saving. Migration `20261123120000_sam_visibility_controls.sql` applied to production 2026-11-24 on Christian's "go" (backup taken, ledger 99/99 after); PR #248 merged after the gate. Record: `STATUS.md` (SAM-VISIBILITY-AND-HEADER-SPONSOR).
 
 ## 2026-11-22 - RC-PAGE-VISIBILITY
 
