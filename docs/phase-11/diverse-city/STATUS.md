@@ -1,5 +1,17 @@
 # Diverse City FC Status
 
+## 2026-11-24 - DCFC-D134: indexing approval recorded; D117 and D129 superseded
+
+- **Agent / package:** Claude Code (Opus 5.5), the decision-log update for `DCFC-1003`, asked for by Christian. Docs and one code comment only.
+- **Status:** `ready for review` (docs PR, not merged).
+- **Completed:** `DECISIONS.md` gains `DCFC-D134`. It records the indexing rule from #252 (`lib/robots.ts`): `index, follow` only for production, `live`, the primary verified domain and a public page; everything else, `grace` included, is noindex. It records Christian's approval: #252 was merged 2026-11-24 19:48 UTC as squash `615599cb` by onzio-coder, and Christian asked for `DCFC-D117` to be recorded as superseded. The approval came before Rose City's 7-day observation ends (2026-11-30). `DCFC-D117` and `DCFC-D129` are marked superseded, and `Last updated` is 2026-11-24. The `lib/robots.ts` header comment now cites `DCFC-D134` instead of "DCFC-D117 open decision". No behaviour change.
+- **Noticed, not changed:** the ID `DCFC-D129` is used twice. In `DECISIONS.md` it is the unconditional-noindex decision. `lib/stripe-price.ts:53` and an older `HANDOFF.md` entry use it for Diverse City's $85 price. Which one should be renamed is Christian's call.
+- **Also recorded (2026-11-24):** Christian ran the lifecycle heartbeat test himself. A POST to `<url>/fail` turned the Healthchecks check red and sent the down email; a success POST turned it green. He chose to keep the current ping URL, which had been pasted in chat, rather than rotate it.
+- **Files changed:** `docs/phase-11/diverse-city/DECISIONS.md`, `lib/robots.ts` (comment only), this file, `HANDOFF.md`.
+- **Verification:** `npx tsc --noEmit` clean; `npx vitest run tests/contracts/tenant-robots.test.ts tests/contracts/robots-middleware.test.ts` 2 files / 35 tests pass.
+- **Blockers / decisions:** the duplicate `DCFC-D129` ID (above).
+- **Exact next step:** Christian's "go" to merge. Then the morning cron check on 2026-11-25.
+
 ## 2026-11-24 - RC-SAM-TEARDOWN: the rc-sam preview is gone; heartbeat URL set
 
 - **Agent / package:** Claude Code (Opus 5.5), the three `rc-sam` teardown actions from the RC-LAUNCH entry, each on its own "go" from Christian. Plus a read-only check that the lifecycle heartbeat is configured.

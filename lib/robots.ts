@@ -8,7 +8,7 @@ import { isPublicTenantPath } from "@/lib/public-tenant-paths";
  *
  * A response is indexable only when ALL of these hold:
  *   - `VERCEL_ENV` is exactly "production" (unset, preview and development block);
- *   - the club's access is `live` (`grace` stays blocked: DCFC-D117 open decision);
+ *   - the club's access is `live` (`grace` stays blocked: DCFC-D134);
  *   - the request is on the club's canonical hostname (its primary, verified,
  *     active domain), never `*.vercel.app`, localhost or a secondary domain;
  *   - the path is a public page (not admin, api, internal, auth or transactional).

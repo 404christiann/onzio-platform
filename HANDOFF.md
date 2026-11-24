@@ -1,3 +1,7 @@
+## 2026-11-24 - DCFC-D134: indexing approval recorded
+
+`DECISIONS.md` now has `DCFC-D134`. It supersedes `DCFC-D117` (noindex through launch) and `DCFC-D129` (unconditional noindex), and it is the `DCFC-1003` indexing approval. A club is indexed only on production, when it is `live`, on its primary verified domain, for a public page. `grace` stays noindex. Christian approved this through #252 (merged 2026-11-24), before Rose City's 7-day observation ends on 2026-11-30. The `lib/robots.ts` comment now cites D134. Open: the ID `DCFC-D129` is also used for Diverse City's $85 price in `lib/stripe-price.ts`. Christian's heartbeat test passed (red, email, green), and he kept the ping URL. Record: `docs/phase-11/diverse-city/STATUS.md`.
+
 ## 2026-11-24 - RC-SAM-TEARDOWN: the rc-sam preview is gone
 
 Each step was done on Christian's "go". The rc-sam shareable link is revoked; the alias has no bypass, and the preview redirects to the Vercel login. Branch `rc-sam` is deleted (tip `e78d259d`). Restore it with `git push origin e78d259d:refs/heads/rc-sam`. The six Preview env vars scoped to rc-sam are deleted by id. The shared Preview entries for the Supabase URL, the anon key and `ONZIO_ENVIRONMENT` are kept, and so is every Production entry. The 18 rc-sam deployments are kept, behind deployment protection. `LIFECYCLE_CRON_HEARTBEAT_URL` is set in Production, and the redeploy after it is live. Next: the morning cron check on 2026-11-25. Record: `docs/phase-11/diverse-city/STATUS.md`.
