@@ -4,8 +4,9 @@ import { expect, test, type Page } from "@playwright/test";
 import { createLocalClients } from "../helpers/supabase";
 
 /**
- * UI-FIX-MATCH-SUMMARY-SCORERS: on Rose City's public Match Summary the scorer line must sit below the whole home team
- * name, however many lines the name takes, and nothing in the score header may overlap or leave the page.
+ * UI-FIX-MATCH-SUMMARY-SCORERS: on Rose City's public Match Summary (and on the homepage, whose "latest result" strip is
+ * the same component) the scorer line must sit below the whole home team name, however many lines the name takes, and
+ * nothing in the score header may overlap or leave the page.
  * Runs against the shared local Supabase (Rose City, kind test); every row it adds is deleted afterwards and the club
  * identity it edits is put back.
  */
@@ -42,12 +43,22 @@ const CASES: Case[] = [
   { key: "non-latin-and-emoji", home: "ローズシティ フットボール クラブ", opponent: "Ατρόμητος ⚽️🔥 الأهلي", score: [2, 1], competition: "リーグ 🏆", venue: "Estadio 🏟️ Ñandú",
     scorers: ["山田 太郎 (14′)", "محمد صلاح (30′)", "🇲🇽 J. Hernández 🔥 (45+2′)"] },
 ];
+/** A match dated after every case, so it is the homepage's "latest result" (the highest kickoff with a score entered). */
+const HOME_ID = id(100);
+const HOME_DATE = "2030-01-01";
+const rowFor = (item: Case, matchId: string, seasonId: string, date: string) => ({
+  id: matchId, club_id: CLUB_ID, season_id: seasonId, date, time: "12:00:00", opponent: item.opponent,
+  opponent_short_name: item.short ?? null, opponent_logo_url: item.logo === undefined ? "/rose-city/icons/youtube-logo.png" : item.logo,
+  competition: item.competition ?? null, home: true, venue: item.venue ?? "", rose_city_score: item.score[0], opponent_score: item.score[1],
+  scorers: item.scorers, league_game: true,
+});
 const caseIndex = (key: string) => CASES.findIndex(item => item.key === key) + 1;
 
 const { service } = createLocalClients();
 let originalInitials: string | null = null;
 /** Set when Rose City had no season, identity row or staging host, so what this run adds is removed again. */
 let seasonCreated = false;
+let seasonIdForHome = "";
 let identityCreated = false;
 let domainCreated = false;
 const CREST = "/match-summary-scorers-crest.webp";
@@ -92,17 +103,14 @@ test.beforeAll(async () => {
   }
   originalInitials = identity.data!.initials as string;
   await service.from("matches").delete().eq("club_id", CLUB_ID).in("id", CASES.map((_, i) => id(i + 1)));
-  const rows = CASES.map((item, i) => ({
-    id: id(i + 1), club_id: CLUB_ID, season_id: seasonId, date: "2026-05-31", time: "12:00:00", opponent: item.opponent,
-    opponent_short_name: item.short ?? null, opponent_logo_url: item.logo === undefined ? "/rose-city/icons/youtube-logo.png" : item.logo,
-    competition: item.competition ?? null, home: true, venue: item.venue ?? "", rose_city_score: item.score[0], opponent_score: item.score[1],
-    scorers: item.scorers, league_game: true,
-  }));
-  await must("seeding matches", service.from("matches").insert(rows));
+  seasonIdForHome = seasonId;
+  await service.from("matches").delete().eq("club_id", CLUB_ID).eq("id", HOME_ID);
+  const rows = CASES.map((item, i) => rowFor(item, id(i + 1), seasonId, "2026-05-31"));
+  await must("seeding matches", service.from("matches").insert([...rows, rowFor(CASES[0], HOME_ID, seasonId, HOME_DATE)]));
 });
 
 test.afterAll(async () => {
-  await service.from("matches").delete().eq("club_id", CLUB_ID).in("id", CASES.map((_, i) => id(i + 1)));
+  await service.from("matches").delete().eq("club_id", CLUB_ID).in("id", [...CASES.map((_, i) => id(i + 1)), HOME_ID]);
   if (identityCreated) await service.from("club_identity").delete().eq("club_id", CLUB_ID);
   else if (originalInitials !== null) await service.from("club_identity").update({ initials: originalInitials }).eq("club_id", CLUB_ID);
   if (seasonCreated) await service.from("seasons").delete().eq("club_id", CLUB_ID);
@@ -117,29 +125,29 @@ type Box = { x: number; y: number; right: number; bottom: number; w: number; h: 
 type Measure = Record<string, Box | null> & { _pageOverflow: number; _clipped: string[]; _nextTop: number | null; _wide: string[] };
 
 /** Every box in the score header, in page pixels, plus whether any name or scorer text spills out of its own box. */
-async function measure(page: Page): Promise<Measure> {
-  return await page.evaluate(() => {
+async function measure(page: Page, stripSelector: string): Promise<Measure> {
+  return await page.evaluate((stripSelector) => {
     const box = (element: Element | null | undefined): Box | null => {
       if (!element) return null;
       const r = element.getBoundingClientRect();
       return { x: r.x + scrollX, y: r.y + scrollY, right: r.right + scrollX, bottom: r.bottom + scrollY, w: r.width, h: r.height };
     };
-    const strip = document.querySelector(".summary-score .result-strip");
+    const strip = document.querySelector(stripSelector);
     const crests = strip ? Array.from(strip.querySelectorAll(".result-crest")) : [];
     const events = strip?.querySelector(".result-events") ?? null;
     const clipped: string[] = [];
     for (const [label, element] of [["home name", strip?.querySelector(".result-name.home")], ["away name", strip?.querySelector(".result-name.away")], ["scorers", events]] as const) {
       if (element && element.scrollWidth > element.clientWidth + 1) clipped.push(label);
     }
-    const next = strip?.closest(".summary-score")?.nextElementSibling ?? null;
+    const next = (strip?.closest(".summary-score") ?? strip)?.nextElementSibling ?? null;
     const wide = Array.from(document.querySelectorAll("body *")).filter(el => el.getBoundingClientRect().right > document.documentElement.clientWidth + 1 || el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && getComputedStyle(el).overflowX === "visible" && el.getBoundingClientRect().left + el.scrollWidth > document.documentElement.clientWidth + 1)
       .map(el => `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} ${Math.round(el.getBoundingClientRect().width)}px wrap=${getComputedStyle(el).overflowWrap} cols=${getComputedStyle(el.parentElement!).gridTemplateColumns}`).filter((v, i, all) => all.indexOf(v) === i).slice(0, 4);
     return {
       strip: box(strip), homeName: box(strip?.querySelector(".result-name.home")), homeCrest: box(crests[0]), score: box(strip?.querySelector(".result-score")),
-      awayCrest: box(crests[1]), awayName: box(strip?.querySelector(".result-name.away")), events: box(events), scoreBlock: box(strip?.closest(".summary-score")),
+      awayCrest: box(crests[1]), awayName: box(strip?.querySelector(".result-name.away")), events: box(events), scoreBlock: box(strip?.closest(".summary-score") ?? null),
       _pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, _clipped: clipped, _nextTop: next ? box(next)!.y : null, _wide: wide,
     } as unknown as Measure;
-  });
+  }, stripSelector);
 }
 
 const overlap = (a: Box, b: Box) => Math.min(a.right, b.right) - Math.max(a.x, b.x) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.y, b.y) > 1;
@@ -180,12 +188,35 @@ for (const item of CASES) {
       await expect(page.locator(".result-name.home")).toHaveText(item.home);
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(150);
-      const found = problems(await measure(page), item.scorers.length > 0);
+      const found = problems(await measure(page, ".summary-score .result-strip"), item.scorers.length > 0);
       if (found.length) failures.push(`${width}px: ${found.join("; ")}`);
       if (SHOTS && ["reported", "many-scorers", "long-home-three-lines"].includes(item.key) && (width === 375 || width === 2000)) {
         mkdirSync(SHOTS, { recursive: true });
         await page.locator(".summary-score").screenshot({ path: path.join(SHOTS, `${item.key}-${width}.png`) });
       }
+    }
+    expect(failures, failures.join("\n")).toEqual([]);
+  });
+}
+
+/** The homepage's "latest result" strip is the same component: the same header holds there, on the cases that stress it. */
+const HOMEPAGE_CASES = ["reported", "short-name", "long-home-three-lines", "long-both-names", "unbreakable-names", "many-scorers", "twenty-five-long-scorers", "unbreakable-scorer", "no-scorers-no-logo", "non-latin-and-emoji"];
+for (const key of HOMEPAGE_CASES) {
+  const item = CASES.find(candidate => candidate.key === key)!;
+  test(`homepage latest result holds: ${key}`, async ({ page }) => {
+    await must("club identity", service.from("club_identity").update({ initials: item.home }).eq("club_id", CLUB_ID));
+    await must("latest match", service.from("matches").update(rowFor(item, HOME_ID, seasonIdForHome, HOME_DATE)).eq("club_id", CLUB_ID).eq("id", HOME_ID));
+    const failures: string[] = [];
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: width < 800 ? 812 : 1000 });
+      await page.goto("/");
+      const strip = page.locator(".result-strip");
+      await expect(strip).toBeVisible({ timeout: 60_000 });
+      await expect(strip.locator(".result-name.home")).toHaveText(item.home);
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(150);
+      const found = problems(await measure(page, ".result-strip"), item.scorers.length > 0);
+      if (found.length) failures.push(`${width}px: ${found.join("; ")}`);
     }
     expect(failures, failures.join("\n")).toEqual([]);
   });
