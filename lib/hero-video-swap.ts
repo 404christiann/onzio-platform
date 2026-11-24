@@ -12,8 +12,10 @@ import {
 } from "@/lib/bunny-stream";
 import { classifyBunnyStreamStatus, parseBunnyStreamWebhook, verifyBunnyStreamSignature } from "@/lib/bunny-stream-webhook";
 import { DIVERSE_CITY_HERO_VIDEO, DIVERSE_CITY_STORY_VIDEO } from "@/lib/bunny-video";
+import { prepareHeroPoster, retireHeroPoster } from "@/lib/hero-video-poster";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 import {
+  HERO_POSTER_FRAME_MS,
   HERO_VIDEO_MAX_BYTES,
   HERO_VIDEO_MAX_SECONDS,
   HERO_VIDEO_MAX_STORED_BYTES,
@@ -39,6 +41,12 @@ export {
 // RC-HERO-VIDEO-SWAP: the only module allowed to use the service-role client
 // for the hero-video RPCs. Server-only. The Bunny key never leaves it.
 // Every state change goes through applyHeroVideoEvent.
+//
+// RC-HERO-POSTER: a swap carries the poster too. The poster is made before the ready event (prepareHeroPoster, which
+// never throws and loads the image library lazily) and committed by the same database function that switches the video,
+// in one UPDATE. A poster that cannot be made never holds the video back: the video goes live with the poster it has
+// and the daily job (repairDuePosters) retries. This module imports no image code, so an image-library load failure
+// cannot take the webhook or cron route down with it.
 
 const PROTECTED_GUIDS: ReadonlySet<string> = new Set([DIVERSE_CITY_HERO_VIDEO.guid, DIVERSE_CITY_STORY_VIDEO.guid]);
 
@@ -87,6 +95,8 @@ export type HeroVideoEventResult = {
   revisionBefore: string | null;
   revisionAfter: string | null;
   used: number | null;
+  /** "set" when the poster went live with the video, "kept" when the old one stayed, null for any other event. */
+  poster: string | null;
 };
 
 type RpcResult = { data: unknown; error: { message?: string } | null };
@@ -112,6 +122,7 @@ type EventRow = {
   revision_after: string | null;
   used: number | null;
   collection_id: string | null;
+  poster?: string | null;
 };
 
 const onzio = () => createServiceRoleClient().schema("onzio");
@@ -159,6 +170,8 @@ export async function safeDeleteHeroVideo(clubId: string, collectionId: string, 
     const video = await getVideo(guid);
     if (!video || video.collectionId !== collectionId) return false;
     await deleteVideo(guid);
+    // The poster made from this video goes with it, unless a slot still shows it. A hand-set poster is never touched.
+    await retireHeroPoster(clubId, guid);
     return true;
   } catch (error) {
     console.error("hero video cleanup failed", { clubId, guid, error: error instanceof Error ? error.name : "unknown" });
@@ -178,6 +191,8 @@ export async function applyHeroVideoEvent(input: {
   expectedLive?: string | null;
   cap?: number | null;
   deadlineMs?: number | null;
+  /** Only for ready: the poster made from this video. Without one the old poster stays and the daily job retries. */
+  posterAssetId?: string | null;
 }): Promise<HeroVideoEventResult> {
   const result = await onzio().rpc("hero_video_event", {
     p_club_id: input.clubId,
@@ -190,6 +205,7 @@ export async function applyHeroVideoEvent(input: {
     p_expected_live: input.expectedLive ?? null,
     p_cap: input.cap ?? null,
     p_deadline_ms: input.deadlineMs ?? null,
+    p_poster_asset_id: input.posterAssetId ?? null,
   });
   const row = firstRow<EventRow>(result, "Hero video event");
   const mapped: HeroVideoEventResult = {
@@ -200,6 +216,7 @@ export async function applyHeroVideoEvent(input: {
     revisionBefore: row.revision_before ?? null,
     revisionAfter: row.revision_after ?? null,
     used: row.used ?? null,
+    poster: row.poster ?? null,
   };
   if (mapped.deleteGuid) await safeDeleteHeroVideo(input.clubId, row.collection_id ?? "", mapped.deleteGuid);
   return mapped;
@@ -265,7 +282,7 @@ export async function startHeroVideoUpload(
   }
 
   const collectionId = await findOrCreateCollection(clubId);
-  const videoGuid = await createVideo({ title: `Hero video ${new Date().toISOString()}`, collectionId });
+  const videoGuid = await createVideo({ title: `Hero video ${new Date().toISOString()}`, collectionId, thumbnailTimeMs: HERO_POSTER_FRAME_MS });
   const event = await applyHeroVideoEvent({
     clubId,
     videoGuid,
@@ -344,8 +361,8 @@ export async function checkReadiness(clubId: string, videoGuid: string, timing: 
 
 const OPEN_PHASES: HeroStoredPhase[] = ["uploading", "preparing"];
 
-const applyReady = (clubId: string, videoGuid: string) =>
-  applyHeroVideoEvent({ clubId, videoGuid, event: "ready", expected: OPEN_PHASES, libraryId: BUNNY_STREAM_LIBRARY_ID });
+const applyReady = (clubId: string, videoGuid: string, posterAssetId: string | null) =>
+  applyHeroVideoEvent({ clubId, videoGuid, event: "ready", expected: OPEN_PHASES, libraryId: BUNNY_STREAM_LIBRARY_ID, posterAssetId });
 const applyReject = (clubId: string, videoGuid: string, failureCode: string) =>
   applyHeroVideoEvent({ clubId, videoGuid, event: "reject", expected: OPEN_PHASES, failureCode });
 
@@ -381,7 +398,10 @@ async function webhookOutcome(input: { rawBody: string; signature: string | null
     await applyReject(clubId, guid, readiness.code);
     return "failed";
   }
-  const { outcome } = await applyReady(clubId, guid);
+  const poster = await prepareHeroPoster({ clubId, videoGuid: guid, collectionId: job.collection_id, timing: { landedAt: job.landed_at, startedAt: job.started_at } });
+  // Inside the grace the still may just not be there yet: answer 503 so Bunny retries, like the MP4 grace.
+  if (poster.status === "processing") return "processing";
+  const { outcome } = await applyReady(clubId, guid, poster.status === "ready" ? poster.assetId : null);
   return outcome === "swapped" ? "live" : outcome === "stale" ? "already_live" : outcome;
 }
 
@@ -400,7 +420,15 @@ export async function applyBunnyStreamWebhook(input: {
   };
 }
 
-export type HeroVideoBackstopResult = { configured: boolean; inspected: number; finalized: number; swept: number; failed: number };
+export type HeroVideoBackstopResult = {
+  configured: boolean;
+  inspected: number;
+  finalized: number;
+  swept: number;
+  failed: number;
+  /** The repair pass for live videos that still have no poster. */
+  posters: { inspected: number; attached: number; failed: number };
+};
 
 async function sweepOrphans(clubId: string, collectionId: string, keepGuid?: string) {
   try {
@@ -426,11 +454,55 @@ async function finishOpen(job: PendingRow & { club_id: string }, video: BunnyVid
   if (video && video.status >= 1 && video.status !== 6) {
     if (job.phase === "uploading") await markHeroVideoUploaded(job.club_id, job.video_guid);
     const readiness = await checkReadiness(job.club_id, job.video_guid, { landedAt: job.landed_at, startedAt: job.started_at });
-    if (readiness.status === "ready") return applyReady(job.club_id, job.video_guid);
+    if (readiness.status === "ready") {
+      const poster = await prepareHeroPoster({ clubId: job.club_id, videoGuid: job.video_guid, collectionId: job.collection_id, timing: { landedAt: job.landed_at, startedAt: job.started_at } });
+      // Still inside the grace: leave the row for the next run. The expire event below is refused until the deadline.
+      if (poster.status !== "processing") return applyReady(job.club_id, job.video_guid, poster.status === "ready" ? poster.assetId : null);
+    }
     if (readiness.status === "rejected" && readiness.code !== "NOT_CLUB_VIDEO") return applyReject(job.club_id, job.video_guid, readiness.code);
   }
   const expired = await applyHeroVideoEvent({ clubId: job.club_id, videoGuid: job.video_guid, event: "expire", expected: [job.phase] });
   return expired.outcome === "stale" ? null : expired;
+}
+
+type PosterDueRow = { club_id: string; video_guid: string };
+
+/**
+ * Repair pass: a live video whose poster could not be made at go-live, or whose club was flagged for a backfill, gets its
+ * poster here. Each row is idempotent (the poster id is fixed by club and video, the database attaches it only to the slot
+ * that holds that video and only once) and counts a try in the database, which stops asking after five. Never throws.
+ */
+async function repairDuePosters(posters: HeroVideoBackstopResult["posters"]): Promise<void> {
+  const listed = await onzio().rpc("list_hero_video_poster_due");
+  if (listed.error) {
+    console.error("hero poster repair list failed");
+    return;
+  }
+  const due = (Array.isArray(listed.data) ? listed.data : []) as PosterDueRow[];
+  for (const row of due) {
+    posters.inspected += 1;
+    try {
+      const pending = await lookupPending(row.video_guid);
+      if (!pending || pending.club_id !== row.club_id) {
+        posters.failed += 1;
+        continue;
+      }
+      // No grace here: the video landed long ago, so a missing still counts as a failed try.
+      const poster = await prepareHeroPoster({ clubId: row.club_id, videoGuid: row.video_guid, collectionId: pending.collection_id, timing: {} });
+      const attached = await onzio().rpc("attach_hero_video_poster", {
+        p_club_id: row.club_id,
+        p_video_guid: row.video_guid,
+        p_poster_asset_id: poster.status === "ready" ? poster.assetId : null,
+      });
+      const outcome = rowOf<{ outcome: string }>(attached.data)?.outcome;
+      if (attached.error) posters.failed += 1;
+      else if (outcome === "attached" || outcome === "already_attached") posters.attached += 1;
+      else if (outcome === "failed" || outcome === "gave_up") posters.failed += 1;
+    } catch (error) {
+      console.error("hero poster repair failed", { clubId: row.club_id, error: error instanceof Error ? error.name : "unknown" });
+      posters.failed += 1;
+    }
+  }
 }
 
 /**
@@ -439,7 +511,7 @@ async function finishOpen(job: PendingRow & { club_id: string }, video: BunnyVid
  * than a day are swept here, not during start.
  */
 export async function runHeroVideoBackstop(): Promise<HeroVideoBackstopResult> {
-  const result: HeroVideoBackstopResult = { configured: true, inspected: 0, finalized: 0, swept: 0, failed: 0 };
+  const result: HeroVideoBackstopResult = { configured: true, inspected: 0, finalized: 0, swept: 0, failed: 0, posters: { inspected: 0, attached: 0, failed: 0 } };
   if (!process.env.BUNNY_STREAM_API_KEY) return { ...result, configured: false };
   const listed = await onzio().rpc("list_hero_video_pending");
   if (listed.error) throw new HeroVideoError(500, "HERO_VIDEO_UNAVAILABLE", "We could not list videos that are still preparing.");
@@ -459,5 +531,6 @@ export async function runHeroVideoBackstop(): Promise<HeroVideoBackstopResult> {
       result.failed += 1;
     }
   }
+  await repairDuePosters(result.posters);
   return result;
 }

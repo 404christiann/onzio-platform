@@ -1779,6 +1779,7 @@ export type Database = {
           header_partner_media_asset_id: string | null
           hero_poster_media_asset_id: string | null
           presentation_config: Json
+          previous_hero_poster_media_asset_id: string | null
           raffle_media_asset_id: string | null
           seats_background_media_asset_id: string | null
           ticket_media_asset_id: string | null
@@ -1793,6 +1794,7 @@ export type Database = {
           header_partner_media_asset_id?: string | null
           hero_poster_media_asset_id?: string | null
           presentation_config?: Json
+          previous_hero_poster_media_asset_id?: string | null
           raffle_media_asset_id?: string | null
           seats_background_media_asset_id?: string | null
           ticket_media_asset_id?: string | null
@@ -1807,6 +1809,7 @@ export type Database = {
           header_partner_media_asset_id?: string | null
           hero_poster_media_asset_id?: string | null
           presentation_config?: Json
+          previous_hero_poster_media_asset_id?: string | null
           raffle_media_asset_id?: string | null
           seats_background_media_asset_id?: string | null
           ticket_media_asset_id?: string | null
@@ -1873,6 +1876,13 @@ export type Database = {
           {
             foreignKeyName: "homepage_revamp_content_club_id_trophy_media_asset_id_fkey"
             columns: ["club_id", "trophy_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "homepage_revamp_previous_hero_poster_fk"
+            columns: ["club_id", "previous_hero_poster_media_asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
             referencedColumns: ["club_id", "id"]
@@ -4361,6 +4371,19 @@ export type Database = {
         }
         Returns: Json
       }
+      attach_hero_video_poster: {
+        Args: {
+          p_club_id: string
+          p_poster_asset_id: string
+          p_video_guid: string
+        }
+        Returns: {
+          outcome: string
+          poster_attempts: number
+          revision_after: string
+          revision_before: string
+        }[]
+      }
       attach_registration_checkout: {
         Args: {
           p_checkout_created_at: string
@@ -4434,6 +4457,7 @@ export type Database = {
           p_expected_live: string
           p_failure_code: string
           p_library_id: string
+          p_poster_asset_id?: string
           p_video_guid: string
         }
         Returns: {
@@ -4441,6 +4465,7 @@ export type Database = {
           delete_guid: string
           outcome: string
           phase: string
+          poster: string
           replace_counted: boolean
           revision_after: string
           revision_before: string
@@ -4461,6 +4486,14 @@ export type Database = {
           phase: string
           replace_counted: boolean
           started_at: string
+          video_guid: string
+        }[]
+      }
+      list_hero_video_poster_due: {
+        Args: never
+        Returns: {
+          club_id: string
+          poster_attempts: number
           video_guid: string
         }[]
       }
@@ -4746,11 +4779,13 @@ export type Database = {
           p_expected_live: string
           p_library_id: string
           p_new_guid: string
+          p_poster_asset_id?: string
         }
         Returns: {
           deletable_guid: string
           live_guid: string
           outcome: string
+          poster: string
           previous_guid: string
           revision_after: string
           revision_before: string

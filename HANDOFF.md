@@ -1,3 +1,11 @@
+## 2026-11-24 - RC-HERO-POSTER-02 to -06: the hero poster follows the hero video
+
+- **Status:** `ready for review`, branch `claude/lane-c-hero-poster-122c76` off main `17e58214`, PR open, not merged, not deployed. **Migration `20261124120000_hero_video_poster.sql` is committed but applied nowhere except the local stack.** Record: `STATUS.md` (RC-HERO-POSTER-02 to -06).
+- **What:** a swap or revert moves the poster with the video in the same database function and one UPDATE; the poster is the still Bunny makes (1.0 s in), run through the normal image pipeline under a deterministic asset id. A poster problem never holds a video back: the old poster stays and the daily job retries up to five times. Deleting a video retires its poster through the reference-checked retire; hand-set posters are never auto-deleted. The admin preview refreshes the poster after a swap or revert without a reload. Swap, revert, ready and attach now take the homepage advisory lock before the row lock (the order `save_homepage` uses).
+- **Before merge (production gate, CLAUDE.md):** backup, `migration list --linked` (only this file Local-only), `db push --linked --dry-run`, `db push --linked`, read-only check, then merge. Code needs the migration: the swap calls pass `p_poster_asset_id`. Rollback: roll the app back first, then `docs/phase-11/diverse-city/RC-HERO-POSTER-02-ROLLBACK.sql`.
+- **After deploy:** Rose City backfill rehearsal then commit (`scripts/operator-sql/rose-city-hero-poster-backfill.*.sql`), one cron run, then one real upload and a revert pair, each on its own "go". No new env is required: the CDN Referer defaults from `VERCEL_PROJECT_PRODUCTION_URL`; set `BUNNY_STREAM_CDN_REFERER` only if the first cron run reports a refused still.
+- **Exact next step:** onzio-bot review, then Christian's "go" per gate step.
+
 ## 2026-11-23 - UI-FIX-MATCH-SUMMARY-SCORERS: scorer line no longer drawn over a two-line home team name
 
 - **Status:** `ready for review`, branch `claude/match-summary-scorers` off main `0b16c5f8`, PR open, not merged. Rose City score header only (`CinematicLatestResult`, also on the homepage); no migration, data or `supabase/**` change. Record: `STATUS.md` (UI-FIX-MATCH-SUMMARY-SCORERS).

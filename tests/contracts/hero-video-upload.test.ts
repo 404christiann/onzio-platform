@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { homepageDraft, SAVE_OPERATION } from "../fixtures/homepage-editor";
 import { buildHomepageSaveRequest } from "@/lib/homepage-editor/adapter";
 import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
-import { createHomepageEditorState, reduceHomepageEditor, type HomepageEditorState } from "@/lib/homepage-editor/model";
+import { createHomepageEditorState, getDirtyHomepageSections, reduceHomepageEditor, type HomepageEditorState } from "@/lib/homepage-editor/model";
 import { defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
-import { HeroVideoApiError, abandonHeroVideoUpload, fetchHomepageRevision, markHeroVideoUploaded, startHeroVideoUpload, type HeroVideoStatus } from "@/lib/homepage-editor/hero-video-client";
+import { HeroVideoApiError, abandonHeroVideoUpload, fetchHomepagePresentation, fetchHomepageRevision, markHeroVideoUploaded, startHeroVideoUpload, type HeroVideoStatus } from "@/lib/homepage-editor/hero-video-client";
 import { readVideoDuration } from "@/lib/homepage-editor/hero-video-duration";
 import { HERO_VIDEO_REPLACES_PER_DAY } from "@/lib/hero-video-lifecycle";
 import {
@@ -39,6 +39,7 @@ function harness(overrides: Partial<HeroVideoDeps> = {}) {
     revert: vi.fn(async () => ({ status: "live" as const, liveGuid: "prev-1", previousGuid: "live-1", ...RANGE })),
     startUpload: vi.fn((_file, _ticket, h) => { handlers.current = h; return { abort }; }),
     refreshRevision: vi.fn(async () => "applied" as const),
+    refreshPresentation: vi.fn(async () => undefined),
     sleep: vi.fn(async () => undefined),
     ...overrides,
   };
@@ -1028,5 +1029,116 @@ describe("hero video duration reader (browser metadata)", () => {
 
   it("resolves undefined where there is no DOM", async () => {
     expect(await readVideoDuration(FILE)).toBeUndefined();
+  });
+});
+
+describe("hero poster in the editor: the preview follows a swap or revert without a reload", () => {
+  const renderer = { templateKey: "cinematic@2", slideshowVariant: "cinematic", heroVariant: "editable" } as const;
+  const capabilities = resolveHomepageCapabilities(renderer);
+  const art = (assetId: string | null, url: string | null, alt = "") => ({ assetId, url, alt });
+  const presentationWith = (poster: ReturnType<typeof art>) => ({ ...defaultCinematicHomepageContent().presentation, heroVideoGuid: "new-guid", heroPoster: poster });
+  const fresh = { ...STATUS, liveGuid: "new-guid", previousGuid: "live-1", pending: { videoGuid: "new-guid", encodeProgress: null, effective: "live" as const }, completion: { videoGuid: "new-guid", revisionBefore: "rev-1", revisionAfter: "rev-2" } };
+  const swapped = async (over: Partial<HeroVideoDeps> = {}) => {
+    const getStatus = vi.fn().mockResolvedValueOnce(STATUS).mockResolvedValue(fresh);
+    const made = harness({ getStatus, ...over });
+    await made.controller.load(); await made.controller.replace(video());
+    made.handlers.current!.onSuccess(); await settle();
+    return made;
+  };
+
+  it("a swap that goes live in this tab re-reads the presentation once", async () => {
+    const { deps, controller } = await swapped();
+    expect(deps.refreshPresentation).toHaveBeenCalledTimes(1);
+    expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY });
+  });
+
+  it("a revert re-reads the presentation too", async () => {
+    const { controller, deps } = harness();
+    await controller.load(); await controller.revert();
+    expect(deps.refreshPresentation).toHaveBeenCalledTimes(1);
+  });
+
+  it("the presentation is refreshed even when the revision check reports a conflict, since the poster is not part of that check", async () => {
+    const { deps, controller } = await swapped({ refreshRevision: vi.fn(async () => "conflict" as const) });
+    expect(deps.refreshPresentation).toHaveBeenCalledTimes(1);
+    expect(controller.getState()).toMatchObject({ phase: "live", revisionConflict: true });
+  });
+
+  it("a presentation read that fails never turns a live video into an error", async () => {
+    const { controller } = await swapped({ refreshPresentation: vi.fn(async () => { throw new Error("offline"); }) });
+    expect(controller.getState()).toMatchObject({ phase: "live", message: HERO_VIDEO_LIVE_COPY, error: null });
+  });
+
+  it("opening the page just after a swap went live refreshes the presentation once", async () => {
+    const { controller, deps } = harness({ getStatus: vi.fn(async () => fresh) });
+    await controller.load();
+    expect(controller.getState()).toMatchObject({ phase: "live" });
+    expect(deps.refreshPresentation).toHaveBeenCalledTimes(1);
+  });
+
+  it("an idle page makes no extra read", async () => {
+    const { controller, deps } = harness();
+    await controller.load();
+    expect(deps.refreshPresentation).not.toHaveBeenCalled();
+  });
+
+  describe("the reducer", () => {
+    const stateWith = (poster: ReturnType<typeof art>) => {
+      const revamp = { ...defaultCinematicHomepageContent(), presentation: { ...defaultCinematicHomepageContent().presentation, heroPoster: poster } };
+      return reduceHomepageEditor(
+        createHomepageEditorState({ content: { ...homepageDraft(), revamp }, revision: "rev-1", designRevision: "d", editableSections: capabilities.editableSections, maxPhotos: 7 }),
+        { type: "field-changed", field: "hero.intro", value: "My unsaved intro" },
+      );
+    };
+
+    it("replaces the presentation in baseline and draft alike, keeps unsaved edits, and is never a pending change", () => {
+      const state = stateWith(art("old-asset", "https://cdn.test/old.webp", "Hand-written"));
+      const dirtyBefore = getDirtyHomepageSections(state);
+      const next = reduceHomepageEditor(state, { type: "presentation-refreshed", presentation: presentationWith(art("new-asset", "https://cdn.test/new.webp")) });
+      expect(next.baseline.revamp?.presentation.heroPoster).toEqual(art("new-asset", "https://cdn.test/new.webp"));
+      expect(next.draft.revamp?.presentation.heroPoster).toEqual(art("new-asset", "https://cdn.test/new.webp"));
+      expect(next.draft.revamp?.presentation.heroVideoGuid).toBe("new-guid");
+      expect(next.draft.hero.intro).toBe("My unsaved intro");
+      expect(getDirtyHomepageSections(next)).toEqual(dirtyBefore);
+      expect(next.baseRevision).toBe(state.baseRevision);
+      expect(state.draft.revamp?.presentation.heroPoster.assetId).toBe("old-asset");
+    });
+
+    it("returns the same state object when the presentation did not change, or there is no cinematic draft", () => {
+      const state = stateWith(art("a", "https://cdn.test/a.webp"));
+      expect(reduceHomepageEditor(state, { type: "presentation-refreshed", presentation: state.draft.revamp!.presentation })).toBe(state);
+      const plain = createHomepageEditorState({ content: homepageDraft(), revision: "r", designRevision: "d", editableSections: capabilities.editableSections, maxPhotos: 7 });
+      expect(reduceHomepageEditor(plain, { type: "presentation-refreshed", presentation: presentationWith(art(null, null)) })).toBe(plain);
+    });
+
+    it("does not change what the next save sends", () => {
+      const state = stateWith(art("old-asset", "https://cdn.test/old.webp"));
+      const before = buildHomepageSaveRequest(state, renderer, SAVE_OPERATION);
+      const next = reduceHomepageEditor(state, { type: "presentation-refreshed", presentation: presentationWith(art("new-asset", "https://cdn.test/new.webp")) });
+      expect(buildHomepageSaveRequest(next, renderer, SAVE_OPERATION)).toEqual(before);
+    });
+  });
+
+  describe("the presentation read", () => {
+    afterEach(() => vi.unstubAllGlobals());
+    it("returns the revision and the presentation from one GET of the editor's own endpoint", async () => {
+      const presentation = presentationWith(art("new-asset", "https://cdn.test/new.webp"));
+      const stub = vi.fn(async () => new Response(JSON.stringify({ revision: "rev-2", content: { revamp: { presentation } } }), { status: 200 }));
+      vi.stubGlobal("fetch", stub);
+      expect(await fetchHomepagePresentation()).toEqual({ revision: "rev-2", presentation });
+      expect(stub).toHaveBeenCalledWith("/api/admin/homepage", { credentials: "same-origin", cache: "no-store" });
+    });
+    it("gives null for a club with no cinematic content, and throws on a failed read", async () => {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ revision: "rev-2", content: {} }), { status: 200 })));
+      expect(await fetchHomepagePresentation()).toEqual({ revision: "rev-2", presentation: null });
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { message: "nope" } }), { status: 500 })));
+      await expect(fetchHomepagePresentation()).rejects.toThrow("nope");
+    });
+  });
+
+  it("the Overview editor hands the controller the editor's refreshPresentation", async () => {
+    const { readFileSync } = await import("node:fs");
+    expect(readFileSync("components/admin/homepage/HomepageOverviewEditor.tsx", "utf8")).toContain("editor.refreshBaseRevision, editor.refreshPresentation");
+    expect(readFileSync("lib/homepage-editor/useHomepageEditor.ts", "utf8")).toMatch(/refreshBaseRevision, refreshPresentation,/);
   });
 });

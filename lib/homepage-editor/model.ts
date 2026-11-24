@@ -100,6 +100,12 @@ export type HomepageEditorAction =
   | { type: "revamp-changed"; content: CinematicHomepageContent }
   /** The server's revision moved without touching this draft (e.g. a hero video swap). Only the base revision changes. */
   | { type: "base-revision-refreshed"; revision: string }
+  /**
+   * The operator-owned presentation (hero poster and video, artwork) moved on the server without touching this draft: a
+   * hero video swap or revert puts the video's poster live in the same step. Replaces only `presentation`, in baseline and
+   * draft alike, so it is never a pending edit and the preview shows the new poster without a reload.
+   */
+  | { type: "presentation-refreshed"; presentation: CinematicHomepageContent["presentation"] }
   | { type: "save-started"; operationId: string }
   | { type: "save-failed"; code: string; message: string }
   | { type: "save-reconciled-not-committed" }
@@ -387,6 +393,16 @@ export function reduceHomepageEditor(
     if (state.baseRevision === action.revision) return state;
     const next = cloneState(state);
     next.baseRevision = action.revision;
+    return next;
+  }
+
+  if (action.type === "presentation-refreshed") {
+    if (!state.baseline.revamp || !state.draft.revamp) return state;
+    if (JSON.stringify(state.baseline.revamp.presentation) === JSON.stringify(action.presentation)
+      && JSON.stringify(state.draft.revamp.presentation) === JSON.stringify(action.presentation)) return state;
+    const next = cloneState(state);
+    next.baseline.revamp = { ...next.baseline.revamp!, presentation: structuredClone(action.presentation) };
+    next.draft.revamp = { ...next.draft.revamp!, presentation: structuredClone(action.presentation) };
     return next;
   }
 

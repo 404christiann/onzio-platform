@@ -3,6 +3,8 @@ import { applyBunnyStreamWebhook } from "@/lib/hero-video-swap";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Going live now also fetches the video's still and runs it through the image pipeline (RC-HERO-POSTER).
+export const maxDuration = 60;
 
 /**
  * Bunny Stream library webhook. The signing secret is BUNNY_STREAM_WEBHOOK_SECRET

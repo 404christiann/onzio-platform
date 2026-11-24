@@ -154,7 +154,7 @@ describe("bunny stream client", () => {
       expect(await getVideo("g1")).toBeNull();
     });
     it("classifying a fetched video makes no request of its own", () => {
-      const fetched = { guid: "g1", collectionId: "c1", status: 4, availableResolutions: ["720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, length: 0, dateUploaded: "", encodeProgress: 100 };
+      const fetched = { guid: "g1", collectionId: "c1", status: 4, availableResolutions: ["720p"], hasMP4Fallback: true, width: 1280, height: 720, storageSize: 0, length: 0, dateUploaded: "", encodeProgress: 100, thumbnailFileName: "thumbnail.jpg" };
       expect(videoReadiness(fetched)).toEqual({ status: "ready" });
       expect(fetchStub).not.toHaveBeenCalled();
     });

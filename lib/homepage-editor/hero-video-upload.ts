@@ -50,13 +50,15 @@ export type HeroVideoDeps = {
   revert: (expectedLiveGuid: string, targetGuid: string) => Promise<HeroVideoLive>;
   startUpload: (file: File, ticket: HeroVideoUploadTicket, handlers: TusUploadHandlers) => TusUploadHandle;
   refreshRevision: (range: { before: string; after: string }) => Promise<"applied" | "conflict">;
+  /** Re-reads the poster and artwork the swap or revert changed, so the preview shows them without a reload. Never throws. */
+  refreshPresentation: () => Promise<void>;
   sleep: (ms: number) => Promise<void>;
 };
 
-export function defaultHeroVideoDeps(refreshRevision: HeroVideoDeps["refreshRevision"]): HeroVideoDeps {
+export function defaultHeroVideoDeps(refreshRevision: HeroVideoDeps["refreshRevision"], refreshPresentation: HeroVideoDeps["refreshPresentation"]): HeroVideoDeps {
   return {
     getStatus: getHeroVideoStatus, start: startHeroVideoUpload, readDuration: readVideoDuration, markUploaded: markHeroVideoUploaded, abandon: abandonHeroVideoUpload, revert: revertHeroVideo,
-    startUpload: startTusUpload, refreshRevision, sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+    startUpload: startTusUpload, refreshRevision, refreshPresentation, sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
   };
 }
 
@@ -172,6 +174,8 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
       try { revisionConflict = await deps.refreshRevision({ before: live.revisionBefore, after: live.revisionAfter }) === "conflict"; }
       catch { revisionWarning = true; }
     }
+    // The poster moves with the video, and not through the revision above: it is refreshed even when that reports a conflict.
+    try { await deps.refreshPresentation(); } catch { /* the preview catches up on the next reload */ }
     const before = state.status;
     set({ status: before ? { ...before, liveGuid: live.liveGuid, previousGuid: live.previousGuid, replacesUsedToday: before.replacesUsedToday + (kind === "replace" ? 1 : 0) } : before });
     await reloadStatus();
@@ -203,7 +207,11 @@ export function createHeroVideoController(deps: HeroVideoDeps) {
     if (view === "live" && guid) {
       set({ status });
       await complete(liveFromStatus(status, guid), "replace");
-    } else if (view === "live") set({ ...idle(status), phase: "live", barPercent: 100, message: HERO_VIDEO_LIVE_COPY });
+    } else if (view === "live") {
+      set({ ...idle(status), phase: "live", barPercent: 100, message: HERO_VIDEO_LIVE_COPY });
+      // A swap that finished while this page was loading: the draft may predate its poster.
+      try { await deps.refreshPresentation(); } catch { /* keep what is shown */ }
+    }
     else if (view === "failed" || view === "timeout") {
       // A file the person can fix (too long, below 720p, too large once processed) says what to change. Everything else, and any upload that is not live by its deadline, reads the same generic line.
       set({ ...idle(status) });

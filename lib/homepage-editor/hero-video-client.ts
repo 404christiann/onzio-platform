@@ -4,6 +4,7 @@
  * place. Errors come back as `{ code, message }`; they surface as HeroVideoApiError.
  */
 
+import type { CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import type { HeroEffective } from "@/lib/hero-video-lifecycle";
 
 const ENDPOINT = "/api/admin/homepage/hero-video";
@@ -77,6 +78,18 @@ export async function abandonHeroVideoUpload(videoGuid: string): Promise<HeroVid
 
 export async function revertHeroVideo(expectedLiveGuid: string, targetGuid: string): Promise<HeroVideoLive> {
   return (await post({ action: "revert", expectedLiveGuid, targetGuid })).body as unknown as HeroVideoLive;
+}
+
+/**
+ * The operator-owned presentation as the editor's own GET returns it (poster and artwork with their public URLs), with the
+ * revision from the same read. After a swap or revert this is what the preview needs to show the new poster, since the
+ * editor only moved its base revision forward and kept its draft.
+ */
+export async function fetchHomepagePresentation(): Promise<{ revision: string; presentation: CinematicHomepageContent["presentation"] | null }> {
+  const response = await fetch("/api/admin/homepage", { credentials: "same-origin", cache: "no-store" });
+  const body = await response.json() as { revision?: unknown; content?: { revamp?: { presentation?: CinematicHomepageContent["presentation"] } }; error?: { message?: string } };
+  if (!response.ok || typeof body.revision !== "string") throw new Error(body.error?.message ?? "Could not read the latest homepage version.");
+  return { revision: body.revision, presentation: body.content?.revamp?.presentation ?? null };
 }
 
 /** The homepage revision the editor sends as expectedRevision on Save (the same GET the editor loads from). */

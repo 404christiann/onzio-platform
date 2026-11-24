@@ -4,8 +4,9 @@ import { DIVERSE_CITY_HERO_VIDEO, DIVERSE_CITY_STORY_VIDEO } from "@/lib/bunny-v
 const m = vi.hoisted(() => ({
   rpc: vi.fn(), maybeSingle: vi.fn(),
   findOrCreateCollection: vi.fn(), createVideo: vi.fn(), getVideo: vi.fn(), listCollectionVideos: vi.fn(),
-  deleteVideo: vi.fn(), tusUploadAuthorization: vi.fn(),
+  deleteVideo: vi.fn(), tusUploadAuthorization: vi.fn(), retireHeroPoster: vi.fn(), prepareHeroPoster: vi.fn(),
 }));
+vi.mock("@/lib/hero-video-poster", () => ({ prepareHeroPoster: m.prepareHeroPoster, retireHeroPoster: m.retireHeroPoster }));
 vi.mock("@/lib/supabase-service-role", () => ({
   createServiceRoleClient: () => ({
     schema: () => ({ rpc: m.rpc, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: m.maybeSingle }) }) }) }),
@@ -20,7 +21,7 @@ vi.mock("@/lib/bunny-stream", async (importActual) => ({
 }));
 
 import { BunnyStreamError } from "@/lib/bunny-stream";
-import { HERO_VIDEO_LIVE_NOTICE_MS, HERO_VIDEO_MP4_GRACE_MS } from "@/lib/hero-video-lifecycle";
+import { HERO_POSTER_FRAME_MS, HERO_VIDEO_LIVE_NOTICE_MS, HERO_VIDEO_MP4_GRACE_MS } from "@/lib/hero-video-lifecycle";
 import {
   checkReadiness, getHeroVideoState, HERO_VIDEO_MAX_BYTES, HERO_VIDEO_MAX_SECONDS, HERO_VIDEO_MAX_STORED_BYTES, HERO_VIDEO_REPLACES_PER_DAY, HeroVideoError, revertHeroVideo,
   safeDeleteHeroVideo, startHeroVideoUpload,
@@ -44,6 +45,7 @@ beforeEach(() => {
   m.getVideo.mockImplementation(async (guid: string) => ({ guid, collectionId: COL, status: 4, availableResolutions: ["720p"], hasMP4Fallback: true, width: 1, height: 1 }));
   m.listCollectionVideos.mockResolvedValue([]);
   m.deleteVideo.mockResolvedValue(true);
+  m.retireHeroPoster.mockResolvedValue(undefined);
   state();
 });
 
@@ -126,7 +128,7 @@ describe("startHeroVideoUpload", () => {
     const r = await startHeroVideoUpload(club, ok);
     expect(m.rpc.mock.calls.filter((call) => call[0] === "consume_hero_video_replace")).toEqual([]);
     expect(m.rpc).toHaveBeenCalledWith("hero_video_event", expect.objectContaining({ p_event: "start" }));
-    expect(m.createVideo).toHaveBeenCalledWith({ title: expect.stringMatching(/^Hero video 20/), collectionId: COL });
+    expect(m.createVideo).toHaveBeenCalledWith({ title: expect.stringMatching(/^Hero video 20/), collectionId: COL, thumbnailTimeMs: HERO_POSTER_FRAME_MS });
     expect(m.listCollectionVideos).not.toHaveBeenCalled();
     expect(r).toMatchObject({ videoGuid: "new-guid", maxBytes: 500 * 1024 * 1024, upload: { signature: "s" } });
   });

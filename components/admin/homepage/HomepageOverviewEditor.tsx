@@ -72,7 +72,7 @@ export default function HomepageOverviewEditor() {
   latest.current = editor;
 
   const capabilities = snapshot ? resolveHomepageCapabilities(snapshot.design) : null;
-  const heroVideo = useHeroVideoController(capabilities?.heroVideoReplaceable === true, editor.refreshBaseRevision);
+  const heroVideo = useHeroVideoController(capabilities?.heroVideoReplaceable === true, editor.refreshBaseRevision, editor.refreshPresentation);
   const parts = useMemo(() => HOMEPAGE_PARTS.filter(part => capabilities?.editableSections.includes(part.section)), [capabilities]);
   const frozen = !!state?.submitted || !!editor.recoveryConflict;
   const dirty = editor.dirty.length > 0;
