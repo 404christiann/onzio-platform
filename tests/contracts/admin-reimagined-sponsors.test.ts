@@ -131,6 +131,8 @@ describe("the migration", () => {
       "20261122120000_club_public_page_visibility.sql",
       // SAM-VISIBILITY-AND-HEADER-SPONSOR (section, jersey and ticket page switches, header sponsor logo).
       "20261123120000_sam_visibility_controls.sql",
+      // RC-HERO-POSTER-02 (the hero poster follows the hero video; hero video functions and two retry columns only).
+      "20261124120000_hero_video_poster.sql",
     ]);
   });
 

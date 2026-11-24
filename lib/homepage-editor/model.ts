@@ -100,6 +100,12 @@ export type HomepageEditorAction =
   | { type: "revamp-changed"; content: CinematicHomepageContent }
   /** The server's revision moved without touching this draft (e.g. a hero video swap). Only the base revision changes. */
   | { type: "base-revision-refreshed"; revision: string }
+  /**
+   * The operator-owned presentation (hero poster and video, artwork) moved on the server without touching this draft: a
+   * hero video swap or revert puts the video's poster live in the same step. Replaces only `presentation`, in baseline and
+   * draft alike, so it is never a pending edit and the preview shows the new poster without a reload.
+   */
+  | { type: "presentation-refreshed"; presentation: CinematicHomepageContent["presentation"] }
   | { type: "save-started"; operationId: string }
   | { type: "save-failed"; code: string; message: string }
   | { type: "save-reconciled-not-committed" }
@@ -387,6 +393,22 @@ export function reduceHomepageEditor(
     if (state.baseRevision === action.revision) return state;
     const next = cloneState(state);
     next.baseRevision = action.revision;
+    return next;
+  }
+
+  if (action.type === "presentation-refreshed") {
+    if (!state.baseline.revamp || !state.draft.revamp) return state;
+    // Only the keys a hero video swap or revert writes. Everything else in `presentation`
+    // (header sponsor logo, backgrounds, sponsor treatments) is editable here, so an unsaved
+    // edit to it must survive the refresh and stay dirty.
+    const owned = (presentation: CinematicHomepageContent["presentation"]) => JSON.stringify([presentation.heroPoster, presentation.heroVideoGuid, presentation.heroVideoLibraryId]);
+    const incoming = owned(action.presentation);
+    if (owned(state.baseline.revamp.presentation) === incoming && owned(state.draft.revamp.presentation) === incoming) return state;
+    const next = cloneState(state);
+    const { heroPoster, heroVideoGuid, heroVideoLibraryId } = structuredClone(action.presentation);
+    const apply = (presentation: CinematicHomepageContent["presentation"]) => ({ ...presentation, heroPoster, heroVideoGuid, heroVideoLibraryId });
+    next.baseline.revamp = { ...next.baseline.revamp!, presentation: apply(next.baseline.revamp!.presentation) };
+    next.draft.revamp = { ...next.draft.revamp!, presentation: apply(next.draft.revamp!.presentation) };
     return next;
   }
 

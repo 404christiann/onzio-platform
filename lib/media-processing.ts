@@ -374,9 +374,127 @@ export async function publishAuthorizedMedia(
   };
 }
 
+/** True when this club already has the asset published, so a retry does not fetch or process anything twice. */
+export async function systemPhotoExists(clubId: string, assetId: string): Promise<boolean> {
+  const { data, error } = await createServiceRoleClient()
+    .schema("onzio")
+    .from("media_assets")
+    .select("id")
+    .eq("id", assetId)
+    .eq("club_id", clubId)
+    .eq("status", "published")
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(`Unable to check system media: ${error.message}`);
+  return Boolean(data);
+}
+
+function isDuplicateObject(error: { message?: string; statusCode?: string | number } | null): boolean {
+  if (!error) return false;
+  return String(error.statusCode) === "409" || /already exists|duplicate/i.test(error.message ?? "");
+}
+
+/**
+ * Publish a photo the platform made itself (today: the still taken from a hero video), for no signed-in actor.
+ * The bytes come from a server-side source the caller trusts to be this club's, never from a browser, and are
+ * checked as a JPEG, rotated, resized and re-encoded like every other photo before anything reaches the public
+ * bucket. It skips the upload reservation and its rate limit on purpose, so a limit can never hold back a video
+ * going live; the bytes still count toward published storage. The asset id is chosen by the caller and the path
+ * is built from it, so a repeat (a second finisher, or a retry after a crash between the upload and the row) is a
+ * success that changes nothing. Rejects with a contract error when the bytes are not a usable image, and with
+ * MEDIA_TOO_SMALL when the still is narrower than minimumWidth.
+ */
+export async function publishSystemPhoto(input: {
+  clubId: string;
+  surface: MediaSurface;
+  assetId: string;
+  bytes: Buffer;
+  minimumWidth: number;
+  source: string;
+}): Promise<{ assetId: string; storagePath: string; idempotent: boolean }> {
+  const service = createServiceRoleClient();
+  const onzio = service.schema("onzio");
+  const publicPath = buildStoragePath({ clubId: input.clubId, surface: input.surface, assetId: input.assetId, extension: "webp" });
+
+  const { data: existing, error: existingError } = await onzio
+    .from("media_assets")
+    .select("storage_path")
+    .eq("id", input.assetId)
+    .eq("club_id", input.clubId)
+    .eq("status", "published")
+    .maybeSingle();
+  if (existingError) throw new Error(`Unable to check system media: ${existingError.message}`);
+  if (existing) return { assetId: input.assetId, storagePath: existing.storage_path, idempotent: true };
+
+  const validated = await validateMediaUpload({
+    bytes: input.bytes,
+    metadata: { fileName: "still.jpg", mimeType: "image/jpeg", size: input.bytes.length, kind: "photo" },
+  });
+  if (validated.width < input.minimumWidth) failContract("MEDIA_TOO_SMALL");
+  const normalized = await normalizePhoto(input.bytes);
+
+  const { error: uploadError } = await service.storage.from("onzio-media").upload(publicPath, normalized.bytes, {
+    contentType: normalized.mimeType,
+    cacheControl: "2678400",
+    upsert: false,
+  });
+  // The path is the asset id, so an object already there is this same poster from an earlier try.
+  if (uploadError && !isDuplicateObject(uploadError)) {
+    throw new Error(`Unable to publish normalized media: ${uploadError.message}`);
+  }
+
+  const { error: insertError } = await onzio.from("media_assets").insert({
+    id: input.assetId,
+    club_id: input.clubId,
+    storage_bucket: "onzio-media",
+    storage_path: publicPath,
+    surface: input.surface,
+    media_kind: "photograph",
+    mime_type: normalized.mimeType,
+    byte_size: normalized.bytes.length,
+    width: normalized.width,
+    height: normalized.height,
+    checksum_sha256: normalized.checksumSha256,
+    status: "published",
+    created_by: null,
+    published_at: new Date().toISOString(),
+  });
+  if (insertError) {
+    // 23505: another finisher wrote the row between our check and our insert. It is the same asset.
+    if (insertError.code === "23505") return { assetId: input.assetId, storagePath: publicPath, idempotent: true };
+    if (!uploadError) await service.storage.from("onzio-media").remove([publicPath]);
+    failContract("FINALIZATION_ROLLED_BACK", insertError.message);
+  }
+
+  const { error: auditError } = await onzio.from("audit_events").insert({
+    club_id: input.clubId,
+    actor_user_id: null,
+    actor_type: "media_processor",
+    operation: "media.publish",
+    resource_type: "media_asset",
+    resource_id: input.assetId,
+    payload: {
+      surface: input.surface,
+      media_kind: "photo",
+      byte_size: normalized.bytes.length,
+      width: normalized.width,
+      height: normalized.height,
+      source: input.source,
+    },
+  });
+  if (auditError) {
+    await onzio.from("media_assets").delete().eq("id", input.assetId);
+    await service.storage.from("onzio-media").remove([publicPath]);
+    failContract("FINALIZATION_ROLLED_BACK", auditError.message);
+  }
+
+  return { assetId: input.assetId, storagePath: publicPath, idempotent: false };
+}
+
 export async function retirePublishedMedia(input: {
   clubId: string;
-  actorId: string;
+  /** Null for a retirement the platform makes itself, as with a hero poster whose video was deleted. */
+  actorId: string | null;
   assetId: string;
 }): Promise<{ status: "retired" | "referenced"; cleanupQueued: boolean; idempotent: boolean }> {
   const service = createServiceRoleClient();

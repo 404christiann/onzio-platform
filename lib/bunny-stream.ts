@@ -36,6 +36,8 @@ export type BunnyVideo = {
   dateUploaded: string;
   /** 0–100 while Bunny reports it. Null when the field is missing. */
   encodeProgress: number | null;
+  /** The still Bunny made, as named on the video object. Empty when Bunny reports none. */
+  thumbnailFileName: string;
 };
 
 export type BunnyCollectionVideo = { guid: string; status: number; storageSize: number; dateUploaded: string };
@@ -94,8 +96,15 @@ export async function findOrCreateCollection(clubId: string): Promise<string> {
   return ((await created.json()) as { guid: string }).guid;
 }
 
-export async function createVideo(input: { title: string; collectionId: string }): Promise<string> {
-  const response = await call("video create", "/videos", { method: "POST", body: { title: input.title, collectionId: input.collectionId } });
+export async function createVideo(input: { title: string; collectionId: string; thumbnailTimeMs?: number }): Promise<string> {
+  const response = await call("video create", "/videos", {
+    method: "POST",
+    body: {
+      title: input.title,
+      collectionId: input.collectionId,
+      ...(input.thumbnailTimeMs === undefined ? {} : { thumbnailTime: input.thumbnailTimeMs }),
+    },
+  });
   return ((await response.json()) as { guid: string }).guid;
 }
 
@@ -118,6 +127,7 @@ export async function getVideo(guid: string): Promise<BunnyVideo | null> {
     length: Number(raw.length ?? 0) || 0,
     dateUploaded: typeof raw.dateUploaded === "string" ? raw.dateUploaded : "",
     encodeProgress: typeof raw.encodeProgress === "number" && Number.isFinite(raw.encodeProgress) ? Math.max(0, Math.min(100, Math.round(raw.encodeProgress))) : null,
+    thumbnailFileName: typeof raw.thumbnailFileName === "string" ? raw.thumbnailFileName : "",
   };
 }
 

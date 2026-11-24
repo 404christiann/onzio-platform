@@ -27,6 +27,11 @@ const nextConfig = {
     "/api/admin/media/finalize": ["./node_modules/@img/sharp-libvips-*/**/*"],
     "/api/admin/media/cleanup": ["./node_modules/@img/sharp-libvips-*/**/*"],
     "/api/cron/media-cleanup": ["./node_modules/@img/sharp-libvips-*/**/*"],
+    // RC-HERO-POSTER: these routes can make a hero poster from a video's still, or retire one, through the image
+    // pipeline, which loads sharp lazily. The same libvips file is needed here.
+    "/api/webhooks/bunny-stream": ["./node_modules/@img/sharp-libvips-*/**/*"],
+    "/api/cron/hero-video": ["./node_modules/@img/sharp-libvips-*/**/*"],
+    "/api/admin/homepage/hero-video": ["./node_modules/@img/sharp-libvips-*/**/*"],
   },
   images: {
     // Onzio publishes normalized, immutable assets. Serve those source files

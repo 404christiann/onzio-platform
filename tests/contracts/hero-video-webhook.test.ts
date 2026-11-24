@@ -6,7 +6,11 @@ const m = vi.hoisted(() => ({
   rpc: vi.fn(), maybeSingle: vi.fn(),
   findOrCreateCollection: vi.fn(), createVideo: vi.fn(), getVideo: vi.fn(), listCollectionVideos: vi.fn(),
   deleteVideo: vi.fn(), tusUploadAuthorization: vi.fn(),
+  prepareHeroPoster: vi.fn(), retireHeroPoster: vi.fn(),
 }));
+// The poster step has its own contract tests (hero-video-poster). Here it is a stand-in, so these tests decide only what
+// the webhook and cron do with each answer.
+vi.mock("@/lib/hero-video-poster", () => ({ prepareHeroPoster: m.prepareHeroPoster, retireHeroPoster: m.retireHeroPoster }));
 vi.mock("@/lib/supabase-service-role", () => ({
   createServiceRoleClient: () => ({
     schema: () => ({ rpc: m.rpc, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: m.maybeSingle }) }) }) }),
@@ -33,6 +37,7 @@ const COL = "col-1";
 const NEW = "00000000-0000-4000-8000-000000000001";
 const OLD = "00000000-0000-4000-8000-000000000002";
 const PREV = "00000000-0000-4000-8000-000000000003";
+const POSTER = "22222222-2222-4222-8222-222222222222";
 const swapped = { outcome: "swapped", live_guid: NEW, previous_guid: OLD, deletable_guid: PREV, revision_before: "r1", revision_after: "r2" };
 
 function sign(raw: string, secret = SECRET) {
@@ -59,6 +64,8 @@ beforeEach(() => {
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.stubEnv("BUNNY_STREAM_WEBHOOK_SECRET", SECRET);
   vi.stubEnv("BUNNY_STREAM_API_KEY", "k");
+  m.prepareHeroPoster.mockResolvedValue({ status: "ready", assetId: POSTER });
+  m.retireHeroPoster.mockResolvedValue(undefined);
   m.findOrCreateCollection.mockResolvedValue(COL);
   m.listCollectionVideos.mockResolvedValue([]);
   m.deleteVideo.mockResolvedValue(true);
@@ -406,6 +413,181 @@ describe("hero video webhook route", () => {
   });
 });
 
+describe("hero poster at go-live", () => {
+  function post(raw: string) {
+    return POST(new Request("https://alpha.example/api/webhooks/bunny-stream", { method: "POST", headers: headers(raw), body: raw }));
+  }
+  const readyEvents = () => m.rpc.mock.calls.filter((call) => call[0] === "hero_video_event" && call[1]?.p_event === "ready");
+
+  it("a finished video goes live with the poster made from it, in the one ready event", async () => {
+    rpcByName({
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing", landed_at: minutesAgo(3), started_at: minutesAgo(10) }],
+      hero_video_event: [{ outcome: "swapped", delete_guid: null, phase: "live", replace_counted: true, revision_before: "r1", revision_after: "r2", used: 1, collection_id: COL, poster: "set" }],
+    });
+    const response = await post(event(3));
+    expect(await response.json()).toEqual({ received: true, outcome: "live" });
+    expect(readyEvents()).toHaveLength(1);
+    expect(readyEvents()[0][1]).toMatchObject({ p_video_guid: NEW, p_poster_asset_id: POSTER });
+    expect(m.prepareHeroPoster).toHaveBeenCalledTimes(1);
+    expect(m.prepareHeroPoster).toHaveBeenCalledWith(expect.objectContaining({ clubId: CLUB, videoGuid: NEW, collectionId: COL }));
+    expect(m.prepareHeroPoster.mock.calls[0][0].timing).toMatchObject({ landedAt: expect.any(String), startedAt: expect.any(String) });
+  });
+
+  it("a still that is not there yet, inside the grace, answers 503 so Bunny retries, and sends no ready event", async () => {
+    m.prepareHeroPoster.mockResolvedValue({ status: "processing" });
+    const response = await post(event(3));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ received: false, outcome: "processing" });
+    expect(readyEvents()).toHaveLength(0);
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+  });
+
+  it("a poster that cannot be made does not hold the video back: it goes live with no poster argument", async () => {
+    m.prepareHeroPoster.mockResolvedValue({ status: "unavailable", reason: "FORBIDDEN" });
+    const response = await post(event(3));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ received: true, outcome: "live" });
+    expect(readyEvents()).toHaveLength(1);
+    expect(readyEvents()[0][1].p_poster_asset_id).toBeNull();
+    expect(rejectEvents()).toHaveLength(0);
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+  });
+
+  it("a video that is already live gets no poster work on a repeated webhook", async () => {
+    rpcByName({ lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "live" }] });
+    const response = await post(event(3));
+    expect(await response.json()).toEqual({ received: true, outcome: "already_live" });
+    expect(m.prepareHeroPoster).not.toHaveBeenCalled();
+    expect(m.getVideo).not.toHaveBeenCalled();
+  });
+
+  it("a video that can never be ready is rejected without making a poster", async () => {
+    m.getVideo.mockResolvedValue(bunnyVideo({ status: 5 }));
+    rpcByName({
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing", landed_at: minutesAgo(16) }],
+      hero_video_event: [{ outcome: "failed", delete_guid: NEW, phase: "failed", replace_counted: true, revision_before: null, revision_after: null, used: 1, collection_id: COL }],
+    });
+    await post(event(3));
+    expect(m.prepareHeroPoster).not.toHaveBeenCalled();
+  });
+
+  it("deleting a video retires the poster made from it, through the same guards that decide the delete", async () => {
+    const DROPPED = "00000000-0000-4000-8000-000000000007";
+    rpcByName({
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing" }],
+      hero_video_event: [{ outcome: "swapped", delete_guid: DROPPED, phase: "live", replace_counted: true, revision_before: "r1", revision_after: "r2", used: 1, collection_id: COL, poster: "set" }],
+    });
+    await post(event(3));
+    expect(m.deleteVideo).toHaveBeenCalledWith(DROPPED);
+    expect(m.retireHeroPoster).toHaveBeenCalledTimes(1);
+    expect(m.retireHeroPoster).toHaveBeenCalledWith(CLUB, DROPPED);
+  });
+
+  it("never retires a poster for a video the delete guards refuse (still live or previous)", async () => {
+    m.maybeSingle.mockResolvedValue({ data: { presentation_config: { heroVideoGuid: NEW, previousHeroVideoGuid: PREV } }, error: null });
+    rpcByName({
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "preparing" }],
+      hero_video_event: [{ outcome: "swapped", delete_guid: PREV, phase: "live", replace_counted: true, revision_before: "r1", revision_after: "r2", used: 1, collection_id: COL, poster: "set" }],
+    });
+    await post(event(3));
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+    expect(m.retireHeroPoster).not.toHaveBeenCalled();
+  });
+});
+
+describe("hero poster repair in the daily cron", () => {
+  const cron = () => GET(new Request("https://onzio.example/api/cron/hero-video", { headers: { authorization: "Bearer secret" } }));
+  const attachCalls = () => m.rpc.mock.calls.filter((call) => call[0] === "attach_hero_video_poster");
+  beforeEach(() => vi.stubEnv("CRON_SECRET", "secret"));
+
+  it("attaches a made poster to the live video that was flagged, and counts it", async () => {
+    rpcByName({
+      list_hero_video_pending: [],
+      list_hero_video_poster_due: [{ club_id: CLUB, video_guid: NEW, poster_attempts: 1 }],
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "live" }],
+      attach_hero_video_poster: [{ outcome: "attached", poster_attempts: 1, revision_before: "r1", revision_after: "r2" }],
+    });
+    const response = await cron();
+    expect((await response.json()).data).toMatchObject({ posters: { inspected: 1, attached: 1, failed: 0 } });
+    expect(attachCalls()).toHaveLength(1);
+    expect(attachCalls()[0][1]).toEqual({ p_club_id: CLUB, p_video_guid: NEW, p_poster_asset_id: POSTER });
+    // No grace on a repair: the video landed long ago.
+    expect(m.prepareHeroPoster).toHaveBeenCalledWith(expect.objectContaining({ clubId: CLUB, videoGuid: NEW, collectionId: COL, timing: {} }));
+  });
+
+  it("a poster that still cannot be made is reported as a failed try (a null asset), and the database counts it", async () => {
+    m.prepareHeroPoster.mockResolvedValue({ status: "unavailable", reason: "NOT_FOUND" });
+    rpcByName({
+      list_hero_video_pending: [],
+      list_hero_video_poster_due: [{ club_id: CLUB, video_guid: NEW, poster_attempts: 4 }],
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "live" }],
+      attach_hero_video_poster: [{ outcome: "gave_up", poster_attempts: 5 }],
+    });
+    const data = (await (await cron()).json()).data;
+    expect(data.posters).toEqual({ inspected: 1, attached: 0, failed: 1 });
+    expect(attachCalls()[0][1].p_poster_asset_id).toBeNull();
+  });
+
+  it("an already attached poster counts as done, and one failing row does not stop the next", async () => {
+    const SECOND = "00000000-0000-4000-8000-000000000008";
+    m.prepareHeroPoster.mockRejectedValueOnce(new Error("boom")).mockResolvedValue({ status: "ready", assetId: POSTER });
+    rpcByName({
+      list_hero_video_pending: [],
+      list_hero_video_poster_due: [{ club_id: CLUB, video_guid: NEW, poster_attempts: 0 }, { club_id: CLUB, video_guid: SECOND, poster_attempts: 0 }],
+      lookup_hero_video_pending: [{ club_id: CLUB, collection_id: COL, phase: "live" }],
+      attach_hero_video_poster: [{ outcome: "already_attached", poster_attempts: 0 }],
+    });
+    const data = (await (await cron()).json()).data;
+    expect(data.posters).toEqual({ inspected: 2, attached: 1, failed: 1 });
+  });
+
+  it("does nothing when no video is flagged, and skips the pass when the host is not configured", async () => {
+    rpcByName({ list_hero_video_pending: [], list_hero_video_poster_due: [] });
+    expect((await (await cron()).json()).data.posters).toEqual({ inspected: 0, attached: 0, failed: 0 });
+    expect(m.prepareHeroPoster).not.toHaveBeenCalled();
+    vi.stubEnv("BUNNY_STREAM_API_KEY", "");
+    m.rpc.mockClear();
+    await cron();
+    expect(m.rpc).not.toHaveBeenCalled();
+  });
+
+  it("a row whose pending record names another club is not touched", async () => {
+    rpcByName({
+      list_hero_video_pending: [],
+      list_hero_video_poster_due: [{ club_id: CLUB, video_guid: NEW, poster_attempts: 0 }],
+      lookup_hero_video_pending: [{ club_id: "99999999-9999-4999-8999-999999999999", collection_id: COL, phase: "live" }],
+    });
+    const data = (await (await cron()).json()).data;
+    expect(data.posters).toEqual({ inspected: 1, attached: 0, failed: 1 });
+    expect(attachCalls()).toHaveLength(0);
+    expect(m.prepareHeroPoster).not.toHaveBeenCalled();
+  });
+
+  it("the cron makes the poster for a ready row too, and leaves a row alone while the still is inside its grace", async () => {
+    const deadline = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    m.prepareHeroPoster.mockResolvedValue({ status: "processing" });
+    rpcByName({
+      list_hero_video_pending: [{ club_id: CLUB, video_guid: NEW, collection_id: COL, phase: "preparing", deadline_at: deadline, landed_at: minutesAgo(2) }],
+      list_hero_video_poster_due: [],
+      hero_video_event: [{ outcome: "stale", delete_guid: null, phase: null, replace_counted: true, collection_id: COL }],
+    });
+    await cron();
+    expect(m.rpc.mock.calls.some((call) => call[0] === "hero_video_event" && call[1]?.p_event === "ready")).toBe(false);
+    expect(m.deleteVideo).not.toHaveBeenCalled();
+    m.prepareHeroPoster.mockResolvedValue({ status: "ready", assetId: POSTER });
+    m.rpc.mockClear();
+    rpcByName({
+      list_hero_video_pending: [{ club_id: CLUB, video_guid: NEW, collection_id: COL, phase: "preparing", deadline_at: deadline, landed_at: minutesAgo(2) }],
+      list_hero_video_poster_due: [],
+      hero_video_event: [{ outcome: "swapped", delete_guid: null, phase: "live", replace_counted: true, collection_id: COL, poster: "set" }],
+    });
+    await cron();
+    const ready = m.rpc.mock.calls.filter((call) => call[0] === "hero_video_event" && call[1]?.p_event === "ready");
+    expect(ready).toHaveLength(1);
+    expect(ready[0][1].p_poster_asset_id).toBe(POSTER);
+  });
+});
+
 describe("pending hero video state", () => {
   const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
   const row = (phase: string, extra: Record<string, unknown> = {}) => ({
@@ -694,7 +876,7 @@ describe("hero video cron backstop", () => {
     vi.stubEnv("CRON_SECRET", "secret");
     vi.stubEnv("BUNNY_STREAM_API_KEY", "");
     const response = await cron("Bearer secret");
-    expect(await response.json()).toEqual({ data: { configured: false, inspected: 0, finalized: 0, swept: 0, failed: 0 }, error: null });
+    expect(await response.json()).toEqual({ data: { configured: false, inspected: 0, finalized: 0, swept: 0, failed: 0, posters: { inspected: 0, attached: 0, failed: 0 } }, error: null });
     expect(m.rpc).not.toHaveBeenCalled();
   });
 

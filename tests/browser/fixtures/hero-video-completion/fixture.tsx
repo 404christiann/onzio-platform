@@ -11,7 +11,7 @@ function Page() {
   const controller = useHeroVideoController(true, async (range) => {
     setRefreshed(`${range.before}:${range.after}`);
     return "applied";
-  });
+  }, async () => undefined);
   return (
     <div className="admin-theme" data-admin-theme="light">
       <div className="admin-portal" style={{ maxWidth: 720, padding: 24 }}>

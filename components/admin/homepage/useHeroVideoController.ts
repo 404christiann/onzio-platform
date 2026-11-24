@@ -36,15 +36,17 @@ export function useHeroUploadNavigationGuard(uploading: boolean) {
  * edit dialog is closed or the editor reloads. `enabled` latches on: a reload briefly clears the snapshot and must not
  * cancel a running upload.
  */
-export function useHeroVideoController(enabled: boolean, refreshRevision: HeroVideoDeps["refreshRevision"]): HeroVideoController | null {
+export function useHeroVideoController(enabled: boolean, refreshRevision: HeroVideoDeps["refreshRevision"], refreshPresentation: HeroVideoDeps["refreshPresentation"]): HeroVideoController | null {
   const refresh = useRef(refreshRevision);
   refresh.current = refreshRevision;
+  const refreshArt = useRef(refreshPresentation);
+  refreshArt.current = refreshPresentation;
   const [latched, setLatched] = useState(false);
   const [controller, setController] = useState<HeroVideoController | null>(null);
   if (enabled && !latched) setLatched(true);
   useEffect(() => {
     if (!latched) return;
-    const next = createHeroVideoController(defaultHeroVideoDeps(range => refresh.current(range)));
+    const next = createHeroVideoController(defaultHeroVideoDeps(range => refresh.current(range), () => refreshArt.current()));
     setController(next);
     void next.load();
     return () => { next.dispose(); setController(null); };

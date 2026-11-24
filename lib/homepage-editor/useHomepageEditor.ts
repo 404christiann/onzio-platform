@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/admin-client";
-import { fetchHomepageRevision } from "./hero-video-client";
+import { fetchHomepagePresentation, fetchHomepageRevision } from "./hero-video-client";
 import { applySwapRevision } from "./hero-video-upload";
 import { buildHomepageSaveRequest, type HomepageEditorSnapshot } from "./adapter";
 import { CINEMATIC_ARTWORK_SLOTS, defaultCinematicHomepageContent, cinematicArtwork, queuedArtwork, type CinematicArtworkSlot } from "@/lib/cinematic-homepage-content";
@@ -375,6 +375,20 @@ export function useHomepageEditor(clubId: string) {
     }, range);
   }
 
+  /**
+   * After a hero video goes live or is reverted, the poster moves with it on the server. The editor keeps its own draft, so
+   * it re-reads only the operator-owned presentation and puts it in baseline and draft (never a pending edit). Safe next to
+   * unsaved edits and independent of the revision check above. A failed read leaves what is shown.
+   */
+  async function refreshPresentation(): Promise<void> {
+    const run = generation.current;
+    try {
+      const { presentation } = await fetchHomepagePresentation();
+      if (run !== generation.current || !presentation) return;
+      dispatch({ type: "presentation-refreshed", presentation });
+    } catch { /* keep what is shown */ }
+  }
+
   function updatePhoto(id: string, update: Partial<HomepagePhoto>) {
     const next = current.current;
     if (!next) return;
@@ -474,7 +488,7 @@ export function useHomepageEditor(clubId: string) {
       const id = current.current?.draft.revamp && cinematicArtwork(current.current.draft.revamp, slot).localFileKey;
       if (id) return startArtworkUpload(slot, id);
     },
-    state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos, refreshBaseRevision,
+    state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos, refreshBaseRevision, refreshPresentation,
     readState: () => current.current,
     cleanupRemovedPhotos: async (photos: readonly HomepagePhoto[]) => {
       if (current.current?.submitted || recoveryConflict) return true;

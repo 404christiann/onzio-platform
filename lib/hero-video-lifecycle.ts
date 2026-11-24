@@ -18,6 +18,16 @@ export const HERO_VIDEO_LIVE_NOTICE_MS = 10 * 60 * 1000;
  */
 export const HERO_VIDEO_MP4_GRACE_MS = 15 * 60 * 1000;
 
+/**
+ * The hero poster is a still taken from the video, at this offset (Christian's decision: 1.0 s, so a video that fades in
+ * from black does not give a black poster). One constant, sent to Bunny as thumbnailTime when the video is created.
+ */
+export const HERO_POSTER_FRAME_MS = 1000;
+/** The still must be at least this wide to serve as a hero poster (it is shown full-bleed). */
+export const HERO_POSTER_MIN_WIDTH = 1280;
+/** Tries the daily job gives a live video that still has no poster. The database stops counting at the same number. */
+export const HERO_POSTER_MAX_ATTEMPTS = 5;
+
 export const HERO_VIDEO_MAX_BYTES = 500 * 1024 * 1024;
 export const HERO_VIDEO_MAX_SECONDS = 600;
 export const HERO_VIDEO_MAX_STORED_BYTES = 4 * HERO_VIDEO_MAX_BYTES;

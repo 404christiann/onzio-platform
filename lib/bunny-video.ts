@@ -48,6 +48,20 @@ export function bunnyVideoMp4Url(
   return `https://${BUNNY_STREAM_PULL_ZONE_HOST}/${guid}/play_${resolution}.mp4`;
 }
 
+const BUNNY_GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const BUNNY_THUMBNAIL_FILE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/;
+
+/**
+ * The CDN URL of the still Bunny makes for a video. Null when the guid is not a Bunny guid, so a value that did not come
+ * from Bunny can never shape a request. A file name Bunny did not report, or one with an odd character, falls back to
+ * thumbnail.jpg. The host is fixed.
+ */
+export function bunnyVideoThumbnailUrl(guid: string, fileName?: string | null): string | null {
+  if (!BUNNY_GUID.test(guid)) return null;
+  const file = fileName && BUNNY_THUMBNAIL_FILE.test(fileName) && !fileName.includes("..") ? fileName : "thumbnail.jpg";
+  return `https://${BUNNY_STREAM_PULL_ZONE_HOST}/${guid}/${file}`;
+}
+
 /** Diverse City FC homepage hero — full-bleed background clip. */
 export const DIVERSE_CITY_HERO_VIDEO: BunnyVideoAsset = {
   guid: "e49b4657-7396-48d7-b55b-09d38d892c72",
