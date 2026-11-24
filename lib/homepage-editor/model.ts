@@ -273,7 +273,7 @@ export function getDirtyHomepageSections(state: HomepageEditorState): HomepageSe
 
 export function getHomepageSaveBlocker(state: HomepageEditorState): string | null {
   if (state.save === "saving") return "SAVING";
-  if (state.editableSections.includes("revamp") && state.draft.revamp && [state.draft.revamp.raffle, state.draft.revamp.ticket, state.draft.revamp.championship.trophy, state.draft.revamp.footerLogo].some(art => art?.upload && art.upload !== "ready")) return "ARTWORK_NOT_READY";
+  if (state.editableSections.includes("revamp") && state.draft.revamp && [state.draft.revamp.raffle, state.draft.revamp.ticket, state.draft.revamp.championship.trophy, state.draft.revamp.footerLogo, state.draft.revamp.presentation?.headerPartner].some(art => art?.upload && art.upload !== "ready")) return "ARTWORK_NOT_READY";
   const dirty = getDirtyHomepageSections(state);
   if (dirty.length === 0) return "NO_CHANGES";
   if (state.editableSections.includes("photos") && state.draft.photos.items.length > state.maxPhotos) {

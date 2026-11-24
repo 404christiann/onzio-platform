@@ -144,6 +144,6 @@ const stamps = (content: SeasonMembershipContent, id: string) => seasonPreviewSt
 
 export default function SeasonMembershipEditor() {
   return <TicketPageEditor spec={SEASON_SPEC} title="Season Ticket Membership" description="Edit the Season Ticket Membership page in the Tickets menu. Save applies all changes together."
-    openPageHref="/tickets/season-membership" renderFields={fields} stamps={stamps}
+    openPageHref="/tickets/season-membership" visibilityKey="season-membership" renderFields={fields} stamps={stamps}
     renderLive={view => <CinematicSeasonMembership content={view} placeholders />} />;
 }

@@ -105,6 +105,12 @@ describe("fetchPublicPageVisibility", () => {
     await expect(fetchPublicPageVisibility(CLUB_ID)).resolves.toEqual({});
   });
 
+  it("reads the Tickets-menu keys like any other page", async () => {
+    db.maybeSingle.mockResolvedValue({ data: { public_page_visibility: { tickets: false, "season-membership": false, "know-before-you-go": false } }, error: null });
+    const fetchPublicPageVisibility = await load();
+    await expect(fetchPublicPageVisibility(CLUB_ID)).resolves.toEqual({ tickets: false, "season-membership": false });
+  });
+
   it("keeps only known keys with boolean values and shows everything else", async () => {
     db.maybeSingle.mockResolvedValue({ data: { public_page_visibility: { stadium: "no", "chick-fil-a": false, "foothill-transit": 0, parking: false } }, error: null });
     const fetchPublicPageVisibility = await load();
@@ -148,15 +154,17 @@ describe("tenant resolution stays out of it", () => {
     expect(walk("components/sites").filter(file => /public-page-visibility/.test(source(file)))).toEqual([]);
   });
 
-  it("only the cinematic@2 layout branch, the admin layout and the five cinematic pages call the query", () => {
+  it("only the cinematic@2 layout branch, the admin layout and the seven cinematic pages call the query", () => {
     const callers = [...walk("app"), ...walk("lib")].filter(file => /public-page-visibility-query/.test(source(file))).sort();
     expect(callers).toEqual([
+      "app/%5Fclubs/[slug]/contact/page.tsx",
       "app/%5Fclubs/[slug]/layout.tsx",
       "app/%5Fclubs/[slug]/stadium/chick-fil-a/page.tsx",
       "app/%5Fclubs/[slug]/stadium/foothill-transit/page.tsx",
       "app/%5Fclubs/[slug]/stadium/page.tsx",
       "app/%5Fclubs/[slug]/stadium/parking/page.tsx",
       "app/%5Fclubs/[slug]/tickets/page.tsx",
+      "app/%5Fclubs/[slug]/tickets/season-membership/page.tsx",
       "app/admin/layout.tsx",
     ].sort());
     expect(callers.filter(file => file.startsWith("lib/"))).toEqual([]);

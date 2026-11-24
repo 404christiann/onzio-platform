@@ -17,7 +17,8 @@ export function buildHomepageSaveRequest(state: HomepageEditorState, renderer: H
   for (const section of getDirtyHomepageSections({ ...state, draft })) {
     if (!capabilities.editableSections.includes(section)) continue;
     if (section === "revamp") {
-      if (draft.revamp) sections.revamp = cinematicHomepageSaveContent(draft.revamp);
+      // The baseline lets the payload carry the header sponsor logo only when this save changed it.
+      if (draft.revamp) sections.revamp = cinematicHomepageSaveContent(draft.revamp, state.baseline.revamp);
     } else if (section === "hero") {
       sections.hero = Object.fromEntries(capabilities.heroEditableFields.map(field => [field, draft.hero[field]]));
     } else if (section === "photos") {

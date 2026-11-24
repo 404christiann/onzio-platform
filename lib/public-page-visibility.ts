@@ -4,7 +4,7 @@
  * explicit false hides the page, its nav/footer links and its embedded blocks.
  * Editors stay reachable so owners can keep working on a hidden page.
  */
-export const PUBLIC_PAGE_KEYS = ["stadium", "chick-fil-a", "foothill-transit"] as const;
+export const PUBLIC_PAGE_KEYS = ["stadium", "chick-fil-a", "foothill-transit", "tickets", "season-membership"] as const;
 
 export type PublicPageKey = (typeof PUBLIC_PAGE_KEYS)[number];
 export type PublicPageVisibility = Partial<Record<PublicPageKey, boolean>>;
@@ -13,6 +13,8 @@ export const PUBLIC_PAGE_PATHS: Record<PublicPageKey, string> = {
   stadium: "/stadium",
   "chick-fil-a": "/stadium/chick-fil-a",
   "foothill-transit": "/stadium/foothill-transit",
+  tickets: "/tickets",
+  "season-membership": "/tickets/season-membership",
 };
 
 export function isPublicPageKey(value: unknown): value is PublicPageKey {
@@ -42,6 +44,21 @@ const pathOf = (href: string) => {
 };
 
 type LinkLike = { href?: string };
+type VisibilityClub = { publicPageVisibility?: PublicPageVisibility | null } | null | undefined;
+
+/** The path of every page the owner has hidden. */
+const hiddenPaths = (club: VisibilityClub) => new Set(PUBLIC_PAGE_KEYS.filter((key) => !pageVisible(club, key)).map((key) => PUBLIC_PAGE_PATHS[key]));
+
+/**
+ * True when `href` points at a page the owner has hidden, by the same rule the menus use: the path decides, so a query,
+ * an #anchor or a trailing slash does not dodge the switch, and a longer path under a hidden page's address
+ * (/tickets/know-before-you-go under /tickets) is a different page. External addresses never match.
+ */
+export function isHiddenPageHref(href: string | null | undefined, club: VisibilityClub): boolean {
+  if (typeof href !== "string") return false;
+  const hidden = hiddenPaths(club);
+  return hidden.size > 0 && hidden.has(pathOf(href));
+}
 
 /**
  * Drops menu links to a hidden page. Every href whose path is a hidden page's path goes, whatever its
@@ -51,9 +68,9 @@ type LinkLike = { href?: string };
  */
 export function withoutHiddenPageLinks<T extends LinkLike & { children?: readonly LinkLike[] }>(
   items: readonly T[],
-  club: { publicPageVisibility?: PublicPageVisibility | null } | null | undefined,
+  club: VisibilityClub,
 ): T[] {
-  const hidden = new Set(PUBLIC_PAGE_KEYS.filter((key) => !pageVisible(club, key)).map((key) => PUBLIC_PAGE_PATHS[key]));
+  const hidden = hiddenPaths(club);
   if (hidden.size === 0) return [...items];
   const isHidden = (link: LinkLike) => link.href !== undefined && hidden.has(pathOf(link.href));
   const kept: T[] = [];

@@ -38,6 +38,9 @@
 .kit, .addColumn { display: grid; gap: 10px; min-inline-size: 0; }
 .kitHead { display: grid; gap: 4px; align-content: start; min-block-size: 56px; }
 .kitHead h2 { margin: 0; font-size: 1rem; font-weight: 600; line-height: 24px; }
+.kitTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-inline-size: 0; }
+/* A switched-off jersey: its preview is dimmed like the other hidden sections; the kit's Hidden badge sits beside its name. */
+.kit[data-hidden] .previewBox { opacity: .6; }
 .optionButton {
   justify-self: start; max-inline-size: 100%; min-block-size: 28px; padding: 0 2px; border: 0; background: transparent;
   color: hsl(var(--muted-foreground)); font-size: .8125rem; text-align: start; text-decoration: underline; text-underline-offset: 3px;

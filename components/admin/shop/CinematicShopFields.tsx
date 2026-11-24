@@ -4,7 +4,7 @@ import { useId } from "react";
 import NativeImage from "@/components/ResilientNativeImage";
 import FileUpload from "@/components/admin/FileUpload";
 import { EditorActionButton, EditorGroup, EditorPageLink, EditorRemoveButton, EditorSwitch, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
-import { APPROVED_SHOP_MAP_CROP, MAX_SHOP_ATTRIBUTES, MAX_SHOP_DETAILS, MAX_SHOP_EDITIONS, MAX_SHOP_SIZE_COLUMNS, MAX_SHOP_SIZE_ROWS, type CinematicShopPresentation, type ShopDetailPresentation, type ShopEdition } from "@/lib/cinematic-shop-content";
+import { APPROVED_SHOP_MAP_CROP, MAX_SHOP_ATTRIBUTES, MAX_SHOP_DETAILS, MAX_SHOP_EDITIONS, MAX_SHOP_SIZE_COLUMNS, MAX_SHOP_SIZE_ROWS, isShopEditionShown, withShopEditionShown, type CinematicShopPresentation, type ShopDetailPresentation, type ShopEdition } from "@/lib/cinematic-shop-content";
 
 export type CinematicShopTarget = "map" | "sponsors" | "page" | "editions" | "details" | "attributes" | "sizeChart";
 /** Option i is the kit SHOP_EDITION_VARIANTS[i]: Home, Away, Third. */
@@ -30,9 +30,10 @@ export default function CinematicShopFields({ target, value, onChange, uploading
   };
   return <div className={kit.stack}>
     {target === "editions" && <>
-      <p className={kit.hint}>Each option shows one whole kit: the first is the Home kit, the second the Away kit, the third the Third kit. Choosing an option switches the kit photos, words, photo row and the line under the title. An option appears on the website once its kit has been saved. Leave a purchase link blank to use that kit’s Buy now link.</p>
+      <p className={kit.hint}>Each option shows one whole kit: the first is the Home kit, the second the Away kit, the third the Third kit. Choosing an option switches the kit photos, words, photo row and the line under the title. An option appears on the website once its kit has been saved. Leave a purchase link blank to use that kit’s Buy now link. Switch an option off to hide that jersey from the website without deleting it.</p>
       <div className={kit.field}><label htmlFor={editionsHeadingId}>Section heading</label><input id={editionsHeadingId} type="text" value={value.editionsHeading ?? ""} placeholder="Select your jersey" maxLength={80} onChange={event => onChange("editionsHeading", event.target.value)} /></div>
       {editions.map((edition, index) => <EditorGroup key={index} legend={EDITION_KIT_LABELS[index] ?? `Jersey option ${index + 1}`}>
+        <Toggle label="Show this jersey in the shop" offBadge="Hidden" value={isShopEditionShown(edition)} onChange={show => onChange("editions", editions.map((item, i) => i === index ? withShopEditionShown(item, show) : item))} />
         <Text label="Button label" value={edition.label} onChange={text => setEdition(index, { label: text })} />
         <Text label="Price" value={edition.price} onChange={text => setEdition(index, { price: text })} />
         <Text label="Line under the title" value={edition.line} onChange={text => setEdition(index, { line: text })} />
@@ -117,6 +118,6 @@ function NumberField({ label, value, min, max, onChange }: { label: string; valu
   return <div className={kit.field}><label htmlFor={id}>{label}</label><input id={id} type="number" value={Math.round(value * 100) / 100} min={min} max={max} step={0.01} onChange={event => { if (Number.isFinite(event.target.valueAsNumber)) onChange(event.target.valueAsNumber); }} /></div>;
 }
 /** The kit's switch row. The surrounding fieldset still disables it while the page is locked. */
-function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
-  return <EditorSwitch label={label} checked={value} disabled={false} onChange={onChange} />;
+function Toggle({ label, value, onChange, offBadge }: { label: string; value: boolean; onChange: (value: boolean) => void; offBadge?: string }) {
+  return <EditorSwitch label={label} checked={value} disabled={false} onChange={onChange} offBadge={offBadge} />;
 }

@@ -112,10 +112,19 @@ describe("Rose City shop and homepage migration, reconciled with main", () => {
     // Only Rose City's own later migrations may sort after it (today: the archived-club purge tables),
     // plus main packages named here, which the loop below checks do not redefine its functions.
     // TELEMETRY-01's page telemetry redefines only the archived-club purge.
-    const laterMainPackages = ["20261118200000_media_upload_quota.sql", "20261119010000_sponsor_and_news_caps.sql", "20261119090000_staging_insert_requires_reservation.sql", "20261119120000_media_orphan_sweep.sql", "20261120230000_hero_video_swap.sql", "20261121060000_page_telemetry.sql", "20261121183000_hero_video_pending.sql", "20261121230000_page_telemetry_rollups.sql", "20261122120000_club_public_page_visibility.sql"]; // RC page visibility (its own functions only), TELEMETRY-02 rollups (telemetry functions only), RC-ADMIN-10b, 10a, 10c, 10d, RC-HERO-VIDEO-SWAP (defines only hero_video functions), TELEMETRY-01, RC-HERO-VIDEO-COMPLETION (hero_video functions only)
+    const laterMainPackages = ["20261123120000_sam_visibility_controls.sql", "20261118200000_media_upload_quota.sql", "20261119010000_sponsor_and_news_caps.sql", "20261119090000_staging_insert_requires_reservation.sql", "20261119120000_media_orphan_sweep.sql", "20261120230000_hero_video_swap.sql", "20261121060000_page_telemetry.sql", "20261121183000_hero_video_pending.sql", "20261121230000_page_telemetry_rollups.sql", "20261122120000_club_public_page_visibility.sql"]; // RC page visibility (its own functions only), TELEMETRY-02 rollups (telemetry functions only), RC-ADMIN-10b, 10a, 10c, 10d, RC-HERO-VIDEO-SWAP (defines only hero_video functions), TELEMETRY-01, RC-HERO-VIDEO-COMPLETION (hero_video functions only)
     expect(later.every((file) => file.includes("_cinematic_") || laterMainPackages.includes(file)), later.join(", ")).toBe(true);
     const ours = /function (onzio_private\.validate_cinematic_shop_section|onzio\.save_shop_page|onzio_private\.validate_cinematic_shop_content|onzio_private\.homepage_binding_identity|onzio_private\.homepage_snapshot|onzio\.save_homepage)\(/;
-    for (const file of later) expect(ours.test(readFileSync(resolve(MIGRATIONS, file), "utf8")), file).toBe(false);
+    // SAM-VISIBILITY-AND-HEADER-SPONSOR deliberately supersedes two of these definitions, starting from this file's text
+    // (optional jersey `visible`, owner header sponsor logo); every other later migration still leaves them alone.
+    const successors: Record<string, string[]> = { "20261123120000_sam_visibility_controls.sql": ["onzio_private.validate_cinematic_shop_content", "onzio.save_homepage"] };
+    for (const file of later) {
+      const sql = readFileSync(resolve(MIGRATIONS, file), "utf8");
+      const allowed = successors[file] ?? [];
+      for (const name of allowed) expect(fn(sql, name), `${file} ${name}`).toContain(name === "onzio.save_homepage" ? "perform onzio_private.check_cinematic_homepage(fields);" : "onzio_private.shop_exact_strings(item-'visible',array['label','price','line','link'],array[80,40,160,2048])");
+      const stripped = allowed.reduce((text, name) => text.split(`function ${name}(`).join(""), sql);
+      expect(ours.test(stripped), file).toBe(false);
+    }
   });
 
   it("does not redefine main's validate_shop_section and never calls the unused 2-argument version", () => {

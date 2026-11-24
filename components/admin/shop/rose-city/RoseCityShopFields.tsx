@@ -10,7 +10,7 @@ import { TableEditor, ValidationMessage } from "@/components/admin/ui/editor-kit
 import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import {
   APPROVED_SHOP_MAP_CROP, MAX_SHOP_ATTRIBUTES, MAX_SHOP_DETAILS, MAX_SHOP_EDITIONS, MAX_SHOP_SIZE_COLUMNS, MAX_SHOP_SIZE_ROWS,
-  SHOP_CARD_ICONS, type CinematicShopPresentation, type ShopCardIcon, type ShopDetailPresentation, type ShopEdition,
+  SHOP_CARD_ICONS, isShopEditionShown, withShopEditionShown, type CinematicShopPresentation, type ShopCardIcon, type ShopDetailPresentation, type ShopEdition,
 } from "@/lib/cinematic-shop-content";
 import type { ShopPhoto, ShopSection, ShopSurface, ShopVariant } from "@/lib/shop-editor/contract";
 import type { ShopPageDraft } from "@/lib/shop-editor/model";
@@ -52,8 +52,9 @@ function TextArea({ label, value, onChange, maxLength, rows = 4, target }: { lab
   const id = useId();
   return <div className={kit.field} {...editTargetProps(target)}><label htmlFor={id}>{label}</label><textarea id={id} rows={rows} value={value} maxLength={maxLength} onChange={event => onChange(event.target.value)} /></div>;
 }
-function Toggle({ label, value, onChange, target }: { label: string; value: boolean; onChange: (value: boolean) => void; target?: EditTargetId }) {
-  return <div {...editTargetProps(target)}><EditorSwitch label={label} checked={value} disabled={false} onChange={onChange} /></div>;
+/** `offBadge` names the state beside the switch while it is off ("Hidden"); the switch keeps its label as its accessible name. */
+function Toggle({ label, value, onChange, target, offBadge }: { label: string; value: boolean; onChange: (value: boolean) => void; target?: EditTargetId; offBadge?: string }) {
+  return <div {...editTargetProps(target)}><EditorSwitch label={label} checked={value} disabled={false} onChange={onChange} offBadge={offBadge} /></div>;
 }
 
 /** The kit photos or the photo row: up to six, reorder with arrows, upload several at once. */
@@ -126,9 +127,11 @@ export function RoseCityShopFields(props: ShopFieldsProps & { id: ShopSectionId 
   </div>;
 
   if (id === "editions") return <div className={kit.stack}>
-    <p className={kit.hint}>Each option shows one whole kit: the first is the Home kit, the second the Away kit, the third the Third kit. Choosing an option switches the kit photos, words, photo row and the line under the title. An option appears on the website once its kit has been saved. Leave a purchase link blank to use that kit’s Buy now link.</p>
+    <p className={kit.hint}>Each option shows one whole kit: the first is the Home kit, the second the Away kit, the third the Third kit. Choosing an option switches the kit photos, words, photo row and the line under the title. An option appears on the website once its kit has been saved. Leave a purchase link blank to use that kit’s Buy now link. Switch an option off to hide that jersey from the website without deleting it.</p>
     <div className={kit.field} {...editTargetProps(SHOP_TARGETS.editionsHeading)}><label htmlFor={editionsHeadingId}>Section heading</label><input id={editionsHeadingId} type="text" value={value.editionsHeading ?? ""} placeholder="Select your jersey" maxLength={80} onChange={event => updatePresentation("editionsHeading", event.target.value)} /></div>
     {editions.map((edition, index) => <EditorGroup key={index} legend={EDITION_KIT_LABELS[index] ?? `Jersey option ${index + 1}`}>
+      {/* First row: switching a jersey off hides it from the website without deleting it. Its fields stay editable. */}
+      <Toggle label="Show this jersey in the shop" offBadge="Hidden" value={isShopEditionShown(edition)} onChange={show => updatePresentation("editions", editions.map((item, i) => i === index ? withShopEditionShown(item, show) : item))} />
       <Text target={editionTarget(index, "label")} label="Button label" value={edition.label} maxLength={80} onChange={text => setEdition(index, { label: text })} />
       <Text target={editionTarget(index, "price")} label="Price" value={edition.price} maxLength={40} onChange={text => setEdition(index, { price: text })} />
       <Text target={editionTarget(index, "line")} label="Line under the title" value={edition.line} maxLength={160} onChange={text => setEdition(index, { line: text })} />

@@ -13,6 +13,9 @@ import type { Fixture } from "@/lib/data";
 import { fetchHomepageContent, fetchSchedule, fetchShopKitContent, fetchSiteSponsorLogos, type HomepageContent, type ShopKitContent } from "@/lib/queries";
 import { fetchClubIdentity } from "@/lib/cinematic-identity";
 import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
+import { isHomepageSectionShown } from "@/lib/cinematic-homepage-content";
+import { usePublicPageVisibility } from "@/components/PublicPageVisibilityProvider";
+import { isHiddenPageHref } from "@/lib/public-page-visibility";
 import { useCinematicContent } from "./CinematicContent";
 import CinematicHero from "./CinematicHero";
 import CinematicPhotos from "./CinematicPhotos";
@@ -46,6 +49,7 @@ export default function CinematicHome({ initialHeroContent, initialData }: { ini
   const ticketPiece = useHomepagePiece("revamp.ticket");
   const matchPiece = useHomepagePiece("revamp.match");
   const pricesPiece = useHomepagePiece("revamp.prices");
+  const pageVisibility = usePublicPageVisibility();
   const championsPiece = useHomepagePiece("revamp.championship");
   useEffect(() => {
     if (served) return;
@@ -64,18 +68,29 @@ export default function CinematicHome({ initialHeroContent, initialData }: { ini
   const kit = shop?.section;
   const player = shop?.photos[0];
   const art = (asset: { url: string | null; alt: string; width?: number | null; height?: number | null }, className: string) => asset.url ? <section className={`artwork ${className}`} aria-label={asset.alt}><NativeImage src={asset.url} alt={asset.alt} width={asset.width ?? undefined} height={asset.height ?? undefined} loading="lazy" /></section> : null;
+  // Raffle, match and prices follow the owner's show/hide switches (only an explicit false hides). A hidden section leaves
+  // nothing on the public page. In the editor preview it keeps an empty, selectable wrapper (like the ticket below) so
+  // the owner can still open it, and the Overview shows it as hidden. The wrappers sit outside the cards' grid, so a
+  // hidden card leaves no empty cell there.
+  const raffleShown = !!revamp && isHomepageSectionShown(revamp.raffle);
+  const matchShown = !!revamp && isHomepageSectionShown(revamp.match);
+  const pricesShown = !!revamp && isHomepageSectionShown(revamp.prices);
+  const matchHref = revamp?.match.buttonHref || "/tickets";
   return <>
     <CinematicHero content={hero} />
     {revamp && <>
-      <div {...rafflePiece}>{art(revamp.raffle, "raffle")}</div>
-      <section className="ticket-cards" aria-label="Next home match and ticket prices" style={{ "--cinematic-seats-background": revamp.presentation.seatsBackground.url ? `url("${revamp.presentation.seatsBackground.url}")` : "none" } as CSSProperties}>
-        <article {...matchPiece} className="match-card"><h2>{revamp.match.heading}</h2>
+      {(raffleShown || rafflePiece["data-homepage-piece"]) && <div {...rafflePiece}>{raffleShown && art(revamp.raffle, "raffle")}</div>}
+      {!matchShown && matchPiece["data-homepage-piece"] && <div {...matchPiece} />}
+      {!pricesShown && pricesPiece["data-homepage-piece"] && <div {...pricesPiece} />}
+      {(matchShown || pricesShown) && <section className={matchShown && pricesShown ? "ticket-cards" : "ticket-cards ticket-cards--single"} aria-label="Next home match and ticket prices" style={{ "--cinematic-seats-background": revamp.presentation.seatsBackground.url ? `url("${revamp.presentation.seatsBackground.url}")` : "none" } as CSSProperties}>
+        {matchShown && <article {...matchPiece} className="match-card"><h2>{revamp.match.heading}</h2>
           {fixture ? <><p className="match-date">{cinematicMatchDate(fixture.date)}</p><hr /><div className="teams">{branding.clubLogoUrl && <NativeImage src={branding.clubLogoUrl} alt={`${club.name} crest`} />}<strong>{cinematicMatchTime(fixture.time)}</strong><div><OpponentCrest name={fixture.opponent} logoUrl={fixture.opponentLogoUrl} size={96} /></div></div><p className="venue">{fixture.venue}<br />{[fixture.city, fixture.state].filter(Boolean).join(", ")}</p></> : <p className="venue" role="status">{scheduleLoading ? "Loading next home match…" : revamp.match.emptyMessage}</p>}
-          <Link className="button ticket-buy" href={revamp.match.buttonHref || "/tickets"}>{revamp.match.buttonLabel}</Link>
+          {/* The button never leads to a page the owner hid (e.g. Single match tickets). */}
+          {!isHiddenPageHref(matchHref, { publicPageVisibility: pageVisibility }) && <Link className="button ticket-buy" href={matchHref}>{revamp.match.buttonLabel}</Link>}
           {fixture?.sponsorLogoUrl && <NativeImage className="match-partner" src={fixture.sponsorLogoUrl} alt={fixture.sponsorName || "Match sponsor"} loading="lazy" />}
-        </article>
-        <article {...pricesPiece} className="prices-card"><h2>{revamp.prices.heading}</h2>{revamp.prices.rows.map(row => <div key={row.id} className="price-item"><h3>{row.label}{row.price && <> <span className={row.accent === "none" ? undefined : row.accent}>{row.price}</span></>}</h3><p>{row.description}</p>{row.note && <small>{row.note}</small>}</div>)}{revamp.prices.footnote && <p className="tennis-note"><i /><em>{revamp.prices.footnote}</em></p>}</article>
-      </section>
+        </article>}
+        {pricesShown && <article {...pricesPiece} className="prices-card"><h2>{revamp.prices.heading}</h2>{revamp.prices.rows.map(row => <div key={row.id} className="price-item"><h3>{row.label}{row.price && <> <span className={row.accent === "none" ? undefined : row.accent}>{row.price}</span></>}</h3><p>{row.description}</p>{row.note && <small>{row.note}</small>}</div>)}{revamp.prices.footnote && <p className="tennis-note"><i /><em>{revamp.prices.footnote}</em></p>}</article>}
+      </section>}
       {(revamp.ticket.visible || ticketPiece["data-homepage-piece"]) && <div {...ticketPiece}>{revamp.ticket.visible && art(revamp.ticket, "ticket-art")}</div>}
     </>}
     <CinematicPhotos photos={photos} />

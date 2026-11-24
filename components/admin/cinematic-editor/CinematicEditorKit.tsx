@@ -76,10 +76,16 @@ export function EditorLoading({ label, failed, onRetry }: { label: string; faile
   </AdminPanel>;
 }
 
-export function EditorSwitch({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled: boolean; onChange: (checked: boolean) => void }) {
-  return <div className={styles.switchRow}>
+/**
+ * `offBadge` is for show/hide switches: while the switch is off, that word (for example "Hidden") shows next to it as a small
+ * outlined badge. The switch keeps its label as its accessible name, so the badge is for sighted editors only.
+ */
+export function EditorSwitch({ label, checked, disabled, onChange, offBadge }: { label: string; checked: boolean; disabled: boolean; onChange: (checked: boolean) => void; offBadge?: string }) {
+  const off = !!offBadge && !checked;
+  const control = <AdminSwitch label={label} checked={checked} disabled={disabled} onCheckedChange={onChange} />;
+  return <div className={styles.switchRow} data-off={off || undefined}>
     <span aria-hidden="true">{label}</span>
-    <AdminSwitch label={label} checked={checked} disabled={disabled} onCheckedChange={onChange} />
+    {offBadge ? <span className={styles.switchEnd}>{off && <span className={styles.offBadge} aria-hidden="true">{offBadge}</span>}{control}</span> : control}
   </div>;
 }
 
