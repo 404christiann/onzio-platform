@@ -53,6 +53,9 @@ describe("POST /api/admin/public-page-visibility", () => {
     ["a null visible", { page: "stadium", visible: null }],
     ["an unknown page", { page: "shop", visible: false }],
     ["a page that is not a visibility key", { page: "robinson", visible: false }],
+    ["the Know Before You Go page, which has no switch", { page: "know-before-you-go", visible: false }],
+    ["a nav id instead of a page key", { page: "tickets-page", visible: false }],
+    ["a page path instead of a page key", { page: "/tickets/season-membership", visible: false }],
     ["an array body", [{ page: "stadium", visible: false }]],
     ["an extra field", { page: "stadium", visible: false, extra: true }],
   ])("rejects %s with 400 before touching the session or the database", async (_label, body) => {
@@ -75,7 +78,7 @@ describe("POST /api/admin/public-page-visibility", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it.each(["stadium", "chick-fil-a", "foothill-transit"] as const)("lets an owner hide and show %s, with the club taken from the host", async page => {
+  it.each(["stadium", "chick-fil-a", "foothill-transit", "tickets", "season-membership"] as const)("lets an owner hide and show %s, with the club taken from the host", async page => {
     for (const visible of [false, true]) {
       mocks.rpc.mockResolvedValueOnce({ data: { [page]: visible }, error: null });
       const response = await POST(post({ page, visible }));
@@ -95,10 +98,20 @@ describe("POST /api/admin/public-page-visibility", () => {
     expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("set_public_page_visibility", { p_club_id: clubId, p_page_key: "stadium", p_visible: false });
   });
 
+  it.each(["tickets", "season-membership"] as const)("answers a database that does not know %s yet (the migration is not applied) with 400, so the switch can fail visibly", async page => {
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "INVALID_PUBLIC_PAGE_VISIBILITY", code: "22023" } });
+    const response = await POST(post({ page, visible: false }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "INVALID_PUBLIC_PAGE_VISIBILITY" });
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("set_public_page_visibility", { p_club_id: clubId, p_page_key: page, p_visible: false });
+  });
+
   it("returns only the known boolean entries the database sent back", async () => {
     mocks.rpc.mockResolvedValue({ data: { stadium: false, "chick-fil-a": true, shop: false, "foothill-transit": "no" }, error: null });
     const response = await POST(post({ page: "stadium", visible: false }));
     expect(await response.json()).toEqual({ visibility: { stadium: false, "chick-fil-a": true } });
+    mocks.rpc.mockResolvedValue({ data: { tickets: false, "season-membership": true, "know-before-you-go": false }, error: null });
+    expect(await (await POST(post({ page: "tickets", visible: false }))).json()).toEqual({ visibility: { tickets: false, "season-membership": true } });
   });
 
   it.each([null, "viewer", "operator", undefined])("returns 403 for a caller whose role is %s and never calls the database", async role => {

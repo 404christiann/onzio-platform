@@ -174,6 +174,8 @@ export function homepageSaveFailureSettlesOperation(code: string): boolean {
 
 /** Restore only fields changed by this draft. Concurrently saved words stay
  * current, and operator-owned presentation inputs always come from the server.
+ * The header sponsor logo is the one owner-editable presentation input: it is
+ * restored only when this draft changed it, otherwise the server's stays.
  * An edited ordered ticket-option list replaces that list, like photo order. */
 export function mergeCinematicHomepageRecovery(
   baseline: CinematicHomepageContent | undefined,
@@ -197,5 +199,8 @@ export function mergeCinematicHomepageRecovery(
   }
   const result = merge(baseline, recovered, current) as CinematicHomepageContent;
   result.presentation = structuredClone(current.presentation);
+  const before = baseline?.presentation?.headerPartner;
+  const after = recovered.presentation.headerPartner;
+  if (before && (before.assetId !== after.assetId || before.alt !== after.alt)) result.presentation.headerPartner = structuredClone(after);
   return result;
 }

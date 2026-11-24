@@ -1,4 +1,5 @@
 import CinematicShopPage from "@/components/cinematic/CinematicShopPage";
+import { withoutHiddenJerseys } from "@/lib/cinematic-shop-public";
 import type { getClubContextBySlug } from "@/lib/club-context";
 import { fetchCinematicShopContent, fetchCinematicShopPurchase } from "@/lib/cinematic-shop-query";
 import { fetchShopCarouselPhotos, fetchShopKitVariants, fetchSiteSponsorLogos } from "@/lib/queries";
@@ -16,7 +17,7 @@ export default async function RoseCityShopPage({ club }: { club: Club }) {
       fetchCinematicShopPurchase(club.id, client), fetchCinematicShopContent(club.id, client),
       fetchSiteSponsorLogos("carousel", club.id, client),
     ]);
-    return { content: { kits, photoRows: { home, away, third }, purchase, presentation, sponsors }, failed: false };
+    return { content: withoutHiddenJerseys({ kits, photoRows: { home, away, third }, purchase, presentation, sponsors }), failed: false };
   })().catch((error) => {
     console.error("RoseCityShopPage:", error);
     return { content: null, failed: true };

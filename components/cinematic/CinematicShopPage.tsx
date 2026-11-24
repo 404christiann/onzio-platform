@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { fetchShopKitVariants, fetchShopCarouselPhotos, fetchSiteSponsorLogos } from "@/lib/queries";
 import { fetchCinematicShopContent, fetchCinematicShopPurchase } from "@/lib/cinematic-shop-query";
+import { withoutHiddenJerseys } from "@/lib/cinematic-shop-public";
 import CinematicShop, { type CinematicShopProps } from "./CinematicShop";
 import { useCinematicContent } from "./CinematicContent";
 
@@ -26,7 +27,7 @@ export default function CinematicShopPage({ initial }: { initial?: CinematicShop
       fetchShopCarouselPhotos("away", club.id), fetchShopCarouselPhotos("third", club.id), fetchCinematicShopPurchase(club.id),
       fetchCinematicShopContent(club.id), fetchSiteSponsorLogos("carousel", club.id),
     ]).then(([kits, home, away, third, purchase, presentation, sponsors]) => {
-      if (active) setState({ clubId: club.id, content: { kits, photoRows: { home, away, third }, purchase, presentation, sponsors }, failed: false });
+      if (active) setState({ clubId: club.id, content: withoutHiddenJerseys({ kits, photoRows: { home, away, third }, purchase, presentation, sponsors }), failed: false });
     }).catch(() => { if (active) setState({ clubId: club.id, content: null, failed: true }); });
     return () => { active = false; };
   }, [club.id]);

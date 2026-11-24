@@ -13,7 +13,7 @@ export type HomepageSnapshot = {
 export function hydrateHomepageSnapshot<T extends HomepageSnapshot>(snapshot: T): T {
   const assets = new Map(snapshot.media.map((asset) => [asset.id, asset]));
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const hydrateArt = (art: CinematicArtwork): CinematicArtwork => {
+  const hydrateArt = <T extends CinematicArtwork>(art: T): T => {
     const asset = art.assetId ? assets.get(art.assetId) : undefined;
     if (!asset || asset.storage_bucket !== "onzio-media" || !base) return { ...art, url: null };
     return { ...art, url: `${base}/storage/v1/object/public/onzio-media/${asset.storage_path.split("/").map(encodeURIComponent).join("/")}` };

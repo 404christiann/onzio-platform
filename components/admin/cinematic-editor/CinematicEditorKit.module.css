@@ -207,6 +207,39 @@
   min-width: 0;
 }
 
+/* A 44px touch target around the 28px switch, drawn here so AdminSwitch stays untouched. */
+.switchRow button[role="switch"]::after {
+  content: "";
+  position: absolute;
+  inset: -10px -6px;
+}
+
+/* A show/hide switch that is off: its label dims through colour, not opacity, and a hairline badge names the state. */
+.switchRow[data-off] > span:first-child {
+  color: hsl(var(--muted-foreground));
+}
+
+.switchEnd {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.offBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  color: hsl(var(--muted-foreground));
+  font-size: .75rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .segmented {
   display: inline-flex;
   flex-wrap: wrap;

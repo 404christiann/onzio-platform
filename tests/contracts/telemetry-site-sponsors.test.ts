@@ -24,7 +24,7 @@ vi.mock("@/lib/club-context", () => ({ getClubContextBySlug: mocks.club }));
 vi.mock("@/lib/telemetry/entitlement", () => ({ clubHasTelemetry: mocks.telemetry }));
 vi.mock("@/lib/code-site", () => ({ codeSiteFor: mocks.codeSite }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: async () => ({ schema: () => ({}) }) }));
-vi.mock("@/lib/cinematic-homepage-content", () => ({ fetchCinematicHomepageContent: async () => null }));
+vi.mock("@/lib/cinematic-homepage-content", () => ({ fetchCinematicHomepageContent: async () => null, withoutHiddenHomepageSections: (content: unknown) => content }));
 vi.mock("@/lib/public-club-time-zone", () => ({ readPublicClubTimeZone: async () => "America/Los_Angeles" }));
 vi.mock("@/lib/academy-shell-branding", () => ({ loadAcademyShellBranding: async () => null }));
 vi.mock("@/components/cinematic/CinematicShell", () => ({ default: () => null }));

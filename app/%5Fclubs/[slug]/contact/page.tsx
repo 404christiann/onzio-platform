@@ -7,6 +7,7 @@ import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchContactContent } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
 import { fetchCinematicContactContent } from "@/lib/cinematic-contact-query";
+import { fetchPublicPageVisibility } from "@/lib/public-page-visibility-query";
 
 export default async function TenantContactPage({
   params,
@@ -15,8 +16,9 @@ export default async function TenantContactPage({
 }) {
   const club = await getClubContextBySlug((await params).slug);
   if (club.presentationTemplateKey === "cinematic@2") {
-    const content = await fetchCinematicContactContent(club.id, (await createClient()).schema("onzio"));
-    return content ? <CinematicContact content={content} /> : <CinematicDestination clubId={club.id} labelId="contact" />;
+    // The "Visible to visitors" map is a fail-open read ({} on any error): a row that leads to a hidden page is left out.
+    const [content, visibility] = await Promise.all([fetchCinematicContactContent(club.id, (await createClient()).schema("onzio")), fetchPublicPageVisibility(club.id)]);
+    return content ? <CinematicContact content={content} pageVisibility={visibility} /> : <CinematicDestination clubId={club.id} labelId="contact" />;
   }
 
   if (codeSiteFor(club) !== "diverse-city") notFound();

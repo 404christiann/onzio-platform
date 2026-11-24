@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { IconAdd, IconShop } from "@/components/admin/icons";
+import { kit as editorKit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
@@ -11,7 +12,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import type { EditTargetStamp } from "@/components/admin/ui/editor-kit/editTargets";
 import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { createClient } from "@/lib/admin-client";
-import type { CinematicShopPresentation } from "@/lib/cinematic-shop-content";
+import { isShopEditionShown, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import { submitPageSave } from "@/lib/page-editor-save";
 import { shopSaveRequestSchemaFor, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
 import { draftFromShopSnapshot, rebaseShopDraft, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
@@ -404,12 +405,14 @@ function ShopEditor() {
         </div>}
         {loading ? <ShopBodySkeleton surface={surface} /> : <>
           <ul className={styles.kitCols} data-surface={surface} aria-label="Kits" data-shop-kit-columns="">
-            {kitsOnPage.map((kitId, index) => {
-              const edition = draft.presentation.editions[index];
+            {kitsOnPage.map((kitId) => {
+              // Option i is kit i (not the column's place on the page), so a switched-off jersey marks its own kit's column.
+              const edition = draft.presentation.editions[KIT_ORDER.indexOf(kitId)];
+              const hidden = surface === "shop" && edition !== undefined && !isShopEditionShown(edition);
               const needsPhoto = draft.changedVariants.includes(kitId) && draft.variants[kitId].photos.length === 0;
-              return <li key={kitId} className={styles.kit} data-kit={kitId}>
+              return <li key={kitId} className={styles.kit} data-kit={kitId} data-hidden={hidden || undefined}>
                 <div className={styles.kitHead}>
-                  <h2>{KIT_NAMES[kitId]}</h2>
+                  <div className={styles.kitTitle}><h2>{KIT_NAMES[kitId]}</h2>{hidden && <span className={editorKit.offBadge}>Hidden</span>}</div>
                   {surface === "shop" && <button type="button" className={`admin-press ${styles.optionButton}`} aria-label={`Edit jersey options, ${KIT_NAMES[kitId].toLowerCase()}`} onClick={(event) => openSection("editions", null, event)}>
                     {edition ? [edition.label || "Untitled", edition.price].filter(Boolean).join(" · ") : "No jersey option yet"}
                   </button>}
@@ -492,7 +495,7 @@ function sectionSummary(id: ShopSectionId, draft: ShopPageDraft | undefined, kit
   if (!draft) return undefined;
   const p = draft.presentation;
   switch (id) {
-    case "editions": return p.editions.map((e) => `${e.label || "Untitled"} ${e.price}`.trim()).join(" · ") || "No options yet";
+    case "editions": return p.editions.map((e) => [e.label || "Untitled", e.price, isShopEditionShown(e) ? "" : "(hidden)"].filter(Boolean).join(" ")).join(" · ") || "No options yet";
     case "kitPhotos": return `${KIT_NAMES[kit]}: ${draft.variants[kit].photos.length} photos`;
     case "kitText": return `${KIT_NAMES[kit]}: ${draft.variants[kit].section.title || "no title yet"}`;
     case "photoRow": return `${KIT_NAMES[kit]}: ${draft.photoRows[kit].length} photos`;

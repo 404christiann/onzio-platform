@@ -192,6 +192,9 @@ html,body{margin:0;min-width:0}body{background:white}*{box-sizing:border-box}
  .cinematic-site .shop-options{gap:12px 14px}
  .cinematic-site .shop-option{min-height:44px;padding:8px 16px;font-size:13px}
 }
+/* Editor previews only: a jersey the owner switched off stays on screen so it can still be edited, dimmed and named. */
+.cinematic-site .shop-option-hidden{opacity:.45}
+.cinematic-site .shop-copy>.shop-hidden-label{margin:0 0 14px}
 /* Desktop lead at Sam's Nov 17 proportions (his 1550px file): wider lead, the title filling the copy column,
    and the heading centred over a pill row that sits flush with the copy column. */
 @media(min-width:1025px){

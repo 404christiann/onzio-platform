@@ -9,14 +9,16 @@ import { CINEMATIC_NAV_ITEMS, defaultCinematicHomepageContent } from "@/lib/cine
 import { hydrateRobinsonContent, type RobinsonContent } from "@/lib/cinematic-robinson-content";
 import { robinsonReferenceContent } from "@/lib/robinson-reference-content";
 import { emptyTicketsContent, hydrateTicketsContent } from "@/lib/tickets-content";
-import { PUBLIC_PAGE_KEYS, pageVisible, withoutHiddenPageLinks, type PublicPageKey, type PublicPageVisibility } from "@/lib/public-page-visibility";
+import { hydrateTicketPage } from "@/lib/cinematic-ticket-pages-content";
+import { PUBLIC_PAGE_KEYS, PUBLIC_PAGE_PATHS, pageVisible, withoutHiddenPageLinks, type PublicPageKey, type PublicPageVisibility } from "@/lib/public-page-visibility";
 
-// RC-PAGE-VISIBILITY: a club owner can hide the Robinson Stadium, Chick-fil-A and Foothill Transit pages. Absent or true = shown;
-// only an explicit false hides a page, its menu and footer links and the blocks that repeat it on other pages.
+// RC-PAGE-VISIBILITY: a club owner can hide the Robinson Stadium, Chick-fil-A, Foothill Transit, Single match tickets and Season ticket
+// membership pages. Absent or true = shown; only an explicit false hides a page, its menu and footer links and the blocks that repeat it
+// on other pages. Know Before You Go has no switch and always stays.
 // The map is NOT part of ClubContext (tenant resolution must never select the column: the 2026-08-14 outage). Server pages read it with
 // fetchPublicPageVisibility (mocked here); the nav and footer read it from PublicPageVisibilityProvider.
 const fixture = vi.hoisted(() => ({ pathname: "/_clubs/rose-city/schedule", content: null as ReturnType<typeof defaultCinematicHomepageContent> | null }));
-const mocks = vi.hoisted(() => ({ club: vi.fn(), visibility: vi.fn(), schema: vi.fn(), robinson: vi.fn(), chick: vi.fn(), transit: vi.fn(), tickets: vi.fn(), trusted: {} }));
+const mocks = vi.hoisted(() => ({ club: vi.fn(), visibility: vi.fn(), schema: vi.fn(), robinson: vi.fn(), chick: vi.fn(), transit: vi.fn(), tickets: vi.fn(), ticketPage: vi.fn(), trusted: {} }));
 vi.mock("next/navigation", () => ({
   usePathname: () => fixture.pathname,
   notFound: () => { throw new Error("not found"); },
@@ -34,6 +36,7 @@ vi.mock("@/lib/cinematic-robinson-query", () => ({ fetchRobinsonContent: mocks.r
 vi.mock("@/lib/chick-fil-a-query", () => ({ fetchChickFilAContent: mocks.chick }));
 vi.mock("@/lib/stadium-query", () => ({ fetchStadiumContent: mocks.transit }));
 vi.mock("@/lib/tickets-query", () => ({ fetchTicketsContent: mocks.tickets }));
+vi.mock("@/lib/cinematic-ticket-pages-query", () => ({ fetchTicketPage: mocks.ticketPage }));
 // The match card inside Robinson and the two partner pages have their own suites; here they only mark that they rendered.
 vi.mock("@/components/cinematic/CinematicStadium", () => ({ default: ({ content }: { content: { title?: string } }) => createElement("div", { "data-stub": "stadium" }, content.title) }));
 vi.mock("@/components/cinematic/CinematicChickFilA", () => ({ default: ({ content }: { content: { title?: string } }) => createElement("div", { "data-stub": "chick-fil-a" }, content.title) }));
@@ -47,6 +50,7 @@ import ChickFilAPage from "@/app/%5Fclubs/[slug]/stadium/chick-fil-a/page";
 import FoothillTransitPage from "@/app/%5Fclubs/[slug]/stadium/foothill-transit/page";
 import StadiumParkingPage from "@/app/%5Fclubs/[slug]/stadium/parking/page";
 import TicketsPage from "@/app/%5Fclubs/[slug]/tickets/page";
+import SeasonMembershipPage from "@/app/%5Fclubs/[slug]/tickets/season-membership/page";
 
 /**
  * A test scenario: a club plus the map the server would read for it. The map rides on the scenario object for convenience only;
@@ -64,6 +68,9 @@ const splitScenario = (scenario: Scenario) => { const { publicPageVisibility: ma
 /** Another design's key; the routes only serve cinematic@2. */
 const notCinematic = "cinematic@1" as ClubContext["presentationTemplateKey"];
 const hiding = (...keys: PublicPageKey[]): PublicPageVisibility => Object.fromEntries(keys.map(key => [key, false]));
+/** The three Stadium pages, and the two Tickets-menu pages: each group's switches never touch the other's links. */
+const STADIUM_PAGE_KEYS: PublicPageKey[] = ["stadium", "chick-fil-a", "foothill-transit"];
+const TICKETS_PAGE_KEYS: PublicPageKey[] = ["tickets", "season-membership"];
 /** Renders under the club and, when the scenario has a map, the provider the public layout mounts around it. */
 const inClub = (scenario: Scenario, child: ReactElement) => {
   const { club, map } = splitScenario(scenario);
@@ -84,6 +91,9 @@ const ROBINSON_HREF = 'href="/stadium"';
 const PARKING_HREF = 'href="/stadium#parking-lot-no-5"';
 const CHICK_HREF = 'href="/stadium/chick-fil-a"';
 const FOOTHILL_HREF = 'href="/stadium/foothill-transit"';
+const TICKETS_HREF = 'href="/tickets"';
+const SEASON_HREF = 'href="/tickets/season-membership"';
+const KNOW_BEFORE_YOU_GO_HREF = 'href="/tickets/know-before-you-go"';
 const STADIUM_LINKS_KEPT = ['href="/stadium/guidelines"', 'href="/stadium/fan-code"', 'href="/stadium/media-credentials"', 'href="/tickets/know-before-you-go"'];
 
 beforeEach(() => {
@@ -118,11 +128,38 @@ describe("pageVisible and withoutHiddenPageLinks", () => {
     expect(stadiumChildren("stadium")).toEqual(all.filter(id => id !== "stadium" && id !== "stadium-parking"));
   });
 
-  it("keeps Know Before You Go, Guidelines, Fan Code and Media Credentials while all three pages are hidden, and every other group", () => {
-    const items = withoutHiddenPageLinks(CINEMATIC_NAV_ITEMS, { publicPageVisibility: hiding(...PUBLIC_PAGE_KEYS) });
+  it("keeps Know Before You Go, Guidelines, Fan Code and Media Credentials while all three Stadium pages are hidden, and every other group", () => {
+    const items = withoutHiddenPageLinks(CINEMATIC_NAV_ITEMS, { publicPageVisibility: hiding(...STADIUM_PAGE_KEYS) });
     expect(items.find(item => item.id === "stadium-group")?.children?.map(child => child.id)).toEqual(["stadium-guidelines", "know-before-you", "fan-code", "media-credentials"]);
     expect(items.map(item => item.id)).toEqual(CINEMATIC_NAV_ITEMS.map(item => item.id));
     expect(items.find(item => item.id === "tickets")).toBe(CINEMATIC_NAV_ITEMS.find(item => item.id === "tickets"));
+  });
+
+  it("drops Single match tickets and Season ticket membership one at a time, and always keeps Know Before You Go", () => {
+    const ticketsChildren = (...keys: PublicPageKey[]) => (withoutHiddenPageLinks(CINEMATIC_NAV_ITEMS, { publicPageVisibility: hiding(...keys) }).find(item => item.id === "tickets")?.children ?? []).map(child => child.id);
+    expect(ticketsChildren()).toEqual(["season-membership", "tickets-page", "know-before-you"]);
+    expect(ticketsChildren("tickets")).toEqual(["season-membership", "know-before-you"]);
+    expect(ticketsChildren("season-membership")).toEqual(["tickets-page", "know-before-you"]);
+    // The Tickets group stays for the page that is left.
+    expect(ticketsChildren(...TICKETS_PAGE_KEYS)).toEqual(["know-before-you"]);
+    expect(ticketsChildren(...PUBLIC_PAGE_KEYS)).toEqual(["know-before-you"]);
+  });
+
+  it("leaves every group and the Stadium group's own Know before you alone while the Tickets pages are hidden", () => {
+    const items = withoutHiddenPageLinks(CINEMATIC_NAV_ITEMS, { publicPageVisibility: hiding(...TICKETS_PAGE_KEYS) });
+    expect(items.map(item => item.id)).toEqual(CINEMATIC_NAV_ITEMS.map(item => item.id));
+    for (const id of CINEMATIC_NAV_ITEMS.map(item => item.id).filter(id => id !== "tickets")) expect(items.find(item => item.id === id), id).toBe(CINEMATIC_NAV_ITEMS.find(item => item.id === id));
+    expect(items.find(item => item.id === "stadium-group")?.children?.map(child => child.id)).toContain("know-before-you");
+    // And the Stadium switches never touch the Tickets group.
+    const stadiumHidden = withoutHiddenPageLinks(CINEMATIC_NAV_ITEMS, { publicPageVisibility: hiding(...STADIUM_PAGE_KEYS) });
+    expect(stadiumHidden.find(item => item.id === "tickets")).toBe(CINEMATIC_NAV_ITEMS.find(item => item.id === "tickets"));
+  });
+
+  it("takes a Tickets group out of the menu only when no link is left in it", () => {
+    const group = { id: "tickets", label: "Tickets", children: [{ id: "a", label: "A", href: "/tickets" }, { id: "b", label: "B", href: "/tickets/season-membership" }] };
+    expect(withoutHiddenPageLinks([group], { publicPageVisibility: hiding("tickets") })[0].children).toEqual([group.children[1]]);
+    expect(withoutHiddenPageLinks([group], { publicPageVisibility: hiding(...TICKETS_PAGE_KEYS) })).toEqual([]);
+    expect(withoutHiddenPageLinks([{ ...group, children: [...group.children, { id: "c", label: "C", href: "/tickets/know-before-you-go" }] }], { publicPageVisibility: hiding(...TICKETS_PAGE_KEYS) })[0].children).toEqual([{ id: "c", label: "C", href: "/tickets/know-before-you-go" }]);
   });
 
   it("drops a group whose links are all hidden, keeps a group that still has one, and drops a hidden plain link", () => {
@@ -178,12 +215,82 @@ describe("navigation", () => {
     expect(html).toContain('data-phone-group="stadium-group"');
   });
 
-  it("removes every address of all three hidden pages from the desktop and phone menus", () => {
-    const html = nav(baseClub({ publicPageVisibility: hiding(...PUBLIC_PAGE_KEYS) }));
+  it("removes every address of all three hidden Stadium pages from the desktop and phone menus", () => {
+    const html = nav(baseClub({ publicPageVisibility: hiding(...STADIUM_PAGE_KEYS) }));
     for (const href of [ROBINSON_HREF, PARKING_HREF, CHICK_HREF, FOOTHILL_HREF]) expect(html, href).not.toContain(href);
     for (const href of STADIUM_LINKS_KEPT) expect(html, href).toContain(href);
     // Everything outside the Stadium group is as before.
     expect(hrefs(html).filter(href => !href.startsWith("/stadium")).sort()).toEqual(hrefs(nav(withoutMap())).filter(href => !href.startsWith("/stadium")).sort());
+  });
+
+  describe("Tickets menu", () => {
+    const base = () => nav(baseClub());
+    it("links Single match tickets from the drop-down and the phone shortcut, and Season ticket membership once, while shown", () => {
+      const html = base();
+      expect(count(html, TICKETS_HREF)).toBe(2);
+      expect(count(html, SEASON_HREF)).toBe(1);
+      expect(html).toContain(">Single match tickets</a>");
+      expect(html).toContain(">Season ticket membership</a>");
+      expect(html).toContain(">Buy Tickets</a>");
+      // Know Before You Go sits under both Stadium and Tickets.
+      expect(count(html, KNOW_BEFORE_YOU_GO_HREF)).toBe(2);
+      expect(html).toBe(nav(withoutMap()));
+    });
+    it("drops Single match tickets from the desktop drop-down and the phone menu, and keeps Season and Know Before You Go", () => {
+      const html = nav(baseClub({ publicPageVisibility: hiding("tickets") }));
+      expect(html).not.toContain(TICKETS_HREF);
+      expect(html).not.toContain("Single match tickets");
+      // The phone menu's own Buy Tickets shortcut points at the same page, so it goes too, and Schedule stays.
+      expect(html).not.toContain("Buy Tickets");
+      expect(html).toContain('<div class="quick-links"><a href="/schedule">');
+      expect(html).toContain(SEASON_HREF);
+      expect(count(html, KNOW_BEFORE_YOU_GO_HREF)).toBe(2);
+      expect(html).toContain('data-nav-id="tickets"');
+      expect(html).toContain('data-phone-group="tickets"');
+    });
+    it("drops Season ticket membership and keeps Single match tickets, the phone shortcut and Know Before You Go", () => {
+      const html = nav(baseClub({ publicPageVisibility: hiding("season-membership") }));
+      expect(html).not.toContain(SEASON_HREF);
+      expect(html).not.toContain("Season ticket membership");
+      expect(count(html, TICKETS_HREF)).toBe(2);
+      expect(html).toContain(">Buy Tickets</a>");
+      expect(count(html, KNOW_BEFORE_YOU_GO_HREF)).toBe(2);
+      expect(html).toContain('data-nav-id="tickets"');
+    });
+    it("keeps the Tickets group with Know Before You Go only when both pages are hidden", () => {
+      const html = nav(baseClub({ publicPageVisibility: hiding(...TICKETS_PAGE_KEYS) }));
+      for (const gone of [TICKETS_HREF, SEASON_HREF, "Single match tickets", "Season ticket membership", "Buy Tickets"]) expect(html, gone).not.toContain(gone);
+      expect(html).toContain('data-nav-id="tickets"');
+      expect(html).toContain('data-phone-group="tickets"');
+      expect(count(html, KNOW_BEFORE_YOU_GO_HREF)).toBe(2);
+      expect(hrefs(html).filter(href => href.startsWith("/tickets"))).toEqual(["/tickets/know-before-you-go", "/tickets/know-before-you-go"]);
+    });
+    it("changes nothing outside the Tickets links, and leaves the Stadium pages alone", () => {
+      const without = (html: string) => hrefs(html).filter(href => !href.startsWith("/tickets"));
+      for (const keys of [["tickets"], ["season-membership"], TICKETS_PAGE_KEYS] as PublicPageKey[][]) {
+        expect(without(nav(baseClub({ publicPageVisibility: hiding(...keys) }))).sort(), keys.join()).toEqual(without(base()).sort());
+      }
+      const stadium = nav(baseClub({ publicPageVisibility: hiding(...STADIUM_PAGE_KEYS) }));
+      for (const href of [TICKETS_HREF, SEASON_HREF]) expect(stadium, href).toContain(href);
+      expect(stadium).toContain(">Buy Tickets</a>");
+    });
+    it("lets an owner's own wording ride along for the links that remain", () => {
+      fixture.content!.navigation.labels["season-membership"] = "Season passes";
+      fixture.content!.navigation.labels["tickets-page"] = "Match tickets";
+      expect(nav(baseClub({ publicPageVisibility: hiding("tickets") }))).toContain(">Season passes</a>");
+      expect(nav(baseClub({ publicPageVisibility: hiding("tickets") }))).not.toContain("Match tickets");
+      expect(nav(baseClub({ publicPageVisibility: hiding("season-membership") }))).not.toContain("Season passes");
+    });
+    it("reads the phone shortcut from the provider only, and shows it in an editor preview that has none", () => {
+      const stray = { ...baseClub(), publicPageVisibility: hiding(...TICKETS_PAGE_KEYS) };
+      const html = renderToStaticMarkup(createElement(ClubContextProvider, { club: stray as ClubContext, children: createElement(CinematicNav, { editing: true }) }));
+      expect(html).toContain(">Buy Tickets</a>");
+      expect(html).toContain(">Single match tickets</a>");
+    });
+    it("hides another club's Tickets pages the same way, and leaves a club with no map alone", () => {
+      expect(nav(withoutMap({ slug: "other-club" }))).toContain(TICKETS_HREF);
+      expect(nav(baseClub({ slug: "other-club", publicPageVisibility: hiding("tickets") }))).not.toContain(TICKETS_HREF);
+    });
   });
 
   it("leaves the Shop switch exactly as it was, whatever the map says", () => {
@@ -237,6 +344,19 @@ describe("Foothill Transit header mark", () => {
     expect(other).not.toContain(MARK);
   });
 
+  it("renders no partner wrapper, link or logo at all while the owner has no header logo, for any club", () => {
+    for (const url of [null, ""]) {
+      for (const alt of ["", "Another sponsor", "Foothill Transit"]) {
+        fixture.content!.presentation.headerPartner = { assetId: null, url, alt };
+        for (const club of [baseClub(), baseClub({ slug: "another-club" }), baseClub({ publicPageVisibility: hiding("foothill-transit") })]) {
+          const html = nav(club);
+          for (const gone of ["header-partner", "phone-partner", "data-transparent-mark", MARK]) expect(html, `${url}/${alt}/${gone}`).not.toContain(gone);
+          expect(count(html, "<img")).toBe(2);
+        }
+      }
+    }
+  });
+
   it("keeps the phone Menu button at the right edge when no partner sits before it", () => {
     const css = readFileSync("components/cinematic/cinematic.css", "utf8");
     const phone = css.slice(css.indexOf("@media(max-width:1024px){\n  .cinematic-site .club-header{height:calc(88px"));
@@ -259,6 +379,24 @@ describe("footer", () => {
     expect(html).not.toContain("STADIUM");
     expect(hrefs(html)).toEqual(hrefs(footer(withoutMap())).filter(href => href !== "/stadium"));
     for (const key of ["chick-fil-a", "foothill-transit"] as const) expect(footer(baseClub({ publicPageVisibility: hiding(key) }))).toContain(stadiumLink);
+  });
+  it("drops the TICKETS link only when Single match tickets is hidden", () => {
+    const base = footer(withoutMap());
+    expect(base).toContain(TICKETS_HREF);
+    expect(base).toContain(">TICKETS</a>");
+    const html = footer(baseClub({ publicPageVisibility: hiding("tickets") }));
+    expect(html).not.toContain(TICKETS_HREF);
+    expect(html).not.toContain("TICKETS");
+    expect(hrefs(html)).toEqual(hrefs(base).filter(href => href !== "/tickets"));
+    // The footer never linked Season ticket membership or Know Before You Go, so their switches change nothing here.
+    expect(footer(baseClub({ publicPageVisibility: hiding("season-membership") }))).toBe(base);
+    expect(footer(baseClub({ publicPageVisibility: hiding(...TICKETS_PAGE_KEYS) }))).toBe(footer(baseClub({ publicPageVisibility: hiding("tickets") })));
+    expect(footer(baseClub({ publicPageVisibility: hiding(...STADIUM_PAGE_KEYS) }))).toContain(TICKETS_HREF);
+  });
+  it("drops an owner's own wording for Tickets along with the link", () => {
+    fixture.content!.navigation.labels.tickets = "Match tickets";
+    expect(footer(baseClub())).toContain(">Match tickets</a>");
+    expect(footer(baseClub({ publicPageVisibility: hiding("tickets") }))).not.toContain("Match tickets");
   });
   it("leaves the Shop switch exactly as it was", () => {
     expect(footer(baseClub())).toContain('href="/shop"');
@@ -346,10 +484,91 @@ describe("public routes", () => {
   });
 
   it("serves no hidden page from the catch-all route either, because every hidden address has its own page", () => {
-    // [...revamp] only answers addresses without a dedicated page; the three pages and the parking alias all have one.
-    for (const file of ["stadium/page.tsx", "stadium/chick-fil-a/page.tsx", "stadium/foothill-transit/page.tsx", "stadium/parking/page.tsx"]) {
+    // [...revamp] only answers addresses without a dedicated page; the five pages and the parking alias all have one.
+    for (const file of ["stadium/page.tsx", "stadium/chick-fil-a/page.tsx", "stadium/foothill-transit/page.tsx", "stadium/parking/page.tsx", "tickets/page.tsx", "tickets/season-membership/page.tsx"]) {
       expect(() => readFileSync(`app/%5Fclubs/[slug]/${file}`, "utf8"), file).not.toThrow();
     }
+  });
+});
+
+describe("Tickets-menu public routes", () => {
+  const roseTickets = () => hydrateTicketsContent(JSON.parse(readFileSync("assets/rose-city-tickets-2027/copy.json", "utf8")), [], false);
+  const routes = [
+    { name: "Single match tickets", key: "tickets" as const, file: "tickets/page.tsx", call: (slug: string) => TicketsPage({ params: Promise.resolve({ slug }) }), fetched: () => mocks.tickets },
+    { name: "Season ticket membership", key: "season-membership" as const, file: "tickets/season-membership/page.tsx", call: (slug: string) => SeasonMembershipPage({ params: Promise.resolve({ slug }) }), fetched: () => mocks.ticketPage },
+  ];
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.schema.mockReturnValue(mocks.trusted);
+    mocks.tickets.mockResolvedValue(roseTickets());
+    mocks.ticketPage.mockResolvedValue(hydrateTicketPage("season-membership", null, []));
+  });
+
+  describe.each(routes)("$name", ({ key, file, call, fetched }) => {
+    const others = PUBLIC_PAGE_KEYS.filter(other => other !== key);
+    const render = async (scenario: Scenario) => { serve(scenario); return inClub(scenario, await call(scenario.slug)); };
+    it("renders with the map absent, empty, true or only other pages hidden", async () => {
+      for (const map of [undefined, {}, { [key]: true }, hiding(...others)]) {
+        expect(await render(map === undefined ? withoutMap() : baseClub({ publicPageVisibility: map })), JSON.stringify(map)).not.toBe("");
+      }
+      expect(fetched()).toHaveBeenCalledTimes(4);
+    });
+    it("is a 404 once hidden, before any page content is read", async () => {
+      serve(baseClub({ publicPageVisibility: hiding(key) }));
+      await expect(call("rose-city")).rejects.toThrow("not found");
+      expect(mocks.visibility).toHaveBeenCalledWith(baseClub().id);
+      expect(mocks.schema).not.toHaveBeenCalled();
+      expect(fetched()).not.toHaveBeenCalled();
+    });
+    it("is a 404 when hidden together with the sibling page too", async () => {
+      serve(baseClub({ publicPageVisibility: hiding(...TICKETS_PAGE_KEYS) }));
+      await expect(call("rose-city")).rejects.toThrow("not found");
+      expect(fetched()).not.toHaveBeenCalled();
+    });
+    it("renders when the visibility read failed open (it resolves {}), never 404s on a read error", async () => {
+      // Before the migration reaches a database, the read answers {} and every page shows.
+      mocks.club.mockResolvedValue(withoutMap());
+      mocks.visibility.mockResolvedValue({});
+      expect(inClub(withoutMap(), await call("rose-city"))).not.toBe("");
+      expect(fetched()).toHaveBeenCalledTimes(1);
+    });
+    it.each(["academy@1", "clubhouse@1", "editorial@1", "cinematic@1"] as const)("is still a 404 for %s, hidden or not", async template => {
+      for (const map of [{}, hiding(key)]) {
+        serve(baseClub({ presentationTemplateKey: template as ClubContext["presentationTemplateKey"], publicPageVisibility: map }));
+        await expect(call("other")).rejects.toThrow("not found");
+      }
+      expect(fetched()).not.toHaveBeenCalled();
+    });
+    it("is never cached across requests, and answers a hidden page with a 404, never a redirect", () => {
+      const source = readFileSync(`app/%5Fclubs/[slug]/${file}`, "utf8");
+      expect(source).not.toMatch(/revalidate|unstable_cache|force-static|generateStaticParams|generateMetadata|redirect\(/);
+      expect(source).toContain(`pageVisible({ publicPageVisibility: visibility }, "${key}")`);
+    });
+  });
+
+  it("hides one page without touching the other", async () => {
+    const [single, season] = routes;
+    serve(baseClub({ publicPageVisibility: hiding("tickets") }));
+    await expect(single.call("rose-city")).rejects.toThrow("not found");
+    expect(inClub(baseClub(), await season.call("rose-city"))).toContain("Season Ticket Membership");
+    serve(baseClub({ publicPageVisibility: hiding("season-membership") }));
+    await expect(season.call("rose-city")).rejects.toThrow("not found");
+    expect(inClub(baseClub(), await single.call("rose-city"))).toContain("tickets-page");
+  });
+
+  it("hides one club's page without touching another club's", async () => {
+    const [single] = routes;
+    serve(baseClub({ slug: "other-club", publicPageVisibility: {} }));
+    expect(inClub(baseClub(), await single.call("other-club"))).toContain("tickets-page");
+    serve(baseClub({ publicPageVisibility: hiding("tickets") }));
+    await expect(single.call("rose-city")).rejects.toThrow("not found");
+  });
+
+  it("keeps Know Before You Go reachable: it has no switch, its address is not a hidden path, and its route never reads the map", () => {
+    expect(Object.values(PUBLIC_PAGE_PATHS)).not.toContain("/tickets/know-before-you-go");
+    expect(withoutHiddenPageLinks([{ href: "/tickets/know-before-you-go" }], { publicPageVisibility: hiding(...PUBLIC_PAGE_KEYS) })).toEqual([{ href: "/tickets/know-before-you-go" }]);
+    const source = readFileSync("app/%5Fclubs/[slug]/tickets/know-before-you-go/page.tsx", "utf8");
+    expect(source).not.toMatch(/pageVisible|public-page-visibility|publicPageVisibility/);
   });
 });
 

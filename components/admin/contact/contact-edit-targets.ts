@@ -10,7 +10,8 @@ import type { ContactSectionId } from "./contact-sections";
  *
  * Every card renders the whole public Contact page and hides the heading and the other four rows with CSS (ContactEditor.module.css
  * `.only`), so a card's stamps reach only its own row's nodes. CinematicContact draws one `.contact-row` for every entry of
- * CONTACT_ACTIONS, always, in that order (no row is ever dropped), so a row node's position is its action's position.
+ * CONTACT_ACTIONS, in that order, when it is given no page-visibility map (every preview here), so a row node's position is its
+ * action's position. Only the public page passes the map, and it may then leave out a row whose page the owner hid.
  *
  * The Information row's destination is the link behind its button; the button's words are its `action`, so the button is the
  * `action` node and the destination has a stamped control and no node of its own.

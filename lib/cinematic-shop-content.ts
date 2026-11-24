@@ -21,6 +21,9 @@ export const MAX_SHOP_SIZE_ROWS = 8;
 const purchaseLink = z.string().max(2048).refine(value => value === "" || /^https?:\/\/\S+$/i.test(value), "Use a full https:// link.");
 export const shopEditionSchema = z.object({
   label: z.string().max(80), price: z.string().max(40), line: z.string().max(160), link: purchaseLink,
+  // Sam: show or hide one jersey. Absent or true shows it; only an explicit false hides it. Saves send the key only for a hidden
+  // jersey (shopContentOnly), so a database without the jersey-visibility migration still accepts every save that hides nothing.
+  visible: z.boolean().optional(),
 }).strict();
 export const shopDetailSchema = z.object({
   assetId: z.string().uuid().nullable(), alt: z.string().max(600), title: z.string().max(80), body: z.string().max(600),
@@ -62,6 +65,17 @@ export const cinematicShopContentSchema = z.object({
 
 export type CinematicShopContent = z.infer<typeof cinematicShopContentSchema>;
 export type ShopEdition = z.infer<typeof shopEditionSchema>;
+/** A jersey is shown unless the owner switched it off: a missing or true `visible` shows it, only an explicit false hides it. */
+export const isShopEditionShown = (edition: Pick<ShopEdition, "visible">): boolean => edition.visible !== false;
+/** The jersey with its visibility set. Showing drops the key (a shown jersey is the default and is never saved as `visible: true`). */
+export function withShopEditionShown(edition: ShopEdition, shown: boolean): ShopEdition {
+  const { visible: _visible, ...rest } = edition;
+  return shown ? rest : { ...rest, visible: false };
+}
+/** One jersey as saved: its four fields, plus `visible: false` only while hidden. Never `visible: true`, never any other key. */
+export function shopEditionOnly({ label, price, line, link, visible }: ShopEdition): ShopEdition {
+  return { label, price, line, link, ...(visible === false ? { visible: false } : {}) };
+}
 export type ShopDetail = z.infer<typeof shopDetailSchema>;
 /** Display-only photo address and size, resolved from the club's published media. Never saved. */
 export type ShopDetailPresentation = ShopDetail & { url?: string; width?: number; height?: number };
@@ -94,7 +108,7 @@ export function withShopDefaults<T extends Partial<CinematicShopPresentation>>(v
 export function shopContentOnly(value: CinematicShopPresentation): CinematicShopContent {
   const { mapUrl: _mapUrl, mapWidth: _mapWidth, mapHeight: _mapHeight, details, editionsHeading, ...content } = value;
   return {
-    ...content, details: details.map(({ assetId, alt, title, body }) => ({ assetId, alt, title, body })),
+    ...content, editions: content.editions.map(shopEditionOnly), details: details.map(({ assetId, alt, title, body }) => ({ assetId, alt, title, body })),
     // A blank heading is never sent, keeping the payload the pre-jersey-options database accepts.
     ...(editionsHeading?.trim() ? { editionsHeading } : {}),
   };

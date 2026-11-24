@@ -14,8 +14,10 @@ import {
   EditorDialog, PageFrame, PageFrameSkeleton, PreviewCards, PreviewCardsSkeleton, ValidationMessage, useEditorDialog,
 } from "@/components/admin/ui/editor-kit";
 import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
+import { PageVisibilityControl } from "@/components/admin/stadium/PageVisibilityControl";
 import type { EditTargetStamp } from "@/components/admin/ui/editor-kit/editTargets";
 import { createClient } from "@/lib/admin-client";
+import type { PublicPageKey } from "@/lib/public-page-visibility";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { loadVisitorPageEditor, saveVisitorPageEditor } from "@/lib/visitor-page-editor";
 import {
@@ -58,8 +60,10 @@ function SectionLiveInner<K extends TicketPageKey>({ spec, id, content, media, s
 const SectionLive = memo(SectionLiveInner, (a, b) => a.id === b.id && a.slice === b.slice && a.media === b.media && a.shared === b.shared) as typeof SectionLiveInner;
 
 /** Load, draft recovery, upload, atomic save and conflict handling for the two Tickets-menu pages (RC2027-TICKET-PAGES), on the editor kit. */
-export default function TicketPageEditor<K extends TicketPageKey>({ spec, title, description, openPageHref, renderFields, renderLive, stamps }: {
+export default function TicketPageEditor<K extends TicketPageKey>({ spec, title, description, openPageHref, visibilityKey, renderFields, renderLive, stamps }: {
   spec: TicketPageSpec<K>; title: string; description: string; openPageHref: string;
+  /** The page's "Visible to visitors" switch, for a page the owner can hide whole. It saves on its own and never counts as an edit. */
+  visibilityKey?: PublicPageKey;
   renderFields: (api: TicketPageFieldsApi<K>, id: string) => ReactNode;
   renderLive: (view: TicketPageView<K>) => ReactNode;
   /** Click-to-field: where a card's fields show on the page, for that card's preview only. A module-level function, so it is stable. */
@@ -266,7 +270,7 @@ export default function TicketPageEditor<K extends TicketPageKey>({ spec, title,
       skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={spec.sections.length} /></div>}>
       <PageFrame title={title} breadcrumb={crumbs} openPageHref={openPageHref} description={description} state={pageState}
         onSave={() => { void saveAction.save().catch(() => undefined); }}
-        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={visibilityKey ? <><PageVisibilityControl pageKey={visibilityKey} />{notice}</> : notice}>
         <PreviewCards sections={sectionItems} label={`${title} sections`} renderPreview={previewOf} previewScale={0.46}
           stamps={stamps ? id => stampsBySection.get(id) ?? [] : undefined}
           onEdit={(id, event, target) => { dialog.openSection(id, event); dialog.focusField(target); }} />

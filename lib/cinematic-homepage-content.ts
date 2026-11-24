@@ -55,14 +55,25 @@ export function isSafeCinematicDestination(value: string): boolean {
 const externalDestination = z.string().max(2000).refine(value => value === "" || isSafeCinematicDestination(value), "Enter a valid HTTPS URL.");
 const artworkInput = z.object({ assetId: z.uuid().nullable(), alt: z.string().max(1000) }).strict();
 const artwork = artworkInput.extend({ url: z.string().nullable(), width: z.number().int().positive().nullable().optional(), height: z.number().int().positive().nullable().optional(), upload: z.enum(["queued", "uploading", "ready", "failed"]).optional(), localFileKey: z.string().optional(), error: z.string().optional() });
+/**
+ * Optional show/hide for the raffle photo, next home match and ticket prices. Absent or true shows the section and only an
+ * explicit false hides it (the rule lib/tickets-content.ts applies to its sections). It is never written as true: the saved
+ * row's database check accepts the key only after the migration that adds it, so a save that hides nothing stays unchanged.
+ */
+const optionalVisibility = { visible: z.boolean().optional() };
 export const cinematicHomepageSaveSchema = z.object({
   sponsors: z.object({ heading }).strict(),
-  raffle: artworkInput,
+  raffle: artworkInput.extend(optionalVisibility),
   ticket: artworkInput.extend({ visible: z.boolean() }),
   // Optional so saves and rows from before the footer logo existed still parse.
   footerLogo: artworkInput.default({ assetId: null, alt: "" }),
-  match: z.object({ heading, buttonLabel: z.string().max(60), buttonHref: z.string().max(2000).regex(/^\/(?!\/)(?:[-A-Za-z0-9_/?#=&%.]*)$/), emptyMessage: copy }).strict(),
-  prices: z.object({ heading, rows: z.array(z.object({ id: z.string().min(1).max(60), label: heading, price: z.string().max(60), description: copy, note: copy, accent: z.enum(["none", "aqua", "lime"]) }).strict()).max(10), footnote: copy }).strict().refine(value => new Set(value.rows.map(row => row.id)).size === value.rows.length, "Price row IDs must be unique."),
+  /**
+   * The header sponsor logo, owner-editable. Key absent means leave the header logo as it is. Present sets it, and assetId null
+   * clears it. It lives in presentation (header_partner_media_asset_id) in stored and loaded content, never in the content JSON.
+   */
+  headerPartner: artworkInput.optional(),
+  match: z.object({ heading, buttonLabel: z.string().max(60), buttonHref: z.string().max(2000).regex(/^\/(?!\/)(?:[-A-Za-z0-9_/?#=&%.]*)$/), emptyMessage: copy, ...optionalVisibility }).strict(),
+  prices: z.object({ heading, rows: z.array(z.object({ id: z.string().min(1).max(60), label: heading, price: z.string().max(60), description: copy, note: copy, accent: z.enum(["none", "aqua", "lime"]) }).strict()).max(10), footnote: copy, ...optionalVisibility }).strict().refine(value => new Set(value.rows.map(row => row.id)).size === value.rows.length, "Price row IDs must be unique."),
   championship: z.object({ league: heading, year: z.string().max(20), title: heading, body: copy, trophy: artworkInput }).strict(),
   navigation: z.object({
     labels: z.record(z.string(), z.string().trim().min(1).max(60)).refine(value => Object.keys(value).every(id => CINEMATIC_NAV_LABEL_IDS.includes(id)), "Unknown navigation label."),
@@ -74,8 +85,8 @@ export const cinematicPresentationSchema = z.object({
   heroVideoGuid: z.string(), heroVideoLibraryId: z.string(),
   sponsorTreatments: z.record(z.uuid(), z.enum(["invert", "dark-lettering"])),
 }).strict();
-export const cinematicHomepageContentSchema = cinematicHomepageSaveSchema.extend({
-  raffle: artwork, ticket: artwork.extend({ visible: z.boolean() }),
+export const cinematicHomepageContentSchema = cinematicHomepageSaveSchema.omit({ headerPartner: true }).extend({
+  raffle: artwork.extend(optionalVisibility), ticket: artwork.extend({ visible: z.boolean() }),
   footerLogo: artwork.default({ assetId: null, url: null, alt: "" }),
   championship: cinematicHomepageSaveSchema.shape.championship.extend({ trophy: artwork }),
   presentation: cinematicPresentationSchema,
@@ -83,8 +94,24 @@ export const cinematicHomepageContentSchema = cinematicHomepageSaveSchema.extend
 export type CinematicArtwork = z.infer<typeof artwork>;
 export type CinematicHomepageContent = z.infer<typeof cinematicHomepageContentSchema>;
 export type CinematicHomepageSaveContent = z.infer<typeof cinematicHomepageSaveSchema>;
-export type CinematicArtworkSlot = "raffle" | "ticket" | "trophy" | "footerLogo";
-export const CINEMATIC_ARTWORK_SLOTS: readonly CinematicArtworkSlot[] = ["raffle", "ticket", "trophy", "footerLogo"];
+export type CinematicArtworkSlot = "raffle" | "ticket" | "trophy" | "footerLogo" | "headerPartner";
+export const CINEMATIC_ARTWORK_SLOTS: readonly CinematicArtworkSlot[] = ["raffle", "ticket", "trophy", "footerLogo", "headerPartner"];
+
+/** True unless the owner hid the section: only an explicit false hides it, and a missing key shows it. */
+export function isHomepageSectionShown(part: { visible?: boolean }): boolean {
+  return part.visible !== false;
+}
+/**
+ * What visitors are sent. This content is the shared shell of every cinematic@2 page, so only what no other page shows is
+ * dropped: a hidden raffle photo keeps only its switch. The next home match words and ticket prices stay, because Tickets,
+ * Chick-fil-A, Robinson Stadium and Know Before You Go show them whatever the homepage switches say. Editors and previews
+ * use the full content.
+ */
+export function withoutHiddenHomepageSections(content: CinematicHomepageContent): CinematicHomepageContent {
+  return isHomepageSectionShown(content.raffle) ? content : { ...content, raffle: { assetId: null, url: null, alt: "", visible: false } };
+}
+/** The save and storage form of a visibility flag: written as false when hidden, and left out when shown. */
+const hiddenFlag = (part: { visible?: boolean }) => part.visible === false ? { visible: false as const } : {};
 
 /** Tenant-neutral until the operator imports the club's approved content. */
 export function defaultCinematicHomepageContent(): CinematicHomepageContent {
@@ -103,21 +130,41 @@ export function resolveCinematicNavLabel(content: CinematicHomepageContent, id: 
   return content.navigation.labels[id] ?? fallbackLabel;
 }
 export function cinematicArtwork(content: CinematicHomepageContent, slot: CinematicArtworkSlot): CinematicArtwork {
-  return slot === "trophy" ? content.championship.trophy : content[slot];
+  if (slot === "trophy") return content.championship.trophy;
+  if (slot === "headerPartner") return content.presentation.headerPartner;
+  return content[slot];
+}
+/**
+ * The change a newly chosen file makes to a slot. A new header sponsor logo also starts with an empty description: the old
+ * one ("Foothill Transit") would otherwise keep the site showing the Foothill Transit mark, tied to that page, instead of it.
+ */
+export function queuedArtwork(slot: CinematicArtworkSlot, localFileKey: string): Partial<CinematicArtwork> {
+  return { upload: "queued", localFileKey, ...(slot === "headerPartner" ? { alt: "" } : {}) };
 }
 export function cinematicHomepageEditableContent(content: CinematicHomepageContent): CinematicHomepageSaveContent {
   const media = ({ assetId, alt }: CinematicArtwork) => ({ assetId, alt });
+  const { visible: matchVisible, ...match } = content.match;
+  const { visible: pricesVisible, ...prices } = content.prices;
   return {
     sponsors: content.sponsors,
-    raffle: media(content.raffle), ticket: { ...media(content.ticket), visible: content.ticket.visible },
+    raffle: { ...media(content.raffle), ...hiddenFlag(content.raffle) }, ticket: { ...media(content.ticket), visible: content.ticket.visible },
     footerLogo: media(content.footerLogo ?? { assetId: null, url: null, alt: "" }),
-    match: content.match, prices: content.prices,
+    // Always listed so the editor's change check sees a header edit. The save payload drops it unless it changed.
+    headerPartner: media(content.presentation.headerPartner),
+    match: { ...match, ...hiddenFlag({ visible: matchVisible }) }, prices: { ...prices, ...hiddenFlag({ visible: pricesVisible }) },
     championship: { ...content.championship, trophy: media(content.championship.trophy) },
     navigation: content.navigation,
   };
 }
-export function cinematicHomepageSaveContent(content: CinematicHomepageContent): CinematicHomepageSaveContent {
-  return cinematicHomepageSaveSchema.parse(cinematicHomepageEditableContent(content));
+/**
+ * The payload for one save. `headerPartner` is left out unless a baseline is given and this draft's header logo (asset or
+ * description) differs from it, so a save that never touches the header leaves it alone on the server.
+ */
+export function cinematicHomepageSaveContent(content: CinematicHomepageContent, baseline?: CinematicHomepageContent): CinematicHomepageSaveContent {
+  const { headerPartner, ...rest } = cinematicHomepageSaveSchema.parse(cinematicHomepageEditableContent(content));
+  const before = baseline?.presentation.headerPartner;
+  const changed = !!before && !!headerPartner && (before.assetId !== headerPartner.assetId || before.alt !== headerPartner.alt);
+  return changed ? { ...rest, headerPartner } : rest;
 }
 
 export const CINEMATIC_MEDIA_COLUMNS = {
@@ -130,7 +177,8 @@ export const CINEMATIC_MEDIA_COLUMNS = {
 export function cinematicHomepageStorageRecord(content: CinematicHomepageContent) {
   const editable = cinematicHomepageSaveContent(content);
   return {
-    content: { ...editable, raffle: { alt: editable.raffle.alt }, ticket: { alt: editable.ticket.alt, visible: editable.ticket.visible }, footerLogo: { alt: editable.footerLogo.alt }, championship: { ...editable.championship, trophy: { alt: editable.championship.trophy.alt } } },
+    // No baseline is passed, so editable has no headerPartner: the header logo is stored only in its column and artworkAlt.
+    content: { ...editable, raffle: { alt: editable.raffle.alt, ...hiddenFlag(editable.raffle) }, ticket: { alt: editable.ticket.alt, visible: editable.ticket.visible }, footerLogo: { alt: editable.footerLogo.alt }, championship: { ...editable.championship, trophy: { alt: editable.championship.trophy.alt } } },
     raffle_media_asset_id: content.raffle.assetId, ticket_media_asset_id: content.ticket.assetId, trophy_media_asset_id: content.championship.trophy.assetId,
     footer_logo_media_asset_id: content.footerLogo.assetId,
     header_partner_media_asset_id: content.presentation.headerPartner.assetId, hero_poster_media_asset_id: content.presentation.heroPoster.assetId,
@@ -161,7 +209,7 @@ export async function fetchCinematicHomepageContent(clubId: string, client?: typ
     return { assetId: typeof id === "string" ? id : null, url: asset && asset.storage_bucket === "onzio-media" && process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/${asset.storage_path.split("/").map(encodeURIComponent).join("/")}` : null, width: asset?.width ?? null, height: asset?.height ?? null, alt };
   };
   return cinematicHomepageContentSchema.parse({
-    ...stored, raffle: resolve("raffle", stored.raffle.alt), ticket: { ...resolve("ticket", stored.ticket.alt), visible: stored.ticket.visible },
+    ...stored, raffle: { ...resolve("raffle", stored.raffle.alt), ...hiddenFlag(stored.raffle) }, ticket: { ...resolve("ticket", stored.ticket.alt), visible: stored.ticket.visible },
     footerLogo: resolve("footerLogo", stored.footerLogo?.alt ?? ""),
     championship: { ...stored.championship, trophy: resolve("trophy", stored.championship.trophy.alt) },
     presentation: {

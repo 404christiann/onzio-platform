@@ -273,4 +273,7 @@
   .cinematic-site .replay-soon{font-size:calc(var(--fit-w) * .02919)}
   .cinematic-site .replay-vs{font-size:calc(var(--fit-w) * .05223)}
   .cinematic-site .replay-watch{gap:calc(var(--fit-w) * .00922)}
+  /* One of the match and prices cards is hidden by the owner: the other sits alone in one centred column the width of the
+     match card, instead of beside an empty column. Phones keep their one-column grid. */
+  .cinematic-site .ticket-cards--single{grid-template-columns:minmax(0,42.2vw);justify-content:center}
 }

@@ -22,6 +22,7 @@ import CinematicTickets from "@/components/cinematic/CinematicTickets";
 import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFrame";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { SettledPreview } from "@/components/admin/stadium/SettledPreview";
+import { PageVisibilityControl } from "@/components/admin/stadium/PageVisibilityControl";
 import styles from "@/components/admin/ticket-pages/ticket-editors.module.css";
 import "@/components/admin/homepage/homepage-editor.css";
 import { TicketsSectionFields, type TicketsFieldsApi } from "./TicketsSectionFields";
@@ -247,7 +248,7 @@ export default function TicketsEditor() {
       skeleton={<div><PageFrameSkeleton cardCount={0} description /><PreviewCardsSkeleton count={TICKETS_SECTIONS.length} /></div>}>
       <PageFrame title={PAGE} breadcrumb={CRUMBS} openPageHref="/tickets" description={DESCRIPTION} state={pageState}
         onSave={() => { void saveAction.save().catch(() => undefined); }}
-        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={notice}>
+        onConflict={() => keepRef.current?.focus()} onDiscard={requestDiscard} notice={<><PageVisibilityControl pageKey="tickets" />{notice}</>}>
         <PreviewCards sections={sectionItems} label="Tickets sections" renderPreview={previewOf} previewScale={0.46}
           stamps={id => stampsBySection.get(id as TicketsSectionId) ?? []}
           onEdit={(id, event, target) => { dialog.openSection(id as TicketsSectionId, event); dialog.focusField(target); }} />

@@ -28,6 +28,8 @@ const TWO_COLUMN_MIN = OVERVIEW_TWO_COLUMN_MIN;
 /** The reserved box (design units) for one column: half the page plus room for the split not landing exactly in the middle. */
 export const overviewReservedHeight = (columns: 1 | 2) => columns === 2 ? OVERVIEW_PAGE_RATIO * OVERVIEW_DESIGN_WIDTH / 2 + 240 : OVERVIEW_PAGE_RATIO * OVERVIEW_DESIGN_WIDTH;
 const HIDDEN_BELOW = 40;
+/** A hidden part's pill is 36px tall. Pills for parts that sit at one point on the page (raffle, match and prices all hidden) are stacked this far apart. */
+const HIDDEN_PILL_PITCH = 40;
 
 type Rect = { top: number; left: number; width: number; height: number };
 export type PartRects = Partial<Record<PartId, Rect[]>>;
@@ -162,6 +164,12 @@ export function layoutPartButtons(parts: readonly HomepagePart[], measurement: M
         height: Math.min(rect.height, offset + span - rect.top) * scale,
       });
     });
+  }
+  // Hidden parts have no height, so neighbours share one top. Stack them so no pill covers another.
+  let previousPill = -Infinity;
+  for (const pill of out.filter(button => button.hidden).sort((a, b) => a.top - b.top)) {
+    pill.top = Math.max(pill.top, previousPill + HIDDEN_PILL_PITCH);
+    previousPill = pill.top;
   }
   return out;
 }

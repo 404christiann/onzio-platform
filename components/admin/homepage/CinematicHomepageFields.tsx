@@ -2,7 +2,7 @@
 
 import { useRef, type ReactNode } from "react";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
-import { CINEMATIC_NAV_ITEMS, cinematicArtwork, type CinematicArtworkSlot, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { CINEMATIC_NAV_ITEMS, cinematicArtwork, isHomepageSectionShown, type CinematicArtworkSlot, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import type { PieceId } from "@/lib/homepage-editor/model";
 import { IconUpload } from "@/components/admin/icons";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -65,12 +65,16 @@ export default function CinematicHomepageFields({ piece, part, content, disabled
       {text("Describe this image", item.alt, 1000, (draft, value) => { cinematicArtwork(draft, slot).alt = value; }, true, ARTWORK_TARGETS[slot])}
     </ArtworkField>;
   };
-  const menuBody = <>{art("footerLogo", { legend: "Footer logo", help: "Optional. When set, this logo appears alone in the footer instead of the club crest and name.", removeLabel: "Remove footer logo" })}<p className={kit.hint}>Rename the tabs and menu links. The footer uses the same names.</p>{CINEMATIC_NAV_ITEMS.flatMap(item => [item, ...("children" in item ? item.children ?? [] : [])]).map(item => <div key={item.id}>{text(item.label, content.navigation.labels[item.id] ?? item.label, 60, (draft, value) => { if (value.trim()) draft.navigation.labels[item.id] = value.trim(); else delete draft.navigation.labels[item.id]; })}</div>)}</>;
+  /** The first row of a piece with a show/hide switch. All four homepage switches use it, so they read and sit the same. */
+  const visibilitySwitch = (label: string, shown: boolean, edit: (draft: CinematicHomepageContent, visible: boolean) => void) =>
+    <EditorSwitch checked={shown} label={label} disabled={disabled} offBadge="Hidden" onChange={visible => update(draft => edit(draft, visible))} />;
+  const menuBody = <>{art("headerPartner", { legend: "Header sponsor logo", help: "Optional. Appears in the top header next to the menu. Remove it to show nothing there. Replacing the image clears its description. Describing it as “Foothill Transit” shows the club’s Foothill Transit mark here instead, hidden whenever the Foothill Transit page is hidden.", removeLabel: "Remove header sponsor logo" })}{art("footerLogo", { legend: "Footer logo", help: "Optional. When set, this logo appears alone in the footer instead of the club crest and name.", removeLabel: "Remove footer logo" })}<p className={kit.hint}>Rename the tabs and menu links. The footer uses the same names.</p>{CINEMATIC_NAV_ITEMS.flatMap(item => [item, ...("children" in item ? item.children ?? [] : [])]).map(item => <div key={item.id}>{text(item.label, content.navigation.labels[item.id] ?? item.label, 60, (draft, value) => { if (value.trim()) draft.navigation.labels[item.id] = value.trim(); else delete draft.navigation.labels[item.id]; })}</div>)}</>;
   const formsBody = <EditorGroup legend="External forms"><p className={kit.hint}>Tryouts, Media credentials, and National anthem request open these forms. Leave a destination blank to show the page placeholder.</p>{text("Tryouts form URL", content.navigation.destinations.tryouts, 2000, (draft, value) => { draft.navigation.destinations.tryouts = value; })}{text("Media credentials form URL", content.navigation.destinations.mediaCredentials, 2000, (draft, value) => { draft.navigation.destinations.mediaCredentials = value; })}{text("National anthem request form URL", content.navigation.destinations.nationalAnthem, 2000, (draft, value) => { draft.navigation.destinations.nationalAnthem = value; })}</EditorGroup>;
   if (piece === "revamp.sponsors") return <div className={kit.stack}>{text("Heading", content.sponsors.heading, 120, (draft, value) => { draft.sponsors.heading = value; }, false, HOMEPAGE_TARGETS.sponsorsHeading)}<p className={kit.hint}>Partner logos are managed in Branding.</p></div>;
-  if (piece === "revamp.raffle") return art("raffle");
-  if (piece === "revamp.ticket") return <div className={kit.stack}><EditorSwitch checked={content.ticket.visible} label="Show ticket and map on homepage" disabled={disabled} onChange={visible => update(draft => { draft.ticket.visible = visible; })} />{art("ticket")}</div>;
+  if (piece === "revamp.raffle") return <div className={kit.stack}>{visibilitySwitch("Show raffle photo on homepage", isHomepageSectionShown(content.raffle), (draft, visible) => { draft.raffle.visible = visible; })}{art("raffle")}</div>;
+  if (piece === "revamp.ticket") return <div className={kit.stack}>{visibilitySwitch("Show ticket and map on homepage", content.ticket.visible, (draft, visible) => { draft.ticket.visible = visible; })}{art("ticket")}</div>;
   if (piece === "revamp.match") return <div className={kit.stack}>
+    {visibilitySwitch("Show next home match on homepage", isHomepageSectionShown(content.match), (draft, visible) => { draft.match.visible = visible; })}
     <p className={kit.hint}>The next home match, opponent, date, time and venue come from Schedule.</p>
     {text("Heading", content.match.heading, 120, (draft, value) => { draft.match.heading = value; }, false, HOMEPAGE_TARGETS.matchHeading)}
     {text("Button text", content.match.buttonLabel, 60, (draft, value) => { draft.match.buttonLabel = value; }, false, HOMEPAGE_TARGETS.matchButton)}
@@ -78,6 +82,7 @@ export default function CinematicHomepageFields({ piece, part, content, disabled
     {text("When no home match is scheduled", content.match.emptyMessage, 1200, (draft, value) => { draft.match.emptyMessage = value; }, true, HOMEPAGE_TARGETS.matchEmpty)}
   </div>;
   if (piece === "revamp.prices") return <div className={kit.stack}>
+    {visibilitySwitch("Show ticket prices on homepage", isHomepageSectionShown(content.prices), (draft, visible) => { draft.prices.visible = visible; })}
     {text("Heading", content.prices.heading, 120, (draft, value) => { draft.prices.heading = value; }, false, HOMEPAGE_TARGETS.pricesHeading)}
     {content.prices.rows.map((row, index) => <EditorGroup key={row.id} legend={`Ticket option ${index + 1}`}>
       {text("Name", row.label, 120, (draft, value) => { draft.prices.rows[index].label = value; }, false, priceRowTarget(row.id, "label"))}

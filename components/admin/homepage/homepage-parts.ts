@@ -1,5 +1,6 @@
-import type { HomepageSection, PieceId } from "@/lib/homepage-editor/model";
+import type { HomepageDraft, HomepageSection, PieceId } from "@/lib/homepage-editor/model";
 import { EDIT_TARGET_REGISTRY } from "@/lib/admin-edit-targets";
+import { isHomepageSectionShown } from "@/lib/cinematic-homepage-content";
 
 /** The parts of the Rose City homepage the Overview editor numbers, in the order the page shows them. */
 export type PartId = "menu" | "hero" | "raffle" | "match" | "prices" | "ticket" | "photos" | "championship" | "video" | "sponsors" | "forms";
@@ -45,5 +46,17 @@ export const HOMEPAGE_PARTS: readonly HomepagePart[] = [
   part("sponsors", { section: "revamp", pieces: ["revamp.sponsors"], anchors: [{ selector: piece("revamp.sponsors"), closest: "section" }] }),
   part("forms", { section: "revamp", pieces: [], anchors: [], offPage: true }),
 ];
+
+/** The parts the owner has switched off with their show/hide switch (raffle photo, next home match, ticket prices, ticket and map). */
+export function hiddenHomepageParts(draft: HomepageDraft): ReadonlySet<PartId> {
+  const hidden = new Set<PartId>();
+  const revamp = draft.revamp;
+  if (!revamp) return hidden;
+  if (!isHomepageSectionShown(revamp.raffle)) hidden.add("raffle");
+  if (!isHomepageSectionShown(revamp.match)) hidden.add("match");
+  if (!isHomepageSectionShown(revamp.prices)) hidden.add("prices");
+  if (!revamp.ticket.visible) hidden.add("ticket");
+  return hidden;
+}
 
 export const PREVIEW_PIECES: readonly PieceId[] = HOMEPAGE_PARTS.flatMap(part => part.pieces);

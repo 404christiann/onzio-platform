@@ -3,15 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { AdminDialog, AdminDialogFooter } from "@/components/admin/ui/AdminDialog";
-import { CINEMATIC_ARTWORK_SLOTS, cinematicArtwork, CINEMATIC_NAV_ITEMS } from "@/lib/cinematic-homepage-content";
+import { CINEMATIC_ARTWORK_SLOTS, cinematicArtwork, CINEMATIC_NAV_ITEMS, isHomepageSectionShown, type CinematicArtworkSlot } from "@/lib/cinematic-homepage-content";
 import type { HomepageDraft } from "@/lib/homepage-editor/model";
 import type { HomepageRecoveryResult } from "@/lib/homepage-editor/recovery";
 
+const ARTWORK_LABELS: Record<CinematicArtworkSlot, string> = {
+  raffle: "Raffle artwork", ticket: "Ticket and map artwork", trophy: "Trophy image", footerLogo: "Footer logo", headerPartner: "Header sponsor logo",
+};
+const shownRow = (shown: boolean | undefined): string => shown === undefined ? "" : shown ? "Yes" : "No";
+
 function rows(draft: HomepageDraft, includeRevamp = false): [string, string][] {
   const revampRows: [string, string][] = [
+    ["Raffle photo shown", shownRow(draft.revamp && isHomepageSectionShown(draft.revamp.raffle))],
+    ["Next home match shown", shownRow(draft.revamp && isHomepageSectionShown(draft.revamp.match))],
     ["Next home match heading", draft.revamp?.match.heading ?? ""],
     ["Ticket button", draft.revamp?.match.buttonLabel ?? ""],
-    ["Ticket and map shown", draft.revamp ? draft.revamp.ticket.visible ? "Yes" : "No" : ""],
+    ["Ticket prices shown", shownRow(draft.revamp && isHomepageSectionShown(draft.revamp.prices))],
+    ["Ticket and map shown", shownRow(draft.revamp?.ticket.visible)],
     ["Ticket prices", draft.revamp ? [draft.revamp.prices.heading, ...draft.revamp.prices.rows.map(row => [row.label, row.price, row.description, row.note].filter(Boolean).join(" · ")), draft.revamp.prices.footnote].filter(Boolean).join("\n") : ""],
     ["Championship", draft.revamp ? [draft.revamp.championship.league, draft.revamp.championship.year, draft.revamp.championship.title, draft.revamp.championship.body].filter(Boolean).join("\n") : ""],
     ["Partner heading", draft.revamp?.sponsors.heading ?? ""],
@@ -67,7 +75,7 @@ export default function HomepageRecoveryReview({ current, recovered, reason, all
     {recovered.revamp && <div className="hp-recovery-comparison">{CINEMATIC_ARTWORK_SLOTS.map(slot => {
       const before = current.revamp ? cinematicArtwork(current.revamp, slot) : null;
       const after = cinematicArtwork(recovered.revamp!, slot);
-      return <section key={slot}><h3>{slot === "raffle" ? "Raffle artwork" : slot === "ticket" ? "Ticket and map artwork" : "Trophy image"}</h3><p>{before?.assetId === after.assetId ? "Image is unchanged." : "Recovered draft uses a different image."}</p><dl>{[["Latest homepage", before], ["Recovered draft", after]].map(([label, image]) => <div key={String(label)}><dt>{String(label)}</dt><dd>{image && typeof image !== "string" && image.url ? <ResilientNativeImage src={image.url} alt={image.alt} style={{ maxHeight: 180, maxWidth: "100%", objectFit: "contain" }} /> : "No image"}</dd></div>)}</dl></section>;
+      return <section key={slot}><h3>{ARTWORK_LABELS[slot]}</h3><p>{before?.assetId === after.assetId ? "Image is unchanged." : "Recovered draft uses a different image."}</p><dl>{[["Latest homepage", before], ["Recovered draft", after]].map(([label, image]) => <div key={String(label)}><dt>{String(label)}</dt><dd>{image && typeof image !== "string" && image.url ? <ResilientNativeImage src={image.url} alt={image.alt} style={{ maxHeight: 180, maxWidth: "100%", objectFit: "contain" }} /> : "No image"}</dd></div>)}</dl></section>;
     })}</div>}
     {applyFailed && <p ref={alertEl} role="alert">We could not use the recovered changes. The draft is still stored. Close this review and reload your homepage before trying again.</p>}
   </>;

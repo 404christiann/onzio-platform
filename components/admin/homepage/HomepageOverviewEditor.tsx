@@ -26,7 +26,7 @@ import HomepagePartFields, { type HomepagePartEditor } from "./HomepagePartField
 import HomepageOverviewPreview, { type PartNumbers } from "./HomepageOverviewPreview";
 import HomepageOverviewSkeleton from "./HomepageOverviewSkeleton";
 import HomepageRecoveryReview from "./HomepageRecoveryReview";
-import { HOMEPAGE_PARTS, type PartId } from "./homepage-parts";
+import { HOMEPAGE_PARTS, hiddenHomepageParts, type PartId } from "./homepage-parts";
 import { resolveEditTarget, type EditTargetId } from "@/lib/admin-edit-targets";
 import styles from "./HomepageOverview.module.css";
 import "./homepage-editor.css";
@@ -156,9 +156,10 @@ export default function HomepageOverviewEditor() {
     replaceArtwork: editor.replaceArtwork, retryArtwork: slot => void editor.retryArtwork(slot),
     heroVideo,
   };
+  const hiddenParts = hiddenHomepageParts(state.draft);
   const sections: EditorDialogSection[] = parts.map(part => ({
     id: part.id, title: part.title,
-    summary: part.offPage ? "Not on the page" : numbers[part.id]?.length ? `Part ${numbers[part.id]!.join(" and ")}` : undefined,
+    summary: part.offPage ? "Not on the page" : hiddenParts.has(part.id) ? "Hidden on the page" : numbers[part.id]?.length ? `Part ${numbers[part.id]!.join(" and ")}` : undefined,
   }));
   const formsSet = FORM_KEYS.filter(key => state.draft.revamp?.navigation.destinations[key]).length;
   const notice = <div className={styles.notices}>
