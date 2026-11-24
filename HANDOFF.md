@@ -1,3 +1,9 @@
+## 2026-11-24 - LIFECYCLE-HEARTBEAT-FAIL: failed lifecycle runs ping `<url>/fail`
+
+- **Status:** `ready for review`, branch `claude/lifecycle-heartbeat-fail` off main `17e58214`, PR open, not merged. No migration. Record: `STATUS.md` (LIFECYCLE-HEARTBEAT-FAIL).
+- **What:** `signalLifecycleHeartbeat("failure", ...)` posts to `<LIFECYCLE_CRON_HEARTBEAT_URL>/fail`; success unchanged. Lets Healthchecks alert on a reported failure and a missed run (PLAT-D022).
+- **Before it works:** `LIFECYCLE_CRON_HEARTBEAT_URL` is not set in Production yet (Christian adds it; never in chat).
+- **Exact next step:** Christian reviews; "go" merges and deploys.
 ## 2026-11-24 - CRON-MIDDLEWARE-EXEMPT (#221): Vercel crons bypass tenant routing, rebased on #245
 
 - **Status:** `ready for review`, PR #221 (`claude/cron-middleware-exempt`) rebased onto main `17e58214`, not merged. No migration. Record: `STATUS.md` (CRON-MIDDLEWARE-EXEMPT).

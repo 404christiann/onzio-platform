@@ -1,5 +1,13 @@
 # Diverse City FC Status
 
+## 2026-11-24 - LIFECYCLE-HEARTBEAT-FAIL: a failed lifecycle run pings `<url>/fail` so Healthchecks goes red
+
+- **Agent / package:** Claude Code (Sonnet 5.5), `LIFECYCLE-HEARTBEAT-FAIL`, branch `claude/lifecycle-heartbeat-fail` off main `17e58214`. `lib/billing-lifecycle.ts` and one new unit test only; no migration, no env or Vercel change.
+- **Status:** `ready for review`, PR open, not merged, not deployed. Merging main deploys production: waits for Christian's "go".
+- **Why:** PLAT-D022 wants an alert on a reported failure as well as a missed run. A Healthchecks-style monitor treats any POST to the base ping URL as success, so `{"status":"failure"}` sent there would not alert. `signalLifecycleHeartbeat("failure", ...)` now POSTs to `<url>/fail`; success is unchanged. The body is the same either way: `{"status":"success"|"failure","detail":"..."}`.
+- **Evidence:** `lib/__tests__/lifecycle-heartbeat.test.ts` (5): success hits the base URL, failure hits `/fail` (also with a trailing slash), slug-style URL untouched for success, bad config still rejects. Red without the change (failure and trailing-slash tests), green with it. tsc clean; unit 6,439; contracts 5,358.
+- **Not changed (finding):** the heartbeat call has no timeout, and a heartbeat error on the success path lands in the route's catch, so the cron answers 500 after the lifecycle work already ran. Left for Christian's call.
+- **Exact next step:** Christian reviews and says "go" to merge; then set `LIFECYCLE_CRON_HEARTBEAT_URL` in Production.
 ## 2026-11-24 - CRON-MIDDLEWARE-EXEMPT: Vercel crons bypass tenant host routing (rebased on #245; + TELEMETRY-02 gate record)
 
 **Agent/package:** Claude Code (Opus 5.5), CRON-MIDDLEWARE-EXEMPT; rebased 2026-11-24 by Claude Code (Sonnet 5.5, POST-LAUNCH-PARALLEL lane B)

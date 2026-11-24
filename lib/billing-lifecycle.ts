@@ -152,7 +152,12 @@ export async function signalLifecycleHeartbeat(
   if (parsed.protocol !== "https:" && parsed.hostname !== "127.0.0.1") {
     failContract("LIFECYCLE_HEARTBEAT_CONFIGURATION_INVALID");
   }
-  const response = await fetch(parsed, {
+  // Healthchecks-style monitors mark a run failed only when the ping goes to `<url>/fail`.
+  const target = new URL(parsed);
+  if (status === "failure") {
+    target.pathname = `${target.pathname.replace(/\/+$/, "")}/fail`;
+  }
+  const response = await fetch(target, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ status, detail }),
