@@ -1,5 +1,63 @@
 # Diverse City FC Status
 
+## 2026-11-24 - PUBLIC-ROBOTS: live club sites are indexable on their canonical domain; everything else stays noindex
+
+**Agent/package:** Claude Code (Sonnet 5.5), POST-LAUNCH-PARALLEL lane A, PUBLIC-ROBOTS. Branch `claude/public-robots`, **built on
+PR #221's branch `claude/cron-middleware-exempt`, rebased onto main `8e1822da` after #221 merged (2026-11-24)**.
+**Status:** `ready for review`, PR open, not merged, not deployed. No migration, no data or Vercel/Supabase/Stripe change.
+Merging main deploys production: waits for Christian's "go".
+
+**D117 finding.** `DCFC-D117` (`DECISIONS.md`, Christian 2026-08-03): *"The production site retains `noindex, nofollow` through
+launch. Indexing remains a separate later approval after observation closes,"* carried by `DCFC-1003`. `DCFC-D116` sets the
+observation at 7 days; `PRODUCTION-CUTOVER-ROLLBACK.md` puts the indexing decision at launch + 7 days. `DCFC-D129`
+(2026-08-07) accepted the unconditional header on Rose City's then-live site. **Launch does not meet D117's conditions as
+written:** Rose City went live 2026-11-23, there is no `DCFC-1003` approval on record, and the observation window would run
+to 2026-11-30. This package implements the lift because the lane brief asked for it; **Christian's "go" on the PR is the
+`DCFC-1003` approval, and `DECISIONS.md` has not been edited** (next step: record it there when he says go).
+
+**Completed:**
+- `lib/robots.ts` `robotsDirective` is the one decider: `index, follow` only when `VERCEL_ENV === "production"`, the
+  club's runtime access is `live` (`isPublicSiteIndexable` in `lib/club-access.ts`, so the existing access-decider contract
+  still holds), the host is the club's **primary verified domain** (`club_domains.is_primary`; never `*.vercel.app`,
+  localhost, a secondary domain such as `www.`, or the Preview host) and the path is an indexable public page. Otherwise
+  `noindex, nofollow`: every non-production env (including unset), preview/suspended/unknown clubs and all 404s, `/admin/**`,
+  auth callbacks, `/api/**`, `/_clubs/**`, unknown paths, and these public-but-private paths: player profiles
+  `/roster/<id>` (youth club members), `/register/**`, the `/r/<id>` sponsor redirect and the logo asset.
+- `middleware.ts`: the unconditional `applyTenantRobotsPolicy` is gone. The handler body moved to `handleTenantRequest`, and
+  `middleware` applies the header once to every response it returns, so the early 404s (bad host, unknown tenant) now carry
+  `noindex` too (they carried none before). `is_primary` added to the domain select. Path list moved to
+  `lib/public-tenant-paths.ts` (re-exported from `middleware.ts`). The cron and Stripe webhook early returns are untouched,
+  so cron responses still carry no `X-Robots-Tag` (#221's test asserts this).
+- `app/robots.ts` and `app/sitemap.ts` (none existed). Middleware forwards `x-onzio-site-indexable` (client copy dropped);
+  both render that decision: `robots.txt` is `Disallow: /` unless indexable, then allows `/` and names
+  `https://<canonical host>/sitemap.xml`; the sitemap lists `/`, roster, schedule, stats, sponsors, staff, club/about (and
+  `/shop` if the store is enabled) on the canonical host only, `[]` otherwise.
+- Not in the sitemap: template-specific pages (cinematic tickets/stadium/news, Academy programs). Picking them needs a
+  template selector, which the SITE-08 ratchet forbids in `app/**`. Crawlers reach them by links. Follow-up: a per-site-module
+  sitemap list.
+
+**Decided (Christian, 2026-11-24): `grace` stays `noindex`, only `live` is indexed.** Diverse City is in grace today, so it stays
+noindex (a later change is one line in `isPublicSiteIndexable`).
+
+**Tests:** `tests/unit/robots-decider.test.ts` (env x access x host kind x path kind matrix, host and path kinds, named launch
+cases); `tests/contracts/robots-middleware.test.ts` (Rose City live on `rosecityfutbolclub.com`, Diverse City grace, preview
+club, suspended, `www.` secondary, a registered `*.vercel.app` host, unknown/invalid hosts, non-production envs, header
+forwarding and spoof drop); `robots-sitemap-routes.test.ts`; `robots-single-decider.test.ts` (fails if anything under
+`middleware.ts`, `app/**`, `lib/**` other than `lib/robots.ts` sets `X-Robots-Tag`, a `robots` metadata field or a robots
+meta tag). **Red shown:** planting `X-Robots-Tag` in `lib/club-access.ts` fails it with
+`lib/club-access.ts: X-Robots-Tag header`; the first run also caught two of my own comment/variable leftovers.
+`diverse-city-admin-public-acceptance.test.ts` now reads the path list from `lib/public-tenant-paths.ts`; the old D117
+comment in `tenant-robots.test.ts` was updated (its `.localhost`, no-`VERCEL_ENV` requests still never index).
+**Verification (2026-11-24, in the shared verify slot):** `tsc --noEmit` clean; `test:unit` 447 files, 6,803 passed;
+`test:contracts` 361 files, 5,409 passed; `test:architecture` 18 files, 432 passed, 1 skipped.
+
+**Files changed:** `middleware.ts`, `lib/club-access.ts`, `lib/robots.ts` (new), `lib/public-tenant-paths.ts` (new),
+`app/robots.ts` (new), `app/sitemap.ts` (new), 4 tests added, 2 edited, `STATUS.md`, `HANDOFF.md`.
+**Blockers/decisions:** D117/`DCFC-1003` approval to record (merging is the approval). Not browser-checked on a deployment:
+production can only be checked after the deploy (`curl -sI https://rosecityfutbolclub.com/` for `x-robots-tag: index, follow`,
+`/robots.txt`, `/sitemap.xml`; `www.` and the `vercel.app` host should still say `noindex, nofollow`).
+**Exact next step:** Christian reviews; "go" to merge and deploy; then the curl checks above.
+
 ## 2026-11-24 - LIFECYCLE-HEARTBEAT-FAIL: a failed lifecycle run pings `<url>/fail` so Healthchecks goes red
 
 - **Agent / package:** Claude Code (Sonnet 5.5), `LIFECYCLE-HEARTBEAT-FAIL`, branch `claude/lifecycle-heartbeat-fail` rebased onto main `9b677cd3` (#221 merged). `lib/billing-lifecycle.ts`, `app/api/cron/lifecycle/route.ts` and two new test files only; no migration, no env or Vercel change.
@@ -8,6 +66,7 @@
 - **Also in this PR (Christian, 2026-11-24):** the heartbeat can no longer break the run it watches. `signalLifecycleHeartbeat` has a 5s `AbortSignal.timeout`, never throws, and logs `billing.lifecycle_heartbeat_failed` with the HTTP status or an error code (never the URL). The route declares `maxDuration = 60` like the other crons, and `runBillingDriftAlert` now runs inside the try, so a crash there pings `/fail` instead of going silent (it still runs first; a throw skips that day's lifecycle run and answers 500, as an uncaught throw did before).
 - **Evidence:** `lib/__tests__/lifecycle-heartbeat.test.ts` (6) and `tests/contracts/lifecycle-heartbeat-resilience.test.ts` (7): success to the base URL, failure to `/fail` (also with a trailing slash), a heartbeat timeout or 5xx or missing URL still returns 200 with the lifecycle result, a failing failure-ping still answers 500 `BILLING_LIFECYCLE_FAILED`, a drift-alert throw sends `/fail`, `maxDuration` is 60. 9 of the 13 are red on main's code. tsc clean; unit 6,447; contracts 5,365; architecture 432 (1 skipped).
 - **Exact next step:** Christian reviews and says "go" to merge; then set `LIFECYCLE_CRON_HEARTBEAT_URL` in Production.
+
 ## 2026-11-24 - CRON-MIDDLEWARE-EXEMPT: Vercel crons bypass tenant host routing (rebased on #245; + TELEMETRY-02 gate record)
 
 **Agent/package:** Claude Code (Opus 5.5), CRON-MIDDLEWARE-EXEMPT; rebased 2026-11-24 by Claude Code (Sonnet 5.5, POST-LAUNCH-PARALLEL lane B)

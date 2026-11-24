@@ -5,45 +5,10 @@ import { isPublicSiteOpen } from "@/lib/club-access";
 import { ROSE_CITY_PREVIEW_SLUG, roseCityPreviewHost } from "@/lib/rose-city-preview";
 import { CINEMATIC_PLACEHOLDER_ROUTES } from "@/lib/cinematic-routes";
 import { parsePresentationDocument, templateKey } from "@/packages/presentation";
+import { isPublicTenantPath } from "@/lib/public-tenant-paths";
+import { SITE_INDEXABLE_HEADER, applyRobotsHeader, siteIndexable } from "@/lib/robots";
 
-const PUBLIC_TENANT_PATHS = new Set([
-  "/",
-  "/roster",
-  "/schedule",
-  "/shop",
-  "/sponsors",
-  "/staff",
-  "/stats",
-  "/club/about",
-  "/club/logo",
-  "/club-logo",
-  "/programs",
-  "/contact",
-  "/tryouts",
-]);
-
-const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";
-const PROGRAM_DETAIL_PATH = new RegExp(`^/programs/${PROGRAM_SLUG_PATTERN}$`);
-// RC2027-NEWS article addresses; the page checks the template and the article.
-const NEWS_ARTICLE_PATH = /^\/news\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const REGISTRATION_PATH =
-  /^\/register\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/confirmation)?$/;
-
-export function isPublicTenantPath(pathname: string): boolean {
-  if (PUBLIC_TENANT_PATHS.has(pathname)) return true;
-  // The destination handler checks the trusted template and returns 404 for
-  // every other template; the rewrite still resolves the verified tenant.
-  if (Object.hasOwn(CINEMATIC_PLACEHOLDER_ROUTES, pathname)) return true;
-  return (
-    /^\/roster\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
-    /^\/schedule\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
-    // TELEMETRY-02: sponsor click redirect; the handler resolves the sponsor within the verified club.
-    /^\/r\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
-    NEWS_ARTICLE_PATH.test(pathname) ||
-    PROGRAM_DETAIL_PATH.test(pathname) ||
-    REGISTRATION_PATH.test(pathname)
-  );
-}
+export { isPublicTenantPath };
 
 // Static files in public/ that the matcher below does not already skip
 // (it only skips images). Never under /api or /admin.
@@ -81,6 +46,8 @@ type ResolvedTenant = {
   slug: string;
   lifecycle: string;
   publicAccess: string;
+  /** The request host is this club's primary verified domain. */
+  isPrimaryDomain: boolean;
 };
 
 function notFound(): NextResponse {
@@ -93,21 +60,6 @@ function notFound(): NextResponse {
 function copyCookies(source: NextResponse, target: NextResponse): NextResponse {
   source.cookies.getAll().forEach((cookie) => target.cookies.set(cookie));
   return target;
-}
-
-/**
- * `DCFC-D117`: the production site retains `noindex, nofollow` **through
- * launch**. Indexing is a separate later approval carried by `DCFC-1003`, after
- * observation closes — so this is deliberately unconditional and must not be
- * keyed to `public_access`. Going live at `DCFC-903` must not make the site
- * indexable as a side effect.
- *
- * When `DCFC-1003` grants indexing, add an explicit per-club opt-in that
- * defaults to blocked, rather than reintroducing a `public_access` branch here.
- */
-function applyTenantRobotsPolicy(response: NextResponse): NextResponse {
-  response.headers.set("X-Robots-Tag", "noindex, nofollow");
-  return response;
 }
 
 export async function middleware(request: NextRequest) {
@@ -127,6 +79,27 @@ export async function middleware(request: NextRequest) {
     headers.delete("x-onzio-user-id");
     return NextResponse.next({ request: { headers } });
   }
+  // One decider for indexing (lib/robots.ts): every response below, including each
+  // 404 and redirect, gets its robots header from the state the handler resolves.
+  const robotsState: RobotsState = { publicAccess: undefined, host: null, isPrimaryDomain: false };
+  const response = await handleTenantRequest(request, robotsState);
+  return applyRobotsHeader(response, {
+    vercelEnv: process.env.VERCEL_ENV,
+    host: robotsState.host,
+    path: request.nextUrl.pathname,
+    publicAccess: robotsState.publicAccess,
+    isPrimaryDomain: robotsState.isPrimaryDomain,
+  });
+}
+
+/** What the handler learned about the request, for the robots decider. */
+type RobotsState = {
+  publicAccess: unknown;
+  host: string | null;
+  isPrimaryDomain: boolean;
+};
+
+async function handleTenantRequest(request: NextRequest, robotsState: RobotsState): Promise<NextResponse> {
   const isAdminRequest =
     request.nextUrl.pathname === "/admin" ||
     request.nextUrl.pathname.startsWith("/admin/");
@@ -159,6 +132,7 @@ export async function middleware(request: NextRequest) {
   } catch {
     return notFound();
   }
+  robotsState.host = hostname;
 
   // RC-PREVIEW: on the declared Preview host only, Rose City's public pages are
   // readable despite the hold. Admin, API and every non-GET/HEAD stay closed.
@@ -172,7 +146,7 @@ export async function middleware(request: NextRequest) {
         STATIC_PUBLIC_FILE.test(request.nextUrl.pathname))
     )
   ) {
-    return applyTenantRobotsPolicy(notFound());
+    return notFound();
   }
 
   const onzio = supabase.schema("onzio");
@@ -200,13 +174,14 @@ export async function middleware(request: NextRequest) {
           slug: data.slug,
           lifecycle: data.lifecycle,
           publicAccess: data.public_access,
+          isPrimaryDomain: false,
         };
       }
     } else {
       const { data: domain } = await onzio
         .from("club_domains")
         .select(
-          "club_id, clubs!inner(id, slug, lifecycle, public_access)",
+          "club_id, is_primary, clubs!inner(id, slug, lifecycle, public_access)",
         )
         .eq("hostname", hostname)
         .eq("environment", process.env.ONZIO_ENVIRONMENT!)
@@ -238,6 +213,9 @@ export async function middleware(request: NextRequest) {
           slug: club.slug,
           lifecycle: club.lifecycle,
           publicAccess: club.public_access,
+          // Only the domain-table lookup can prove the host is the canonical one;
+          // the admin/billing RPC fallback never does.
+          isPrimaryDomain: domain?.is_primary === true,
         };
       }
     }
@@ -269,12 +247,14 @@ export async function middleware(request: NextRequest) {
   if (runtimeAccessError || typeof runtimeAccess !== "string") {
     return notFound();
   }
+  robotsState.publicAccess = runtimeAccess;
+  robotsState.isPrimaryDomain = tenant.isPrimaryDomain;
   if (
     runtimeAccess === "suspended" &&
     !isAdminRequest &&
     !isBillingRequest
   ) {
-    return applyTenantRobotsPolicy(notFound());
+    return notFound();
   }
   // PLAT-D024: grace keeps full admin access (content editing stays open —
   // the DB's `can_mutate_content` allows `live` and `grace`; AdminShell shows
@@ -293,9 +273,7 @@ export async function middleware(request: NextRequest) {
     target.hostname = hostname;
     target.pathname = "/admin/payments";
     target.search = "";
-    return applyTenantRobotsPolicy(
-      NextResponse.redirect(target, 303),
-    );
+    return NextResponse.redirect(target, 303);
   }
 
   if (
@@ -303,16 +281,29 @@ export async function middleware(request: NextRequest) {
     !isRoseCityPreviewRequest &&
     isHeldPublicSiteRequest(request.nextUrl.pathname, request.method, tenant.slug)
   ) {
-    return applyTenantRobotsPolicy(notFound());
+    return notFound();
   }
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete("x-onzio-club-id");
   requestHeaders.delete("x-onzio-club-slug");
   requestHeaders.delete("x-onzio-user-id");
+  requestHeaders.delete(SITE_INDEXABLE_HEADER);
   requestHeaders.set("x-onzio-club-id", tenant.id);
   requestHeaders.set("x-onzio-club-slug", tenant.slug);
   if (user) requestHeaders.set("x-onzio-user-id", user.id);
+  // For app/robots.ts and app/sitemap.ts, which read this instead of deciding again.
+  requestHeaders.set(
+    SITE_INDEXABLE_HEADER,
+    siteIndexable({
+      vercelEnv: process.env.VERCEL_ENV,
+      host: hostname,
+      publicAccess: runtimeAccess,
+      isPrimaryDomain: tenant.isPrimaryDomain,
+    })
+      ? "1"
+      : "0",
+  );
 
   if (Object.hasOwn(CINEMATIC_PLACEHOLDER_ROUTES, request.nextUrl.pathname)) {
     // Query without member cookies: public RLS exposes only the published
@@ -326,13 +317,13 @@ export async function middleware(request: NextRequest) {
     const presentationClient = publicClient.schema("onzio");
     const { data: published, error } = await presentationClient.from("presentation_documents")
       .select("configuration").eq("club_id", tenant.id).maybeSingle();
-    if (error || !published) return applyTenantRobotsPolicy(notFound());
+    if (error || !published) return notFound();
     try {
       if (templateKey(parsePresentationDocument(published.configuration, { surface: "production" }).template) !== "cinematic@2") {
-        return applyTenantRobotsPolicy(notFound());
+        return notFound();
       }
     } catch {
-      return applyTenantRobotsPolicy(notFound());
+      return notFound();
     }
   }
 
@@ -349,14 +340,14 @@ export async function middleware(request: NextRequest) {
     });
     rewritten.headers.set("Vary", "Host, RSC, Next-Router-State-Tree");
     rewritten.headers.set("x-onzio-cache-tenant", tenant.id);
-    return applyTenantRobotsPolicy(copyCookies(sessionResponse, rewritten));
+    return copyCookies(sessionResponse, rewritten);
   }
 
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
   response.headers.set("Vary", "Host");
-  return applyTenantRobotsPolicy(copyCookies(sessionResponse, response));
+  return copyCookies(sessionResponse, response);
 }
 
 export const config = {
