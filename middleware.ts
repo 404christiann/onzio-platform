@@ -61,6 +61,11 @@ function isHeldPublicSiteRequest(pathname: string, method: string, slug: string)
     (pathname === "/api/register" && method === "POST");
 }
 
+/** Vercel cron routes (vercel.json `crons`): bearer-authenticated, not tenant-scoped. */
+export function isCronPath(pathname: string): boolean {
+  return /^\/api\/cron\/[a-z0-9-]+$/.test(pathname);
+}
+
 /** Protected endpoints that must resolve their tenant on fallback deployment hosts. */
 export function requiresTenantFallback(pathname: string): boolean {
   return pathname === "/admin/payments" ||
@@ -111,6 +116,16 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === "/api/stripe/connect-webhook"
   ) {
     return NextResponse.next({ request });
+  }
+  if (isCronPath(request.nextUrl.pathname)) {
+    // Vercel invokes crons on the deployment URL, which is no club's domain, so tenant
+    // resolution would 404 them. Each cron route checks CRON_SECRET itself and is not
+    // tenant-scoped; client copies of the tenant headers are dropped so none can reach it.
+    const headers = new Headers(request.headers);
+    headers.delete("x-onzio-club-id");
+    headers.delete("x-onzio-club-slug");
+    headers.delete("x-onzio-user-id");
+    return NextResponse.next({ request: { headers } });
   }
   const isAdminRequest =
     request.nextUrl.pathname === "/admin" ||

@@ -1,5 +1,83 @@
 # Diverse City FC Status
 
+## 2026-11-24 - CRON-MIDDLEWARE-EXEMPT: Vercel crons bypass tenant host routing (rebased on #245; + TELEMETRY-02 gate record)
+
+**Agent/package:** Claude Code (Opus 5.5), CRON-MIDDLEWARE-EXEMPT; rebased 2026-11-24 by Claude Code (Sonnet 5.5, POST-LAUNCH-PARALLEL lane B)
+onto main `17e58214`. Branch `claude/cron-middleware-exempt`. **Status:** `ready for review`, PR #221 open, not merged, not
+deployed. No migration. Merging main deploys production: waits for Christian's "go".
+
+**2026-11-24 rebase:** #221 conflicted with #245 (PAID-LAUNCH-AUTOMATION) in `middleware.ts`, the contract test and this
+file. Main's middleware behaviour is kept unchanged (`publicSiteState`/`isPublicSiteOpen` in `lib/club-access.ts` as the
+only visibility decider, 404 `no-store` and `noindex, nofollow` for closed tenants, the suspended-admin redirect, the Rose
+City preview-host bypass). The only change to `middleware.ts` against main is the `isCronPath` helper and its early
+return, placed straight after the two Stripe webhook exemptions and before any tenant, Supabase or visibility logic. New
+test: `reaches every vercel.json cron route untouched on the production host, a custom tenant domain and a *.vercel.app
+host`. It reads `vercel.json`, so a cron added there is covered with no edit, and for each of the 7 paths x 3 hosts
+(`www.diversecityfc.com`, `www.alphafc.example`, `onzio-platform-9p3oxcj5d-team.vercel.app`, `Host` header set) with
+spoofed `x-onzio-*` headers it asserts 200, `x-middleware-next: 1`, no rewrite, no `Location`, no `X-Robots-Tag`, no tenant
+header forwarded and the bearer kept. **Red without the exemption:** with the early return disabled and dummy Supabase
+env, the test fails with `/api/cron/media-cleanup on the production tenant host (www.diversecityfc.com): expected 404 to
+be 200` (the original deployment-URL test fails the same way). Green with it: `tenant-routing` 34/34.
+**Verification (2026-11-24, in the shared verify slot):** `tsc --noEmit` clean; `test:unit` 443 files, 6,437 passed;
+`test:contracts` 358 files, 5,361 passed; `test:architecture` 18 files, 432 passed, 1 skipped. The unit and architecture
+runs print a harmless `fatal: Not a valid object name origin/main` from a git-diff helper in this worktree.
+**Next step (unchanged):** Christian says "go" to merge and deploy; the cron log check (below) follows the deploy.
+
+**TELEMETRY-02 production record (on Christian's "go run the migration gate for 216"):**
+- Linked with `npx supabase@2.122.0 link` in the worktree. The link files were made fresh, not copied, and deleted
+  afterwards.
+- `migration list --linked`: 96 matched, only `20261121230000` local-only, so it was not already in production.
+- Backup with `db dump --linked` (schema, 104 tables) and `--data-only` (93 table sections):
+  `~/Documents/onzio-prod-backups.nosync/onzio-prod-20261121-1740-pre-telemetry02-{schema,data}.sql`, 0600.
+- Dry run listed only `20261121230000_page_telemetry_rollups.sql`; its sha256 `f08fb9f1…1435` matched `38cc3c3`.
+  `db push --linked --skip-vault` applied it.
+- Read-only checks: ledger 97, max `20261121230000`, local and remote match 97/97. The type, sponsor and engaged checks
+  are in place. The 3 rollup tables have RLS and policies, with no insert grant. `rollup_page_telemetry` (both) is
+  service_role only, and anon can still execute `record_page_event`. There are 5 telemetry definers, and the purge
+  starts with the rollup tables. The bucket and drop-reason checks are widened. Production has 0 page events.
+- Grokbot merged #216 as `ee21290d`. The production deploy `onzio-platform-9p3oxcj5d` (17:51 PT) is Ready, and Vercel
+  lists `/api/cron/telemetry-rollup` as Active at `35 10 * * *`.
+
+**Why this package:** the manual rollup run failed. Vercel's dashboard "Run" called the deployment URL
+`onzio-platform-9p3oxcj5d-404christian.vercel.app/api/cron/telemetry-rollup` and got 404, because the middleware found
+no tenant for that host. This is the gap PLAT-102 flagged on 2026-08-05, and it applies to every cron, so the daily
+crons have likely been 404ing too. That can't be confirmed from history: Hobby keeps request logs for 1 hour. A manual
+`curl` through `www.diversecityfc.com` reached the route but got 401: the `CRON_SECRET` from `vercel env pull` (never
+printed, temp file deleted at once) does not match the deployed value. Unresolved; Vercel's Run sends the right one.
+
+**Completed:** `isCronPath` (`^/api/cron/[a-z0-9-]+$`) in `middleware.ts`. Cron paths skip tenant resolution like the
+two Stripe webhooks, and client-supplied `x-onzio-club-id/slug/user-id` headers are dropped. All 7 cron routes check
+`CRON_SECRET` themselves and fail closed (checked). New contract test in `tests/contracts/tenant-routing.test.ts`
+covers:
+- every `vercel.json` cron path passes on a deployment-URL host with 200 and next, with no tenant headers forwarded;
+- near-miss paths are not exempt.
+Removing the bypass, or the header stripping, each makes the test fail.
+
+**Review Low fixed (onzio-bot on #221):** a new contract test walks `app/api/cron/` itself, not `vercel.json`. It
+requires that:
+- every route directory is scheduled in `vercel.json`, every `vercel.json` cron has a route, and none has nested
+  routes;
+- each route exports only `GET`;
+- each route returns 401 with no `CRON_SECRET` (bearer empty or `undefined`), with no bearer, and with a wrong bearer.
+
+Dropping a route's `!cronSecret` guard (it answers 500), adding an unscheduled route, or adding a `POST` export each
+fails it.
+
+**Before merging #221:** `LIFECYCLE_SUSPENSION_ENABLED`, `LIFECYCLE_RECONCILIATION_ENABLED` and
+`LIFECYCLE_CRON_HEARTBEAT_URL` are not set in Vercel Production (`vercel env ls production`, names only). With them
+missing, the lifecycle cron fails closed: `requiredFlag` throws `LIFECYCLE_CONFIGURATION_INVALID` before the database
+call, so it answers 500 and suspends nothing. Christian decides the values. Setting suspension to `true` would let it
+suspend clubs.
+
+**Files:** `middleware.ts`, `tests/contracts/tenant-routing.test.ts`, this file.
+
+**Verification:** `tenant-routing` contract 33/33; `tsc --noEmit` and `npm run lint` clean; non-DB vitest 395 files,
+5,260 passed, 1 skipped; `test:architecture` 432 passed, 1 skipped; `npm run build` ok (with the local Supabase env).
+
+**Next step:** grokbot review and merge. After the deploy, use Vercel's Run for `/api/cron/telemetry-rollup` and
+expect 200 `{clubs: 0, days: 3, rowsWritten: 0}`. Then check the logs right after the next daily runs (10:00-11:00 UTC)
+for 200s on every cron.
+
 ## 2026-11-23 - UI-FIX-MATCH-SUMMARY-SCORERS: the scorer line sits below the whole home team name
 
 - **Agent / package:** Claude Code (Sonnet 5.5), `UI-FIX-MATCH-SUMMARY-SCORERS`, branch `claude/match-summary-scorers` from main `0b16c5f8`. Public Rose City score header only (the same `CinematicLatestResult` strip also shows on the homepage); no data, query, gate, `app/api/**`, `supabase/**`, dependency or migration change.
