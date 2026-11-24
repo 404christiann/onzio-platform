@@ -20,7 +20,8 @@
   - Lockfile regenerated with npm 11.21.3 from main's lockfile: additions only, the 40 `libc` entries kept.
   - Kept the name `lib/admin-analytics.ts`: Christian's brief names it.
   - Verification: `tsc` clean; `npm run test:unit` 457 files / 6940 tests passed; `next build` passed (local placeholder Supabase env); PostHog chunks on 28 pages, none outside `/admin/(protected)`.
-- **Exact next step:** onzio-bot re-review; then Christian sets `NEXT_PUBLIC_POSTHOG_KEY` in Vercel Production and decides the merge.
+- **Re-review (onzio-bot @ `6494854`): clean.** Rebased onto `origin/main` `fe5c8cb6` (#257); only the HANDOFF/STATUS top entries conflicted, both kept. After the rebase: `tsc` clean, `npm run test:unit` 457 files / 6940 tests passed, `next build` passed; lockfile diff vs main is additions only.
+- **Exact next step:** Christian's "go" to merge; separately, he sets `NEXT_PUBLIC_POSTHOG_KEY` in Vercel Production (analytics stays off until then).
 
 ## 2026-11-24 - UPLOAD-FIX: large admin graphics are downscaled; finalize errors reach the field
 
