@@ -118,6 +118,128 @@ describe("tenant route resolution contract", () => {
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
 
+  it("lets every Vercel cron route bypass tenant host routing on the deployment URL, without client tenant headers", async () => {
+    const middleware = await loadContract<Middleware>("@/middleware", "middleware");
+    const isCronPath = await loadContract<(pathname: string) => boolean>("@/middleware", "isCronPath");
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const { crons } = JSON.parse(readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")) as {
+      crons: Array<{ path: string }>;
+    };
+    expect(crons.length).toBeGreaterThan(0);
+    for (const { path } of crons) {
+      expect(isCronPath(path), path).toBe(true);
+      // The host Vercel uses for cron invocations: a deployment URL, not a club domain.
+      const response = await middleware(
+        new NextRequest(`https://onzio-platform-9p3oxcj5d-team.vercel.app${path}`, {
+          headers: { "x-onzio-club-id": clubs.alpha.id, "x-onzio-user-id": USER_IDS.ownerAal2 },
+        }),
+      );
+      expect(response.status, path).toBe(200);
+      expect(response.headers.get("x-middleware-next"), path).toBe("1");
+      const forwarded = response.headers.get("x-middleware-override-headers") ?? "";
+      expect(response.headers.get("x-middleware-request-x-onzio-club-id"), path).toBeNull();
+      expect(response.headers.get("x-middleware-request-x-onzio-user-id"), path).toBeNull();
+      expect(forwarded, path).not.toContain("x-onzio-");
+    }
+    for (const pathname of ["/api/cron", "/api/cron/", "/api/cronx/lifecycle", "/api/cron/a/b", "/api/cron/Lifecycle", "/admin/api/cron/lifecycle"]) {
+      expect(isCronPath(pathname), pathname).toBe(false);
+    }
+  });
+
+  // Driven by vercel.json, so a cron added there is covered with no edit here.
+  const CRON_HOSTS = [
+    ["the production tenant host", "www.diversecityfc.com"],
+    ["a custom tenant domain", "www.alphafc.example"],
+    ["a *.vercel.app deployment host", "onzio-platform-9p3oxcj5d-team.vercel.app"],
+  ] as const;
+
+  it("reaches every vercel.json cron route untouched on the production host, a custom tenant domain and a *.vercel.app host", async () => {
+    const middleware = await loadContract<Middleware>("@/middleware", "middleware");
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const { crons } = JSON.parse(readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")) as {
+      crons: Array<{ path: string }>;
+    };
+    expect(crons.length).toBeGreaterThan(0);
+    for (const { path } of crons) {
+      for (const [label, host] of CRON_HOSTS) {
+        const where = `${path} on ${label} (${host})`;
+        // Vercel's cron call is a bearer-authenticated GET; the spoofed tenant headers must not survive.
+        const response = await middleware(
+          new NextRequest(`https://${host}${path}`, {
+            method: "GET",
+            headers: {
+              host,
+              authorization: "Bearer cron-contract-test",
+              "x-onzio-club-id": clubs.alpha.id,
+              "x-onzio-club-slug": "spoofed",
+              "x-onzio-user-id": USER_IDS.ownerAal2,
+            },
+          }),
+        );
+        // Passed straight on: not 404'd, redirected or rewritten to a tenant's internal path.
+        expect(response.status, where).toBe(200);
+        expect(response.headers.get("x-middleware-next"), where).toBe("1");
+        expect(response.headers.get("x-middleware-rewrite"), where).toBeNull();
+        expect(response.headers.get("location"), where).toBeNull();
+        expect(response.headers.get("x-robots-tag"), where).toBeNull();
+        // Not resolved as a tenant: none of the tenant headers reach the route.
+        const forwarded = response.headers.get("x-middleware-override-headers") ?? "";
+        expect(forwarded, where).not.toContain("x-onzio-");
+        for (const header of ["club-id", "club-slug", "user-id"]) {
+          expect(response.headers.get(`x-middleware-request-x-onzio-${header}`), `${where}: ${header}`).toBeNull();
+        }
+        // The route keeps its own bearer: middleware does not strip or replace it.
+        expect(forwarded, where).toContain("authorization");
+      }
+    }
+  });
+
+  // Middleware lets ANY /api/cron/<name> through, so every route there must be a scheduled cron that
+  // authenticates itself. This walks the directory, not vercel.json, so a new route is caught even if
+  // nobody schedules it.
+  it("keeps every route under app/api/cron scheduled in vercel.json, GET-only and closed without CRON_SECRET", async () => {
+    const { readdirSync, readFileSync, existsSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const root = resolve(process.cwd(), "app/api/cron");
+    const names = readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+    const { crons } = JSON.parse(readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")) as {
+      crons: Array<{ path: string }>;
+    };
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.map((name) => `/api/cron/${name}`)).toEqual(crons.map((cron) => cron.path).sort());
+
+    const original = process.env.CRON_SECRET;
+    try {
+      for (const name of names) {
+        const file = resolve(root, name, "route.ts");
+        expect(existsSync(file), name).toBe(true);
+        // Nothing nested below a cron route: middleware's exemption covers exactly one segment.
+        expect(readdirSync(resolve(root, name), { withFileTypes: true }).filter((entry) => entry.isDirectory()), name).toEqual([]);
+        const route = (await import(file)) as Record<string, unknown>;
+        const methods = Object.keys(route).filter((key) => /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(key));
+        expect(methods, name).toEqual(["GET"]);
+        const get = route.GET as (request: Request) => Promise<Response>;
+        const url = `https://onzio-platform-9p3oxcj5d-team.vercel.app/api/cron/${name}`;
+
+        delete process.env.CRON_SECRET;
+        for (const authorization of ["Bearer ", "Bearer undefined"]) {
+          expect((await get(new Request(url, { headers: { authorization } }))).status, `${name} without CRON_SECRET`).toBe(401);
+        }
+        process.env.CRON_SECRET = "cron-inventory-test-secret";
+        expect((await get(new Request(url))).status, `${name} without a bearer`).toBe(401);
+        expect((await get(new Request(url, { headers: { authorization: "Bearer wrong" } }))).status, `${name} with a wrong bearer`).toBe(401);
+      }
+    } finally {
+      if (original === undefined) delete process.env.CRON_SECRET;
+      else process.env.CRON_SECRET = original;
+    }
+  });
+
   it("resolves a verified primary domain", async () => {
     const resolveTenantRoute = await loadContract<ResolveTenantRoute>(
       "@/lib/tenant-routing",

@@ -4,7 +4,30 @@
 - **What:** a swap or revert moves the poster with the video in the same database function and one UPDATE; the poster is the still Bunny makes (1.0 s in), run through the normal image pipeline under a deterministic asset id. A poster problem never holds a video back: the old poster stays and the daily job retries up to five times. Deleting a video retires its poster through the reference-checked retire; hand-set posters are never auto-deleted. The admin preview refreshes the poster after a swap or revert without a reload. Swap, revert, ready and attach now take the homepage advisory lock before the row lock (the order `save_homepage` uses).
 - **Before merge (production gate, CLAUDE.md):** backup, `migration list --linked` (only this file Local-only), `db push --linked --dry-run`, `db push --linked`, read-only check, then merge. Code needs the migration: the swap calls pass `p_poster_asset_id`. Rollback: roll the app back first, then `docs/phase-11/diverse-city/RC-HERO-POSTER-02-ROLLBACK.sql`.
 - **After deploy:** Rose City backfill rehearsal then commit (`scripts/operator-sql/rose-city-hero-poster-backfill.*.sql`), one cron run, then one real upload and a revert pair, each on its own "go". No new env is required: the CDN Referer defaults from `VERCEL_PROJECT_PRODUCTION_URL`; set `BUNNY_STREAM_CDN_REFERER` only if the first cron run reports a refused still.
-- **Exact next step:** onzio-bot review, then Christian's "go" per gate step.
+- **Exact next step:** gate steps 1-5 done 2026-11-24 (backup, ledger, dry run, `db push --linked`, read-only check; see STATUS). Next: Christian's "go" to merge (step 6), which deploys (step 7).
+
+## 2026-11-24 - PUBLIC-ROBOTS: live club sites are indexable on their canonical domain
+
+- **Status:** `ready for review`, PR open on `claude/public-robots`, rebased onto main `8e1822da` after #221 merged. Not merged, no migration. Record: `STATUS.md` (PUBLIC-ROBOTS).
+- **What:** `lib/robots.ts` is the one robots decider: `index, follow` only for `VERCEL_ENV=production` + `live` + the club's primary domain + a public page; everything else, every 404 and `grace` stay `noindex, nofollow`. Middleware applies it once to every response; `app/robots.ts` and `app/sitemap.ts` follow the same decision. A contract test fails if any other file sets a robots header or tag.
+- **D117:** `DCFC-D117` kept noindex "through launch" until a separate `DCFC-1003` approval after the 7-day observation; Rose City launched 2026-11-23, so by the letter the conditions are not met. Christian's "go" is that approval; `DECISIONS.md` is not edited yet.
+- **Decided (Christian, 2026-11-24):** grace stays noindex, only live is indexed. Open: template-specific pages are not in the sitemap (template-selector ratchet).
+- **Evidence:** tsc clean; unit 6803, contracts 5409, architecture 432.
+- **Exact next step:** Christian reviews; "go", then curl `x-robots-tag` on `rosecityfutbolclub.com`, `www.` and the vercel.app host.
+
+## 2026-11-24 - LIFECYCLE-HEARTBEAT-FAIL: failed lifecycle runs ping `<url>/fail`
+
+- **Status:** `ready for review`, branch `claude/lifecycle-heartbeat-fail` rebased onto main `9b677cd3`, PR open, not merged. No migration. Record: `STATUS.md` (LIFECYCLE-HEARTBEAT-FAIL).
+- **What:** `signalLifecycleHeartbeat("failure", ...)` posts to `<LIFECYCLE_CRON_HEARTBEAT_URL>/fail`; success unchanged. Lets Healthchecks alert on a reported failure and a missed run (PLAT-D022). The heartbeat also has a 5s timeout and never throws, so a slow monitor can't turn a good run into a 500; `maxDuration = 60`; a drift-alert crash now pings `/fail`.
+- **Before it works:** `LIFECYCLE_CRON_HEARTBEAT_URL` is not set in Production yet (Christian adds it; never in chat).
+- **Exact next step:** Christian reviews; "go" merges and deploys.
+
+## 2026-11-24 - CRON-MIDDLEWARE-EXEMPT (#221): Vercel crons bypass tenant routing, rebased on #245
+
+- **Status:** `ready for review`, PR #221 (`claude/cron-middleware-exempt`) rebased onto main `17e58214`, not merged. No migration. Record: `STATUS.md` (CRON-MIDDLEWARE-EXEMPT).
+- **What:** `isCronPath` + one early return in `middleware.ts`, after the Stripe webhook exemptions and before any tenant logic; main's #245 visibility behaviour is untouched. Without it production crons hit `UNKNOWN_TENANT` 404s on the deployment URL.
+- **Evidence:** new contract test iterates every `vercel.json` cron on the production host, a custom tenant domain and a `*.vercel.app` host (200, next, no rewrite/404/tenant headers); red without the exemption (404 on `/api/cron/media-cleanup`), green with it. tsc clean; unit 6437, contracts 5361, architecture 432.
+- **Exact next step:** Christian reviews; "go" merges and deploys. Then check Vercel runtime logs within an hour of each cron's UTC schedule.
 
 ## 2026-11-23 - UI-FIX-MATCH-SUMMARY-SCORERS: scorer line no longer drawn over a two-line home team name
 

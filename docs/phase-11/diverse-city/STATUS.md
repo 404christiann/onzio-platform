@@ -1,6 +1,6 @@
 # Diverse City FC Status
 
-## 2026-11-24 - RC-HERO-POSTER-02 to -06: the hero poster follows the hero video (migration local only)
+## 2026-11-24 - RC-HERO-POSTER-02 to -06: the hero poster follows the hero video (migration applied to production)
 
 - **Agent / package:** Claude Code (Sonnet 5.5), `RC-HERO-POSTER-02`, `-03`, `-04`, `-05` and `-06` (the plan's steps 3-7) in one branch, `claude/lane-c-hero-poster-122c76`, from main `17e58214`. Steps 00 and 01 are already on main (#225); #219 is merged, so 06 is unblocked.
 - **Status:** `ready for review`, PR open, not merged, not deployed. **The migration is not applied to any hosted database.** Merging main deploys to production, and the code needs the migration first: the production gate (in the PR body) runs before merge, each step on Christian's "go".
@@ -13,9 +13,154 @@
   - **06 editor preview:** new `presentation-refreshed` reducer action and `refreshPresentation` in the editor; the hero video controller calls it after a swap or revert (even on a revision conflict) and when the page opens right after a swap, so part 2 of the preview shows the new poster with no reload. Never a pending edit; the next save is unchanged.
 - **Files changed:** `supabase/migrations/20261124120000_hero_video_poster.sql`, `docs/phase-11/diverse-city/RC-HERO-POSTER-02-ROLLBACK.sql`, `lib/{bunny-stream,bunny-video,bunny-thumbnail,hero-video-lifecycle,hero-video-poster,hero-video-poster-id,hero-video-swap,media-processing,database.generated}.ts`, `lib/homepage-editor/{model,hero-video-client,hero-video-upload,useHomepageEditor}.ts`, `components/admin/homepage/{HomepageOverviewEditor.tsx,useHeroVideoController.ts}`, `app/api/webhooks/bunny-stream/route.ts`, `next.config.mjs`, `scripts/operator-sql/rose-city-hero-poster-backfill.*.sql`, tests (new: `hero-video-poster`, `hero-video-poster-step`, `hero-video-poster-migration`, `media-system-publish`, `rose-city-hero-poster-operator-sql` contracts; `hero-video-poster` and `rose-city-hero-poster-backfill` database; edited: bunny-stream, hero-video-swap, hero-video-webhook, hero-video-upload, three migration-order lists, the completion fixture), this file, `HANDOFF.md`.
 - **Verification:** `npx tsc --noEmit` clean; eslint on changed files clean; `npm run test:unit` 448 files / 6527 tests pass; `npm run test:contracts` 363 files / 5451 pass; `npm run test:architecture` 18 files / 432 pass, 1 skipped; `npm run db:types:check` matches. `npm run test:db` on a clean `supabase@2.109.1 db reset --local` inside one `scripts/with-local-db-lock.sh` hold: 89 files / 1692 tests pass on the second run. The first run had 1 failure, `contact-content-policy` "rejects page object type false" (`canceling statement due to statement timeout` in `load_contact_editor`, a file this change does not touch); that file passes alone (124/124) and the whole suite passed on a second clean reset, so it is a load-dependent timeout, not caused by this branch. New database tests: `hero-video-poster` 43 (swap, revert, ready, start, attach, list, references, guards, grants, the old 10-argument call through PostgREST) and `rose-city-hero-poster-backfill` 10; the existing `hero-video-swap` file (75) passes unchanged against the new functions. Break-checks (each guard broken, a test went red, guard restored): the poster `processing` answer, a static import of the media pipeline, the AccessKey on the CDN request. The backfill DB test caught a real bug (`text[] || 'literal'`), fixed with `array_append`. Not run: Playwright, `next build`, any hosted or Bunny call.
+- **Production gate (2026-11-24, each on Christian's "go"):** step 1 schema backup `~/Documents/onzio-prod-backups.nosync/prod-pre-hero-poster-20261124-1202.sql`; step 2 `migration list --linked` showed only `20261124120000` Local-only, nothing Remote-only; step 3 dry run listed only that file; step 4 `db push --linked` applied it; step 5 read-only check on production: previous-poster column 1, both new functions 2, `poster_due_at` and `poster_attempts` present, FK and guard trigger present, no anon or authenticated execute, service_role execute on both, ledger 100 matched. Steps 6 (merge) and 7 (deploy) wait for "go". Main moved (#221, #252, #253), so main was merged into the branch; only the two doc files conflicted (both entries kept).
 - **Review fix (onzio-coder, Medium):** `presentation-refreshed` replaced the whole `presentation` in baseline and draft, so an unsaved header sponsor logo edit was lost (and no longer dirty) when a video went live. It now replaces only `heroPoster`, `heroVideoGuid` and `heroVideoLibraryId`; new reducer test in `tests/contracts/hero-video-upload.test.ts` (red on the old reducer, green now); `tsc` clean, `hero-video-upload` 143/143, 20 homepage-editor contract files 435/435.
 - **Blockers / decisions:** none for review. Open for the gate: confirm at step 2 that production's remote ledger ends at `20261123120000_sam_visibility_controls` (it was applied 2026-11-24 per the SAM entry), so this is the only Local-only file. If another migration lands on main first, retimestamp this one after it.
 - **Exact next step:** onzio-bot reviews the PR. Then the production gate, one "go" each: backup, `migration list --linked`, `db push --linked --dry-run`, `db push --linked`, read-only check, merge. After deploy: backfill rehearsal, backfill commit, one cron run, one real Rose City upload (spends one of ten daily replaces), a revert and revert back (each its own "go").
+## 2026-11-24 - PUBLIC-ROBOTS: live club sites are indexable on their canonical domain; everything else stays noindex
+
+**Agent/package:** Claude Code (Sonnet 5.5), POST-LAUNCH-PARALLEL lane A, PUBLIC-ROBOTS. Branch `claude/public-robots`, **built on
+PR #221's branch `claude/cron-middleware-exempt`, rebased onto main `8e1822da` after #221 merged (2026-11-24)**.
+**Status:** `ready for review`, PR open, not merged, not deployed. No migration, no data or Vercel/Supabase/Stripe change.
+Merging main deploys production: waits for Christian's "go".
+
+**D117 finding.** `DCFC-D117` (`DECISIONS.md`, Christian 2026-08-03): *"The production site retains `noindex, nofollow` through
+launch. Indexing remains a separate later approval after observation closes,"* carried by `DCFC-1003`. `DCFC-D116` sets the
+observation at 7 days; `PRODUCTION-CUTOVER-ROLLBACK.md` puts the indexing decision at launch + 7 days. `DCFC-D129`
+(2026-08-07) accepted the unconditional header on Rose City's then-live site. **Launch does not meet D117's conditions as
+written:** Rose City went live 2026-11-23, there is no `DCFC-1003` approval on record, and the observation window would run
+to 2026-11-30. This package implements the lift because the lane brief asked for it; **Christian's "go" on the PR is the
+`DCFC-1003` approval, and `DECISIONS.md` has not been edited** (next step: record it there when he says go).
+
+**Completed:**
+- `lib/robots.ts` `robotsDirective` is the one decider: `index, follow` only when `VERCEL_ENV === "production"`, the
+  club's runtime access is `live` (`isPublicSiteIndexable` in `lib/club-access.ts`, so the existing access-decider contract
+  still holds), the host is the club's **primary verified domain** (`club_domains.is_primary`; never `*.vercel.app`,
+  localhost, a secondary domain such as `www.`, or the Preview host) and the path is an indexable public page. Otherwise
+  `noindex, nofollow`: every non-production env (including unset), preview/suspended/unknown clubs and all 404s, `/admin/**`,
+  auth callbacks, `/api/**`, `/_clubs/**`, unknown paths, and these public-but-private paths: player profiles
+  `/roster/<id>` (youth club members), `/register/**`, the `/r/<id>` sponsor redirect and the logo asset.
+- `middleware.ts`: the unconditional `applyTenantRobotsPolicy` is gone. The handler body moved to `handleTenantRequest`, and
+  `middleware` applies the header once to every response it returns, so the early 404s (bad host, unknown tenant) now carry
+  `noindex` too (they carried none before). `is_primary` added to the domain select. Path list moved to
+  `lib/public-tenant-paths.ts` (re-exported from `middleware.ts`). The cron and Stripe webhook early returns are untouched,
+  so cron responses still carry no `X-Robots-Tag` (#221's test asserts this).
+- `app/robots.ts` and `app/sitemap.ts` (none existed). Middleware forwards `x-onzio-site-indexable` (client copy dropped);
+  both render that decision: `robots.txt` is `Disallow: /` unless indexable, then allows `/` and names
+  `https://<canonical host>/sitemap.xml`; the sitemap lists `/`, roster, schedule, stats, sponsors, staff, club/about (and
+  `/shop` if the store is enabled) on the canonical host only, `[]` otherwise.
+- Not in the sitemap: template-specific pages (cinematic tickets/stadium/news, Academy programs). Picking them needs a
+  template selector, which the SITE-08 ratchet forbids in `app/**`. Crawlers reach them by links. Follow-up: a per-site-module
+  sitemap list.
+
+**Decided (Christian, 2026-11-24): `grace` stays `noindex`, only `live` is indexed.** Diverse City is in grace today, so it stays
+noindex (a later change is one line in `isPublicSiteIndexable`).
+
+**Tests:** `tests/unit/robots-decider.test.ts` (env x access x host kind x path kind matrix, host and path kinds, named launch
+cases); `tests/contracts/robots-middleware.test.ts` (Rose City live on `rosecityfutbolclub.com`, Diverse City grace, preview
+club, suspended, `www.` secondary, a registered `*.vercel.app` host, unknown/invalid hosts, non-production envs, header
+forwarding and spoof drop); `robots-sitemap-routes.test.ts`; `robots-single-decider.test.ts` (fails if anything under
+`middleware.ts`, `app/**`, `lib/**` other than `lib/robots.ts` sets `X-Robots-Tag`, a `robots` metadata field or a robots
+meta tag). **Red shown:** planting `X-Robots-Tag` in `lib/club-access.ts` fails it with
+`lib/club-access.ts: X-Robots-Tag header`; the first run also caught two of my own comment/variable leftovers.
+`diverse-city-admin-public-acceptance.test.ts` now reads the path list from `lib/public-tenant-paths.ts`; the old D117
+comment in `tenant-robots.test.ts` was updated (its `.localhost`, no-`VERCEL_ENV` requests still never index).
+**Verification (2026-11-24, in the shared verify slot):** `tsc --noEmit` clean; `test:unit` 447 files, 6,803 passed;
+`test:contracts` 361 files, 5,409 passed; `test:architecture` 18 files, 432 passed, 1 skipped.
+
+**Files changed:** `middleware.ts`, `lib/club-access.ts`, `lib/robots.ts` (new), `lib/public-tenant-paths.ts` (new),
+`app/robots.ts` (new), `app/sitemap.ts` (new), 4 tests added, 2 edited, `STATUS.md`, `HANDOFF.md`.
+**Blockers/decisions:** D117/`DCFC-1003` approval to record (merging is the approval). Not browser-checked on a deployment:
+production can only be checked after the deploy (`curl -sI https://rosecityfutbolclub.com/` for `x-robots-tag: index, follow`,
+`/robots.txt`, `/sitemap.xml`; `www.` and the `vercel.app` host should still say `noindex, nofollow`).
+**Exact next step:** Christian reviews; "go" to merge and deploy; then the curl checks above.
+
+## 2026-11-24 - LIFECYCLE-HEARTBEAT-FAIL: a failed lifecycle run pings `<url>/fail` so Healthchecks goes red
+
+- **Agent / package:** Claude Code (Sonnet 5.5), `LIFECYCLE-HEARTBEAT-FAIL`, branch `claude/lifecycle-heartbeat-fail` rebased onto main `9b677cd3` (#221 merged). `lib/billing-lifecycle.ts`, `app/api/cron/lifecycle/route.ts` and two new test files only; no migration, no env or Vercel change.
+- **Status:** `ready for review`, PR open, not merged, not deployed. Merging main deploys production: waits for Christian's "go".
+- **Why:** PLAT-D022 wants an alert on a reported failure as well as a missed run. A Healthchecks-style monitor treats any POST to the base ping URL as success, so `{"status":"failure"}` sent there would not alert. `signalLifecycleHeartbeat("failure", ...)` now POSTs to `<url>/fail`; success is unchanged. The body is the same either way: `{"status":"success"|"failure","detail":"..."}`.
+- **Also in this PR (Christian, 2026-11-24):** the heartbeat can no longer break the run it watches. `signalLifecycleHeartbeat` has a 5s `AbortSignal.timeout`, never throws, and logs `billing.lifecycle_heartbeat_failed` with the HTTP status or an error code (never the URL). The route declares `maxDuration = 60` like the other crons, and `runBillingDriftAlert` now runs inside the try, so a crash there pings `/fail` instead of going silent (it still runs first; a throw skips that day's lifecycle run and answers 500, as an uncaught throw did before).
+- **Evidence:** `lib/__tests__/lifecycle-heartbeat.test.ts` (6) and `tests/contracts/lifecycle-heartbeat-resilience.test.ts` (7): success to the base URL, failure to `/fail` (also with a trailing slash), a heartbeat timeout or 5xx or missing URL still returns 200 with the lifecycle result, a failing failure-ping still answers 500 `BILLING_LIFECYCLE_FAILED`, a drift-alert throw sends `/fail`, `maxDuration` is 60. 9 of the 13 are red on main's code. tsc clean; unit 6,447; contracts 5,365; architecture 432 (1 skipped).
+- **Exact next step:** Christian reviews and says "go" to merge; then set `LIFECYCLE_CRON_HEARTBEAT_URL` in Production.
+
+## 2026-11-24 - CRON-MIDDLEWARE-EXEMPT: Vercel crons bypass tenant host routing (rebased on #245; + TELEMETRY-02 gate record)
+
+**Agent/package:** Claude Code (Opus 5.5), CRON-MIDDLEWARE-EXEMPT; rebased 2026-11-24 by Claude Code (Sonnet 5.5, POST-LAUNCH-PARALLEL lane B)
+onto main `17e58214`. Branch `claude/cron-middleware-exempt`. **Status:** `ready for review`, PR #221 open, not merged, not
+deployed. No migration. Merging main deploys production: waits for Christian's "go".
+
+**2026-11-24 rebase:** #221 conflicted with #245 (PAID-LAUNCH-AUTOMATION) in `middleware.ts`, the contract test and this
+file. Main's middleware behaviour is kept unchanged (`publicSiteState`/`isPublicSiteOpen` in `lib/club-access.ts` as the
+only visibility decider, 404 `no-store` and `noindex, nofollow` for closed tenants, the suspended-admin redirect, the Rose
+City preview-host bypass). The only change to `middleware.ts` against main is the `isCronPath` helper and its early
+return, placed straight after the two Stripe webhook exemptions and before any tenant, Supabase or visibility logic. New
+test: `reaches every vercel.json cron route untouched on the production host, a custom tenant domain and a *.vercel.app
+host`. It reads `vercel.json`, so a cron added there is covered with no edit, and for each of the 7 paths x 3 hosts
+(`www.diversecityfc.com`, `www.alphafc.example`, `onzio-platform-9p3oxcj5d-team.vercel.app`, `Host` header set) with
+spoofed `x-onzio-*` headers it asserts 200, `x-middleware-next: 1`, no rewrite, no `Location`, no `X-Robots-Tag`, no tenant
+header forwarded and the bearer kept. **Red without the exemption:** with the early return disabled and dummy Supabase
+env, the test fails with `/api/cron/media-cleanup on the production tenant host (www.diversecityfc.com): expected 404 to
+be 200` (the original deployment-URL test fails the same way). Green with it: `tenant-routing` 34/34.
+**Verification (2026-11-24, in the shared verify slot):** `tsc --noEmit` clean; `test:unit` 443 files, 6,437 passed;
+`test:contracts` 358 files, 5,361 passed; `test:architecture` 18 files, 432 passed, 1 skipped. The unit and architecture
+runs print a harmless `fatal: Not a valid object name origin/main` from a git-diff helper in this worktree.
+**Next step (unchanged):** Christian says "go" to merge and deploy; the cron log check (below) follows the deploy.
+
+**TELEMETRY-02 production record (on Christian's "go run the migration gate for 216"):**
+- Linked with `npx supabase@2.122.0 link` in the worktree. The link files were made fresh, not copied, and deleted
+  afterwards.
+- `migration list --linked`: 96 matched, only `20261121230000` local-only, so it was not already in production.
+- Backup with `db dump --linked` (schema, 104 tables) and `--data-only` (93 table sections):
+  `~/Documents/onzio-prod-backups.nosync/onzio-prod-20261121-1740-pre-telemetry02-{schema,data}.sql`, 0600.
+- Dry run listed only `20261121230000_page_telemetry_rollups.sql`; its sha256 `f08fb9f1…1435` matched `38cc3c3`.
+  `db push --linked --skip-vault` applied it.
+- Read-only checks: ledger 97, max `20261121230000`, local and remote match 97/97. The type, sponsor and engaged checks
+  are in place. The 3 rollup tables have RLS and policies, with no insert grant. `rollup_page_telemetry` (both) is
+  service_role only, and anon can still execute `record_page_event`. There are 5 telemetry definers, and the purge
+  starts with the rollup tables. The bucket and drop-reason checks are widened. Production has 0 page events.
+- Grokbot merged #216 as `ee21290d`. The production deploy `onzio-platform-9p3oxcj5d` (17:51 PT) is Ready, and Vercel
+  lists `/api/cron/telemetry-rollup` as Active at `35 10 * * *`.
+
+**Why this package:** the manual rollup run failed. Vercel's dashboard "Run" called the deployment URL
+`onzio-platform-9p3oxcj5d-404christian.vercel.app/api/cron/telemetry-rollup` and got 404, because the middleware found
+no tenant for that host. This is the gap PLAT-102 flagged on 2026-08-05, and it applies to every cron, so the daily
+crons have likely been 404ing too. That can't be confirmed from history: Hobby keeps request logs for 1 hour. A manual
+`curl` through `www.diversecityfc.com` reached the route but got 401: the `CRON_SECRET` from `vercel env pull` (never
+printed, temp file deleted at once) does not match the deployed value. Unresolved; Vercel's Run sends the right one.
+
+**Completed:** `isCronPath` (`^/api/cron/[a-z0-9-]+$`) in `middleware.ts`. Cron paths skip tenant resolution like the
+two Stripe webhooks, and client-supplied `x-onzio-club-id/slug/user-id` headers are dropped. All 7 cron routes check
+`CRON_SECRET` themselves and fail closed (checked). New contract test in `tests/contracts/tenant-routing.test.ts`
+covers:
+- every `vercel.json` cron path passes on a deployment-URL host with 200 and next, with no tenant headers forwarded;
+- near-miss paths are not exempt.
+Removing the bypass, or the header stripping, each makes the test fail.
+
+**Review Low fixed (onzio-bot on #221):** a new contract test walks `app/api/cron/` itself, not `vercel.json`. It
+requires that:
+- every route directory is scheduled in `vercel.json`, every `vercel.json` cron has a route, and none has nested
+  routes;
+- each route exports only `GET`;
+- each route returns 401 with no `CRON_SECRET` (bearer empty or `undefined`), with no bearer, and with a wrong bearer.
+
+Dropping a route's `!cronSecret` guard (it answers 500), adding an unscheduled route, or adding a `POST` export each
+fails it.
+
+**Before merging #221:** `LIFECYCLE_SUSPENSION_ENABLED`, `LIFECYCLE_RECONCILIATION_ENABLED` and
+`LIFECYCLE_CRON_HEARTBEAT_URL` are not set in Vercel Production (`vercel env ls production`, names only). With them
+missing, the lifecycle cron fails closed: `requiredFlag` throws `LIFECYCLE_CONFIGURATION_INVALID` before the database
+call, so it answers 500 and suspends nothing. Christian decides the values. Setting suspension to `true` would let it
+suspend clubs.
+
+**Files:** `middleware.ts`, `tests/contracts/tenant-routing.test.ts`, this file.
+
+**Verification:** `tenant-routing` contract 33/33; `tsc --noEmit` and `npm run lint` clean; non-DB vitest 395 files,
+5,260 passed, 1 skipped; `test:architecture` 432 passed, 1 skipped; `npm run build` ok (with the local Supabase env).
+
+**Next step:** grokbot review and merge. After the deploy, use Vercel's Run for `/api/cron/telemetry-rollup` and
+expect 200 `{clubs: 0, days: 3, rowsWritten: 0}`. Then check the logs right after the next daily runs (10:00-11:00 UTC)
+for 200s on every cron.
 
 ## 2026-11-23 - UI-FIX-MATCH-SUMMARY-SCORERS: the scorer line sits below the whole home team name
 

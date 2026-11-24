@@ -28,7 +28,8 @@ describe("DCFC-304 reusable public route acceptance", () => {
   });
 
   it("routes Programs, program details, Contact, and Tryouts through verified tenant middleware", () => {
-    const middleware = source("middleware.ts");
+    // The public path list moved out of middleware.ts so lib/robots.ts can share it.
+    const middleware = source("lib/public-tenant-paths.ts");
     for (const route of ['"/programs"', '"/contact"', '"/tryouts"']) {
       expect(middleware).toContain(route);
     }

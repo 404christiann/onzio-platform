@@ -52,12 +52,12 @@ describe("tenant robots response contract", () => {
     expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
   });
 
-  // DCFC-D117: the production site retains noindex, nofollow *through launch*.
-  // Indexing is a separate later approval carried by DCFC-1003, after
-  // observation closes. Going live must not make the site indexable as a side
-  // effect, so every access state emits the header.
+  // DCFC-D117 held noindex for every state through launch. lib/robots.ts now
+  // indexes a `live` club on its canonical production domain (see
+  // tests/contracts/robots-middleware.test.ts); these requests are on a
+  // `.localhost` host with VERCEL_ENV unset, which never indexes, in any state.
   it.each(["live", "grace", "suspended", "preview"] as const)(
-    "public_access=%s still emits X-Robots-Tag: noindex, nofollow through launch",
+    "public_access=%s emits noindex, nofollow off production",
     async (publicAccess) => {
       tenantState.publicAccess = publicAccess;
 

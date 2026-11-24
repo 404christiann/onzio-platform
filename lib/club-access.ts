@@ -65,3 +65,12 @@ export function publicSiteState(access: unknown): PublicSiteState {
 export function isPublicSiteOpen(access: unknown): boolean {
   return publicSiteState(access) === "open";
 }
+
+/**
+ * Whether search engines may index a club's public site. A strict subset of
+ * "open": only `live` qualifies. `grace` (past due, site still open to visitors)
+ * is deliberately not indexed; whether it should be is an open decision.
+ */
+export function isPublicSiteIndexable(access: unknown): boolean {
+  return publicSiteState(access) === "open" && access !== "grace";
+}
