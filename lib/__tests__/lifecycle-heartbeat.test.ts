@@ -46,13 +46,32 @@ describe("signalLifecycleHeartbeat", () => {
     expect((fetchMock.mock.calls[0][0] as URL).href).toBe("https://hc-ping.example.test/ping-key/lifecycle");
   });
 
-  it("still rejects a missing, non-https or non-ok heartbeat", async () => {
+  it("never throws: bad config, non-ok and a timeout are logged without the URL", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubEnv("LIFECYCLE_CRON_HEARTBEAT_URL", "http://hc-ping.example.test/x");
-    await expect(signalLifecycleHeartbeat("success", "x")).rejects.toThrow();
+    await expect(signalLifecycleHeartbeat("success", "x")).resolves.toBeUndefined();
     vi.stubEnv("LIFECYCLE_CRON_HEARTBEAT_URL", "");
-    await expect(signalLifecycleHeartbeat("success", "x")).rejects.toThrow();
+    await expect(signalLifecycleHeartbeat("success", "x")).resolves.toBeUndefined();
     vi.stubEnv("LIFECYCLE_CRON_HEARTBEAT_URL", BASE);
-    fetchMock.mockResolvedValue(new Response("no", { status: 500 }));
-    await expect(signalLifecycleHeartbeat("failure", "x")).rejects.toThrow("LIFECYCLE_HEARTBEAT_FAILED");
+    fetchMock.mockResolvedValueOnce(new Response("no", { status: 503 }));
+    await expect(signalLifecycleHeartbeat("failure", "x")).resolves.toBeUndefined();
+    fetchMock.mockRejectedValueOnce(new DOMException("timed out", "TimeoutError"));
+    await expect(signalLifecycleHeartbeat("success", "x")).resolves.toBeUndefined();
+    const logs = error.mock.calls.map((call) => String(call[0]));
+    expect(logs).toHaveLength(4);
+    for (const line of logs) {
+      expect(line).toContain("billing.lifecycle_heartbeat_failed");
+      expect(line).not.toContain("hc-ping");
+    }
+    expect(logs[0]).toContain("LIFECYCLE_HEARTBEAT_CONFIGURATION_INVALID");
+    expect(logs[2]).toContain('"httpStatus":503');
+    expect(logs[3]).toContain("TimeoutError");
+    error.mockRestore();
+  });
+
+  it("gives the fetch a 5s abort signal", async () => {
+    await signalLifecycleHeartbeat("success", "BILLING_LIFECYCLE_CLEAN");
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 });

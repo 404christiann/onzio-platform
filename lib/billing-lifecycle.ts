@@ -1,4 +1,4 @@
-import { failContract } from "@/lib/contract-error";
+import { ContractError, failContract } from "@/lib/contract-error";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 
 export type BillingLifecycleRecord = {
@@ -137,31 +137,62 @@ export async function runBillingLifecycle(now = new Date()): Promise<{
   return { warnings, suspensions, divergences };
 }
 
+const HEARTBEAT_TIMEOUT_MS = 5000;
+
+/**
+ * Pings the monitor. Never throws: a slow or failing monitor must not turn a lifecycle run
+ * that worked into a failed one. Logs `billing.lifecycle_heartbeat_failed` with the status
+ * or an error code, never the URL.
+ */
 export async function signalLifecycleHeartbeat(
   status: "success" | "failure",
   detail: string,
 ): Promise<void> {
-  const url = process.env.LIFECYCLE_CRON_HEARTBEAT_URL;
-  if (!url) failContract("LIFECYCLE_HEARTBEAT_CONFIGURATION_INVALID");
-  let parsed: URL;
   try {
-    parsed = new URL(url);
-  } catch {
-    failContract("LIFECYCLE_HEARTBEAT_CONFIGURATION_INVALID");
+    const url = process.env.LIFECYCLE_CRON_HEARTBEAT_URL;
+    if (!url) failContract("LIFECYCLE_HEARTBEAT_CONFIGURATION_INVALID");
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      failContract("LIFECYCLE_HEARTBEAT_CONFIGURATION_INVALID");
+    }
+    if (parsed.protocol !== "https:" && parsed.hostname !== "127.0.0.1") {
+      failContract("LIFECYCLE_HEARTBEAT_CONFIGURATION_INVALID");
+    }
+    // Healthchecks-style monitors mark a run failed only when the ping goes to `<url>/fail`.
+    const target = new URL(parsed);
+    if (status === "failure") {
+      target.pathname = `${target.pathname.replace(/\/+$/, "")}/fail`;
+    }
+    const response = await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status, detail }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(HEARTBEAT_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      console.error(
+        JSON.stringify({
+          event: "billing.lifecycle_heartbeat_failed",
+          heartbeat: status,
+          httpStatus: response.status,
+        }),
+      );
+    }
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "billing.lifecycle_heartbeat_failed",
+        heartbeat: status,
+        error:
+          error instanceof ContractError
+            ? error.code
+            : error instanceof Error
+              ? error.name
+              : "unknown",
+      }),
+    );
   }
-  if (parsed.protocol !== "https:" && parsed.hostname !== "127.0.0.1") {
-    failContract("LIFECYCLE_HEARTBEAT_CONFIGURATION_INVALID");
-  }
-  // Healthchecks-style monitors mark a run failed only when the ping goes to `<url>/fail`.
-  const target = new URL(parsed);
-  if (status === "failure") {
-    target.pathname = `${target.pathname.replace(/\/+$/, "")}/fail`;
-  }
-  const response = await fetch(target, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ status, detail }),
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error("LIFECYCLE_HEARTBEAT_FAILED");
 }
