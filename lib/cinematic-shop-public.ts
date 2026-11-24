@@ -10,19 +10,21 @@ type PublicShopContent = {
 
 /**
  * What visitors are sent: a switched-off jersey keeps only its switch and its place (option i is kit i), and its kit's words
- * and photos are dropped, unless the shown Third kit still borrows the Away photos (Sam's rule) - then those photos stay.
+ * and photos are dropped, except the Away lead photos or photo row a shown Third kit still borrows (Sam's rule).
  */
 export function withoutHiddenJerseys<T extends PublicShopContent>(content: T): T {
   const editions = content.presentation.editions ?? [];
   const hidden = editions.map((edition, index) => isShopEditionShown(edition) ? null : SHOP_EDITION_VARIANTS[index]).filter((variant): variant is ShopKitVariant => variant !== null);
   if (!hidden.length) return content;
   const thirdEdition = editions[SHOP_EDITION_VARIANTS.indexOf("third")];
-  const thirdBorrowsAway = !!thirdEdition && isShopEditionShown(thirdEdition) && !content.kits.third.photos.length;
+  const thirdShown = !!thirdEdition && isShopEditionShown(thirdEdition);
+  // The Third kit borrows the Away lead photos and the Away photo row separately, each only while its own is empty.
+  const borrowsLead = thirdShown && !content.kits.third.photos.length;
+  const borrowsRow = thirdShown && !content.photoRows.third.length;
   const kits = { ...content.kits }, photoRows = { ...content.photoRows };
   for (const variant of hidden) {
-    const keepPhotos = variant === "away" && thirdBorrowsAway;
-    kits[variant] = { section: null, photos: keepPhotos ? content.kits.away.photos : [] };
-    if (!keepPhotos) photoRows[variant] = [];
+    kits[variant] = { section: null, photos: variant === "away" && borrowsLead ? content.kits.away.photos : [] };
+    if (!(variant === "away" && borrowsRow)) photoRows[variant] = [];
   }
   const sent = editions.map(edition => isShopEditionShown(edition) ? edition : { label: "", price: "", line: "", link: "", visible: false });
   return { ...content, kits, photoRows, presentation: { ...content.presentation, editions: sent } };

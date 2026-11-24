@@ -47,7 +47,7 @@ describe("replacing the Rose City header sponsor logo (Medium)", () => {
   });
 });
 
-describe("hidden homepage sections never reach visitors (Low)", () => {
+describe("hidden homepage content never reaches visitors (Low)", () => {
   const content = () => {
     const value = defaultCinematicHomepageContent();
     value.raffle = { assetId: "00000000-0000-4000-8000-000000000009", url: "/raffle.png", alt: "Raffle prizes" };
@@ -56,14 +56,25 @@ describe("hidden homepage sections never reach visitors (Low)", () => {
     return value;
   };
 
-  it("strips a hidden section's words and image", () => {
+  it("drops a hidden raffle photo, the one part no other page shows", () => {
     const value = content();
-    value.raffle.visible = false; value.match.visible = false; value.prices.visible = false;
+    value.raffle.visible = false;
     const sent = withoutHiddenHomepageSections(value);
     expect(sent.raffle).toEqual({ assetId: null, url: null, alt: "", visible: false });
-    expect(sent.prices).toEqual({ heading: "", rows: [], footnote: "", visible: false });
-    expect(sent.match).toMatchObject({ heading: "", buttonLabel: "", emptyMessage: "", visible: false });
-    expect(JSON.stringify(sent)).not.toMatch(/Secret opponent|Unreleased price|General admission|raffle\.png|Raffle prizes/);
+    expect(JSON.stringify(sent)).not.toMatch(/raffle\.png|Raffle prizes/);
+  });
+
+  // Second review (Medium): this content is the shared shell, so the homepage switches must not touch what Tickets,
+  // Chick-fil-A, Robinson Stadium and Know Before You Go show.
+  it("keeps the match words and ticket prices for the other pages when the homepage hides them", () => {
+    const value = content();
+    value.match.buttonLabel = "Get seats"; value.match.emptyMessage = "Soon";
+    value.match.visible = false; value.prices.visible = false;
+    const sent = withoutHiddenHomepageSections(value);
+    expect(sent.match).toEqual(value.match);
+    expect(sent.prices).toEqual(value.prices);
+    expect(sent.prices.rows).toHaveLength(1);
+    expect(sent.match.heading).toBe("Secret opponent");
   });
 
   it("leaves shown sections untouched", () => {
@@ -79,13 +90,13 @@ describe("hidden homepage sections never reach visitors (Low)", () => {
 
 describe("hidden jerseys never reach visitors (Low)", () => {
   type Content = Parameters<typeof withoutHiddenJerseys>[0];
-  const build = (visible: [boolean, boolean, boolean], thirdPhotos = true): Content => ({
+  const build = (visible: [boolean, boolean, boolean], thirdPhotos = true, thirdRow = true): Content => ({
     kits: {
       home: { section: { title: "Home secret" }, photos: [{ id: "h" }] },
       away: { section: { title: "Away secret" }, photos: [{ id: "a" }] },
       third: { section: { title: "Third" }, photos: thirdPhotos ? [{ id: "t" }] : [] },
     },
-    photoRows: { home: [{ id: "hr" }], away: [{ id: "ar" }], third: [{ id: "tr" }] },
+    photoRows: { home: [{ id: "hr" }], away: [{ id: "ar" }], third: thirdRow ? [{ id: "tr" }] : [] },
     purchase: null, sponsors: [],
     presentation: { ...EMPTY_CINEMATIC_SHOP_CONTENT, details: [], editions: (["Home", "Away", "Third"] as const).map((label, index) => ({ label, price: `$${80 + index}`, line: `${label} line`, link: "", ...(visible[index] ? {} : { visible: false }) })) },
   } as unknown as Content);
@@ -100,12 +111,25 @@ describe("hidden jerseys never reach visitors (Low)", () => {
     expect(JSON.stringify(sent)).not.toMatch(/Home secret|Home line|\$80/);
   });
 
-  it("keeps the Away photos a shown Third kit borrows, but not the Away words", () => {
-    const sent = withoutHiddenJerseys(build([true, false, true], false));
+  it("keeps the Away lead photos a shown Third kit borrows, but not the Away words", () => {
+    const sent = withoutHiddenJerseys(build([true, false, true], false, true));
     expect(sent.kits.away.section).toBeNull();
     expect(sent.kits.away.photos).toHaveLength(1);
-    expect(sent.photoRows.away).toHaveLength(1);
+    expect(sent.photoRows.away).toEqual([]);
     expect(JSON.stringify(sent)).not.toContain("Away secret");
+  });
+
+  // Second review (Low): the photo row is borrowed on its own, even when the Third kit has its own lead photos.
+  it("keeps the Away photo row a shown Third kit borrows, even with Third lead photos of its own", () => {
+    const sent = withoutHiddenJerseys(build([true, false, true], true, false));
+    expect(sent.photoRows.away).toHaveLength(1);
+    expect(sent.kits.away.photos).toEqual([]);
+  });
+
+  it("drops the Away photos when the Third kit is hidden too", () => {
+    const sent = withoutHiddenJerseys(build([true, false, false], false, false));
+    expect(sent.kits.away.photos).toEqual([]);
+    expect(sent.photoRows.away).toEqual([]);
   });
 
   it("changes nothing when every jersey is shown", () => {

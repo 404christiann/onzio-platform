@@ -102,15 +102,13 @@ export function isHomepageSectionShown(part: { visible?: boolean }): boolean {
   return part.visible !== false;
 }
 /**
- * What visitors are sent: a hidden raffle photo, next home match or ticket prices section keeps only its switch, so its
- * words and image never reach the public page. Editors and previews use the full content.
+ * What visitors are sent. This content is the shared shell of every cinematic@2 page, so only what no other page shows is
+ * dropped: a hidden raffle photo keeps only its switch. The next home match words and ticket prices stay, because Tickets,
+ * Chick-fil-A, Robinson Stadium and Know Before You Go show them whatever the homepage switches say. Editors and previews
+ * use the full content.
  */
 export function withoutHiddenHomepageSections(content: CinematicHomepageContent): CinematicHomepageContent {
-  const next = { ...content };
-  if (!isHomepageSectionShown(content.raffle)) next.raffle = { assetId: null, url: null, alt: "", visible: false };
-  if (!isHomepageSectionShown(content.match)) next.match = { ...content.match, heading: "", buttonLabel: "", emptyMessage: "", visible: false };
-  if (!isHomepageSectionShown(content.prices)) next.prices = { heading: "", rows: [], footnote: "", visible: false };
-  return next;
+  return isHomepageSectionShown(content.raffle) ? content : { ...content, raffle: { assetId: null, url: null, alt: "", visible: false } };
 }
 /** The save and storage form of a visibility flag: written as false when hidden, and left out when shown. */
 const hiddenFlag = (part: { visible?: boolean }) => part.visible === false ? { visible: false as const } : {};
