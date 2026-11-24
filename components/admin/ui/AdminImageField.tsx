@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type DragEvent } from "react";
 import { Upload, X } from "lucide-react";
 
+import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
 import ResilientImage from "@/components/ResilientImage";
 import {
   imageAccept,
@@ -27,6 +28,8 @@ export type AdminImageFieldProps = AdminImageRules & {
   onRemove?: () => void;
   onDirty?: () => void;
   onPendingChange?: (pending: boolean) => void;
+  /** Static slot name for analytics. Defaults to the current admin tab id. */
+  analyticsSlot?: string;
 };
 
 export function AdminImageField({
@@ -43,6 +46,7 @@ export function AdminImageField({
   onRemove,
   onDirty,
   onPendingChange,
+  analyticsSlot,
 }: AdminImageFieldProps) {
   const input = useRef<HTMLInputElement>(null);
   const uploadButton = useRef<HTMLButtonElement>(null);
@@ -79,11 +83,13 @@ export function AdminImageField({
     attemptRef.current = attempt;
     setPending(true);
     const file = files[0];
+    const slot = analyticsSlot ?? currentAdminTab();
     try {
       attempt.notify?.(true);
       const issue = await imageFileIssue(file, rules);
       if (!mounted.current || attemptRef.current !== attempt) return;
       if (issue) {
+        trackAdminEvent("admin_media_uploaded", { slot, ok: false });
         setMessage(issue);
         return;
       }
@@ -91,11 +97,13 @@ export function AdminImageField({
       const transfer = new DataTransfer();
       transfer.items.add(file);
       const saved = await onUpload(transfer.files);
+      trackAdminEvent("admin_media_uploaded", { slot, ok: saved });
       if (!mounted.current || attemptRef.current !== attempt) return;
       if (saved === true) onDirty?.();
       else if (saved && typeof saved === "object" && saved.error) setMessage(saved.error);
       else setMessage("The image could not be uploaded. Try again.");
     } catch {
+      trackAdminEvent("admin_media_uploaded", { slot, ok: false });
       if (mounted.current && attemptRef.current === attempt) setMessage("The image could not be uploaded. Try again.");
     } finally {
       if (attemptRef.current === attempt) {

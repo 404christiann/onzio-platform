@@ -51,6 +51,7 @@ import {
   type AdminVisibleRoute,
 } from "@/lib/admin-route-manifest";
 import { createClient } from "@/lib/supabase-browser";
+import { resetAdminAnalytics } from "@/lib/admin-analytics";
 
 function isPathActive(pathname: string, href: string) {
   return href === "/admin"
@@ -174,6 +175,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         void (async () => {
           const supabase = createClient();
           await supabase.auth.signOut();
+          resetAdminAnalytics();
           router.push("/admin/login");
           router.refresh();
         })();

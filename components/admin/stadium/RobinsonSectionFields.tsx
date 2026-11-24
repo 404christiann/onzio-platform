@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useId, type ReactNode } from "react";
 import { IconAdd, IconCaretDown, IconCaretUp, IconDelete } from "@/components/admin/icons";
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
+import { trackAdminEvent } from "@/lib/admin-analytics";
 import { EditorField, EditorGroup, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import {
@@ -90,7 +91,7 @@ export function RobinsonSectionFields({ api, id }: { api: RobinsonFieldsApi; id:
   const visible = (
     <div className={styles.showRow}>
       <span aria-hidden="true">Show on the page</span>
-      <AdminSwitch label={`Show ${title} on the page`} checked={draft[id].visible} disabled={locked} onCheckedChange={next => patch(id, { visible: next } as Partial<RobinsonContent[typeof id]>)} />
+      <AdminSwitch label={`Show ${title} on the page`} checked={draft[id].visible} disabled={locked} onCheckedChange={next => { trackAdminEvent("admin_visibility_toggled", { scope: `robinson.${id}`, visible: next }); patch(id, { visible: next } as Partial<RobinsonContent[typeof id]>); }} />
     </div>
   );
   let body: ReactNode = null;

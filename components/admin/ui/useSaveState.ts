@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { currentAdminTab, trackAdminEvent, type AdminSaveFailureReason } from "@/lib/admin-analytics";
 import { ADMIN_MOTION_DURATIONS } from "@/lib/admin-motion";
+import { ContractError } from "@/lib/contract-error";
 
 export type SaveState = "clean" | "dirty" | "saving" | "saved";
 
@@ -68,6 +70,17 @@ export function createSaveLifecycle(publish: (phase: SavePhase) => void) {
   return { save, dismissSaved, reset, cancel };
 }
 
+/** Buckets a thrown save error into a fixed reason. The message never leaves. */
+export function classifySaveFailure(error: unknown): AdminSaveFailureReason {
+  if (error instanceof ContractError) {
+    if (/CONFLICT|STALE|MISMATCH/.test(error.code)) return "conflict";
+    if (/INVALID|REQUIRED|TOO_LARGE|UNSUPPORTED|CORRUPT|EXCEEDED/.test(error.code)) return "validation";
+    return "server";
+  }
+  if (error instanceof TypeError) return "network";
+  return "unknown";
+}
+
 /**
  * Update the caller's persisted snapshot on success so isDirty compares the
  * current draft with what actually saved. An eligible save() resolves or
@@ -77,9 +90,12 @@ export function createSaveLifecycle(publish: (phase: SavePhase) => void) {
 export function useSaveState({
   isDirty,
   onSave,
+  analyticsEditor,
 }: {
   isDirty: boolean;
   onSave: SaveAction;
+  /** Static editor label for analytics. Defaults to the current admin tab id. */
+  analyticsEditor?: string;
 }): { state: SaveState; save: () => Promise<void> } {
   const [phase, setPhase] = useState<SavePhase>("idle");
   const [lifecycle] = useState(() => createSaveLifecycle(setPhase));
@@ -95,7 +111,17 @@ export function useSaveState({
   return {
     state: phase === "saving" ? "saving" : isDirty ? "dirty" : phase === "saved" ? "saved" : "clean",
     async save() {
-      if (isDirty) await lifecycle.save(onSave);
+      if (!isDirty) return;
+      await lifecycle.save(async () => {
+        const editor = analyticsEditor ?? currentAdminTab();
+        try {
+          await onSave();
+        } catch (error) {
+          trackAdminEvent("admin_content_save_failed", { editor, reason: classifySaveFailure(error) });
+          throw error;
+        }
+        trackAdminEvent("admin_content_saved", { editor });
+      });
     },
   };
 }

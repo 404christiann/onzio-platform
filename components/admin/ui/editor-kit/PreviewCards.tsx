@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
+import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
 import { Shimmer } from "../Shimmer";
 import { resolveEditTarget, type EditTargetId, type ResolvedEditTarget } from "@/lib/admin-edit-targets";
 import { editTargetHitAt, watchEditTargetStamps, type EditTargetStamp } from "./editTargets";
@@ -205,7 +206,10 @@ export function PreviewCards({
                       checked={Boolean(section.visible)}
                       label={section.switchLabel ?? `Show ${section.title} on the page`}
                       disabled={section.disabled}
-                      onCheckedChange={(next) => section.onVisibleChange?.(next)}
+                      onCheckedChange={(next) => {
+                        trackAdminEvent("admin_visibility_toggled", { scope: `${currentAdminTab()}.${section.id}`, visible: next });
+                        section.onVisibleChange?.(next);
+                      }}
                     />
                   </span>
                 ) : (

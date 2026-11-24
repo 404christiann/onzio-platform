@@ -2,6 +2,7 @@ import type { Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
+import { AdminAnalyticsProvider } from "@/components/admin/AdminAnalyticsProvider";
 import { AdminPortalProvider } from "@/components/admin/AdminPortalProvider";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { ClassicAdminUnsavedGuardProvider } from "@/components/admin/ui/UnsavedGuardDialog";
@@ -93,6 +94,17 @@ export default async function ProtectedLayout({
 
   return (
     <AdminThemeProvider initialTheme={initialTheme}>
+      {/* ADMIN-POSTHOG: classic admin only; a silent no-op outside Vercel production or without a key. */}
+      {!shell && (
+        <AdminAnalyticsProvider
+          env={{
+            vercelEnv: process.env.VERCEL_ENV,
+            key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+            host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+          }}
+          identity={{ userId, clubId: club.id, clubSlug: club.slug, role: club.role }}
+        />
+      )}
       <AdminPortalProvider settings={portal} isOwner={club.role === "owner"}>
         {/* ADMIN-RE-05: the club's admin_portal picks the shell; classic on any doubt. */}
         {shell ? (

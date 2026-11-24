@@ -2,6 +2,7 @@
 
 import type { MouseEvent, ReactNode } from "react";
 import { AdminSwitch } from "../AdminSwitch";
+import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
 import { KIT_EDIT_PROPS } from "./kitEdit";
 import styles from "./SectionCards.module.css";
 
@@ -55,7 +56,10 @@ export function SectionCards({ sections, onEdit, label = "Page sections" }: Sect
                     checked={Boolean(section.visible)}
                     label={section.switchLabel ?? `Show ${section.title} on the page`}
                     disabled={section.disabled}
-                    onCheckedChange={(next) => section.onVisibleChange?.(next)}
+                    onCheckedChange={(next) => {
+                      trackAdminEvent("admin_visibility_toggled", { scope: `${currentAdminTab()}.${section.id}`, visible: next });
+                      section.onVisibleChange?.(next);
+                    }}
                   />
                 </span>
               ) : (

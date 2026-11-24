@@ -5,6 +5,7 @@ import { FormEvent, useState, type ReactNode } from "react";
 import { AdminBar } from "@/components/admin/ui/AdminBar";
 import { AdminPendingButton } from "@/components/admin/ui/AdminPendingButton";
 import { Shimmer } from "@/components/admin/ui/Shimmer";
+import { trackAdminEvent } from "@/lib/admin-analytics";
 import { GRACE_MS, type PaymentsUiState } from "@/lib/stripe-subscription-state";
 import { cn } from "@/lib/utils";
 
@@ -178,6 +179,7 @@ export function BillingActionForm({
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (pending) return;
+    trackAdminEvent(endpoint === "/api/stripe/checkout" ? "admin_checkout_started" : "admin_billing_portal_opened");
     setPending(true);
     setMessage(null);
     try {
@@ -326,7 +328,7 @@ function PaymentPanels({
   skeleton?: boolean;
 }) {
   return (
-    <div className={cn(styles.layout, !timeline && styles.exempt)} data-classic-payments="" data-tone={tone} data-payments-skeleton={skeleton || undefined} aria-hidden={skeleton || undefined}>
+    <div className={cn("ph-no-capture", styles.layout, !timeline && styles.exempt)} data-classic-payments="" data-tone={tone} data-payments-skeleton={skeleton || undefined} aria-hidden={skeleton || undefined}>
       <section className={cn(styles.panel, styles.summary)} aria-label="Onzio subscription" data-payments-summary="">
         {summary}
       </section>

@@ -3,6 +3,7 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from "lucide-react";
 
+import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
 import ResilientImage from "@/components/ResilientImage";
 import { useAnimatedList } from "./useAnimatedList";
 import { useAdminToast } from "./AdminToast";
@@ -34,6 +35,8 @@ export type AdminPhotoManagerProps = AdminImageRules & {
   removalMessage?: string;
   reorderLabels?: "up-down" | "earlier-later";
   disabled?: boolean;
+  /** Static slot name for analytics. Defaults to the current admin tab id. */
+  analyticsSlot?: string;
 };
 
 const limit = 6;
@@ -45,7 +48,7 @@ export function AdminPhotoManager({ collectionId, ...props }: AdminPhotoManagerP
 function PhotoCollection({
   collectionId, label, variant, photos, onChange, onUpload, onAbandonedUpload, onDirty, disabled = false,
   allowedTypes, maxBytes,
-  onPendingChange, onUndoPendingChange, showDescriptions = true, descriptionLabel = "Description", emptyUploadMessage = "The photos could not be uploaded. Try again.", removalMessage, reorderLabels = "up-down",
+  onPendingChange, onUndoPendingChange, showDescriptions = true, descriptionLabel = "Description", emptyUploadMessage = "The photos could not be uploaded. Try again.", removalMessage, reorderLabels = "up-down", analyticsSlot,
 }: AdminPhotoManagerProps) {
   const input = useRef<HTMLInputElement>(null);
   const current = useRef(photos);
@@ -231,7 +234,15 @@ function PhotoCollection({
       const tiles = selected.map((file) => ({ id: ++nextPendingId.current, name: file.name }));
       pendingIds = tiles.map((tile) => tile.id);
       setPendingPhotos((previous) => [...previous, ...tiles]);
-      const added = await onUpload(selected);
+      const slot = analyticsSlot ?? currentAdminTab();
+      let added: AdminPhoto[];
+      try {
+        added = await onUpload(selected);
+      } catch (error) {
+        trackAdminEvent("admin_media_uploaded", { slot, ok: false });
+        throw error;
+      }
+      trackAdminEvent("admin_media_uploaded", { slot, ok: added.length > 0 });
       if (!alive.current) {
         onAbandonedUpload?.(added, collectionId);
         return;
