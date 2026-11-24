@@ -86,6 +86,10 @@
 - **Evidence:** contract tests run the real stamps on the real server-rendered public components; 40 breaks each caught; browser spec 36/36 (12 new) on a production build.
 - **Exact next step:** Christian reviews; then PR E2 (News + Rose City Sponsors item cards).
 
+## 2026-11-23 - SAM-VISIBILITY-AND-HEADER-SPONSOR
+
+- Sam's Rose City feedback: owner-editable header sponsor logo (Homepage > Menu and footer; `header_partner_media_asset_id` unchanged as the source of truth), show/hide switches for the homepage raffle photo, next home match and ticket prices, per-jersey show/hide on the Shop, and page-level "Visible to visitors" for Single match tickets and Season ticket membership (`public_page_visibility` keys `tickets`, `season-membership`). Payloads omit `visible` unless false and `headerPartner` unless changed, so code deployed before the migration keeps saving. Migration `20261123120000_sam_visibility_controls.sql` is local only and needs the production gate and Christian's "go". Branch `claude/sam-visibility-controls`, PR open, not merged. Record: `STATUS.md` (SAM-VISIBILITY-AND-HEADER-SPONSOR).
+
 ## 2026-11-22 - RC-PAGE-VISIBILITY
 
 - cinematic@2 owners/admins can hide Robinson Stadium, Chick-fil-A and Foothill Transit with a "Visible to visitors" switch on each editor (new `onzio.clubs.public_page_visibility`, absent/true = shown). Hidden pages 404 and leave the nav/footer; embedded Robinson/Tickets blocks and Rose City's Foothill header mark follow at render time. The map is read in a separate fail-open query (`lib/public-page-visibility-query.ts`), never in tenant resolution, so code deployed before the migration shows every page instead of breaking sites. Migration applied to production 2026-11-23 on Christian's "Go" (backup taken, ledger 98/98 after); code not yet merged or deployed, waiting on "merge 230". Branch `codex/rc-public-page-visibility`, PR open, not merged. Record: `STATUS.md` (RC-PAGE-VISIBILITY).
