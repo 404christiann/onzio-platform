@@ -33,9 +33,9 @@ describe("homepage slideshow and artwork uploads", () => {
     expect(hook.indexOf('adminImageRules("graphic")')).toBeLessThan(hook.indexOf('storage.from("homepage-artwork")'));
   });
 
-  it("show the server's message, keeping the generic line only as a fallback", () => {
-    expect(hook).toContain('throw new Error(result.error?.message || "This photo could not be added. Your other changes are still here.")');
-    expect(hook).toContain('throw new Error(result.error?.message || "This artwork could not be added. Try again.")');
+  it("show the server's readable message, keeping the generic line for a bare code or no message", () => {
+    expect(hook).toContain('throw new Error(readableUploadError(result.error, "This photo could not be added. Your other changes are still here."))');
+    expect(hook).toContain('throw new Error(readableUploadError(result.error, "This artwork could not be added. Try again."))');
   });
 
   it("artwork slots accept and describe graphics only", () => {

@@ -65,3 +65,14 @@ export async function imageFileIssue(file: File, rules: AdminImageRules): Promis
   return null;
 }
 
+
+/**
+ * The text to show for a refused upload: the server's reason when it is written for people, otherwise the
+ * caller's friendly line. Some refusals carry only their code as the message (an expired session at authorize
+ * says `AUTHENTICATION_REQUIRED`), and a code is not something to show an admin.
+ */
+export function readableUploadError(error: { code?: string; message?: string } | null | undefined, fallback: string): string {
+  const message = error?.message?.trim();
+  if (!message || /^[A-Z][A-Z0-9_]*$/.test(message)) return fallback;
+  return message;
+}

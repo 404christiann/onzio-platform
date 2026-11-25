@@ -43,6 +43,11 @@
 - **Blockers / decisions:** none. Open choices for Christian:
   - the stranded-staging backfill ("go")
   - whether to add a `rejected` reservation outcome later (needs a migration)
+- **Review follow-up (onzio-bot on `994be5c`, 2026-11-24):** no High or Medium. Fixed the Low:
+  - The homepage photo and artwork editors had started showing a bare code (for example `AUTHENTICATION_REQUIRED` when the session expires mid-upload). They now show the server's message only when it is written for people (`readableUploadError` in `components/admin/ui/adminImageFiles.ts`), and otherwise the old friendly line.
+  - Test: `tests/contracts/homepage-upload-error-message.test.ts`. It failed 4 of 4 before the fix.
+  - `npx tsc --noEmit` is clean, and the unit suite passes 468 files / 7023 tests.
+  - The reviewer could not run `test:db`. It was run here on the shared local stack, under the lock, with the ledger at 100/100 migrations matching the branch: `media-upload-quota` + `media-orphan-sweep` pass 42/42.
 - **Exact next step:** onzio-bot review, then Christian's "go" to merge. There is no migration, so no production gate.
 
 ## 2026-11-24 - ADMIN-POSTHOG: PostHog analytics + masked session replay in the classic admin
