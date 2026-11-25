@@ -71,6 +71,14 @@ async function asOwner(): Promise<void> {
   await db.query("reset role");
 }
 
+// On a freshly reset database page_events has never been analyzed. The sweep's cached generic delete plan then
+// estimates one row and re-runs its batch subquery for every row: about 24 s for 12,000 rows instead of 11 ms.
+// Production keeps statistics current through autovacuum, so tests that bulk-load the table analyze it too.
+async function analyzePageEvents(): Promise<void> {
+  await asOwner();
+  await db.query("analyze onzio.page_events");
+}
+
 async function ingestKeyHex(): Promise<string> {
   if (!ingestKeyCache) {
     await asOwner();
@@ -1044,6 +1052,7 @@ describe("telemetry retention sweep", () => {
        from generate_series(1, 12000) as g`,
       [CLUB_IDS.bravo],
     );
+    await analyzePageEvents();
     const kept = await rawEvent(CLUB_IDS.bravo, "89 days");
     expect(await expiredCount(CLUB_IDS.bravo)).toBe(12000);
 
@@ -1244,6 +1253,7 @@ describe("onzio.sweep_page_telemetry (the daily retention cron)", () => {
        from generate_series(1, 12000) as g`,
       [CLUB_IDS.bravo],
     );
+    await analyzePageEvents();
     const oldest = await rawEvent(CLUB_IDS.bravo, "3650 days");
     const kept = await rawEvent(CLUB_IDS.bravo, "89 days");
     const total = (await expired()).events;

@@ -1,0 +1,79 @@
+name: Database tests
+
+# Runs the `db` vitest project and the generated-types drift check against a local Supabase stack started on the
+# runner. No secrets: the stack's keys are the fixed local demo keys, and tests/helpers/environment.ts refuses any
+# non-loopback Supabase URL. The db tests that read onzio-ops SQL skip with a warning here (that repo is private);
+# onzio-ops CI runs those checks.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # Pinned to the CLI that generated lib/database.generated.ts; its images (Postgres 15.8.1.085,
+      # postgres-meta v0.96.6) match the local development stack, so the drift check compares like with like.
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The db tests need Postgres, PostgREST, Auth, Storage, Kong and Mailpit (email-code sign-in).
+      # postgres-meta stays for `supabase gen types`.
+      - name: Start local Supabase
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,supavisor
+
+      - name: Reset the local database
+        run: supabase db reset
+
+      - name: Export the local test environment
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "SUPABASE_TEST_URL=$API_URL"
+            echo "SUPABASE_TEST_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_TEST_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "SUPABASE_TEST_JWT_SECRET=$JWT_SECRET"
+            echo "SUPABASE_DB_URL=$DB_URL"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "STRIPE_TEST_SECRET_KEY=sk_test_contract_only"
+            echo "STRIPE_TEST_WEBHOOK_SECRET=whsec_test_contract_only"
+            echo "STRIPE_CONNECT_WEBHOOK_SECRET=whsec_test_connect_contract_only"
+            echo "STRIPE_PRICE_ID_STARTER=price_test_starter"
+            echo "STRIPE_PRICE_ID_PRO=price_test_pro"
+            echo "ONZIO_ENVIRONMENT=staging"
+          } >> "$GITHUB_ENV"
+
+      - name: Run database tests
+        run: npm run test:db
+
+      - name: Check generated database types
+        if: ${{ !cancelled() }}
+        run: npm run db:types:check

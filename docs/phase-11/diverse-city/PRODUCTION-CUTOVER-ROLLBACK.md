@@ -349,7 +349,7 @@ attempted — those checklist items below remain unticked and untouched.
 - [x] Provision Diverse City exactly once through audited operator tooling as
   `onboarding`/`preview` with the pre-billing Starter tier.
   **2026-08-07, separately approved by Christian in chat after the release
-  half above.** Christian ran `scripts/provision-diverse-city-production.ts`
+  half above.** Christian ran `scripts/provision-diverse-city-production.ts` (now in onzio-ops)
   himself, interactively, authenticating as operator with his own email OTP
   and TOTP (AAL2) — no operator token or credential passed through the
   assisting agent. Result: club `d7a41762-5158-496e-b415-c83c01ab5c70`,

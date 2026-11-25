@@ -1,11 +1,12 @@
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // Indexing is decided in exactly one place: lib/robots.ts. No other runtime file
 // may set X-Robots-Tag, a `robots` metadata field or a <meta name="robots">.
 
-const root = process.cwd();
+const REPO_ROOT = process.cwd();
 const DECIDER = "lib/robots.ts";
 const SCANNED_ROOTS = ["middleware.ts", "app", "lib"];
 const SOURCE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
@@ -17,7 +18,7 @@ const SIGNATURES: ReadonlyArray<readonly [string, RegExp]> = [
   ["<meta name=\"robots\">", /<meta[^>]*\bname\s*=\s*["']robots["']/i],
 ];
 
-function walk(path: string): string[] {
+function walk(root: string, path: string): string[] {
   const absolute = resolve(root, path);
   let entries;
   try {
@@ -27,7 +28,7 @@ function walk(path: string): string[] {
   }
   return entries.flatMap((entry) => {
     const child = join(path, entry.name);
-    if (entry.isDirectory()) return entry.name === "__tests__" || entry.name === "node_modules" ? [] : walk(child);
+    if (entry.isDirectory()) return entry.name === "__tests__" || entry.name === "node_modules" ? [] : walk(root, child);
     return SOURCE.test(entry.name) && !/\.(?:test|spec)\./.test(entry.name) ? [child] : [];
   });
 }
@@ -40,9 +41,14 @@ export function findRobotsDeciders(files: Readonly<Record<string, string>>): str
     );
 }
 
-function readTree(): Record<string, string> {
+// The scan is rooted so a test can point it at a temporary tree. Never plant files inside the repo:
+// the other architecture tests walk app/, components/ and lib/ in parallel worker threads.
+function readTree(root: string = REPO_ROOT): Record<string, string> {
   return Object.fromEntries(
-    SCANNED_ROOTS.flatMap(walk).map((path) => [path, readFileSync(resolve(root, path), "utf8")]),
+    SCANNED_ROOTS.flatMap((scanned) => walk(root, scanned)).map((path) => [
+      path,
+      readFileSync(resolve(root, path), "utf8"),
+    ]),
   );
 }
 
@@ -75,17 +81,23 @@ describe("a single robots decider", () => {
     });
 
     it("a real file planted on disk is found by the scan, then removed", () => {
-      const directory = resolve(root, "lib/__planted_robots__");
-      const file = join(directory, "second-decider.ts");
+      const temporary = mkdtempSync(join(tmpdir(), "robots-planted-"));
+      const write = (path: string, text: string) => {
+        mkdirSync(dirname(join(temporary, path)), { recursive: true });
+        writeFileSync(join(temporary, path), text);
+      };
       try {
-        mkdirSync(directory, { recursive: true });
-        writeFileSync(file, 'export const bad = (r: Response) => r.headers.set("X-Robots-Tag", "noindex");\n');
-        expect(findRobotsDeciders(readTree())).toEqual([
-          `${relative(root, file)}: X-Robots-Tag header`,
+        write("middleware.ts", "export const middleware = () => undefined;\n");
+        write("lib/robots.ts", 'export const decide = (r: Response) => r.headers.set("X-Robots-Tag", "noindex");\n');
+        const file = join(temporary, "lib/second-decider.ts");
+        write("lib/second-decider.ts", 'export const bad = (r: Response) => r.headers.set("X-Robots-Tag", "noindex");\n');
+        expect(findRobotsDeciders(readTree(temporary))).toEqual([
+          `${relative(temporary, file)}: X-Robots-Tag header`,
         ]);
       } finally {
-        rmSync(directory, { recursive: true, force: true });
+        rmSync(temporary, { recursive: true, force: true });
       }
+      expect(existsSync(temporary)).toBe(false);
       expect(findRobotsDeciders(readTree())).toEqual([]);
     });
   });
