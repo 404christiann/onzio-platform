@@ -3,10 +3,11 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
-.env
-.env.local
-.env.test
-.env.*.local
+.env*
+!.env*.example
+*.pem
+*.log
+.claude/settings.local.json
 .DS_Store
 **/.DS_Store
 tsconfig.tsbuildinfo
