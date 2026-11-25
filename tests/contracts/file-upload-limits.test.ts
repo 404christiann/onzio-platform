@@ -70,8 +70,10 @@ describe("FileUpload refuses a file over maxBytes before onUpload", () => {
     expect(source).toContain("maxBytes?: number;");
     expect(source).toContain("fileUploadIssue(entry, { accept, maxBytes, hint: hintText })");
     expect(source).toMatch(/\{rejection && \([\s\S]*data-slot="file-upload-error"[\s\S]*\{rejection\}/);
-    // The check sits before onUpload in handleFiles.
-    expect(source.indexOf("fileUploadIssue(entry")).toBeLessThan(source.indexOf("onUpload(files);"));
+    // The check sits before the upload starts in handleFiles (startUpload wraps onUpload for analytics).
+    const handleFiles = source.slice(source.indexOf("function handleFiles("));
+    expect(handleFiles.indexOf("fileUploadIssue(entry")).toBeGreaterThan(-1);
+    expect(handleFiles.indexOf("fileUploadIssue(entry")).toBeLessThan(handleFiles.indexOf("startUpload(files);"));
   });
 
   it("every FileUpload that uploads an image on a classic or Rose City page passes the byte limit", () => {
