@@ -4,6 +4,7 @@ import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { usePublicPageVisibility } from "@/components/PublicPageVisibilityProvider";
+import { trackAdminEvent } from "@/lib/admin-analytics";
 import { EditorNotice } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ValidationMessage } from "@/components/admin/ui/editor-kit";
 import { PAGE_HIDDEN_BANNER, VISIBLE_TO_VISITORS_LABEL, pageVisible, type PublicPageKey } from "@/lib/public-page-visibility";
@@ -44,7 +45,10 @@ export function PageVisibilityControl({ pageKey, note }: { pageKey: PublicPageKe
       if (clubId.current !== owner) return;
       setVisible(result.visible); setFailure(result.failure ?? "");
       // The admin layout holds the visibility map; refreshing re-renders it with a fresh read, so this switch (and any later visit) reads the saved value.
-      if (!result.failure) router.refresh();
+      if (!result.failure) {
+        trackAdminEvent("admin_visibility_toggled", { scope: pageKey, visible: result.visible });
+        router.refresh();
+      }
     } finally {
       if (clubId.current === owner) setSaving(false);
     }

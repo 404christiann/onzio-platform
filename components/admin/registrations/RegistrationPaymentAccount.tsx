@@ -5,7 +5,7 @@ import type { RegistrationsEditorModel } from "./useRegistrationsEditor";
 export function RegistrationPaymentAccount({ model }: { model: RegistrationsEditorModel }) {
  const { connect } = model;
  return (
-        <AdminPanel className="overflow-hidden p-0 sm:p-0">
+        <AdminPanel className="ph-no-capture overflow-hidden p-0 sm:p-0">
           <div className="flex items-center gap-3 border-b border-border p-4">
             <span className="grid size-9 flex-none place-items-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
               S

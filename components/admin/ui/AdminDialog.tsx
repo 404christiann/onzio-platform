@@ -5,6 +5,7 @@ import { Fragment, useEffect, useId, useRef, useState, useSyncExternalStore, typ
 
 import { AdminModal } from "@/components/admin/AdminModal";
 import { IconClose } from "@/components/admin/icons";
+import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
 import styles from "./AdminDialog.module.css";
 
 export type AdminDialogSize = "sm" | "md" | "lg" | "xl";
@@ -25,6 +26,8 @@ export type AdminDialogProps = {
   /** Supply the opener ref if it may open the dialog without taking focus. */
   finalFocus?: Dialog.Popup.Props["finalFocus"];
   descriptionId?: string;
+  /** Static name for analytics. Never derive it from the title. */
+  analyticsName?: string;
 };
 
 const phoneQuery = "(max-width: 700px)";
@@ -58,10 +61,15 @@ export function AdminDialog({
   initialFocus,
   finalFocus,
   descriptionId,
+  analyticsName,
 }: AdminDialogProps) {
   const titleId = useId();
   const [popup, setPopup] = useState<HTMLDivElement | null>(null);
   const body = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) trackAdminEvent("admin_modal_opened", { modal: analyticsName ?? `${currentAdminTab()}:dialog` });
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- once per closed-to-open change
 
   useEffect(() => {
     if (!open || !popup) return;
@@ -132,7 +140,7 @@ export function AdminDialog({
     >
       <header className={styles.header} data-slot="admin-dialog-header">
         {eyebrow && <div className={styles.eyebrow}>{eyebrow}</div>}
-        <h2 id={titleId} className={styles.title} data-slot="admin-dialog-title">{title}</h2>
+        <h2 id={titleId} className={`${styles.title} ph-no-capture`} data-slot="admin-dialog-title">{title}</h2>
         <Dialog.Close
           type="button"
           className={`admin-press ${styles.close}`}

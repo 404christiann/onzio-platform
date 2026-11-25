@@ -343,12 +343,12 @@ function ClassicMembersPage() {
   const body = (
     <>
       {!isOwner ? (
-        <section className={styles.card} aria-labelledby="team-access-heading">
+        <section className={cn("ph-no-capture", styles.card)} aria-labelledby="team-access-heading">
           <h2 id="team-access-heading">Team access</h2>
           <p className={styles.notice}>Only owners can view and manage this club’s administrators. Contact your club owner for access changes.</p>
         </section>
       ) : (
-        <section className={styles.card} aria-labelledby="team-access-heading" aria-busy={loading || undefined}>
+        <section className={cn("ph-no-capture", styles.card)} aria-labelledby="team-access-heading" aria-busy={loading || undefined}>
           <h2 id="team-access-heading">Team access</h2>
           <p className={styles.description}>Owners can add or remove administrators. Ownership changes still require Onzio.</p>
           <ShimmerRegion loading={loading} quietRefresh={owners.length + admins.length > 0} skeleton={<TeamSkeleton />} minHeight={240} loadingLabel="Loading team access">
@@ -402,7 +402,7 @@ function ClassicMembersPage() {
         confirmLabel={pending === "remove" ? "Removing…" : "Remove access"} destructive busy={pending === "remove"}
         onCancel={() => { if (!busy.current) setRemoving(null); }} onConfirm={() => { void remove(); }}
         finalFocus={() => opener.current?.isConnected ? opener.current : addInput.current}>
-        <p>{removing?.email} will be signed out and can’t sign in until you add them again.</p>
+        <p className="ph-no-capture">{removing?.email} will be signed out and can’t sign in until you add them again.</p>
         {message && pending !== "remove" && <p role="alert" className={styles.error}>{message.text}</p>}
       </AdminConfirmDialog>
     </>

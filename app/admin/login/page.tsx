@@ -246,7 +246,7 @@ export default function LoginPage() {
           <p className="mx-auto mt-3 max-w-[500px] text-sm leading-6 text-[#6a6d7e] sm:text-base">
             We sent a one-time code to{" "}
             <span className="block break-words sm:inline">
-              <strong className="font-semibold text-[#202235]">{email.trim()}</strong>.
+              <strong className="ph-no-capture font-semibold text-[#202235]">{email.trim()}</strong>.
             </span>
             <br className="hidden sm:block" /> Enter it to access your Onzio admin portal.
           </p>
@@ -415,7 +415,7 @@ export default function LoginPage() {
         <div className="mt-8 space-y-4 text-sm leading-6 text-muted-foreground">
           <p>
             {UNKNOWN_ADDRESS_INTRO}{" "}
-            <strong className="break-all text-foreground">{email.trim()}</strong>.
+            <strong className="ph-no-capture break-all text-foreground">{email.trim()}</strong>.
           </p>
           <p>
             Onzio accounts are set up by us — there&apos;s no signup. If your

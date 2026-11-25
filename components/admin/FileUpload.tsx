@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Upload, X } from "@/components/admin/icons";
 import pendingRing from "@/components/admin/ui/AdminImageField.module.css";
+import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
 import ResilientImage from "@/components/ResilientImage";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,8 @@ type FileUploadProps = {
   /** Visual density for the idle and uploading surfaces. Defaults to `default`. */
   density?: "default" | "compact";
   disabled?: boolean;
+  /** Static slot name for analytics. Defaults to the current admin tab id. */
+  analyticsSlot?: string;
   className?: string;
 };
 
@@ -117,6 +120,7 @@ function FileUpload({
   multiple = false,
   density = "default",
   disabled = false,
+  analyticsSlot,
   className,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -133,6 +137,26 @@ function FileUpload({
 
   function openBrowser() {
     if (interactive) inputRef.current?.click();
+  }
+
+  // onUpload is typed void, but page callers are usually async: a rejection counts as a failed upload.
+  function startUpload(files: FileList | null) {
+    const slot = analyticsSlot ?? currentAdminTab();
+    try {
+      const result: unknown = onUpload(files);
+      if (result && typeof (result as Promise<unknown>).then === "function") {
+        (result as Promise<unknown>).then(
+          () => trackAdminEvent("admin_media_uploaded", { slot, ok: true }),
+          (error: unknown) => {
+            trackAdminEvent("admin_media_uploaded", { slot, ok: false });
+            throw error;
+          },
+        );
+      } else trackAdminEvent("admin_media_uploaded", { slot, ok: true });
+    } catch (error) {
+      trackAdminEvent("admin_media_uploaded", { slot, ok: false });
+      throw error;
+    }
   }
 
   function handleFiles(files: FileList | null) {
@@ -152,7 +176,7 @@ function FileUpload({
               size: picked.reduce((total, entry) => total + entry.size, 0),
             },
       );
-      onUpload(files);
+      startUpload(files);
       return;
     }
     const file = files?.[0];
@@ -163,7 +187,7 @@ function FileUpload({
     }
     setRejected(false);
     setFileMeta({ name: file.name, size: file.size });
-    onUpload(files);
+    startUpload(files);
   }
 
   function handleDragEnter(event: React.DragEvent) {

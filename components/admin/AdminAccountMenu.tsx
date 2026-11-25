@@ -54,7 +54,7 @@ export function AdminAccountMenu({
           {initials || <UserRound className="size-4" aria-hidden="true" />}
         </span>
         <span className="hidden min-w-0 sm:block">
-          <span className="block max-w-36 truncate text-sm font-medium leading-4 text-foreground">
+          <span className="ph-no-capture block max-w-36 truncate text-sm font-medium leading-4 text-foreground">
             {email ?? "Admin account"}
           </span>
           <span className="block text-xs capitalize text-muted-foreground">{role ?? "member"}</span>
@@ -68,7 +68,7 @@ export function AdminAccountMenu({
           className={"absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-border bg-popover p-2 text-popover-foreground shadow-xl " + guided.accountPopover}
         >
           <div className="border-b border-border px-3 py-2.5">
-            <p className="truncate text-sm font-medium text-foreground">{email ?? "Admin account"}</p>
+            <p className="ph-no-capture truncate text-sm font-medium text-foreground">{email ?? "Admin account"}</p>
             <p className="mt-0.5 text-xs capitalize text-muted-foreground">Club {role ?? "member"}</p>
           </div>
           <button

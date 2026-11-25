@@ -4,6 +4,7 @@ import { useId, type ReactNode } from "react";
 import { IconAdd, IconCaretDown, IconCaretUp, IconDelete } from "@/components/admin/icons";
 import NativeImage from "@/components/ResilientNativeImage";
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
+import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
 import { EditorField, EditorGroup } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
@@ -40,7 +41,7 @@ export function TextField({ label, value, max, disabled, multiline, hint, invali
 export function ShowRow({ label, title = "Show on the page", checked, disabled, onChange, copy }: { label: string; title?: string; checked: boolean; disabled: boolean; onChange: (shown: boolean) => void; copy?: ReactNode }) {
   return <div className={styles.showRow}>
     <span className={copy ? styles.showCopy : undefined} aria-hidden="true">{copy ? <><span>{title}</span><small>{copy}</small></> : title}</span>
-    <AdminSwitch label={label} checked={checked} disabled={disabled} onCheckedChange={onChange} />
+    <AdminSwitch label={label} checked={checked} disabled={disabled} onCheckedChange={next => { trackAdminEvent("admin_visibility_toggled", { scope: `${currentAdminTab()}:section`, visible: next }); onChange(next); }} />
   </div>;
 }
 

@@ -22,7 +22,7 @@ export function RegistrationRegistrants({ model, onView }: { model: Registration
             role="tabpanel"
             aria-labelledby="registration-form-tab-registrants"
             hidden={formTab !== "registrants"}
-            className="flex flex-col gap-4"
+            className="ph-no-capture flex flex-col gap-4"
           >
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-2xl border border-border bg-card p-4">
