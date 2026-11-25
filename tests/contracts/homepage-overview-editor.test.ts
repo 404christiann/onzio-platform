@@ -158,7 +158,7 @@ describe("The Edit in … chips", () => {
     const entry = read("components/admin/homepage/HomepageEditor.tsx");
     const route = entry.indexOf('.editableSections.includes("revamp")) return <HomepageOverviewEditor />');
     expect(route).toBeGreaterThan(-1);
-    expect(entry.indexOf("return classic ?")).toBeGreaterThan(route);
+    expect(entry.indexOf('return club.presentationTemplateKey !== "cinematic@2" ? <ClassicHomepageEditor')).toBeGreaterThan(route);
     for (const file of ["HomepageOverviewEditor", "HomepageOverviewPreview", "HomepagePartFields", "HomepageOverviewSkeleton"]) {
       const source = read(`components/admin/homepage/${file}.tsx`);
       expect(source).not.toContain("Edit in ");

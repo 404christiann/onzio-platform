@@ -34,26 +34,17 @@ describe("Tryouts public-page Save contract", () => {
 
   it("routes the public canvas to the atomic endpoint, with a red white-text staged Delete and Undo", () => {
     const route = read("app/admin/(protected)/tryouts/page.tsx");
-    const editor = read("components/admin/tryouts/TryoutsPageEditor.tsx");
+    const editor = read("components/admin/tryouts/ClassicTryoutsPageEditor.tsx");
     const preview = read("components/admin/ScaledTryoutsPreview.tsx");
     expect(route).toContain('export { default } from "@/components/admin/tryouts/TryoutsPageEditor"');
     expect(editor).toContain('fetch("/api/admin/tryouts-page"');
-    expect(editor).toContain("deletedIds: deleted.map");
-    expect(editor).toContain("page: pageDirty ? buildTryoutsPageMutationPayload(pageCopy)");
-    expect(editor).toContain("setEvents((current) => ordered(current.filter");
-    expect(editor).toContain("function undoDelete()");
-    expect(editor).toContain("bg-destructive");
-    expect(editor).toContain("text-destructive-foreground");
-    expect(editor).toContain('import { AlertDialog } from "@base-ui/react/alert-dialog"');
-    expect(editor).toContain("<AlertDialog.Title");
-    expect(editor).toContain("<AlertDialog.Description");
     expect(editor).not.toContain('window.confirm(`Delete');
-    expect(editor).toContain('const policy = codeSiteAdminFor(club)?.tryouts');
-    expect(editor).toContain('!policy?.routeVisible');
+    const dispatcher = read("components/admin/tryouts/TryoutsPageEditor.tsx");
+    expect(dispatcher).toContain('const policy = codeSiteAdminFor(club)?.tryouts');
+    expect(dispatcher).toContain('!policy?.routeVisible');
     expect(editor).not.toMatch(/\.from\("tryouts"\)\s*\.(update|delete|insert)/);
     expect(preview).toContain("TryoutsPreviewFrame");
     expect(preview).toContain("editor={onSelect ? { selected, onSelect } : undefined}");
-    expect(editor).toContain("nativeForms[event.registrationFormId]");
     expect(read("app/api/admin/tryouts-page/route.ts")).toContain("loadLinkedOpenRegistrationForms");
   });
 

@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useClubContext } from "@/components/ClubContextProvider";
-import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import { AdminSaveButton } from "@/components/admin/ui/AdminSaveButton";
@@ -11,8 +9,6 @@ import type { SaveState } from "@/components/admin/ui/useSaveState";
 import { useSeasons } from "@/lib/use-seasons";
 import { MatchStatsEditor } from "./MatchStatsEditor";
 import { SeasonStatsEditor } from "./SeasonStatsEditor";
-import { LegacyMatchStatsEditor } from "./LegacyMatchStatsEditor";
-import { LegacySeasonStatsEditor } from "./LegacySeasonStatsEditor";
 import type { StatsEditorControls, StatsEditorProps, StatsView } from "./types";
 import styles from "./stats-workspace.module.css";
 
@@ -22,9 +18,6 @@ const VIEWS: { id: StatsView; label: string }[] = [
 ];
 
 export function CombinedStatsPage() {
-  const club = useClubContext();
-  // The unsaved-work guard and the header Save button belong to the classic portal; the reimagined portal keeps its own bar and switch dialog.
-  const classic = useAdminPortal().portal !== "reimagined";
   const router = useRouter();
   const searchParams = useSearchParams();
   const view: StatsView = searchParams.get("view") === "season" ? "season" : "match";
@@ -78,7 +71,7 @@ export function CombinedStatsPage() {
       actions={<><SeasonSelect seasons={seasonState.seasons} loading={seasonState.loading}
         value={seasonState.selectedSeasonId} onChange={id => controls.current?.changeSeason(id)}
         label="Season" disabled={saving || switching || seasonState.loading} className={styles.seasonPicker} />
-        {classic && <AdminSaveButton state={saveState} onSave={() => controls.current?.save()} />}</>} />
+        <AdminSaveButton state={saveState} onSave={() => controls.current?.save()} /></>} />
     <div className={styles.viewTabs} role="tablist" aria-label="Stats view">
       {VIEWS.map((item, index) => <button key={item.id} type="button" role="tab"
         ref={node => { if (node) tabs.current.set(item.id, node); else tabs.current.delete(item.id); }}
@@ -95,8 +88,8 @@ export function CombinedStatsPage() {
         </div>
         <fieldset disabled={switching} aria-busy={switching} className={styles.editorBoundary}>
           {view === "match"
-            ? classic ? <MatchStatsEditor {...editorProps} /> : <LegacyMatchStatsEditor {...editorProps} />
-            : classic ? <SeasonStatsEditor {...editorProps} /> : <LegacySeasonStatsEditor {...editorProps} />}
+            ? <MatchStatsEditor {...editorProps} />
+            : <SeasonStatsEditor {...editorProps} />}
         </fieldset>
       </>}
     </div>)}

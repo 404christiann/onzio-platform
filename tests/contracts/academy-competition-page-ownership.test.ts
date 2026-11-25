@@ -52,7 +52,7 @@ describe("Academy competition page ownership", () => {
     expect(source("components/sites/diverse-city/AcademyStandingsSection.tsx")).toContain(
       `from "${modulePath}"`,
     );
-    expect(source("app/admin/(protected)/standings/page.tsx")).toContain(
+    expect(source("components/admin/standings/ClassicStandingsPage.tsx")).toContain(
       `import AcademyLeagueStandingsTable from "${modulePath}";`,
     );
     expect(source("components/sites/diverse-city/routes.ts")).not.toContain("standings:");

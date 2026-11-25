@@ -22,12 +22,9 @@ const PLAYER = "11111111-1111-4111-8111-111111111111";
 const SEASON = "22222222-2222-4222-8222-222222222222";
 
 describe("who reads season totals", () => {
-  it("the public roster, the Seasons hub, analytics and the old editors read the totals views", () => {
+  it("the public roster and the editors read the totals views", () => {
     for (const path of [
       "lib/queries.ts",
-      "lib/admin-seasons-data.ts",
-      "lib/admin-analytics-data.ts",
-      "components/admin/reimagined/SeasonsHub.tsx",
       "components/admin/stats/SeasonStatsEditor.tsx",
       "components/admin/ClassicSeasonsPage.tsx",
       "app/admin/(protected)/roster/page.tsx",
@@ -42,8 +39,6 @@ describe("who reads season totals", () => {
     // What is still allowed: who is in a season (player_id), seeding, and deleting rows.
     const reads = [
       "lib/queries.ts",
-      "lib/admin-seasons-data.ts",
-      "lib/admin-analytics-data.ts",
       "components/admin/stats/SeasonStatsEditor.tsx",
     ].map((path) => [path, source(path)] as const);
     for (const [path, file] of reads) {

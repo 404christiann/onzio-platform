@@ -177,7 +177,6 @@ describe("Rose City Shop, Both kits: sliders and size chart", () => {
   it("leaves Diverse City and the legacy editors untouched", () => {
     const page = read("app/admin/(protected)/shop/page.tsx");
     expect(page).toContain("<ClassicShopPageEditor />");
-    expect(page).toContain("<ShopPageEditor />");
     expect(page.match(/"cinematic@2"/g)).toHaveLength(1);
     expect(page.match(/presentationTemplateKey/g)).toHaveLength(1);
   });

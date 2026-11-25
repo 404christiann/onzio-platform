@@ -206,8 +206,8 @@ runs and profile separately before claiming a speedup. See the
 
 ## Local authenticated browser suites
 
-The `admin-guided`, `admin-loading`, `homepage`, `public-page-editors` and
-`contact-editor` Playwright configs run against a production build served at
+The `admin-guided`, `admin-loading`, `homepage` and `public-page-editors`
+Playwright configs run against a production build served at
 `http://alpha.localhost:3110` with a loopback-only `.env.local`, under
 `scripts/with-local-db-lock.sh`. With `.env.test` exported:
 
@@ -226,11 +226,10 @@ specs refuse to run without the administrator state and the loopback database
 URL. Alpha stands in for Diverse City, so the `admin-loading`, `homepage` and
 `public-page-editors` configs turn Alpha's Shop switch on for their run and
 restore it afterwards (`tests/browser/alpha-store-enabled.global-setup.ts`);
-the seeded Alpha has it off. `public-page-editor-shop-off.spec.ts` turns it
-off again for its own case and restores it. The owner's first admin visit confirms
+the seeded Alpha has it off. The owner's first admin visit confirms
 Alpha's time zone from the browser (ADMIN-RE-02), which the RE-01 database test
-expects unset, so every config that signs the Alpha owner in (these five plus
-`admin-reimagined`, `dcfc-403` and `plat-101`) puts `time_zone` and
+expects unset, so every config that signs the Alpha owner in (these four plus
+`dcfc-403` and `plat-101`) puts `time_zone` and
 `time_zone_set_at` back when the run ends
 (`tests/browser/alpha-time-zone.global-setup.ts`). Strip any real email or media provider keys from
 the local `.env.local` before a run.
@@ -247,25 +246,8 @@ set -a && . ./.env.test && set +a && npx vitest run tests/database/contact-page-
 ```
 
 The database test requires the checked-in `20261005003024_contact_page_editor.sql`
-migration on isolated local Supabase. Browser acceptance uses the built local
-app at `http://alpha.localhost:3110/admin/contact` and the synthetic owner
-identity from `scripts/homepage-local-auth.mjs`.
-
-Review regressions cover malformed direct RPC revisions, committed response loss,
-unknown receipts and exact retries, native dialog keyboard containment/dismissal,
-focus restoration, and phone Branding link hit testing above Save:
-
-```bash
-set -a && . ./.env.test && set +a
-node scripts/homepage-local-auth.mjs
-PAGE_EDITOR_STORAGE_STATE=/private/tmp/onzio-homepage-tests/local-auth.json npx playwright test --config=playwright.contact-editor.config.ts
-```
-
-Run against a production build with local Supabase credentials and
-`ONZIO_ENVIRONMENT=production` (the synthetic Alpha fixture uses production
-domain records). Do not run concurrently with database/browser suites using
-Alpha. Browser writes are restored in `finally`. Chromium's short-height check
-proves layout; native iOS keyboard/safe-area behavior remains unverified.
+migration on isolated local Supabase. Browser acceptance for the classic Contact
+editor is `tests/browser/admin-classic-contact.spec.ts`.
 
 ## Homepage editor redesign
 

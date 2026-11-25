@@ -2,33 +2,21 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import ClassicSeasonsPage from "@/components/admin/ClassicSeasonsPage";
 import RoseCitySeasonsPage from "@/components/admin/seasons/rose-city/RoseCitySeasonsPage";
-import { SeasonsHub } from "@/components/admin/reimagined/SeasonsHub";
-import { readAdminPortal } from "@/lib/admin-portal";
-import { getAdminRouteHref, isAdminRouteHiddenForClub } from "@/lib/admin-route-manifest";
+import { isAdminRouteHiddenForClub } from "@/lib/admin-route-manifest";
 import { loadSeasonsList } from "@/lib/admin-seasons-list";
-import { loadSeasonsHub } from "@/lib/admin-seasons-data";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
-import { clubToday } from "@/lib/club-time";
-import { savedLabel, websiteState } from "@/lib/save-status";
 import { createClient } from "@/lib/supabase-server";
 
-// ADMIN-RE-11a: "This season" (design: cd-season-final, dc-club-home). In the
-// reimagined admin the Seasons page is the hub: the season the website shows,
-// its numbers, "Start next season" and the quiet past-season switcher. A club
-// still on the classic admin keeps the old page unchanged. Session, tenant and
-// role are resolved on the server from the host and the signed-in person; every
-// write goes through POST /api/admin/data, which checks them again.
+// Session, tenant and role are resolved on the server from the host and the
+// signed-in person; every write goes through POST /api/admin/data, which checks
+// them again.
 
 export const dynamic = "force-dynamic";
 
 const ROSE_CITY_SLUG = "rose-city";
 
-export default async function SeasonsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function SeasonsPage() {
   const supabase = await createClient();
   const { userId } = await requireFreshClubSession(supabase);
   const requestHeaders = await headers();
@@ -36,60 +24,22 @@ export default async function SeasonsPage({
   if (club.role !== "owner" && club.role !== "admin") {
     redirect("/admin/login?error=not_authorized");
   }
-  const portal = await readAdminPortal(supabase, club.id);
-  if (portal.portal !== "reimagined") {
-    // RC-ADMIN-4b-seasons: Rose City's classic admin lists seasons on the editor kit, keyed on the club's slug
-    // (not on its site design, as ADMIN_ROUTES_HIDDEN_BY_CLUB is). Every other club keeps the classic page.
-    if (club.slug !== ROSE_CITY_SLUG) return <ClassicSeasonsPage />;
-    const list = await loadSeasonsList(supabase, club.id);
-    if (list.status !== "ready") {
-      return (
-        <p role="alert" className="mx-auto max-w-[1120px] text-sm text-destructive">
-          Your seasons could not be loaded. Refresh the page to try again.
-        </p>
-      );
-    }
-    return (
-      <RoseCitySeasonsPage
-        seasons={list.seasons}
-        deleteStates={list.deleteStates}
-        hasStandings={!isAdminRouteHiddenForClub(club.slug, "standings")}
-      />
-    );
-  }
-
-  // The same predicate the home and the classic shell use for content changes.
-  const canMutateContent =
-    club.lifecycle === "onboarding" ||
-    (club.lifecycle === "active" &&
-      (club.kind === "demo" ||
-        club.kind === "test" ||
-        club.publicAccess === "live" ||
-        club.publicAccess === "grace"));
-
-  const params = await searchParams;
-  const asked = typeof params.season === "string" ? params.season : undefined;
-  const data = await loadSeasonsHub(supabase, club.id, clubToday(portal.timeZone), asked);
-  if (data.status !== "ready") {
+  // RC-ADMIN-4b-seasons: Rose City's classic admin lists seasons on the editor kit, keyed on the club's slug
+  // (not on its site design, as ADMIN_ROUTES_HIDDEN_BY_CLUB is). Every other club keeps the classic page.
+  if (club.slug !== ROSE_CITY_SLUG) return <ClassicSeasonsPage />;
+  const list = await loadSeasonsList(supabase, club.id);
+  if (list.status !== "ready") {
     return (
       <p role="alert" className="mx-auto max-w-[1120px] text-sm text-destructive">
         Your seasons could not be loaded. Refresh the page to try again.
       </p>
     );
   }
-
   return (
-    <SeasonsHub
-      data={data}
-      canChange={canMutateContent}
-      savedText={savedLabel(websiteState(club))}
-      links={{
-        league: isAdminRouteHiddenForClub(club.slug, "standings") ? null : getAdminRouteHref("standings"),
-        // ADMIN-RE-11c-2: the Season totals page (design cd-season-totals), games added up plus what is added by hand.
-        totals: `${getAdminRouteHref("seasons")}/totals`,
-        games: getAdminRouteHref("schedule"),
-        playerNumbers: getAdminRouteHref("score"),
-      }}
+    <RoseCitySeasonsPage
+      seasons={list.seasons}
+      deleteStates={list.deleteStates}
+      hasStandings={!isAdminRouteHiddenForClub(club.slug, "standings")}
     />
   );
 }

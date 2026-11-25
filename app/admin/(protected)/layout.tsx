@@ -6,13 +6,8 @@ import { AdminAnalyticsProvider } from "@/components/admin/AdminAnalyticsProvide
 import { AdminPortalProvider } from "@/components/admin/AdminPortalProvider";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { ClassicAdminUnsavedGuardProvider } from "@/components/admin/ui/UnsavedGuardDialog";
-import { ReimaginedShell } from "@/components/admin/reimagined/ReimaginedShell";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { readAdminPortal } from "@/lib/admin-portal";
-import { adminAccessFor, readAdminHomeCounts, readSearchExtras } from "@/lib/admin-tab-page";
-import { gameSearchItems, getAdminSearchItems, playerSearchItems } from "@/lib/admin-search";
-import { getAdminTabDots, getAdminTabTargets, getVisibleAdminTabs } from "@/lib/admin-tabs";
-import { getAdminRouteHref } from "@/lib/admin-route-manifest";
 import {
   ADMIN_THEME_COOKIE_NAME,
   resolveAdminTheme,
@@ -60,7 +55,7 @@ export default async function ProtectedLayout({
     redirect("/admin/login?error=not_authorized");
   }
 
-  // ADMIN-RE-02: fail-safe; any read problem keeps the classic admin.
+  // Fail-safe: any read problem falls back to the default settings.
   const portal = await readAdminPortal(supabase, club.id);
 
   const cookieStore = await cookies();
@@ -68,54 +63,21 @@ export default async function ProtectedLayout({
     cookieStore.get(ADMIN_THEME_COOKIE_NAME)?.value,
   );
 
-  // ADMIN-RE-24: the tabs follow the club, and a red dot marks a tab that
-  // needs you. Counts are read fail-safe: a failed read shows no dot.
-  let shell: React.ComponentProps<typeof ReimaginedShell> | null = null;
-  if (portal.portal === "reimagined") {
-    const [needs, extras] = await Promise.all([
-      readAdminHomeCounts(club.id, portal.timeZone).catch(() => null),
-      readSearchExtras(club.id, portal.timeZone),
-    ]);
-    const access = adminAccessFor(club, portal, needs?.hasLiveSignUps ?? false);
-    const tabs = getVisibleAdminTabs(access);
-    shell = {
-      tabs: tabs.map(({ id, label, href }) => ({ id, label, href })),
-      targets: getAdminTabTargets(access),
-      dots: getAdminTabDots(tabs, needs ?? { gamesNeedingScore: null, newSignUps: null }),
-      // ADMIN-RE-24c: only what this person can open goes to the browser.
-      search: [
-        ...getAdminSearchItems(access),
-        ...playerSearchItems(extras.players),
-        ...gameSearchItems(extras.games, getAdminRouteHref("schedule")),
-      ],
-      children: null,
-    };
-  }
-
   return (
     <AdminThemeProvider initialTheme={initialTheme}>
-      {/* ADMIN-POSTHOG: classic admin only; a silent no-op outside Vercel production or without a key. */}
-      {!shell && (
-        <AdminAnalyticsProvider
-          env={{
-            vercelEnv: process.env.VERCEL_ENV,
-            key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
-            host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-          }}
-          identity={{ userId, clubId: club.id, clubSlug: club.slug, role: club.role }}
-        />
-      )}
+      {/* ADMIN-POSTHOG: a silent no-op outside Vercel production or without a key. */}
+      <AdminAnalyticsProvider
+        env={{
+          vercelEnv: process.env.VERCEL_ENV,
+          key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+          host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+        }}
+        identity={{ userId, clubId: club.id, clubSlug: club.slug, role: club.role }}
+      />
       <AdminPortalProvider settings={portal} isOwner={club.role === "owner"}>
-        {/* ADMIN-RE-05: the club's admin_portal picks the shell; classic on any doubt. */}
-        {shell ? (
-          <ReimaginedShell tabs={shell.tabs} targets={shell.targets} dots={shell.dots} search={shell.search}>
-            {children}
-          </ReimaginedShell>
-        ) : (
-          <ClassicAdminUnsavedGuardProvider>
-            <AdminShell>{children}</AdminShell>
-          </ClassicAdminUnsavedGuardProvider>
-        )}
+        <ClassicAdminUnsavedGuardProvider>
+          <AdminShell>{children}</AdminShell>
+        </ClassicAdminUnsavedGuardProvider>
       </AdminPortalProvider>
     </AdminThemeProvider>
   );

@@ -39,7 +39,7 @@ function Workspace() {
 }
 createRoot(document.getElementById("root")!).render(
   <AdminThemeProvider initialTheme={theme}>
-    <AdminPortalProvider settings={{ ...CLASSIC_ADMIN_PORTAL, portal: params.get("portal") === "reimagined" ? "reimagined" : "classic" }} isOwner={false}>
+    <AdminPortalProvider settings={{ ...CLASSIC_ADMIN_PORTAL, portal: "classic" }} isOwner={false}>
       <ClubContextProvider club={club}><Workspace /></ClubContextProvider>
     </AdminPortalProvider>
   </AdminThemeProvider>,

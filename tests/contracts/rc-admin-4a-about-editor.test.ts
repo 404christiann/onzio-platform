@@ -218,10 +218,9 @@ describe("RC-ADMIN-4a About editor: sections, rules and wording", () => {
 
 describe("RC-ADMIN-4a About editor: Diverse City keeps the classic editor", () => {
   const page = source("app/admin/(protected)/about/page.tsx");
-  it("sends only a classic-portal Rose City club to the new editor; every other club still renders the classic editor", () => {
-    expect(page).toContain('if (portal === "classic" && club.presentationTemplateKey === "cinematic@2") return <RoseCityAboutEditor />;');
+  it("sends only a Rose City club to the new editor; every other club still renders the classic editor", () => {
+    expect(page).toContain('if (club.presentationTemplateKey === "cinematic@2") return <RoseCityAboutEditor />;');
     expect(page).toContain("<ClassicAboutToastBoundary><AboutEditor classic /></ClassicAboutToastBoundary>");
-    expect(page).toContain(": <AboutEditor />;");
   });
   it("does not choose a template itself, so the selector debt does not grow", () => {
     for (const file of ["RoseCityAboutEditor.tsx", "AboutSectionFields.tsx", "about-sections.ts"]) {

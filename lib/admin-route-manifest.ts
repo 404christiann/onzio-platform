@@ -1,4 +1,4 @@
-import type { AdminFlags, AdminPortal } from "@/lib/admin-portal";
+import type { AdminFlags } from "@/lib/admin-portal";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 export type AdminRole = "owner" | "admin";
@@ -18,19 +18,8 @@ export type AdminRouteAccessContext = Readonly<{
    * the admin keeps Shop so owners can prepare kits under the Shop-off banner.
    */
   storeEnabled: boolean;
-  /**
-   * ADMIN-RE-05: which admin the club sees (onzio.clubs.admin_portal, read
-   * fail-safe by lib/admin-portal.ts). Missing means classic: the home jobs and
-   * More rows exist only in the reimagined admin.
-   */
-  adminPortal?: AdminPortal;
-  /** Per-slice switches (onzio.clubs.admin_flags) for later ADMIN-RE slices. */
+  /** Per-club switches (onzio.clubs.admin_flags), read fail-safe by lib/admin-portal.ts. */
   adminFlags?: AdminFlags;
-  /**
-   * A non-archived sign-up form that is open or already has sign-ups. Decides
-   * whether "See registrations" is a big job on the home.
-   */
-  hasLiveSignUps?: boolean;
 }>;
 
 export type AdminRouteGroupId =
@@ -53,7 +42,6 @@ export type AdminRouteId =
   | "seasons"
   | "roster"
   | "schedule"
-  | "score"
   | "match-stats"
   | "standings"
   | "registrations"
@@ -61,10 +49,6 @@ export type AdminRouteId =
   | "branding"
   | "team-access"
   | "payments"
-  | "sign-ups"
-  | "add-game"
-  | "your-club"
-  | "programs-and-tryouts"
   | "stadium"
   | "foothill-transit"
   | "chick-fil-a"
@@ -121,17 +105,6 @@ export type AdminRouteDefinition = Readonly<{
   feature?: AdminRouteFeature;
   ownerOnly?: true;
   billingRequired?: true;
-  /**
-   * A page that exists only in the reimagined admin (ADMIN-RE-06 onward). It
-   * never appears in the classic sidebar or search; the page itself sends a
-   * classic club to the old one.
-   */
-  reimaginedOnly?: true;
-  /**
-   * A page the classic sidebar and search list but the reimagined admin does
-   * not, because it reaches the same page through its own tab (Insights).
-   */
-  classicOnly?: true;
   /**
    * A page whose editor exists only on the Rose City site design (News and the
    * nine other site editors). Every other design never sees the row.
@@ -404,14 +377,6 @@ export const ADMIN_ROUTE_MANIFEST = [
     groupId: "competition",
   },
   {
-    id: "score",
-    label: "Enter a score",
-    href: "/admin/score",
-    iconKey: "schedule",
-    groupId: "competition",
-    reimaginedOnly: true,
-  },
-  {
     id: "match-stats",
     label: "Stats",
     href: "/admin/stats",
@@ -463,52 +428,13 @@ export const ADMIN_ROUTE_MANIFEST = [
     ownerOnly: true,
     billingRequired: true,
   },
-  {
-    id: "sign-ups",
-    label: "Registrations",
-    href: "/admin/sign-ups",
-    iconKey: "registrations",
-    groupId: null,
-    reimaginedOnly: true,
-  },
-  {
-    id: "add-game",
-    label: "Add a game",
-    href: "/admin/add-game",
-    iconKey: "schedule",
-    groupId: null,
-    reimaginedOnly: true,
-  },
-  // ADMIN-RE-14: logo, how to reach the club, social pages and the footer line
-  // on one page. Branding stays the classic admin's page for the same data.
-  {
-    id: "your-club",
-    label: "Your club",
-    href: "/admin/your-club",
-    iconKey: "branding",
-    groupId: null,
-    reimaginedOnly: true,
-  },
-  // ADMIN-RE-12c: programs and tryouts on one list, with whether families can
-  // sign up (group 2 decision 1). The two classic pages stay: a program's page
-  // is still edited on /admin/programs ("Edit the page").
-  {
-    id: "programs-and-tryouts",
-    label: "Programs and tryouts",
-    href: "/admin/programs-and-tryouts",
-    iconKey: "tryouts",
-    groupId: null,
-    reimaginedOnly: true,
-  },
-  // TELEMETRY-06: the Sponsor Insights add-on in the classic sidebar. The
-  // reimagined admin has its Insights tab for the same page.
+  // TELEMETRY-06: the Sponsor Insights add-on in the sidebar.
   {
     id: "insights",
     label: "Insights",
     href: "/admin/insights",
     iconKey: "insights",
     groupId: null,
-    classicOnly: true,
     pageTitle: "Sponsor Insights",
   },
 ] as const satisfies readonly AdminRouteDefinition[];
@@ -650,7 +576,6 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
-  score: ["competition", "score", "result", "enter a score", "matches"],
   "match-stats": ["competition", "stats", "match stats", "season stats", "season totals", "game statistics", "player statistics"],
   standings: ["competition", "standings", "table"],
   registrations: ["registrations", "forms", "registrants"],
@@ -664,10 +589,6 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
     "permissions",
   ],
   payments: ["payments", "billing", "subscription", "invoices"],
-  "sign-ups": ["registrations", "sign-ups", "registrants", "players", "guardians", "download list"],
-  "add-game": ["schedule", "fixtures", "add a game", "new match"],
-  "your-club": ["club settings", "logo", "social pages", "footer", "email", "phone", "hours", "contact details"],
-  "programs-and-tryouts": ["programs", "tryouts", "sign-ups", "camps", "evaluations", "registration"],
   insights: ["sponsor insights", "sponsors", "visits", "visitors", "page views", "traffic", "monthly report"],
 } as const satisfies Record<AdminRouteId, readonly string[]>;
 
@@ -676,12 +597,12 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
  * design, so a future cinematic@2 club is unaffected). Rose City outsources
  * tryouts, so its admin has no Registrations, and its public site never shows
  * standings, so it has no Standings either: no sidebar row, hub row, search
- * result, quick action, home job or More row, and /admin/registrations and
+ * result or quick action, and /admin/registrations and
  * /admin/standings answer 404. The code, data, API routes and public pages stay
  * for the clubs that use them (Diverse City).
  */
 export const ADMIN_ROUTES_HIDDEN_BY_CLUB: Readonly<Record<string, readonly AdminRouteId[]>> = {
-  "rose-city": ["registrations", "sign-ups", "standings"],
+  "rose-city": ["registrations", "standings"],
 };
 
 /** Whether this club's admin hides a row (see ADMIN_ROUTES_HIDDEN_BY_CLUB). */
@@ -705,9 +626,9 @@ export const SPONSOR_INSIGHTS_FLAG = "sponsor_insights";
 
 /**
  * TELEMETRY-06: the one gate for Sponsor Insights (/admin/insights and its
- * monthly report), on either admin: an owner or admin of a club whose
- * admin_flags.sponsor_insights is true. The classic sidebar, the reimagined
- * Insights tab and the page loader all ask this.
+ * monthly report), an owner or admin of a club whose
+ * admin_flags.sponsor_insights is true. The sidebar and the page loader
+ * ask this.
  */
 export function canSeeSponsorInsights(
   context: Pick<AdminRouteAccessContext, "role" | "adminFlags">,
@@ -720,17 +641,11 @@ export function isAdminRouteVisible(
   context: AdminRouteAccessContext,
 ): boolean {
   if (!isProtectedAdminRole(context.role)) return false;
-  if (route.reimaginedOnly && context.adminPortal !== "reimagined") return false;
-  if (route.classicOnly && context.adminPortal === "reimagined") return false;
   if (route.id === "insights" && !canSeeSponsorInsights(context)) return false;
   if (isAdminRouteHiddenForClub(context.clubSlug, route.id)) return false;
   const siteAdmin = codeSiteAdminFor(context);
   if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
   if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible) return false;
-  // A club whose website has neither sees no row (decision 0005).
-  if (route.id === "programs-and-tryouts" && !siteAdmin?.programs.routeVisible && !siteAdmin?.tryouts.routeVisible) {
-    return false;
-  }
   // Only designs that publish a Contact page get the Contact editor (cinematic@2
   // has its own Contact editor); its details are used nowhere else on other designs.
   if (route.id === "contact" && !siteAdmin?.contact.routeVisible && context.presentationTemplateKey !== "cinematic@2") return false;
@@ -931,228 +846,4 @@ export function getAdminGroupForPathname(
     pathnameMatchesRoute(pathname, candidate.href),
   );
   return route?.groupId ?? null;
-}
-
-// ADMIN-RE-05: the reimagined home. Its big jobs and its More list are built
-// from this manifest (decision 0005), so a club sees only the sections its
-// website has, and owner-only or billing rows follow the same route checks as
-// the classic sidebar. Labels are the glossary's words. Until each job's own
-// page ships, the tiles and rows open the existing pages.
-
-export type AdminHomeJobId =
-  | "enter-score"
-  | "add-game"
-  | "see-registrations"
-  | "edit-website";
-
-/** Which count the home puts under a tile ("12 games need a score", "3 new"). */
-export type AdminHomeHintKey = "games-needing-score" | "new-sign-ups";
-
-/** Each job keeps its own color, so owners find it by color and shape. */
-export type AdminHomeJobHue = "amber" | "blue" | "green" | "coral";
-
-type AdminHomeJobDefinition = Readonly<{
-  id: AdminHomeJobId;
-  label: string;
-  routeId: AdminRouteId;
-  hue: AdminHomeJobHue;
-  hint?: AdminHomeHintKey;
-  /** Hidden while content changes are paused, like the classic quick actions. */
-  needsContentMutation?: true;
-  /** A big job only while the club has a live sign-up form. */
-  needsLiveSignUps?: true;
-}>;
-
-export type AdminHomeJob = Readonly<{
-  id: AdminHomeJobId;
-  label: string;
-  href: `/admin${string}`;
-  hue: AdminHomeJobHue;
-  hint?: AdminHomeHintKey;
-}>;
-
-export const ADMIN_HOME_JOBS = [
-  {
-    id: "enter-score",
-    label: "Enter a score",
-    routeId: "score",
-    hue: "amber",
-    hint: "games-needing-score",
-    needsContentMutation: true,
-  },
-  {
-    id: "add-game",
-    label: "Add a game",
-    routeId: "add-game",
-    hue: "blue",
-    needsContentMutation: true,
-  },
-  {
-    id: "see-registrations",
-    label: "See registrations",
-    routeId: "sign-ups",
-    hue: "green",
-    hint: "new-sign-ups",
-    needsLiveSignUps: true,
-  },
-  {
-    id: "edit-website",
-    label: "Edit my website",
-    routeId: "homepage",
-    hue: "coral",
-    needsContentMutation: true,
-  },
-] as const satisfies readonly AdminHomeJobDefinition[];
-
-export type AdminMoreRowId =
-  | "team-roster"
-  | "this-season"
-  | "games"
-  | "player-numbers"
-  | "league-table"
-  | "programs-and-tryouts"
-  | "homepage"
-  | "about-page"
-  | "contact-page"
-  | "sponsors"
-  | "shop"
-  | "your-club"
-  | "how-the-team-is-doing"
-  | "payments-and-plan"
-  | "who-can-sign-in"
-  | "sign-up-forms";
-
-type AdminMoreRowDefinition = Readonly<{
-  id: AdminMoreRowId;
-  label: string;
-  routeId: AdminRouteId;
-  /**
-   * The way to a page whose big jobs hide while content changes are paused,
-   * so the owner can still open it and look.
-   */
-  onlyWhileContentPaused?: true;
-}>;
-
-export type AdminMoreRow = Readonly<{
-  id: AdminMoreRowId;
-  label: string;
-  href: `/admin${string}`;
-  iconKey: AdminRouteIconKey;
-}>;
-
-// Programs and tryouts are one row (ADMIN-RE-12c, group 2 decision 1). A club
-// whose website has only one of them sees it named for that one (decision
-// 0005; see programsTryoutsLabel). Every old
-// page stays reachable from the home: About, Contact and Player numbers until
-// Edit my website and Enter a score cover them (RE-13, RE-06), Games always
-// (ADMIN-RE-07: no job opens the old schedule page any more, and it is still
-// where a game is changed or removed), and Homepage while content changes are
-// paused hide the job that opens it.
-export const ADMIN_MORE_ROWS = [
-  { id: "team-roster", label: "Team roster", routeId: "roster" },
-  { id: "this-season", label: "This season", routeId: "seasons" },
-  { id: "games", label: "Games", routeId: "schedule" },
-  { id: "player-numbers", label: "Player numbers", routeId: "match-stats" },
-  { id: "league-table", label: "League table", routeId: "standings" },
-  { id: "programs-and-tryouts", label: "Programs and tryouts", routeId: "programs-and-tryouts" },
-  { id: "homepage", label: "Homepage", routeId: "homepage", onlyWhileContentPaused: true },
-  { id: "about-page", label: "About page", routeId: "about" },
-  { id: "contact-page", label: "Contact page", routeId: "contact" },
-  { id: "sponsors", label: "Sponsors", routeId: "sponsors" },
-  { id: "shop", label: "Shop", routeId: "shop" },
-  { id: "your-club", label: "Your club", routeId: "your-club" },
-  { id: "how-the-team-is-doing", label: "How the team is doing", routeId: "analytics" },
-  { id: "payments-and-plan", label: "Payments and plan", routeId: "payments" },
-  { id: "who-can-sign-in", label: "Who can sign in", routeId: "team-access" },
-  // ADMIN-RE-08: always here, since See registrations now opens its own
-  // page; building, opening and closing forms stay on the old page.
-  { id: "sign-up-forms", label: "Sign-up forms", routeId: "registrations" },
-] as const satisfies readonly AdminMoreRowDefinition[];
-
-/** "Programs and tryouts", or just the one the club's website has (decision 0005). */
-function programsTryoutsLabel(routes: ReadonlyMap<AdminRouteId, AdminRouteDefinition>): string {
-  const programs = routes.has("programs");
-  const tryouts = routes.has("tryouts");
-  if (programs && !tryouts) return "Programs";
-  if (tryouts && !programs) return "Tryouts";
-  return "Programs and tryouts";
-}
-
-function isReimagined(context: AdminRouteAccessContext): boolean {
-  return context.adminPortal === "reimagined";
-}
-
-function visibleRouteMap(context: AdminRouteAccessContext) {
-  return new Map(
-    ADMIN_ROUTE_MANIFEST.filter((route) => isAdminRouteVisible(route, context)).map(
-      (route) => [route.id, route as AdminRouteDefinition],
-    ),
-  );
-}
-
-export function getVisibleAdminHomeJobs(
-  context: AdminRouteAccessContext,
-): readonly AdminHomeJob[] {
-  if (!isReimagined(context)) return [];
-  const routes = visibleRouteMap(context);
-  return ADMIN_HOME_JOBS.flatMap((job: AdminHomeJobDefinition) => {
-    const route = routes.get(job.routeId);
-    if (!route) return [];
-    if (job.needsContentMutation && !context.canMutateContent) return [];
-    if (job.needsLiveSignUps && !context.hasLiveSignUps) return [];
-    return [
-      {
-        id: job.id,
-        label: job.label,
-        href: route.href,
-        hue: job.hue,
-        ...(job.hint ? { hint: job.hint } : {}),
-      },
-    ];
-  });
-}
-
-/**
- * ADMIN-RE-06: where a home job leads, for a link from inside another job's
- * page ("All scores are in" → Add a game). It follows the job as its page
- * ships. The caller decides whether to show the link.
- */
-/** The path of a route that every owner and administrator has (no template or billing rule). */
-export function getAdminRouteHref(id: AdminRouteId): `/admin${string}` {
-  return ROUTE_BY_ID.get(id)?.href ?? "/admin";
-}
-
-export function getAdminHomeJobHref(id: AdminHomeJobId): `/admin${string}` {
-  const job = ADMIN_HOME_JOBS.find((candidate) => candidate.id === id);
-  const route = job ? ROUTE_BY_ID.get(job.routeId) : undefined;
-  return route?.href ?? "/admin";
-}
-
-export function getVisibleAdminMoreRows(
-  context: AdminRouteAccessContext,
-): readonly AdminMoreRow[] {
-  if (!isReimagined(context)) return [];
-  const routes = visibleRouteMap(context);
-  return ADMIN_MORE_ROWS.flatMap((row: AdminMoreRowDefinition) => {
-    const route = routes.get(row.routeId);
-    if (!route) return [];
-    if (row.onlyWhileContentPaused && context.canMutateContent) return [];
-    const label = row.id === "programs-and-tryouts" ? programsTryoutsLabel(routes) : row.label;
-    return [{ id: row.id, label, href: route.href, iconKey: route.iconKey }];
-  });
-}
-
-/**
- * The reimagined top bar's title for a page: the glossary name from More when
- * the page is one of its rows ("Team roster" for /admin/roster), otherwise the
- * page's own name, otherwise "Club admin". A title only names the page; each
- * page still checks who may open it, so this needs no access context.
- */
-export function getReimaginedPageTitle(pathname: string): string {
-  const route = ADMIN_ROUTE_MANIFEST.find(
-    (candidate) => candidate.href !== "/admin" && pathnameMatchesRoute(pathname, candidate.href),
-  );
-  if (!route) return "Club admin";
-  const row = ADMIN_MORE_ROWS.find((candidate) => candidate.routeId === route.id);
-  return row?.label ?? route.label;
 }

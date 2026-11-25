@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
-import { useLeaveGuard } from "@/components/admin/reimagined/TopBar";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { IconLink } from "@/components/admin/icons";
@@ -38,11 +35,6 @@ function ClassicGuard({ dirty, onSave, onDiscard, retention }: { dirty: boolean;
   useUnsavedGuard({ dirty, edited: "Homepage", onSave, onDiscard, retentionNotice: retention });
   return null;
 }
-/** The same for the reimagined portal's tabs. */
-function ReimaginedGuard({ unsaved, onLeave }: { unsaved: boolean; onLeave: (href: string) => void }) {
-  useLeaveGuard(onLeave, unsaved);
-  return null;
-}
 
 const FORM_KEYS = ["tryouts", "mediaCredentials", "nationalAnthem"] as const;
 
@@ -53,8 +45,6 @@ const FORM_KEYS = ["tryouts", "mediaCredentials", "nationalAnthem"] as const;
  */
 export default function HomepageOverviewEditor() {
   const club = useClubContext();
-  const portal = useAdminPortal().portal;
-  const router = useRouter();
   const editor = useHomepageEditor(club.id);
   const { state, snapshot, dispatch } = editor;
   const dialog = useEditorDialog<PartId>();
@@ -64,7 +54,6 @@ export default function HomepageOverviewEditor() {
   const [reviewRecovery, setReviewRecovery] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
-  const [leaveTo, setLeaveTo] = useState<string | null>(null);
   // Saved shows for a moment, then the button goes back to Save (grey) until the next edit.
   const [savedFlash, setSavedFlash] = useState(false);
   const keepAfterReload = useRef(false);
@@ -103,7 +92,7 @@ export default function HomepageOverviewEditor() {
     if (recoveryConflictNow.allowedAction === "apply") void latest.current.restoreRecoveredDraft();
     else setReviewRecovery(true);
   }, [editor.loading, recoveryConflictNow]);
-  // Leaving with unsaved work: the shell's guard (classic) or the tabs' guard (reimagined) asks first, and a hard navigation warns.
+  // Leaving with unsaved work: the shell's guard asks first, and a hard navigation warns.
   useEffect(() => {
     if (!dirty && !state?.submitted) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -179,9 +168,7 @@ export default function HomepageOverviewEditor() {
   </div>;
 
   return <>
-    {portal === "classic"
-      ? <ClassicGuard dirty={dirty || !!state.submitted || !!editor.recoveryConflict || editor.cleanupWarning} onSave={guardSave} onDiscard={guardDiscard} retention={retention} />
-      : <ReimaginedGuard unsaved={dirty || !!state.submitted} onLeave={href => setLeaveTo(href)} />}
+    <ClassicGuard dirty={dirty || !!state.submitted || !!editor.recoveryConflict || editor.cleanupWarning} onSave={guardSave} onDiscard={guardDiscard} retention={retention} />
     <PageFrame
       title="Homepage"
       breadcrumb={[{ label: "Website", href: "/admin/website-pages" }, { label: "Pages" }]}
@@ -223,9 +210,6 @@ export default function HomepageOverviewEditor() {
     {reviewRecovery && editor.recoveryConflict && <HomepageRecoveryReview current={state.baseline} recovered={editor.recoveryConflict.draft} reason={editor.recoveryConflict.reason} allowedAction={editor.recoveryConflict.allowedAction} close={() => setReviewRecovery(false)} restore={editor.restoreRecoveredDraft} />}
     <AdminConfirmDialog open={confirmDiscard} title={DISCARD_CONFIRM.title} confirmLabel={DISCARD_CONFIRM.confirmLabel} destructive busy={discarding} onCancel={() => setConfirmDiscard(false)} onConfirm={() => void discard()}>
       Your unsaved homepage edits and any photos added since the last save will be removed, and the saved homepage will load again.
-    </AdminConfirmDialog>
-    <AdminConfirmDialog open={leaveTo !== null} title="Leave without saving?" confirmLabel="Leave without saving" destructive onCancel={() => setLeaveTo(null)} onConfirm={() => { const href = leaveTo; setLeaveTo(null); void editor.discardUnsavedUploads().then(ok => { if (ok && href) router.push(href); }); }}>
-      Your homepage changes have not been saved yet.
     </AdminConfirmDialog>
   </>;
 }

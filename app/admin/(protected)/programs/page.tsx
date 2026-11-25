@@ -11,15 +11,12 @@ import { resolveProgramsPageContent } from "@/lib/programs-page-content";
 import type { DBProgramsPageContent } from "@/lib/db-types";
 import type { ProgramPreviews } from "@/components/admin/programs/program-previews";
 import { useProgramsEditor } from "@/components/admin/programs/useProgramsEditor";
-import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { ClassicProgramsEditor } from "@/components/admin/programs/ClassicProgramsEditor";
-import { LegacyProgramsEditor } from "@/components/admin/programs/LegacyProgramsEditor";
 import "./programs-editor.css";
 
 export default function AdminProgramsPage() {
   const club = useClubContext();
   const router = useRouter();
-  const classic = useAdminPortal().portal !== "reimagined";
   const programsPolicy = codeSiteAdminFor(club)?.programs;
   const unsupportedTemplate = !programsPolicy?.routeVisible;
   useEffect(() => {
@@ -34,10 +31,10 @@ export default function AdminProgramsPage() {
       <AcademyProgramDetailPage program={previewProgram} otherPrograms={previewOtherPrograms} editorPreview />
     </TemplateFontScope>,
   };
-  return <ProgramsWorkspace key={club.id} clubId={club.id} clubName={club.name} programsPolicy={programsPolicy} classic={classic} previews={previews} />;
+  return <ProgramsWorkspace key={club.id} clubId={club.id} clubName={club.name} programsPolicy={programsPolicy} previews={previews} />;
 }
 
-function ProgramsWorkspace({ clubId, clubName, programsPolicy, classic, previews }: Parameters<typeof useProgramsEditor>[0] & { previews: ProgramPreviews }) {
-  const editor = useProgramsEditor({ clubId, clubName, programsPolicy, classic });
-  return classic ? <ClassicProgramsEditor editor={editor} previews={previews} /> : <LegacyProgramsEditor editor={editor} previews={previews} />;
+function ProgramsWorkspace({ clubId, clubName, programsPolicy, previews }: Parameters<typeof useProgramsEditor>[0] & { previews: ProgramPreviews }) {
+  const editor = useProgramsEditor({ clubId, clubName, programsPolicy, classic: true });
+  return <ClassicProgramsEditor editor={editor} previews={previews} />;
 }

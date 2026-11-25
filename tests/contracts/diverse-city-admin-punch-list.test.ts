@@ -29,7 +29,7 @@ const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
 const PROGRAMS_ADMIN = "app/admin/(protected)/programs/page.tsx";
 const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
 const HOMEPAGE_ADMIN = "app/admin/(protected)/homepage/page.tsx";
-const BRANDING_ADMIN = "components/admin/club-settings/LegacyBranding.tsx";
+const BRANDING_ADMIN = "components/admin/club-settings/ClassicBranding.tsx";
 
 /**
  * Christian reported four admin-portal failures against the live Diverse City
@@ -370,10 +370,10 @@ describe("Diverse City admin punch list", () => {
     });
 
     it("Staff saves run photo_url through rosterImageForStorage, matching Players", () => {
-      const roster = source(ROSTER_ADMIN);
+      const roster = source(ROSTER_ADMIN) + source("components/admin/roster/ClassicRosterPage.tsx");
       const matches = roster.match(/rosterImageForStorage\(\w+\.photo_url\)/g) ?? [];
-      // Two for players (add/edit) already existed; two more for staff (add/edit).
-      expect(matches.length).toBeGreaterThanOrEqual(4);
+      // One for players (the classic roster page); two for staff (add/edit).
+      expect(matches.length).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -428,7 +428,7 @@ describe("Diverse City admin punch list", () => {
     it("Branding Footer tagline: no placeholder prop remains, and the load resolves the default", () => {
       const branding = source(BRANDING_ADMIN);
       expect(branding).not.toContain("placeholder={DEFAULT_ACADEMY_FOOTER_TAGLINE}");
-      expect(branding).toContain("resolveFooterTagline(row?.footer_tagline)");
+      expect(branding).toContain("resolveFooterTagline(draft.tagline)");
     });
   });
 });

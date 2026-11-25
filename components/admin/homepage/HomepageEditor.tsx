@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "@/components/admin/icons";
 import { mediaAccept } from "@/lib/media-rules";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
-import { EditBar } from "@/components/admin/reimagined/EditBar";
-import { useLeaveGuard } from "@/components/admin/reimagined/TopBar";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { useSidebar } from "@/components/ui/sidebar";
 import HomePageClient from "@/components/HomePageClient";
@@ -22,8 +19,7 @@ import HomepageRecoveryReview from "./HomepageRecoveryReview";
 import HomepageEditorSkeleton from "./HomepageEditorSkeleton";
 import HomepageOverviewEditor from "./HomepageOverviewEditor";
 import { homepageRendererForClub, resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
-import { getChangedHomepagePieces } from "@/lib/homepage-editor/changed-pieces";
-import { getHomepageSaveBlocker, type HomepageDraft, type PieceId } from "@/lib/homepage-editor/model";
+import { getHomepageSaveBlocker, type PieceId } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PIECE_LABELS, HomepagePreviewContext } from "@/lib/homepage-editor/preview-context";
 import { useHomepageEditor } from "@/lib/homepage-editor/useHomepageEditor";
 import HomepagePreviewFrame from "./HomepagePreviewFrame";
@@ -32,29 +28,22 @@ import ClassicHomepageEditor from "./ClassicHomepageEditor";
 import HomepageNotifications, { useHomepageNotification } from "./HomepageNotifications";
 import { AdminPageHeader } from "@/components/admin/AdminPage";
 import saveButtonStyles from "@/components/admin/ui/AdminSaveButton.module.css";
-import { savedLabel, websiteState } from "@/lib/save-status";
 import "./homepage-editor.css";
 
 const SECTION_NAMES = { hero: "Top of your homepage", photos: "Photos", story: "Your club’s story", video: "Video feature", revamp: "Matchday content and navigation" };
-// ADMIN-RE-09: the reimagined edit bar's shorter names ("Not saved yet: Hero").
-const EDIT_BAR_NAMES = { hero: "Hero", photos: "Photos", story: "Club story", video: "Video", revamp: "Matchday content" };
 
 export default function HomepageEditor() {
   const club = useClubContext();
   // cinematic@2 (Rose City) keeps the editor that carries its revamp sections
   // and artwork tools; ClassicHomepageEditor has no revamp support yet.
-  const classic = useAdminPortal().portal === "classic" && club.presentationTemplateKey !== "cinematic@2";
   const { openMobile: navigationOpen } = useSidebar();
   // RC-ADMIN-05: a homepage with the matchday ("revamp") sections, which today is Rose City, is edited in the Overview (the page at half size, numbered parts); every other editor is unchanged.
   if (resolveHomepageCapabilities(homepageRendererForClub(club)).editableSections.includes("revamp")) return <HomepageOverviewEditor />;
-  return classic ? <ClassicHomepageEditor PreviewShell={HomepagePublicPreview} navigationOpen={navigationOpen} /> : <ExistingHomepageEditor />;
+  return club.presentationTemplateKey !== "cinematic@2" ? <ClassicHomepageEditor PreviewShell={HomepagePublicPreview} navigationOpen={navigationOpen} /> : <ExistingHomepageEditor />;
 }
 
 function ExistingHomepageEditor() {
   const club = useClubContext();
-  // Classic clubs keep the editor exactly as it was; reimagined clubs get the
-  // edit bar, tags and the edit sheet's simpler header (ADMIN-RE-09).
-  const reimagined = useAdminPortal().portal === "reimagined";
   const { openMobile: navigationOpen } = useSidebar();
   const router = useRouter();
   const editor = useHomepageEditor(club.id);
@@ -69,7 +58,6 @@ function ExistingHomepageEditor() {
   const photoInput = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const anchor = useRef<{ piece: PieceId; top: number } | null>(null);
-  const opened = useRef<HomepageDraft | null>(null);
   const piece = state?.selection ?? null;
   const disclosure = state?.disclosure;
   const disclosurePiece = disclosure?.piece;
@@ -196,15 +184,10 @@ function ExistingHomepageEditor() {
     if (editor.dirty.length) { setDestination(href); return; }
     if (await editor.discardUnsavedUploads()) router.push(href);
   }
-  // ADMIN-RE-24: the tabs leave through go() too, so it can ask first when
-  // something is unsaved and tidy up failed photo uploads when nothing is. If
-  // that tidy-up fails, the page stays put (as the edit bar's back link does).
-  useLeaveGuard(reimagined ? (href: string) => void go(href) : null, editor.dirty.length > 0);
 
   if (editor.loading) return <HomepageEditorSkeleton />;
   if (!state || !snapshot) return <section className="hp-editor" aria-label="Homepage editor"><h1>Homepage</h1><p role="alert">{editor.error?.message ?? "We could not load your homepage."}</p><button className="hp-button" onClick={editor.retryLoad}>Try loading again</button></section>;
   const capabilities = resolveHomepageCapabilities(snapshot.design);
-  if (!opened.current) opened.current = state.baseline;
   const frozen = !!state.submitted || !!editor.recoveryConflict;
   const isShared = piece?.startsWith("shared.");
   const isStory = piece === "story.text" || piece === "story.cta";
@@ -223,14 +206,6 @@ function ExistingHomepageEditor() {
   const saveButton = <button type="button" className={`admin-press ${saveButtonStyles.button}`} data-state={state.save === "saving" ? "saving" : saveDisabled ? "clean" : "dirty"} disabled={saveDisabled} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
   // The phone thumb bar keeps its compact 44px touch target.
   const thumbSaveButton = <button type="button" className="hp-button hp-save" disabled={saveDisabled} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
-  const editBar = reimagined ? <EditBar
-    state={state.save === "saving" ? "saving" : editor.dirty.length ? "dirty" : state.save === "saved" ? "saved" : "clean"}
-    unsaved={editor.dirty.map(section => EDIT_BAR_NAMES[section])}
-    savedText={savedLabel(websiteState(club))}
-    saveDisabled={saveDisabled}
-    onSave={() => void editor.save()}
-    onHome={(href) => void go(href)}
-  /> : null;
   const preview = <HomePageClient initialHeroContent={{ ...state.draft.hero, id: 1, updated_at: "" }} />;
   const tools = piece ? <>
     {isShared ? <button className="hp-button" onClick={() => go(sharedHref)}>{sharedLabel}</button> : <button className="hp-button" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "primary" }); }}>{piece.startsWith("revamp.") ? "Edit this section" : "Change the words"}</button>}
@@ -247,10 +222,9 @@ function ExistingHomepageEditor() {
   if (capabilities.editableSections.includes("revamp")) parts.push({ name: "Match & prices", piece: "revamp.match" }, { name: "Ticket & map", piece: "revamp.ticket" }, { name: "Navigation", piece: "revamp.navigation" });
   if (capabilities.editableSections.includes("video")) parts.push({ name: "Video", piece: "video" });
 
-  return <div ref={root} className="hp-editor" data-sheet-open={!!disclosure && !playback} data-playback={playback} data-portal={reimagined ? "reimagined" : undefined}>
-    {editBar}
-    {!reimagined && <AdminPageHeader className="mb-3 sm:mb-[18px]" eyebrow="Public website" title="Homepage" description="Click a part of your page to make it yours." actions={mobile ? undefined : <div className="hp-desktop-save">{!disclosure && saveButton}</div>} />}
-    {!reimagined && <div className="hp-status" role="status" aria-live="off" data-dirty={editor.dirty.length > 0}>{status}</div>}
+  return <div ref={root} className="hp-editor" data-sheet-open={!!disclosure && !playback} data-playback={playback}>
+    <AdminPageHeader className="mb-3 sm:mb-[18px]" eyebrow="Public website" title="Homepage" description="Click a part of your page to make it yours." actions={mobile ? undefined : <div className="hp-desktop-save">{!disclosure && saveButton}</div>} />
+    <div className="hp-status" role="status" aria-live="off" data-dirty={editor.dirty.length > 0}>{status}</div>
     {!navigationOpen && !mobile && !disclosure && !destination && <HomepageNotifications {...notificationProps} />}
     {editor.recoveryUnavailable && <p className="hp-recovery-notice" role="alert">Browser recovery is unavailable. Keep this page open until you save; your unsaved work may not survive closing it.</p>}
     {editor.cleanupWarning && <div className="hp-recovery-notice" role="alert"><p>An unused photo could not be removed from storage.</p><button className="hp-button" onClick={() => void editor.retryUnusedCleanup()}>Try removing it again</button></div>}
@@ -267,7 +241,7 @@ function ExistingHomepageEditor() {
     <div className="hp-preview-notice">{playback ? "Preview — not your live site." : "Preview · Changes appear on your website after you save."}</div>
     <div className="hp-workspace">
       <HomepagePreviewContext.Provider value={{ playback, draft: state.draft, videoSource: snapshot.videoSource, selection: piece, allowedPieces: state.allowedPieces, select }}>
-        <HomepagePreviewFrame host={club.primaryDomain} playback={playback} tags={reimagined ? { changed: getChangedHomepagePieces(opened.current, state.draft) } : undefined}>
+        <HomepagePreviewFrame host={club.primaryDomain} playback={playback}>
           <HomepagePublicPreview playback={playback}>{preview}</HomepagePublicPreview>
         </HomepagePreviewFrame>
       </HomepagePreviewContext.Provider>
@@ -280,7 +254,7 @@ function ExistingHomepageEditor() {
           else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
         }
       }}>
-        <div className="hp-panel-heading"><h2>{HOMEPAGE_PIECE_LABELS[piece]}</h2>{!reimagined && saveButton}</div>
+        <div className="hp-panel-heading"><h2>{HOMEPAGE_PIECE_LABELS[piece]}</h2>{saveButton}</div>
         <div className="hp-panel-fields">
         {!destination && <HomepageNotifications {...notificationProps} inModal />}
           {piece.startsWith("revamp.") && state.draft.revamp && <CinematicHomepageFields piece={piece} content={state.draft.revamp} disabled={frozen} change={content => dispatch({ type: "revamp-changed", content })} replaceArtwork={editor.replaceArtwork} retryArtwork={slot => { void editor.retryArtwork(slot); }} />}
@@ -304,8 +278,8 @@ function ExistingHomepageEditor() {
     </div>
     {mobile && !navigationOpen && !disclosure && !destination && <div className="hp-mobile-notification-slot"><HomepageNotifications {...notificationProps} /></div>}
     <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept={mediaAccept("photo")} multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
-    <div ref={thumbBar} className="hp-thumb-bar" hidden={navigationOpen}><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div>{!reimagined && <div className="hp-thumb-save">{thumbSaveButton}</div>}{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
-    <dialog ref={dialog} className="hp-leave-dialog" aria-labelledby="hp-leave-title" onCancel={event => { if (editor.isDiscardingUnsaved()) event.preventDefault(); else setDestination(null); }}><h2 id="hp-leave-title">{reimagined ? "Save your changes first?" : "Save your homepage changes?"}</h2><p>Your changes have not been saved yet.</p>{(state.submitted || editor.recoveryConflict) && <p>Your browser draft and any unconfirmed save will be kept when you leave.</p>}{destination && <HomepageNotifications {...notificationProps} inModal />}<div><button className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict || editor.discardingUnsaved} onClick={async () => { if (await editor.save()) { setDestination(null); if (destination) router.push(destination); } }}>Save and continue</button><button className="hp-button" disabled={editor.discardingUnsaved} onClick={() => { if (!editor.isDiscardingUnsaved()) setDestination(null); }}>Keep editing</button><button className="hp-button" disabled={state.save === "saving" || editor.discardingUnsaved} onClick={async () => { if (!await editor.discardUnsavedUploads()) return; setDestination(null); if (destination) router.push(destination); }}>Leave without saving</button></div></dialog>
+    <div ref={thumbBar} className="hp-thumb-bar" hidden={navigationOpen}><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div><div className="hp-thumb-save">{thumbSaveButton}</div>{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
+    <dialog ref={dialog} className="hp-leave-dialog" aria-labelledby="hp-leave-title" onCancel={event => { if (editor.isDiscardingUnsaved()) event.preventDefault(); else setDestination(null); }}><h2 id="hp-leave-title">Save your homepage changes?</h2><p>Your changes have not been saved yet.</p>{(state.submitted || editor.recoveryConflict) && <p>Your browser draft and any unconfirmed save will be kept when you leave.</p>}{destination && <HomepageNotifications {...notificationProps} inModal />}<div><button className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict || editor.discardingUnsaved} onClick={async () => { if (await editor.save()) { setDestination(null); if (destination) router.push(destination); } }}>Save and continue</button><button className="hp-button" disabled={editor.discardingUnsaved} onClick={() => { if (!editor.isDiscardingUnsaved()) setDestination(null); }}>Keep editing</button><button className="hp-button" disabled={state.save === "saving" || editor.discardingUnsaved} onClick={async () => { if (!await editor.discardUnsavedUploads()) return; setDestination(null); if (destination) router.push(destination); }}>Leave without saving</button></div></dialog>
   </div>;
 }
 

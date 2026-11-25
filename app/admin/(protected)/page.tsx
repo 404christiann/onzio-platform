@@ -22,31 +22,13 @@ import {
 import { REGISTRATION_MIX_COLORS } from "@/lib/admin-dashboard-mix";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { clubToday } from "@/lib/club-time";
-import { getClubContext, type ClubContext } from "@/lib/club-context";
+import { getClubContext } from "@/lib/club-context";
 import {
-  getVisibleAdminHomeJobs,
   getVisibleAdminQuickActions,
   isAdminRouteHiddenForClub,
   type AdminQuickActionId,
   type AdminRouteAccessContext,
 } from "@/lib/admin-route-manifest";
-import { adminGreeting } from "@/lib/admin-greeting";
-import {
-  gamesNeedingScoreHint,
-  newSignUpsHint,
-  readOwnDisplayName,
-} from "@/lib/admin-home-data";
-import { HomeFallback } from "@/components/admin/reimagined/HomeFallback";
-import {
-  ReimaginedHome,
-  ReimaginedHomeSkeleton,
-  type HomeNeed,
-} from "@/components/admin/reimagined/ReimaginedHome";
-import { gameLine, loadHomeBoard, needsSummary, signUpsNeed, versus } from "@/lib/admin-home-board";
-import { getAdminTab, getVisibleAdminTabs } from "@/lib/admin-tabs";
-import { readAdminHomeCounts } from "@/lib/admin-tab-page";
-import { publicSiteState } from "@/lib/club-access";
-import type { AdminPortalSettings } from "@/lib/admin-portal";
 import { createClient } from "@/lib/supabase-server";
 
 const ACTION_ICONS: Record<AdminQuickActionId, AdminIconComponent> = {
@@ -104,9 +86,7 @@ function formatTime(time: string | null) {
  */
 export default function AdminDashboard() {
   return (
-    <Suspense
-      fallback={<HomeFallback classic={<DashboardSkeleton />} reimagined={<ReimaginedHomeSkeleton />} />}
-    >
+    <Suspense fallback={<DashboardSkeleton />}>
       <AdminDashboardContent />
     </Suspense>
   );
@@ -260,17 +240,6 @@ async function AdminDashboardContent() {
     storeEnabled: club.storeEnabled,
   };
   const portal = await readAdminPortal(supabase, club.id);
-  if (portal.portal === "reimagined") {
-    return (
-      <ReimaginedHomeContent
-        supabase={supabase}
-        userId={userId}
-        club={club}
-        portal={portal}
-        routeAccess={routeAccess}
-      />
-    );
-  }
   const quickActions = getVisibleAdminQuickActions(routeAccess);
   const { timeZone } = portal;
   const data = await loadAdminDashboardData(supabase, club.id, timeZone);
@@ -432,89 +401,6 @@ async function AdminDashboardContent() {
   );
 }
 
-// ADMIN-RE-05: the reimagined home. Same session, club and capability checks
-// as the classic dashboard above; reads stay server-side and user-scoped.
-// ADMIN-RE-24b: what needs you, the next game and the season at a glance.
-async function ReimaginedHomeContent({
-  supabase,
-  userId,
-  club,
-  portal,
-  routeAccess,
-}: {
-  supabase: Awaited<ReturnType<typeof createClient>>;
-  userId: string;
-  club: ClubContext;
-  portal: AdminPortalSettings;
-  routeAccess: AdminRouteAccessContext;
-}) {
-  const [home, displayName, board] = await Promise.all([
-    readAdminHomeCounts(club.id, portal.timeZone),
-    readOwnDisplayName(supabase, club.id, userId),
-    loadHomeBoard(supabase, club.id, portal.timeZone),
-  ]);
-  const access: AdminRouteAccessContext = {
-    ...routeAccess,
-    adminPortal: portal.portal,
-    adminFlags: portal.flags,
-    hasLiveSignUps: home.hasLiveSignUps,
-  };
-  const visibleJobs = getVisibleAdminHomeJobs(access);
-  const jobs = visibleJobs.map((job) => ({
-    ...job,
-    hintText:
-      job.hint === "games-needing-score"
-        ? gamesNeedingScoreHint(home.gamesNeedingScore)
-        : job.hint === "new-sign-ups"
-          ? newSignUpsHint(home.newSignUps)
-          : null,
-    count:
-      job.hint === "games-needing-score" ? home.gamesNeedingScore : job.hint === "new-sign-ups" ? home.newSignUps : null,
-  }));
-  const jobHref = (id: string) => visibleJobs.find((job) => job.id === id)?.href ?? null;
-
-  // Each thing that needs you has its own button. A row shows only when its
-  // job is open to this person and its count could be read.
-  const needs: HomeNeed[] = [];
-  const scoreHref = jobHref("enter-score");
-  if (scoreHref && (home.gamesNeedingScore ?? 0) > 0) {
-    const count = home.gamesNeedingScore ?? 0;
-    const game = board.missingScore;
-    needs.push({
-      id: "score",
-      hue: "amber",
-      title: count === 1 && game ? `Add the score ${versus(game)}` : (gamesNeedingScoreHint(count) ?? ""),
-      sub: game ? (count === 1 ? gameLine(game) : `Oldest: ${versus(game)}, ${gameLine(game)}`) : "Games that have been played",
-      action: { label: "Enter score", href: scoreHref, kind: "primary" },
-    });
-  }
-  const signUpsHref = jobHref("see-registrations");
-  if (signUpsHref && (home.newSignUps ?? 0) > 0) {
-    needs.push({
-      id: "sign-ups",
-      hue: "green",
-      ...signUpsNeed(home.newSignUps ?? 0, board.newSignUpForms),
-      action: { label: "See", href: signUpsHref, kind: "secondary" },
-    });
-  }
-
-  const tabs = getVisibleAdminTabs(access);
-  const held = publicSiteState(club.publicAccess) === "prelaunch";
-  return (
-    <ReimaginedHome
-      greeting={adminGreeting(displayName)}
-      summary={needsSummary(needs.length)}
-      needs={needs}
-      jobs={jobs}
-      board={board}
-      held={held}
-      visitsHref={tabs.some((tab) => tab.id === "insights") ? getAdminTab("insights").href : null}
-      seasonHref={getAdminTab("games").href}
-      addGameHref={jobHref("add-game")}
-      contentPaused={!routeAccess.canMutateContent}
-    />
-  );
-}
 
 function MetricCard({ label, section }: { label: string; section: DashboardSection<number> }) {
   // flex-col-reverse: the number reads first, while screen readers still get

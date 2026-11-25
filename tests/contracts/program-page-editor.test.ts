@@ -31,16 +31,12 @@ describe("Programs public-page editor contract", () => {
     expect(programPageSaveRequestSchema.safeParse({ ...valid, gallery: [{ ...valid.gallery[0], sortOrder: 1 }] }).success).toBe(false);
   });
 
-  it("navigates from the real directory to a real detail page with a persistent search", () => {
+  it("navigates from the real directory to a real detail page", () => {
     const page = source("app/admin/(protected)/programs/page.tsx");
     const frame = source("components/admin/ProgramCanvasFrame.tsx");
     expect(page).toContain("<AcademyProgramsPage programs={directoryPrograms}");
     expect(page).toContain("<AcademyProgramDetailPage program={previewProgram}");
     expect(page).toContain("<ProgramCanvasFrame");
-    expect(page).toContain("program-editor-navigation-desktop");
-    expect(page).toContain("program-editor-navigation-phone");
-    expect(page).toContain('type ProgramPageView = "directory" | "detail" | "manage"');
-    expect(page).toContain("program.displayTitle.toLowerCase().includes(trimmedProgramFilter)");
     expect(frame).toContain("createPortal");
     expect(frame).toContain("onProgramLink?.(");
     expect(frame).toContain("data-program-editor-section");

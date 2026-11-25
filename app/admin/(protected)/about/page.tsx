@@ -7,7 +7,6 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
 import { adminImageRules, imageFileIssue } from "@/components/admin/ui/adminImageFiles";
@@ -95,13 +94,10 @@ function toLogoDraft(content: DBClubLogoPageContent): DBClubLogoPageContent {
 }
 
 export default function AdminAboutPage() {
-  const { portal } = useAdminPortal();
   const club = useClubContext();
   // Rose City's classic admin edits About on the editor kit; every other club keeps the editor below.
-  if (portal === "classic" && club.presentationTemplateKey === "cinematic@2") return <RoseCityAboutEditor />;
-  return portal === "classic"
-    ? <ClassicAboutToastBoundary><AboutEditor classic /></ClassicAboutToastBoundary>
-    : <AboutEditor />;
+  if (club.presentationTemplateKey === "cinematic@2") return <RoseCityAboutEditor />;
+  return <ClassicAboutToastBoundary><AboutEditor classic /></ClassicAboutToastBoundary>;
 }
 
 function AboutEditor({ classic = false }: { classic?: boolean }) {

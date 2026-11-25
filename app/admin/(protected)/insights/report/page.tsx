@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { ReportMessage, SponsorReport, type ReportOption } from "@/components/admin/insights-report/SponsorReport";
 import { sponsorSummary } from "@/components/admin/insights/classic/sponsor-lines";
-import { TopBarTitle } from "@/components/admin/reimagined/TopBar";
-import { loadAdminTabPage } from "@/lib/admin-tab-page";
+import { loadSponsorInsightsPage } from "@/lib/admin-tab-page";
 import { formatClubDate } from "@/lib/club-time";
 import {
   buildMonthlyReport,
@@ -19,8 +18,8 @@ import {
 
 // TELEMETRY-05: the monthly sponsor report, one printed page per sponsor
 // (?month=YYYY-MM&sponsor=<sponsor id>|all). Same access as the Insights tab:
-// loadAdminTabPage("insights") checks a fresh session, owner or admin, the
-// reimagined admin and the Sponsor Insights add-on. Every read goes through the
+// loadSponsorInsightsPage() checks a fresh session, owner or admin and the
+// Sponsor Insights add-on. Every read goes through the
 // signed-in person's own client and lib/telemetry/report-data.ts, which reads the
 // daily rollups, the sponsor list, the schedule and the club logo, never raw page
 // events. "Download PDF" is the browser's print dialog; see report.module.css.
@@ -59,17 +58,13 @@ export default async function MonthlySponsorReportPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
-  const { supabase, club, portal } = await loadAdminTabPage("insights");
+  const { supabase, club, portal } = await loadSponsorInsightsPage();
   const timeZone = portal.timeZone;
-  const title = <TopBarTitle title="Monthly sponsor report" />;
 
   const available = await readReportMonths(supabase, club.id);
   if (available.status === "error") {
     return (
-      <>
-        {title}
-        <ReportMessage tone="error">We couldn’t load the numbers. Try again in a minute.</ReportMessage>
-      </>
+      <ReportMessage tone="error">We couldn’t load the numbers. Try again in a minute.</ReportMessage>
     );
   }
 
@@ -77,10 +72,7 @@ export default async function MonthlySponsorReportPage({
   const month = chooseReportMonth(parseReportMonth(query.month), available.months, currentMonth);
   if (month === null) {
     return (
-      <>
-        {title}
-        <ReportMessage tone="empty">No visits yet. The first report is ready the day after your website&rsquo;s first counted visit.</ReportMessage>
-      </>
+      <ReportMessage tone="empty">No visits yet. The first report is ready the day after your website&rsquo;s first counted visit.</ReportMessage>
     );
   }
 
@@ -91,10 +83,7 @@ export default async function MonthlySponsorReportPage({
   ]);
   if (rows.status === "error") {
     return (
-      <>
-        {title}
-        <ReportMessage tone="error">We couldn’t load the numbers. Try again in a minute.</ReportMessage>
-      </>
+      <ReportMessage tone="error">We couldn’t load the numbers. Try again in a minute.</ReportMessage>
     );
   }
 
@@ -113,18 +102,15 @@ export default async function MonthlySponsorReportPage({
   const overview = sponsor === "all" ? report : build("all");
 
   return (
-    <>
-      {title}
-      <SponsorReport
-        report={report}
-        summary={sponsorSummary(overview, rows.sponsors)}
-        clubName={club.name}
-        clubLogoUrl={clubLogoUrl}
-        months={monthOptions(available.months, currentMonth)}
-        month={month}
-        sponsors={sponsorOptions(rows.sponsors, [...overview.pages, ...report.pages])}
-        sponsor={sponsor}
-      />
-    </>
+    <SponsorReport
+      report={report}
+      summary={sponsorSummary(overview, rows.sponsors)}
+      clubName={club.name}
+      clubLogoUrl={clubLogoUrl}
+      months={monthOptions(available.months, currentMonth)}
+      month={month}
+      sponsors={sponsorOptions(rows.sponsors, [...overview.pages, ...report.pages])}
+      sponsor={sponsor}
+    />
   );
 }

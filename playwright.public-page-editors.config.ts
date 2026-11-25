@@ -13,7 +13,7 @@ export default defineConfig({
   globalSetup: ["./tests/browser/alpha-store-enabled.global-setup.ts", "./tests/browser/alpha-time-zone.global-setup.ts", "./tests/browser/local-test-data-cleanup.global-setup.ts"],
   outputDir: "test-results/public-page-editors",
   testDir: "./tests/browser",
-  testMatch: ["public-page-about-viewport.spec.ts", "public-page-about-save.spec.ts", "public-page-editor-recovery.spec.ts", "public-page-editor-phone.spec.ts", "public-page-editor-shop-off.spec.ts"],
+  testMatch: ["public-page-about-viewport.spec.ts", "public-page-about-save.spec.ts", "public-page-editor-recovery.spec.ts", "public-page-editor-phone.spec.ts"],
   workers: 1,
   timeout: 60_000,
   reporter: "list",

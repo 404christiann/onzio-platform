@@ -43,7 +43,7 @@ describe("1. Standings title", () => {
   });
 
   it("saves a blank title as blank and says where the title appears", () => {
-    const page = source("app/admin/(protected)/standings/page.tsx");
+    const page = source("components/admin/standings/ClassicStandingsPage.tsx");
     expect(page).not.toContain("DEFAULT_STANDINGS_SETTINGS.title");
     // ADMIN-RE-22: Next Match takes its competition from the game, so the
     // Standings title no longer claims to be shown there.
@@ -89,7 +89,7 @@ describe("3. Logo and sponsor uploads match what the server accepts", () => {
     const graphicJpeg = { surface: "branding", kind: "graphic", fileName: "logo.jpg", mimeType: "image/jpeg", size: 1000 };
     expect(authorizeMediaRequestSchema.safeParse(graphicJpeg).success).toBe(false);
     expect(authorizeMediaRequestSchema.safeParse({ ...graphicJpeg, fileName: "logo.png", mimeType: "image/png" }).success).toBe(true);
-    for (const page of ["components/admin/club-settings/LegacyBranding.tsx", "components/admin/sponsors/ClassicSponsorsPage.tsx"]) {
+    for (const page of ["components/admin/club-settings/ClassicBranding.tsx", "components/admin/sponsors/ClassicSponsorsPage.tsx"]) {
       const text = source(page);
       expect(text).toContain('import { createClient } from "@/lib/admin-client";');
       expect(text).not.toMatch(/from "@\/lib\/supabase(-server)?"/);
@@ -97,7 +97,7 @@ describe("3. Logo and sponsor uploads match what the server accepts", () => {
   });
 
   it("stops promising JPG on Branding and Sponsors", () => {
-    const branding = source("components/admin/club-settings/LegacyBranding.tsx");
+    const branding = source("components/admin/club-settings/ClassicBranding.tsx");
     expect(branding).not.toMatch(/JPG|image\/jpeg/);
     const sponsors = source("components/admin/sponsors/ClassicSponsorsPage.tsx");
     expect(sponsors).not.toContain('accept="image/*"');
@@ -117,7 +117,7 @@ describe("4. Contact admin only where a Contact page exists", () => {
 describe("5. Branding footer line only where the footer shows it", () => {
   it("gates the tagline field and its save on the design", () => {
     expect(diverseCitySite.admin.branding.showFooterTagline).toBe(true);
-    const branding = source("components/admin/club-settings/LegacyBranding.tsx");
+    const branding = source("components/admin/club-settings/ClassicBranding.tsx");
     expect(branding).toContain("showFooterTagline");
     expect(branding).toMatch(/showFooterTagline\s*\?/);
   });
@@ -140,7 +140,7 @@ describe("7. Roster age", () => {
     expect(playerAgeError(14)).toBeNull();
     expect(playerAgeError(80)).toBeNull();
     const roster = source("app/admin/(protected)/roster/page.tsx");
-    expect(roster).toContain("playerAgeError(");
+    expect(source("components/admin/roster/ClassicRosterPage.tsx")).toContain("playerAgeError(");
     expect(roster).toContain("min={PLAYER_MIN_AGE}");
   });
 

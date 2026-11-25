@@ -8,13 +8,10 @@ import { describe, expect, it } from "vitest";
 // textual and the box shows "30". Whole-number boxes only: a decimal box
 // (the About logo icon scale) must keep "1." while it's being typed.
 const WHOLE_NUMBER_INPUTS = [
-  "components/ui/number-stepper.tsx",
   "components/admin/StatInput.tsx",
   "components/admin/stats/StatsWorkspace.tsx",
-  "app/admin/(protected)/standings/page.tsx",
   "components/admin/standings/StandingNumberField.tsx",
   "app/admin/(protected)/roster/page.tsx",
-  "components/admin/schedule/LegacySchedulePage.tsx",
   "components/admin/schedule/ScheduleMatchForm.tsx",
   "components/admin/schedule/ScheduleMatchList.tsx",
 ];

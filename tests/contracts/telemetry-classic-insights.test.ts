@@ -43,9 +43,6 @@ vi.mock("@/lib/admin-portal", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/admin-portal")>()),
   readAdminPortal: async () => mocks.portal,
 }));
-vi.mock("@/lib/admin-home-data", () => ({
-  loadAdminHomeData: async () => ({ gamesNeedingScore: null, newSignUps: null, hasLiveSignUps: false }),
-}));
 vi.mock("@/lib/telemetry/insights-data", () => ({ loadInsightsData: mocks.loadInsightsData }));
 vi.mock("@/lib/telemetry/report-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/telemetry/report-data")>()),
@@ -62,14 +59,13 @@ import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { UnsavedGuardContext } from "@/components/admin/ui/useUnsavedGuard";
 import InsightsTabPage from "@/app/admin/(protected)/insights/page";
 import MonthlySponsorReportPage from "@/app/admin/(protected)/insights/report/page";
-import { loadAdminTabPage } from "@/lib/admin-tab-page";
 import {
   canSeeSponsorInsights,
   getVisibleAdminNavigation,
   getVisibleAdminRoutes,
   type AdminRouteAccessContext,
 } from "@/lib/admin-route-manifest";
-import { getAdminTabTargets, getVisibleAdminTabs, SPONSOR_INSIGHTS_FLAG } from "@/lib/admin-tabs";
+import { SPONSOR_INSIGHTS_FLAG } from "@/lib/admin-route-manifest";
 
 const FLAG_ON = { [SPONSOR_INSIGHTS_FLAG]: true } as const;
 
@@ -93,8 +89,8 @@ function club(overrides: Partial<ClubContext> = {}): ClubContext {
   };
 }
 
-function portal(kind: "classic" | "reimagined", flags: Record<string, boolean> = FLAG_ON): AdminPortalSettings {
-  return { portal: kind, flags, timeZone: "America/Los_Angeles", timeZoneConfirmed: true };
+function portal(flags: Record<string, boolean> = FLAG_ON): AdminPortalSettings {
+  return { portal: "classic", flags, timeZone: "America/Los_Angeles", timeZoneConfirmed: true };
 }
 
 function access(overrides: Partial<AdminRouteAccessContext> = {}): AdminRouteAccessContext {
@@ -105,7 +101,6 @@ function access(overrides: Partial<AdminRouteAccessContext> = {}): AdminRouteAcc
     isBillingAuthorized: true,
     canMutateContent: true,
     storeEnabled: false,
-    adminPortal: "classic",
     adminFlags: FLAG_ON,
     ...overrides,
   };
@@ -144,11 +139,9 @@ beforeEach(() => {
 });
 
 describe("the Sponsor Insights gate", () => {
-  it("opens for an owner or admin with the flag on, on either admin", () => {
+  it("opens for an owner or admin with the flag on", () => {
     for (const role of ["owner", "admin"] as const) {
-      for (const adminPortal of ["classic", "reimagined", undefined] as const) {
-        expect(canSeeSponsorInsights(access({ role, adminPortal })), `${role} ${adminPortal}`).toBe(true);
-      }
+      expect(canSeeSponsorInsights(access({ role })), role).toBe(true);
     }
   });
 
@@ -196,7 +189,7 @@ describe("classic sidebar", () => {
     mocks.pathname = "/admin/insights";
     const guard = { register: () => () => undefined, requestNavigation: () => true };
     const page = createElement(UnsavedGuardContext.Provider, { value: guard }, createElement(AdminShell, null, "page"));
-    const settings = { ...portal("classic"), flags: adminFlags };
+    const settings = { ...portal(), flags: adminFlags };
     // The providers type children as a required prop; createElement passes them as arguments.
     const portalProps = { settings, isOwner: true } as ComponentProps<typeof AdminPortalProvider>;
     const themeProps = { initialTheme: "light" } as ComponentProps<typeof AdminThemeProvider>;
@@ -219,34 +212,9 @@ describe("classic sidebar", () => {
   });
 });
 
-describe("reimagined admin keeps its Insights tab", () => {
-  it("shows the tab with the flag on, and no sidebar row for the same page", () => {
-    const context = access({ adminPortal: "reimagined" });
-    expect(getVisibleAdminTabs(context).map((tab) => tab.id)).toContain("insights");
-    expect(getVisibleAdminRoutes(context).map((route) => route.id)).not.toContain("insights");
-    expect(getAdminTabTargets(context).filter((target) => target.href === "/admin/insights")).toEqual([
-      { href: "/admin/insights", tab: "insights" },
-    ]);
-  });
-
-  it("has no tab without the flag", () => {
-    expect(getVisibleAdminTabs(access({ adminPortal: "reimagined", adminFlags: {} })).map((tab) => tab.id)).not.toContain(
-      "insights",
-    );
-  });
-
-  it("renders the tab page with the flag on and sends a club without it to /admin", async () => {
-    setClub(club(), portal("reimagined"));
-    expect(await insightsPage()).toContain('data-admin-tab-page="insights"');
-    setClub(club(), portal("reimagined", {}));
-    expect(await redirectOf(() => insightsPage())).toBe("/admin");
-    expect(await redirectOf(() => reportPage())).toBe("/admin");
-  });
-});
-
 describe("Insights on the classic admin", () => {
   it.each(["owner", "admin"] as const)("renders both pages for a classic %s with the flag on", async (role) => {
-    setClub(club({ role }), portal("classic"));
+    setClub(club({ role }), portal());
 
     const insights = await insightsPage();
     expect(insights).toContain('data-admin-insights-page="classic"');
@@ -260,14 +228,14 @@ describe("Insights on the classic admin", () => {
   });
 
   it("shows a held club's waiting state without reading its numbers", async () => {
-    setClub(club({ publicAccess: "preview" }), portal("classic"));
+    setClub(club({ publicAccess: "preview" }), portal());
     const markup = await insightsPage();
     expect(markup).toContain("data-held");
     expect(mocks.loadInsightsData).not.toHaveBeenCalled();
   });
 
-  it("sends a classic club without the flag to /admin, like any tab it does not have", async () => {
-    setClub(club(), portal("classic", {}));
+  it("sends a club without the flag to /admin", async () => {
+    setClub(club(), portal({}));
     expect(await redirectOf(() => insightsPage())).toBe("/admin");
     expect(await redirectOf(() => reportPage())).toBe("/admin");
     expect(mocks.loadInsightsData).not.toHaveBeenCalled();
@@ -275,18 +243,9 @@ describe("Insights on the classic admin", () => {
   });
 
   it("denies someone who is not an owner or admin even with the flag on", async () => {
-    setClub(club({ role: null }), portal("classic"));
+    setClub(club({ role: null }), portal());
     expect(await redirectOf(() => insightsPage())).toBe("/admin/login?error=not_authorized");
     expect(await redirectOf(() => reportPage())).toBe("/admin/login?error=not_authorized");
-  });
-
-  it("still sends a classic club from every other tab to its classic page", async () => {
-    setClub(club(), portal("classic"));
-    expect(await redirectOf(() => loadAdminTabPage("games"))).toBe("/admin/schedule");
-    expect(await redirectOf(() => loadAdminTabPage("website"))).toBe("/admin/homepage");
-    expect(await redirectOf(() => loadAdminTabPage("club"))).toBe("/admin/branding");
-    expect(await redirectOf(() => loadAdminTabPage("programs"))).toBe("/admin");
-    expect(await redirectOf(() => loadAdminTabPage("home"))).toBe("/admin");
   });
 
   const month = "2026-10";
@@ -308,7 +267,7 @@ describe("Insights on the classic admin", () => {
       ],
       matches: [],
     });
-    setClub(club(), portal("classic"));
+    setClub(club(), portal());
   }
 
   it("answers what each sponsor got in the month, most seen first, with no NaN or Infinity", async () => {
