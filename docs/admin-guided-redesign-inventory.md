@@ -1,6 +1,6 @@
 # Guided admin route, field, and action inventory
 
-Source snapshot: baseline `41bfb009089bb2b67ff048c71d1a3c6fac11578c` versus the uncommitted `codex/admin-guided-redesign` worktree on 2026-10-11. This records preservation evidence; completion and acceptance status remain in `admin-guided-redesign-plan.md` and `HANDOFF.md`.
+Source snapshot: baseline `41bfb009089bb2b67ff048c71d1a3c6fac11578c` versus the uncommitted `codex/admin-guided-redesign` worktree on 2026-10-11. This records preservation evidence; completion and acceptance status remain in `admin-guided-redesign-plan.md` and `HANDOFF.md` (onzio-ops).
 
 ## Scope and source parity
 
@@ -88,4 +88,4 @@ The all-route screenshot matrix covers the synthetic Alpha owner's eligible stat
 - Source parity audit used TypeScript's parser/printer on all table entries, comparing baseline `git show HEAD:<file>` with worktree text. Evidence: `/private/tmp/guided-route-parity.cjs`, `/private/tmp/guided-route-parity.json`; these temporary paths are local evidence, not a committed test or runtime gate.
 - Existing contract areas: admin shell/manifest/loading, roster/schedule models and panels, statistics/standings/seasons/registrations/payment contracts, Homepage/public-page preview/save/capability/phone contracts. Keep their exact source assertions intact.
 - New pilot persistence acceptance: `tests/browser/admin-guided-persistence.spec.ts` runs ten checks at 390px/1440px: real Player hometown and Match venue edit/save/reload, real Player/Staff/Match Add/Save/Reload, and Staff edit/save/reload within each Staff creation check. It asserts real admin-data responses and database values, reloads/reopens records, restores edited originals via UI plus exact local-row cleanup, and deletes only captured new IDs and their child rows. Each creation check verifies all eight original Player/Staff/Match/photo/stat table snapshots are unchanged after cleanup. Only guarded `alpha.localhost` and loopback PostgreSQL54322 are allowed; run serially after other Alpha-writing suites. This document does not claim that unexecuted tests have passed.
-- Package acceptance/result locations: `docs/admin-guided-redesign-plan.md`, `HANDOFF.md`, and root-owned review artifacts. Source inventory completion alone does not mark GUIDED03–07 complete.
+- Package acceptance/result locations: `docs/admin-guided-redesign-plan.md`, `HANDOFF.md` (onzio-ops), and root-owned review artifacts. Source inventory completion alone does not mark GUIDED03–07 complete.

@@ -51,7 +51,8 @@ the repository's original red-contract phase is historical.
 ## Project documentation
 
 - [Architecture and platform decisions](docs/onzio-platform-plan.md).
-- [Current work and verification history](HANDOFF.md).
+- Current work, verification history and other internal ops docs live in the
+  private `onzio-ops` repo ([docs/README.md](docs/README.md)).
 - [Repository instructions for coding agents](AGENTS.md).
 
 Historical plans record their original scope and acceptance evidence. Check

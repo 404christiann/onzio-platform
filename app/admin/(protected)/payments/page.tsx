@@ -2,13 +2,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PaymentStatusCard, PaymentStatusSkeleton } from "@/components/admin/payments/PaymentStatusCard";
-import { PaymentsPlan } from "@/components/admin/reimagined/PaymentsPlan";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
-import { buildPaymentsView } from "@/lib/admin-payments-view";
-import { readAdminPortal } from "@/lib/admin-portal";
-import { isAdminRouteHiddenForClub } from "@/lib/admin-route-manifest";
 import { getClubContext } from "@/lib/club-context";
-import { publicSiteState } from "@/lib/club-access";
 import { getConfiguredStripePriceLabel } from "@/lib/stripe-price";
 import { createClient } from "@/lib/supabase-server";
 import {
@@ -69,28 +64,6 @@ async function PaymentsPageContent() {
     : null;
   const uiState = resolvePaymentsUiState(mirrorRow);
   const priceLabel = await getConfiguredStripePriceLabel(club.stripePriceId);
-
-  // ADMIN-RE-20: a club on the reimagined admin gets the new page (design:
-  // cd-payments). Same data, same Stripe portal and checkout calls; classic on any doubt.
-  const portal = await readAdminPortal(supabase, club.id);
-  if (portal.portal === "reimagined") {
-    return (
-      <PaymentsPlan
-        clubName={club.name}
-        showRegistrationMoney={!isAdminRouteHiddenForClub(club.slug, "registrations")}
-        view={buildPaymentsView({
-          uiState,
-          priceLabel,
-          clubName: club.name,
-          clubKind: club.kind,
-          domain: club.primaryDomain,
-          publicAccess: club.publicAccess,
-          held: publicSiteState(club.publicAccess) === "prelaunch",
-          timeZone: portal.timeZone,
-        })}
-      />
-    );
-  }
 
   return (
     <AdminPage className="max-w-4xl">

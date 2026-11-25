@@ -185,7 +185,7 @@ describe("DCFC-302 Contact admin state and validation", () => {
 
 describe("DCFC-302 protected Contact admin surface", () => {
   const pageSource = readFileSync(
-    resolve(process.cwd(), "app/admin/(protected)/contact/page.tsx"),
+    resolve(process.cwd(), "components/admin/contact/ClassicContactEditor.tsx"),
     "utf8",
   );
   const routeSource = readFileSync(resolve(process.cwd(), "app/api/admin/contact-editor/route.ts"), "utf8");
@@ -222,29 +222,7 @@ describe("DCFC-302 protected Contact admin surface", () => {
     expect(pageSource).not.toMatch(/club_id\s*:/);
   });
 
-  it("makes shared ownership, page-only content, social ownership, and UX states explicit", () => {
-    for (const label of [
-      "Shared club data",
-      "Contact page only",
-      "Public email",
-      "Public phone",
-      "Service area",
-      "Hours",
-      "Eyebrow",
-      "Headline",
-      "Introduction",
-      "Hero image",
-      "Social links are managed in Branding",
-      "Loading contact content",
-      "Contact content saved",
-      "Unable to load contact content",
-    ]) {
-      expect(pageSource).toContain(label);
-    }
-  });
-
   it("selects real Academy page sections with phone and desktop preview", () => {
-    expect(pageSource).toContain("Section guide");
     expect(pageSource).toContain("ContactPageCanvas");
     expect(editorSource).toContain("AcademyContactPage");
     expect(editorSource).toContain("previewWidth = phone ? 390 : 1440");

@@ -9,8 +9,10 @@ if (!["127.0.0.1", "localhost", "::1"].includes(target.hostname)) {
   throw new Error(`Refusing non-local database host: ${target.hostname}`);
 }
 
+// The rollback script lives in the private onzio-ops repo, at the same path it had here.
+const opsDir = process.env.ONZIO_OPS_DIR ?? resolve("../onzio-ops");
 const rollbackSql = await readFile(
-  resolve("docs/phase-12/PLAT-101-ROLLBACK.sql"),
+  resolve(opsDir, "docs/phase-12/PLAT-101-ROLLBACK.sql"),
   "utf8",
 );
 const forwardAuthSql = await readFile(

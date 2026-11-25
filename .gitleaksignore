@@ -1,0 +1,12 @@
+# Reviewed false positives (commit:file:rule:line). No secret values here.
+0b8c50150d69bbf17884c1804c76442baf6e7914:docs/phase-8/resend-smtp-rollout.md:generic-api-key:314
+0b8c50150d69bbf17884c1804c76442baf6e7914:docs/phase-8/resend-smtp-rollout.md:generic-api-key:343
+157cb6565db8581cbb744ce2dfae66f6b691260c:HANDOFF.md:generic-api-key:4472
+18f9707e07392c4cf892f4514a09eb0261c5b9ef:scripts/preflight-lions-production.ts:generic-api-key:22
+18f9707e07392c4cf892f4514a09eb0261c5b9ef:scripts/provision-lions-production.ts:generic-api-key:38
+63246b4943e6126c40f0e5b9349582731040d13f:docs/rose-city-remaining-pages-2027.md:generic-api-key:40
+b6926541baaae6cefd5c5796072194c6b366f6c9:HANDOFF.md:generic-api-key:679
+ce629c1148e67cc3b21fcc1fee9f1e92a6a9abf3:scripts/provision-diverse-city-production.ts:generic-api-key:12
+da21728f091ce0caf4acd6e6b829e4e785c6ce6a:lib/__tests__/stripe-config.test.ts:stripe-access-token:35
+da21728f091ce0caf4acd6e6b829e4e785c6ce6a:lib/__tests__/stripe-config.test.ts:stripe-access-token:36
+e3c4714b65af5b4ef0cc6cbb3eb6899b8be290ab:docs/rose-city-remaining-pages-2027.md:generic-api-key:40

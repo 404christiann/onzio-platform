@@ -8,7 +8,7 @@ import { createLocalClients } from "../helpers/supabase";
 // the club_domains_one_active_primary_per_environment partial unique index
 // (and the rollback path around it) is exercised for real, not simulated —
 // same discipline this repo already applies to provisionClub before any
-// operator script runs against production (see HANDOFF.md, DCFC-801).
+// operator script runs against production (see HANDOFF.md (onzio-ops), DCFC-801).
 
 describe("attach club domain", () => {
   const cleanups: Array<() => Promise<void>> = [];

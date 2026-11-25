@@ -8,7 +8,7 @@ platform behavior, `tests/database` exercises local PostgreSQL and RLS, and
 
 The project began with failing contracts for unimplemented features. That is
 historical context, not an expectation that the current suites should fail.
-Use the current requirements and recorded baseline in [HANDOFF.md](../HANDOFF.md)
+Use the current requirements and recorded baseline in HANDOFF.md (onzio-ops `HANDOFF.md`)
 when investigating a failure. Do not skip, weaken, or broadly mock a contract
 to obtain a passing run.
 
@@ -138,7 +138,7 @@ files never overlap the serial ones.
 
 The `db` and `pilot` files share state outside their own process. Database files share the tenant
 singleton fixtures. Pilot proofs start servers and own process groups, and parallel files collide
-on ports and processes (see `HANDOFF.md`, 2026-11-01). `tests/global-setup/serial-project-guard.ts`
+on ports and processes (see `HANDOFF.md` (onzio-ops), 2026-11-01). `tests/global-setup/serial-project-guard.ts`
 makes both projects fail before any test runs when the command line sets `--fileParallelism` or
 `--isolate=false`, instead of racing. Do not set `isolate: false` on `unit` either. Two runs with
 `--project unit --isolate=false` failed 55 tests in 7 files, then 28 tests in 4 other files, and
@@ -206,8 +206,8 @@ runs and profile separately before claiming a speedup. See the
 
 ## Local authenticated browser suites
 
-The `admin-guided`, `admin-loading`, `homepage`, `public-page-editors` and
-`contact-editor` Playwright configs run against a production build served at
+The `admin-guided`, `admin-loading`, `homepage` and `public-page-editors`
+Playwright configs run against a production build served at
 `http://alpha.localhost:3110` with a loopback-only `.env.local`, under
 `scripts/with-local-db-lock.sh`. With `.env.test` exported:
 
@@ -226,11 +226,10 @@ specs refuse to run without the administrator state and the loopback database
 URL. Alpha stands in for Diverse City, so the `admin-loading`, `homepage` and
 `public-page-editors` configs turn Alpha's Shop switch on for their run and
 restore it afterwards (`tests/browser/alpha-store-enabled.global-setup.ts`);
-the seeded Alpha has it off. `public-page-editor-shop-off.spec.ts` turns it
-off again for its own case and restores it. The owner's first admin visit confirms
+the seeded Alpha has it off. The owner's first admin visit confirms
 Alpha's time zone from the browser (ADMIN-RE-02), which the RE-01 database test
-expects unset, so every config that signs the Alpha owner in (these five plus
-`admin-reimagined`, `dcfc-403` and `plat-101`) puts `time_zone` and
+expects unset, so every config that signs the Alpha owner in (these four plus
+`dcfc-403` and `plat-101`) puts `time_zone` and
 `time_zone_set_at` back when the run ends
 (`tests/browser/alpha-time-zone.global-setup.ts`). Strip any real email or media provider keys from
 the local `.env.local` before a run.
@@ -247,25 +246,8 @@ set -a && . ./.env.test && set +a && npx vitest run tests/database/contact-page-
 ```
 
 The database test requires the checked-in `20261005003024_contact_page_editor.sql`
-migration on isolated local Supabase. Browser acceptance uses the built local
-app at `http://alpha.localhost:3110/admin/contact` and the synthetic owner
-identity from `scripts/homepage-local-auth.mjs`.
-
-Review regressions cover malformed direct RPC revisions, committed response loss,
-unknown receipts and exact retries, native dialog keyboard containment/dismissal,
-focus restoration, and phone Branding link hit testing above Save:
-
-```bash
-set -a && . ./.env.test && set +a
-node scripts/homepage-local-auth.mjs
-PAGE_EDITOR_STORAGE_STATE=/private/tmp/onzio-homepage-tests/local-auth.json npx playwright test --config=playwright.contact-editor.config.ts
-```
-
-Run against a production build with local Supabase credentials and
-`ONZIO_ENVIRONMENT=production` (the synthetic Alpha fixture uses production
-domain records). Do not run concurrently with database/browser suites using
-Alpha. Browser writes are restored in `finally`. Chromium's short-height check
-proves layout; native iOS keyboard/safe-area behavior remains unverified.
+migration on isolated local Supabase. Browser acceptance for the classic Contact
+editor is `tests/browser/admin-classic-contact.spec.ts`.
 
 ## Homepage editor redesign
 
@@ -513,7 +495,7 @@ adapter appears on main its counts can only shrink. #56 reduced the inventory
 from 455 mentions in 63 files to 300 in 53 files. The initial inventory
 included 51 presentation-package mentions.
 The 461-mention, 61-file recovery snapshot at `eb82ba3` remains in
-[the inventory comparison](../docs/verification/site08-selector-check/initial-inventory.json).
+the inventory comparison (onzio-ops `docs/verification/site08-selector-check/initial-inventory.json`).
 Accepted Competition changes remove 17 mentions, Sponsors and Shop add five outer
 adapter mentions, and locally accepted registration pages add six outer adapter
 mentions across two more files. The guard itself adds no application selector.

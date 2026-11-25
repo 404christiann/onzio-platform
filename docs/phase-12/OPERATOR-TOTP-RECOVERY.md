@@ -70,7 +70,7 @@ the task transcript, or the audit payload.
    authenticated operator action.
 9. **Close out.** Confirm exactly one verified TOTP factor, zero unresolved or
    other factors, zero pre-recovery sessions, a new fresh AAL2 session only when
-   needed, and the single audit row. Update `STATUS.md` and `HANDOFF.md` without
+   needed, and the single audit row. Update `STATUS.md` (onzio-ops) and `HANDOFF.md` (onzio-ops) without
    sensitive values.
 
 ## Failure and rollback

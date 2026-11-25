@@ -1,20 +1,21 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ROSE_CITY_CLUB_ID } from "../../scripts/rose-city-2027-operator-sql";
+import { hasOpsFile, readOpsFile } from "../helpers/ops-repo";
 
 // TELEMETRY-01: the operator SQL that turns the paid telemetry add-on on for
 // Rose City. tests/database/page-telemetry.test.ts runs both files for real.
 
-const DIR = resolve(process.cwd(), "scripts/operator-sql");
-const rehearsal = readFileSync(resolve(DIR, "rose-city-telemetry-enable.rehearsal.sql"), "utf8").replaceAll("\r\n", "\n");
-const commit = readFileSync(resolve(DIR, "rose-city-telemetry-enable.commit.sql"), "utf8").replaceAll("\r\n", "\n");
+const REHEARSAL = "scripts/operator-sql/rose-city-telemetry-enable.rehearsal.sql";
+const COMMIT = "scripts/operator-sql/rose-city-telemetry-enable.commit.sql";
+const present = hasOpsFile(REHEARSAL) && hasOpsFile(COMMIT);
+const rehearsal = present ? readOpsFile(REHEARSAL) : "";
+const commit = present ? readOpsFile(COMMIT) : "";
 
 function statements(sql: string): string[] {
   return sql.split("\n").filter((line) => !line.startsWith("--"));
 }
 
-describe("Rose City telemetry operator SQL", () => {
+describe.skipIf(!present)("Rose City telemetry operator SQL", () => {
   it("is one transaction: the rehearsal ends in ROLLBACK, the commit file in COMMIT, and nothing else differs", () => {
     const body = (sql: string) => statements(sql).join("\n").trim();
     expect(body(rehearsal).startsWith("begin;")).toBe(true);

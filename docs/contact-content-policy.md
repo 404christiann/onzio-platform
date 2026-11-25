@@ -28,4 +28,4 @@ Profile, page, revision, audit effects, and receipt commit atomically. The forwa
 
 Acceptance uses real direct SQL, loopback PostgREST, exported GET/POST handlers, and independent-connection contention with legacy Contact writers. Historical compatibility creates a genuine old-function receipt before applying the complete forward file in rollback scope, then checks exact replay after later content and design changes.
 
-Current results, files, exact revision, and independent reviews belong in [HANDOFF.md](../HANDOFF.md) and the [SITE ledger](site-architecture.md). Local application does not authorize a hosted migration or deployment.
+Current results, files, exact revision, and independent reviews belong in HANDOFF.md (onzio-ops `HANDOFF.md`) and the [SITE ledger](site-architecture.md). Local application does not authorize a hosted migration or deployment.

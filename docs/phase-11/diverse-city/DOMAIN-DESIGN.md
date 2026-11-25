@@ -376,7 +376,7 @@ here, consistent with `CONTENT-MATRIX.md`.
 ## Approval
 
 Christian approved this design on 2026-07-31, closing `DCFC-103` and with it
-Phase 1. Recorded as `DCFC-D109` in `DECISIONS.md`.
+Phase 1. Recorded as `DCFC-D109` in `DECISIONS.md` (onzio-ops).
 
 The approval covers the table shapes, the feature/tier assignments
 (`DCFC-D108`), and the column-constraint policy added during the same

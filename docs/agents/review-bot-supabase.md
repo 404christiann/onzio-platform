@@ -5,7 +5,7 @@ changes files under `supabase/migrations/`. For any other PR, do not touch Supab
 all. Christian has decided that you merge every PR that meets the review criterion in
 `docs/agents/review-bot-contract.md`, migrations included, and that you may apply
 migrations to production. This file is how you do that safely. It is built from the
-record in `HANDOFF.md` (PR #5 release) and
+record in `HANDOFF.md` (onzio-ops) (PR #5 release) and
 `docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md`.
 
 ## Why the order matters

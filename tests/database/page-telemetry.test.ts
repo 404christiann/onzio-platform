@@ -1,11 +1,10 @@
 import { createHash, createHmac, randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { Client } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 import { localPostgresConfig } from "../helpers/local-postgres";
+import { hasOpsFile, readOpsFile } from "../helpers/ops-repo";
 import { createLocalClients } from "../helpers/supabase";
 import { ROSE_CITY_CLUB_ID } from "../../scripts/rose-city-2027-operator-sql";
 import { signPayload } from "../../lib/telemetry/ingest";
@@ -234,13 +233,13 @@ function manyVisitors(prefix: string, n: number, overrides: Event = {}): Event[]
   return Array.from({ length: n }, (_, i) => event({ visitorMaterial: material(`${prefix}-${i}`), ...overrides }));
 }
 
-const OPERATOR_SQL_DIR = resolve(__dirname, "../../scripts/operator-sql");
+const OPERATOR_SQL = (kind: "rehearsal" | "commit") => `scripts/operator-sql/rose-city-telemetry-enable.${kind}.sql`;
+const hasOperatorSql = hasOpsFile(OPERATOR_SQL("commit")) && hasOpsFile(OPERATOR_SQL("rehearsal"));
 
 /** Runs an operator SQL file exactly as written, inside this test's transaction (its begin/commit/rollback become a savepoint). */
 async function runOperatorSql(kind: "rehearsal" | "commit") {
   await asOwner();
-  const sql = readFileSync(resolve(OPERATOR_SQL_DIR, `rose-city-telemetry-enable.${kind}.sql`), "utf8")
-    .replaceAll("\r\n", "\n")
+  const sql = readOpsFile(OPERATOR_SQL(kind))
     .replace(/^begin;$/m, "savepoint operator_sql;")
     .replace(/^commit;$/m, "release savepoint operator_sql;")
     .replace(/^rollback;$/m, "rollback to savepoint operator_sql;");
@@ -1352,7 +1351,7 @@ describe("the telemetry paid add-on", () => {
     expect((await rows(CLUB_IDS.alpha)).map((row) => row.path)).toEqual(["/schedule"]);
   });
 
-  it("records Rose City normally once the operator SQL turns it on, and a rerun is a no-op with one audit event", async () => {
+  it.skipIf(!hasOperatorSql)("records Rose City normally once the operator SQL turns it on, and a rerun is a no-op with one audit event", async () => {
     await roseCityClub();
     expect(await hasTelemetry(ROSE_CITY_CLUB_ID)).toBe(false);
     expect(await record(ROSE_CITY_CLUB_ID, event())).toBe("not_entitled");
@@ -1385,7 +1384,7 @@ describe("the telemetry paid add-on", () => {
     ]);
   });
 
-  it("leaves nothing behind after the rehearsal", async () => {
+  it.skipIf(!hasOperatorSql)("leaves nothing behind after the rehearsal", async () => {
     await roseCityClub();
     const rehearsed = await runOperatorSql("rehearsal");
     expect(rehearsed).toMatchObject({ result: "changed: telemetry off -> on", telemetry_enabled: true, all_ok: true });
@@ -1394,7 +1393,7 @@ describe("the telemetry paid add-on", () => {
     expect(await record(ROSE_CITY_CLUB_ID, event())).toBe("not_entitled");
   });
 
-  it("refuses to run when Rose City is missing or archived", async () => {
+  it.skipIf(!hasOperatorSql)("refuses to run when Rose City is missing or archived", async () => {
     await rejects(() => runOperatorSql("commit"), { message: expect.stringContaining("ROSE_CITY_NOT_FOUND") });
     await roseCityClub();
     await db.query("update onzio.clubs set lifecycle = 'archived', public_access = 'suspended', archived_at = now() where id = $1", [ROSE_CITY_CLUB_ID]);

@@ -96,11 +96,11 @@ admin surface exists for Diverse City yet.
 Composed in `app/(public)/page.tsx`: `Hero`, `HomeShopFeature`,
 `MatchPresentation`, `VerticalStory`, `PartnerStrip`,
 `DiverseLeagueStandings`, `ProgramsFeature`, in that order (matches
-`HANDOFF.md`'s documented homepage order).
+`HANDOFF.md` (onzio-ops)'s documented homepage order).
 
 | Section | Source | Content | Media (checksum) | Provenance | Blocker |
 | --- | --- | --- | --- | --- | --- |
-| Video hero | `components/Hero.tsx` | "One Club" / "One Community"; intro paragraph; CTAs "Explore Our Programs" → `/programs`, "Discover the Club" → `/club/about` | `media/video/homepage-hero-edited.mp4` (`78fb8018…4daf64`); poster `media/video/keeper-save-poster.jpg` (`801df56d…073b4c5`) | `operator_approved` (manager-trimmed video per `HANDOFF.md`) | Not database-backed; needs Phase 2 homepage-hero schema (Onzio's existing `homepage_hero_content` table pattern is a plausible base) |
+| Video hero | `components/Hero.tsx` | "One Club" / "One Community"; intro paragraph; CTAs "Explore Our Programs" → `/programs`, "Discover the Club" → `/club/about` | `media/video/homepage-hero-edited.mp4` (`78fb8018…4daf64`); poster `media/video/keeper-save-poster.jpg` (`801df56d…073b4c5`) | `operator_approved` (manager-trimmed video per `HANDOFF.md` (onzio-ops)) | Not database-backed; needs Phase 2 homepage-hero schema (Onzio's existing `homepage_hero_content` table pattern is a plausible base) |
 | Shop feature | `components/HomeShopFeature.tsx` | "Sky Blue / Match Jersey"; intro; 4 bullet details; "Contact the club for current sizing…" disclaimer; "Buy Now" → `/shop` | `media/shop/front_jersey.png` (`365fffde…5f07a4909`); `media/shop/back_jersey.png` (`a094c5cf…5c1092917`) | `club_supplied` | Not database-backed |
 | Next Match | `components/HomeSections.tsx` (`MatchPresentation`) | "Next Match" heading; crest vs. "TBA" opponent; "UPSL Midwest Central"; "Date and time TBA"; "Schaumburg, Illinois"; "Full Schedule" → `/schedule` | crest, see Site Chrome below | Structure `operator_approved`; match data `missing` (honest TBA, matches Schedule page) | Blocked on official fixture data |
 | "Developing the next generation" | `components/HomeSections.tsx` (`VerticalStory`) | Headline; 2 paragraphs (coaching pathway; vision statement — overlaps About page's closing paragraph almost verbatim); "Our Story" → `/club/about` | `media/video/club-reel-portrait.mp4` (`aac0847a…4cafe062f64f`); poster `media/video/club-reel-poster.jpg` (`5e284592…159d1d045a0`) | `club_supplied` | Not database-backed |
@@ -195,7 +195,7 @@ the other three (`operator_approved`).
 ### Contact (`/contact`) and Tryouts (`/tryouts`)
 
 Both approved via `DCFC-001`/`DCFC-002`/`DCFC-003`; full field-level detail
-already lives in `HANDOFF.md` (snapshot) and this file's Content Contract
+already lives in `HANDOFF.md` (onzio-ops) (snapshot) and this file's Content Contract
 Draft sections below rather than being repeated here. Quick summary:
 
 | Route | Real facts used (source, provenance) | Placeholder/TBA fields | Media |

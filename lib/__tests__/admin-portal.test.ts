@@ -13,11 +13,10 @@ function clientReturning(result: () => Promise<{ data: unknown; error: unknown }
 }
 
 describe("readAdminPortal is fail-safe", () => {
-  it("reads a reimagined club's settings", async () => {
+  it("reads a club's settings", async () => {
     const settings = await readAdminPortal(
       clientReturning(async () => ({
         data: {
-          admin_portal: "reimagined",
           admin_flags: { season: true, shop: false },
           time_zone: "America/Chicago",
           time_zone_set_at: "2026-11-08T15:00:00Z",
@@ -27,7 +26,7 @@ describe("readAdminPortal is fail-safe", () => {
       "club-id",
     );
     expect(settings).toEqual({
-      portal: "reimagined",
+      portal: "classic",
       flags: { season: true, shop: false },
       timeZone: "America/Chicago",
       timeZoneConfirmed: true,

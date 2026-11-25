@@ -40,4 +40,4 @@ Tenant media ownership, surface, bucket, published status, deletion checks, lega
 
 Focused behavior lives in the About content-policy SQL and route suites alongside the existing atomic, concurrent, recovery, picker, and public-query contracts. Historical compatibility creates a real receipt with the old save function, applies the entire forward migration in rollback scope, then checks exact replay after later content and design changes. Loopback PostgREST acceptance commits nonempty maintained content and checks unauthorized callers.
 
-Current acceptance results and exact reviewed revision belong in [HANDOFF.md](../HANDOFF.md) and the [SITE ledger](site-architecture.md). Local SQL application does not authorize a hosted migration or deployment.
+Current acceptance results and exact reviewed revision belong in HANDOFF.md (onzio-ops `HANDOFF.md`) and the [SITE ledger](site-architecture.md). Local SQL application does not authorize a hosted migration or deployment.

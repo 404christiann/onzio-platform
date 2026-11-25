@@ -74,5 +74,5 @@ do not rediscover it:
 | --- | --- | --- |
 | Platform account activated (live charges enabled) | Done | Live billing subscriptions charging since 2026-08 (Diverse City FC) |
 | Connect platform profile questionnaire | **PENDING as of 2026-08-26** — discovered incomplete during the registration-payments go-live (live `accounts.create` returned the platform-profile error, req `req_dNolWBKNl4w3my`); awaiting Christian's completion in the Dashboard | Update this row once a retried "Connect to Stripe" succeeds or `stripe:verify-connect-config` reports `platformProfileProven: true` |
-| Live Connect webhook endpoint (`/api/stripe/connect-webhook`, connected-accounts scope, 3 events) | Done 2026-08-26 | Go-live deploy record in `HANDOFF.md`; `STRIPE_CONNECT_WEBHOOK_SECRET` set in Vercel production |
-| Live Billing webhook endpoint (`/api/stripe/webhook`) | Done (Rose City era) | `docs/rose-city-legacy/stripe-subscription-plan.md` Phase 2 |
+| Live Connect webhook endpoint (`/api/stripe/connect-webhook`, connected-accounts scope, 3 events) | Done 2026-08-26 | Go-live deploy record in `HANDOFF.md` (onzio-ops); `STRIPE_CONNECT_WEBHOOK_SECRET` set in Vercel production |
+| Live Billing webhook endpoint (`/api/stripe/webhook`) | Done (Rose City era) | `docs/rose-city-legacy/stripe-subscription-plan.md` (onzio-ops) Phase 2 |

@@ -81,7 +81,7 @@ function apply(control: Control, request: TryoutsPageSaveRequest): Snapshot {
   return next;
 }
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ status, json: body }); }
-async function open(page: Page, theme: string, options: { empty?: boolean; single?: boolean; long?: boolean; delay?: number; portal?: string; unsupported?: boolean } = {}) {
+async function open(page: Page, theme: string, options: { empty?: boolean; single?: boolean; long?: boolean; delay?: number; unsupported?: boolean } = {}) {
   const control: Control = { snapshot: initial(options.empty), requests: [], cleanups: [], media: [],
     unknownNext: false, conflictNext: false, rejectNext: false, loadDelay: options.delay ?? 0,
     holdPost: false, holdUpload: false, errors: controls.get(page)?.errors ?? [], expectedHttpErrors: 0 };
@@ -178,7 +178,7 @@ async function open(page: Page, theme: string, options: { empty?: boolean; singl
   });
   await page.context().addCookies([{ name: "onzio-admin-theme", value: theme, domain: "127.0.0.1", path: "/admin", sameSite: "Lax" }]);
   const response = await page.goto(origin + "/admin/cl22-fixture?" + new URLSearchParams({
-    ...(options.portal ? { portal: options.portal } : {}), ...(options.unsupported ? { unsupported: "1" } : {}),
+    ...(options.unsupported ? { unsupported: "1" } : {}),
   }));
   expect(response?.status()).toBe(200);
   await expect(page.locator(".admin-theme").first()).toHaveAttribute("data-admin-theme", theme);
@@ -559,14 +559,11 @@ for (const theme of ["light", "dark"] as const) {
     });
   });
 }
-test("unsupported presentation stays gated and nonclassic keeps its staged page editor", async ({ page }) => {
+test("unsupported presentation stays gated", async ({ page }) => {
   const control = await open(page, "light", { unsupported: true });
   await expect(page.getByText("This website design does not publish a Tryouts page.")).toBeVisible();
   await expect(page.locator("[data-tryouts-classic-canvas]")).toHaveCount(0);
   expect(control.requests).toEqual([]);
-  await open(page, "light", { portal: "reimagined" });
-  await expect(page.getByRole("button", { name: "Save page", exact: true }).first()).toBeVisible();
-  await expect(page.locator("[data-tryouts-classic-canvas]")).toHaveCount(0);
 });
 
 for (const variant of [{ width: 390, theme: "light", motion: "no-preference" }, { width: 1280, theme: "dark", motion: "reduce" }] as const) {

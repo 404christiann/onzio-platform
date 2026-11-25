@@ -73,11 +73,6 @@ describe("Programs page words on Diverse City", () => {
     expect(page).toContain("programsPolicy ? !programsPolicy.showPageCopyEditor : false");
   });
 
-  it("stops saying the words are managed by Onzio once the club can change them", () => {
-    expect(page).toContain('hidesPageCopyEditor ? "Page copy managed by Onzio" : "Click a heading or paragraph to change its words"');
-    expect(page).toContain("!hidesPageCopyEditor && (section === \"Page heading\" || section === \"Closing band\")");
-  });
-
   it("writes the same eleven stored words as before, with no new table or column", () => {
     const migrations = readdirSync(join(ROOT, "supabase/migrations")).filter((name) => name > "20261109120000");
     expect(migrations.filter((name) => /programs_page|next_match|competition/.test(name))).toEqual([]);

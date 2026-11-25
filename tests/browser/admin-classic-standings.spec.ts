@@ -129,10 +129,10 @@ test.describe("bounded controls",()=>{
   for(const cell of cells)for(const rect of cell.rects){expect(rect.left).toBeGreaterThanOrEqual(cell.left-1);expect(rect.right).toBeLessThanOrEqual(cell.right+1);}
   expect(state.errors).toEqual([]);await page.screenshot({path:info.outputPath("320-long.png"),fullPage:true});
  });
- test("auto numbers and own logo are read only; reimagined keeps original editor",async({page})=>{
+ test("auto numbers and own logo are read only",async({page})=>{
   const state=await backend(page,origin);state.seasons[0].standings_from_scores=true;await open(page);await page.getByRole("button",{name:"Edit Alpha FC",exact:true}).click();await settleDialog(page);
   await expect(dialog(page).getByRole("spinbutton",{name:"Points",exact:true})).toHaveAttribute("readonly","");await expect(dialog(page).getByRole("button",{name:"Upload image",exact:true})).toHaveCount(0);
-  await dialog(page).getByRole("button",{name:"Cancel",exact:true}).click();await open(page,"light","&legacy=1",false);await expect(page.getByRole("button",{name:"Add Team",exact:true})).toBeVisible();await expect(page.getByRole("textbox",{name:"Team name",exact:true})).toHaveCount(6);expect(state.writes).toHaveLength(0);expect(state.errors).toEqual([]);
+  await dialog(page).getByRole("button",{name:"Cancel",exact:true}).click();expect(state.writes).toHaveLength(0);expect(state.errors).toEqual([]);
  });
  test("load failure retry recovers and missing season cannot mutate",async({page})=>{
   const state=await backend(page,origin);state.failRead=true;await open(page);await expect(page.getByRole("alert")).toContainText("unavailable");state.failRead=false;await page.getByRole("button",{name:"Retry loading",exact:true}).click();await expect(page.getByRole("button",{name:"Edit Alpha FC",exact:true})).toBeVisible();
@@ -184,39 +184,6 @@ test.describe("bounded controls",()=>{
   try {await expect(page.getByLabel("Current page",{exact:true})).toHaveText("/admin/roster");}
   finally {await writeFile(info.outputPath("guard-early-retry.json"),JSON.stringify({entered,elapsed:await page.evaluate(()=>performance.now())-started,writes:state.writes.map(w=>({table:w.table,operation:w.operation})),alerts:await page.getByRole("alert").allTextContents(),destination:await page.getByLabel("Current page",{exact:true}).textContent()}));}
   expect(state.writes.filter(w=>w.table==="league_standings_settings")).toHaveLength(1);expect(state.writes.filter(w=>w.table==="league_standings")).toHaveLength(2);expect(state.writes.filter(w=>w.table==="league_standings")[1].payload).toEqual(state.writes.filter(w=>w.table==="league_standings")[0].payload);expect(state.settings.title).toBe("Guard retry title");expect(state.errors).toEqual([]);
- });
-
- for(const logoWidth of [390,1280])test("own persisted logo keeps Legacy rendering and locked controls "+logoWidth+"px",async({page},info)=>{
-  await page.setViewportSize({width:logoWidth,height:844});
-  const state=await backend(page,origin),theme=logoWidth===390?"dark":"light";
-  const logo="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6TcAAAAAASUVORK5CYII=";
-  state.rows[0].logo_url=logo;await open(page,theme);
-  const ownRow=page.getByRole("table").first().locator("tbody tr").filter({hasText:"Alpha FC"}),crest=ownRow.locator("img");
-  await expect(crest).toBeVisible();await expect.poll(()=>crest.evaluate(el=>(el as HTMLImageElement).complete&&(el as HTMLImageElement).naturalWidth>0)).toBe(true);await expect(crest).toHaveAttribute("src",logo);
-  const classic=await crest.evaluate(el=>({ready:(el as HTMLImageElement).complete,naturalWidth:(el as HTMLImageElement).naturalWidth,naturalHeight:(el as HTMLImageElement).naturalHeight,rect:el.getBoundingClientRect().toJSON()}));
-  await page.getByRole("button",{name:"Edit Alpha FC",exact:true}).click();await settleDialog(page);await expect(dialog(page).getByText("Uses your club crest. Logo controls are locked.",{exact:true})).toBeVisible();await expect(dialog(page).getByRole("button",{name:"Upload image",exact:true})).toHaveCount(0);await expect(dialog(page).getByRole("button",{name:"Remove",exact:true})).toHaveCount(0);
-  await page.screenshot({path:info.outputPath("own-logo-locked.png")});await dialog(page).getByRole("button",{name:"Cancel",exact:true}).click();await expect(page.locator("[data-slot=admin-dialog]")).toHaveCount(0);
-  await open(page,theme,"&legacy=1",false);await expect(page.getByRole("button",{name:"Add Team",exact:true})).toBeVisible();
-  const legacyRow=page.getByRole("table").first().locator("tbody tr").first(),legacyCrest=legacyRow.locator("img");
-  await expect(legacyCrest).toBeVisible();await expect.poll(()=>legacyCrest.evaluate(el=>(el as HTMLImageElement).complete&&(el as HTMLImageElement).naturalWidth>0)).toBe(true);await expect(legacyCrest).toHaveAttribute("src",logo);await expect(legacyRow.getByText("Logo locked",{exact:true})).toBeVisible();await expect(legacyRow.getByRole("button",{name:"Upload Logo",exact:true})).toHaveCount(0);
-  const legacy=await legacyCrest.evaluate(el=>({ready:(el as HTMLImageElement).complete,naturalWidth:(el as HTMLImageElement).naturalWidth,naturalHeight:(el as HTMLImageElement).naturalHeight,rect:el.getBoundingClientRect().toJSON()}));
-  expect(classic.naturalWidth).toBe(legacy.naturalWidth);expect(classic.naturalHeight).toBe(legacy.naturalHeight);expect(state.writes).toHaveLength(0);expect(state.errors).toEqual([]);
-  await writeFile(info.outputPath("own-logo-legacy-parity.json"),JSON.stringify({classic,legacy,sameSource:true,writes:0,locked:true,scope:"existing persisted-logo display with real native image decode; not normalized upload pipeline/retirement proof"}));
- });
-
- for(const previewWidth of [390,1280])test("preview heading matches Legacy typography "+previewWidth+"px",async({page},info)=>{
-  await page.setViewportSize({width:previewWidth,height:844});
-  const state=await backend(page,origin),theme=previewWidth===390?"dark":"light";await open(page,theme);
-  const heading=page.locator("[data-admin-public-preview] h2");await expect(heading).toHaveText("League table");
-  const read=(el:Element)=>{const css=getComputedStyle(el);return{fontSize:css.fontSize,fontWeight:css.fontWeight,fontFamily:css.fontFamily,lineHeight:css.lineHeight,fontStyle:css.fontStyle,textTransform:css.textTransform,letterSpacing:css.letterSpacing,marginTop:css.marginTop,marginBottom:css.marginBottom,color:css.color,rect:el.getBoundingClientRect().toJSON()};};
-  const classic=await heading.evaluate(read),host=await page.getByRole("heading",{name:"Homepage preview",exact:true}).evaluate(read);
-  await heading.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath("classic-preview-heading.png")});
-  await open(page,theme,"&legacy=1",false);await expect(page.getByRole("button",{name:"Add Team",exact:true})).toBeVisible();
-  const legacyHeading=page.locator("[data-admin-public-preview] h2");await expect(legacyHeading).toHaveText("League table");const legacy=await legacyHeading.evaluate(read);
-  await legacyHeading.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath("legacy-preview-heading.png")});
-  await writeFile(info.outputPath("preview-typography-parity.json"),JSON.stringify({classic,legacy,host,theme,viewport:previewWidth,scope:"actual reused renderer in same fixture environment; wrapper geometry recorded separately; no public component modification"}));
-  for(const key of ["fontSize","fontWeight","fontFamily","lineHeight","fontStyle","textTransform","letterSpacing","marginTop","marginBottom","color"] as const)expect(classic[key],key).toBe(legacy[key]);
-  expect(host.fontSize).toBe("14px");expect(state.writes).toHaveLength(0);expect(state.errors).toEqual([]);
  });
 
 });

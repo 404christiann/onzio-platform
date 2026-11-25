@@ -12,7 +12,7 @@ function files(directory: string): string[] {
   try { entries = readdirSync(directory); } catch { return []; }
   return entries.flatMap((entry) => {
     const path = join(directory, entry);
-    if (statSync(path).isDirectory()) return entry === "reimagined" || entry === "node_modules" ? [] : files(path);
+    if (statSync(path).isDirectory()) return entry === "node_modules" ? [] : files(path);
     return SOURCE.test(entry) ? [path] : [];
   });
 }
@@ -39,7 +39,6 @@ const REIMAGINED_CONFIRM_ALLOWLIST: { file: string; within: string; call: string
   { file: "components/admin/programs/useProgramsEditor.ts", within: "function showDirectory(", call: 'window.confirm("Discard unsaved program changes?")', why: "reimagined Programs: back to the directory (`if (!classic)` branch)" },
   { file: "components/admin/programs/useProgramsEditor.ts", within: "function showManage(", call: 'window.confirm("Discard unsaved program changes?")', why: "reimagined Programs: open Manage programs (`if (!classic)` branch)" },
   { file: "components/admin/programs/useProgramsEditor.ts", within: "function startCreate(", call: 'window.confirm("Discard unsaved program changes?")', why: "reimagined Programs: start a new program (`if (!classic)` branch)" },
-  { file: "components/admin/tryouts/TryoutsPageEditor.tsx", within: "function TryoutsPageEditorContent(", call: 'window.confirm("Leave Tryouts? Your unsaved page changes will be lost.")', why: "reimagined Tryouts: leaving the page by a link (the classic branch is ClassicTryoutsPageEditor)" },
   { file: "app/admin/(protected)/tryouts/page.tsx", within: "function selectTryout(", call: 'window.confirm("Discard unsaved tryout changes?")', why: "LegacyAdminTryoutsPage (not rendered; kept because contract tests read its text)" },
   { file: "app/admin/(protected)/tryouts/page.tsx", within: "function startCreate(", call: 'window.confirm("Discard unsaved tryout changes?")', why: "LegacyAdminTryoutsPage (not rendered; kept because contract tests read its text)" },
 ];

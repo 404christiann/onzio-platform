@@ -1,11 +1,11 @@
 import { clubTimeZoneOrDefault, DEFAULT_CLUB_TIME_ZONE } from "@/lib/club-time";
 
-// ADMIN-RE-02: which admin a club sees, its slice flags and its time zone.
-// Read separately from tenant resolution (lib/club-context.ts must never select
-// these columns: the 2026-08-14 outage), and fail-safe: any error, a lagging
-// migration or an unexpected value falls back to the classic admin.
+// A club's admin flags and time zone. Read separately from tenant resolution
+// (lib/club-context.ts must never select these columns: the 2026-08-14
+// outage), and fail-safe: any error, a lagging migration or an unexpected value
+// falls back to the defaults.
 
-export type AdminPortal = "classic" | "reimagined";
+export type AdminPortal = "classic";
 export type AdminFlags = Readonly<Record<string, boolean>>;
 
 export type AdminPortalSettings = {
@@ -38,7 +38,7 @@ export function parseAdminPortalRow(row: unknown): AdminPortalSettings {
   if (!row || typeof row !== "object") return CLASSIC_ADMIN_PORTAL;
   const record = row as Record<string, unknown>;
   return {
-    portal: record.admin_portal === "reimagined" ? "reimagined" : "classic",
+    portal: "classic",
     flags: booleanFlags(record.admin_flags),
     timeZone: clubTimeZoneOrDefault(record.time_zone),
     timeZoneConfirmed: record.time_zone_set_at !== null,
@@ -53,7 +53,7 @@ export async function readAdminPortal(
     const { data, error } = await supabase
       .schema("onzio")
       .from("clubs")
-      .select("admin_portal, admin_flags, time_zone, time_zone_set_at")
+      .select("admin_flags, time_zone, time_zone_set_at")
       .eq("id", clubId)
       .maybeSingle();
     if (error || !data) return CLASSIC_ADMIN_PORTAL;

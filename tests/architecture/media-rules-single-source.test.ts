@@ -17,8 +17,6 @@ const SKIPPED = new Set([RULES_MODULE, "lib/database.generated.ts", "lib/db-type
 const ALLOWED: { file: string; why: string }[] = [
   { file: "lib/bunny-thumbnail.ts", why: "Bunny Stream's own 5 MB video-thumbnail limit, not an admin image upload" },
 ];
-// The reimagined portal is abandoned (every club stays on the classic admin) and is out of scope for classic-only work.
-const SKIPPED_DIRECTORIES = ["components/admin/reimagined/"];
 
 function files(directory: string): string[] {
   let entries: string[];
@@ -36,8 +34,7 @@ const sources = () =>
     .map((path) => ({ file: relative(path), text: readFileSync(path, "utf8") }))
     .filter(({ file }) =>
       !SKIPPED.has(file) &&
-      !ALLOWED.some((entry) => entry.file === file) &&
-      !SKIPPED_DIRECTORIES.some((directory) => file.startsWith(directory)));
+      !ALLOWED.some((entry) => entry.file === file));
 
 /** Each match is reported as file:line: snippet so a failure says exactly what to move into the rules module. */
 function offenders(pattern: RegExp, within: (file: string) => boolean = () => true): string[] {

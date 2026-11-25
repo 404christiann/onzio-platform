@@ -376,7 +376,7 @@ describe("Tryouts page intro copy", () => {
 
 describe("DCFC-303 protected Tryouts admin surface", () => {
   const pageSource = readFileSync(
-    resolve(process.cwd(), "components/admin/tryouts/TryoutsPageEditor.tsx"),
+    resolve(process.cwd(), "components/admin/tryouts/ClassicTryoutsPageEditor.tsx"),
     "utf8",
   );
   const routeSource = readFileSync(
@@ -416,34 +416,6 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     expect(pageSource).toContain('.order("sort_order"');
     expect(pageSource).not.toContain('from("@/lib/supabase-browser")');
     expect(pageSource).not.toMatch(/club_id\s*:/);
-  });
-
-  it("exposes the approved event, state, association, media, and complete UX fields", () => {
-    for (const label of [
-      "Program association",
-      // ADMIN-RE-12b: the state follows the sign-up way and the date; the
-      // owner only chooses whether it is closed.
-      "Sign-ups",
-      // The merged single name field, stored in the existing `headline`
-      // column. It replaced the Eyebrow + Headline pair.
-      'label="Name"',
-      "Event date",
-      "Location",
-      "Cost",
-      "Button text",
-      "External registration destination",
-      "Closed message",
-      "Event photo",
-      "Add event",
-      "Save page",
-      "No tryout events yet",
-      "Loading tryout events",
-      "Tryouts page saved",
-      "Unable to load tryout events",
-      "Upload failed",
-    ]) {
-      expect(pageSource).toContain(label);
-    }
   });
 
   it("no longer offers the retired per-event copy editors", () => {
@@ -496,24 +468,6 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
       'tryouts: { surface: "tryouts", kind: "photo" }',
     );
     expect(migrationSource).toContain("when 'tryouts' then 'tryouts'");
-  });
-
-  it("edits both page-level intro paragraphs inside one page-scoped save", () => {
-    for (const label of [
-      "Page introduction",
-      "Intro shown when tryouts are published",
-      "Intro shown when none are published",
-    ]) {
-      expect(pageSource).toContain(label);
-    }
-    // Christian approved one atomic Save per public page on 2026-10-02,
-    // superseding the old separate-intro Save assertion.
-    expect(pageSource).toContain('fetch("/api/admin/tryouts-page"');
-    expect(pageSource).toContain("deletedIds: deleted.map");
-    expect(pageSource).not.toContain("Save page intro");
-    expect(pageSource).not.toMatch(/\.from\("tryouts_page_content"\)\s*\.upsert/);
-    // The preview reflects the unsaved page-copy draft, not just saved rows.
-    expect(pageSource).toContain("content={previewPageContent}");
   });
 
   it("offers native registration with external fallback and stores no submission data here", () => {

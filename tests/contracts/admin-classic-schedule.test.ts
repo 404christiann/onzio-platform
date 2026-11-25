@@ -4,15 +4,11 @@ import { emptyForm, hasResult, matchTooLong, normalizeScore, monthGroupKey, form
 import { EMPTY_MATCH_SUMMARY } from "@/lib/match-summary";
 
 const page = readFileSync("app/admin/(protected)/schedule/page.tsx", "utf8");
-const legacy = readFileSync("components/admin/schedule/LegacySchedulePage.tsx", "utf8");
 
 describe("classic Schedule regression boundaries", () => {
   it("enters the classic guard only inside the classic component", () => {
-    expect(page).toContain('if (portal.portal === "reimagined") return <LegacySchedulePage />;');
     expect(page).toContain("return isCinematic ? <RoseCityScheduleEditor /> : <ClassicSchedulePage />;");
     expect(page.indexOf("useUnsavedGuard({")).toBeGreaterThan(page.indexOf("function ClassicSchedulePage()"));
-    expect(legacy).not.toContain("useUnsavedGuard");
-    expect(legacy).toContain("<AdminSidePanel");
   });
   it("retains nullable scores and season defaults without client tenant fields", () => {
     expect(emptyForm("season")).toEqual({

@@ -36,9 +36,9 @@ and data dumps, and an exact two-file dry run. The linked ledger now matches
 every local migration and a second dry run is empty. Read-only SQL found both
 new history rows, 40 media guards, one Diverse City tenant and two verified
 domains. Diverse City's four checked public routes returned 200 afterward.
-Files changed for this release entry: `HANDOFF.md`, this ledger and the HP-08
+Files changed for this release entry: `HANDOFF.md` (onzio-ops), this ledger and the HP-08
 ledger; production migration files were already reviewed and committed.
-Verification and backup details are in `HANDOFF.md`. Exact next step: push the
+Verification and backup details are in `HANDOFF.md` (onzio-ops). Exact next step: push the
 release evidence on PR #5, merge its verified head into auto-deploying `main`,
 then confirm the deployment and live tenants.
 
@@ -105,13 +105,13 @@ atomic-save migration was the only pending file in the dry run and was applied
 after verified backups, and the post-apply ledger matches the branch with no
 pending migrations. Changed files for this release step:
 `supabase/migrations/20260815140402_pathway_presentation_template.sql`,
-`HANDOFF.md`, this ledger, the HP-08 ledger and the closeout handoff. Verification:
+`HANDOFF.md` (onzio-ops), this ledger, the HP-08 ledger and the closeout handoff. Verification:
 completed physical backup plus mode-600 logical schema/data dumps, one-file dry
 run, successful apply, zero-file post-apply dry run, and read-only table/RPC/
 trigger readback. Christian paused step 3, so the exact next step is to wait for
 his instruction to merge PR #5, then verify the deployment and live sites.
 Current `origin/main` was merged into the feature branch to resolve its
-`HANDOFF.md` conflict; the combined branch passed TypeScript, lint, local build
+`HANDOFF.md` (onzio-ops) conflict; the combined branch passed TypeScript, lint, local build
 and full suite 1556/1556. Its client bundle contains the local Supabase URL in
 nine chunks and the hosted URL in zero chunks. Browser gates above predate that
 merge; no Homepage implementation changed in it.
@@ -573,7 +573,7 @@ understand the photo.” Use “Not saved yet: …”, “Save homepage”, “S
 
 Plan approval and the explicitly revised source-review prerequisite are resolved. Each package must record changed files, actual test
 commands/results, evidence paths, blockers and its exact next step here and in
-`HANDOFF.md`. No package is complete merely because its code is written.
+`HANDOFF.md` (onzio-ops). No package is complete merely because its code is written.
 
 | ID | Status | Work and intended files | Required acceptance / exact next step |
 | --- | --- | --- | --- |
@@ -649,7 +649,7 @@ acceptance under this plan.
 For every assignment:
 
 1. Verify the active branch/worktree and current dirty files. Read this ledger
-   and `HANDOFF.md` before selecting work; do not repeat completed assignments.
+   and `HANDOFF.md` (onzio-ops) before selecting work; do not repeat completed assignments.
 2. Give the agent one deliverable, exact allowed files, relevant source files,
    fixed interfaces, expected behavior, test commands and current blockers.
    Clarify whether it is read-only, tests-only or implementation work.
@@ -670,7 +670,7 @@ For every assignment:
    assertions for real behavior, not simply agreement with the implementation.
 7. Record the package ID, model, assignment, review corrections, accepted
    files, verification, blockers and exact next step in this ledger and
-   `HANDOFF.md`. Delegation alone never marks a package complete. No delegated
+   `HANDOFF.md` (onzio-ops). Delegation alone never marks a package complete. No delegated
    commit, push, deployment or hosted mutation is authorized by this workflow.
 
 Use this assignment format; replace every bracketed field before dispatch:
@@ -872,7 +872,7 @@ approval and verified backups. This planning task performs none of those steps.
   code fences and required decision/package coverage passed. No tracked
   application, component, library, test, migration or middleware diff exists.
 - At initial plan delivery, implementation, migrations, runtime tests and browser
-  acceptance had not started; only this plan and `HANDOFF.md` had changed.
+  acceptance had not started; only this plan and `HANDOFF.md` (onzio-ops) had changed.
 - Unrelated initial dirty paths: `.gitignore`, `.claude/`,
   `docs/cv-united-launch-plan.md`, `lions-font-comparison.html`; preserve them.
 - Historical planning gate: subsequently resolved by Christian’s explicit
@@ -985,7 +985,7 @@ missing-module failures, zero skipped**; TypeScript and targeted lint passed.
 Current suites: 20 state, 23 payload, 15 recovery, 5 capability cases. Refreshed
 report: `/private/tmp/onzio-homepage-contract-results.json`. No runtime modules,
 API/database changes or visual acceptance. Only the new test file, this plan
-and `HANDOFF.md` changed during this step; unrelated dirty files were preserved.
+and `HANDOFF.md` (onzio-ops) changed during this step; unrelated dirty files were preserved.
 
 This historical checkpoint is superseded by the explicit source-review
 approval and completion record below.
@@ -1169,9 +1169,9 @@ remain excluded. No commit, hosted mutation, push or deployment was performed.
 
 ### HP-04 checkpoint — 2026-09-16 (Claude)
 
-Read the full required order (`AGENTS.md`, `HANDOFF.md`,
+Read the full required order (`AGENTS.md`, `HANDOFF.md` (onzio-ops),
 `docs/onzio-platform-plan.md`, `tests/README.md`, this plan,
-`docs/homepage-editor-claude-handoff.md`) before touching code. Continued the
+`docs/homepage-editor-claude-handoff.md` (onzio-ops)) before touching code. Continued the
 existing uncommitted `codex/homepage-editor-redesign` checkout; did not reset,
 restart planning, commit, push or deploy.
 
@@ -1426,7 +1426,7 @@ receipt reconciliation and cross-tab deletion; those runtime paths are now fixed
 `components/{AcademyNextMatch,Hero,Nav,PhotoSlideshow,ResilientBunnyVideo}.tsx`,
 `components/editorial/{EditorialHeader,EditorialHero,EditorialMatchdaySlideshow}.tsx`,
 `tests/browser/homepage-editor-{accessibility,recovery-hardening,photos,templates}.spec.ts`,
-`tests/browser/admin-loading.spec.ts`, `tests/README.md`, this ledger and `HANDOFF.md`.
+`tests/browser/admin-loading.spec.ts`, `tests/README.md`, this ledger and `HANDOFF.md` (onzio-ops).
 Earlier packages' source/migration files remain uncommitted, including untracked files.
 
 Bounded GPT-5.6-Luna work: read-only accessibility/recovery review and two browser

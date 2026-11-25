@@ -35,7 +35,7 @@ describe("operator script: scripts/set-club-admin-portal.ts", () => {
   });
 
   it("validates every input before touching the database", () => {
-    expect(source).toContain('"--portal must be classic or reimagined"');
+    expect(source).toContain('"--portal must be classic: the reimagined admin was removed"');
     expect(source).toContain("const FLAG_NAME = /^[a-z][a-z0-9_]{0,39}$/;");
     expect(source).toMatch(/is in both --on and --off/);
     expect(source).toContain("isValidTimeZone(timeZone)");
@@ -64,23 +64,19 @@ describe("operator script: scripts/set-club-admin-portal.ts", () => {
 describe("the admin reads the switch fail-safe", () => {
   it("reads the columns in lib/admin-portal.ts with the user-scoped client, never in tenant resolution", () => {
     const portal = read("lib/admin-portal.ts");
-    expect(portal).toContain('.select("admin_portal, admin_flags, time_zone, time_zone_set_at")');
+    expect(portal).toContain('.select("admin_flags, time_zone, time_zone_set_at")');
     expect(portal).toMatch(/catch \{\s*return CLASSIC_ADMIN_PORTAL;/);
     expect(portal).not.toMatch(/supabase-service-role|SUPABASE_SERVICE_ROLE_KEY/);
     expect(read("lib/club-context.ts")).not.toMatch(/admin_portal|admin_flags|time_zone/);
   });
 
-  // ADMIN-RE-05 changed this on purpose: RE-02 rendered the classic shell for
-  // both values; now "reimagined" gets the reimagined shell and anything else,
-  // including a failed read, keeps the classic one. ADMIN-RE-24 gave the
-  // reimagined shell its tabs, worked out only for a reimagined club.
-  it("picks the shell by portal inside the provider, classic unless the read says reimagined", () => {
+  it("renders the classic shell inside the provider for every club", () => {
     const layout = read("app/admin/(protected)/layout.tsx");
     expect(layout).toContain("const portal = await readAdminPortal(supabase, club.id);");
-    expect(layout).toMatch(/let shell: [^\n]* \| null = null;\s*if \(portal\.portal === "reimagined"\) \{/);
     expect(layout).toMatch(
-      /<AdminPortalProvider settings=\{portal\} isOwner=\{club\.role === "owner"\}>[\s\S]*\{shell \? \(\s*<ReimaginedShell tabs=\{shell\.tabs\} targets=\{shell\.targets\} dots=\{shell\.dots\} search=\{shell\.search\}>\s*\{children\}\s*<\/ReimaginedShell>\s*\) : \(\s*<ClassicAdminUnsavedGuardProvider>\s*<AdminShell>\{children\}<\/AdminShell>\s*<\/ClassicAdminUnsavedGuardProvider>\s*\)\}\s*<\/AdminPortalProvider>/,
+      /<AdminPortalProvider settings=\{portal\} isOwner=\{club\.role === "owner"\}>\s*<ClassicAdminUnsavedGuardProvider>\s*<AdminShell>\{children\}<\/AdminShell>\s*<\/ClassicAdminUnsavedGuardProvider>\s*<\/AdminPortalProvider>/,
     );
+    expect(layout).not.toMatch(/Reimagined/);
   });
 });
 

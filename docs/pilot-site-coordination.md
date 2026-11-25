@@ -155,7 +155,7 @@ failure and superseded long-title capture remain disclosed.
 
 Post-merge commands, logs, cleanup confirmation and advisory review are recorded
 separately at `/home/coder/.codex/visualizations/2026/10/22/onzio-site05-postmerge`.
-The status reconciliation changes HANDOFF.md, this guide, the SITE-05/SITE-05L
+The status reconciliation changes HANDOFF.md (onzio-ops), this guide, the SITE-05/SITE-05L
 ledger and task-branch deployment disablement. No authorized local SITE-05 work
 remains. SITE-06 and hosted rollout require Christian's separate direction.
 

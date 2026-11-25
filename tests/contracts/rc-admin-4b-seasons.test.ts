@@ -35,8 +35,6 @@ describe("RC-ADMIN-4b-seasons: where it runs", () => {
     expect(page).toContain("if (club.slug !== ROSE_CITY_SLUG) return <ClassicSeasonsPage />");
     expect(page).toContain("loadSeasonsList(supabase, club.id)");
     expect(page).toContain('hasStandings={!isAdminRouteHiddenForClub(club.slug, "standings")}');
-    // The reimagined hub branch is untouched.
-    expect(page).toContain("<SeasonsHub");
     // No new template selector in a shared file.
     expect(page).not.toContain("presentationTemplateKey");
     expect(page).not.toContain("cinematic@2");

@@ -27,39 +27,29 @@ const club: ClubContext = {
   stripePriceId: null, tier: "pro", role: "owner", primaryColor: null, secondaryColor: null,
   presentationTemplateKey: "academy@1", storeEnabled: false,
 };
-function render(portal: "classic" | "reimagined", key: ClubContext["presentationTemplateKey"]) {
-  const portalProps = { settings: { ...CLASSIC_ADMIN_PORTAL, portal }, isOwner: false };
+function render(key: ClubContext["presentationTemplateKey"]) {
+  const portalProps = { settings: CLASSIC_ADMIN_PORTAL, isOwner: false };
   const clubProps = { club: { ...club, presentationTemplateKey: key } };
   return renderToStaticMarkup(createElement(AdminPortalProvider,
     portalProps as Parameters<typeof AdminPortalProvider>[0],
     createElement(ClubContextProvider, clubProps as Parameters<typeof ClubContextProvider>[0],
-      // Render the way app/admin/(protected)/layout.tsx does: the guard provider wraps the classic shell only, and
-      // the reimagined shell has none, so the nonclassic editor must mount without it.
-      portal === "classic"
-        ? createElement(UnsavedGuardProvider, { navigate: () => undefined, children: createElement(TryoutsPageEditor) })
-        : createElement(TryoutsPageEditor))));
+      // Render the way app/admin/(protected)/layout.tsx does: the guard provider wraps the shell.
+      createElement(UnsavedGuardProvider, { navigate: () => undefined } as unknown as Parameters<typeof UnsavedGuardProvider>[0], createElement(TryoutsPageEditor)))));
 }
 
 beforeEach(() => probe.render.mockClear());
 describe("Tryouts policy dispatch precedes the classic editor", () => {
   it("passes actual supported capabilities to the classic branch", () => {
-    expect(render("classic", "academy@1")).toContain("data-classic-editor-probe");
+    expect(render("academy@1")).toContain("data-classic-editor-probe");
     expect(probe.render).toHaveBeenCalledOnce();
     expect(probe.render).toHaveBeenCalledWith({ routeVisible: true, showProgramAndHeroFields: false, showHeroImageField: true });
   });
   it("rejects an absent presentation before mounting classic controls", () => {
-    expect(render("classic", null)).toContain("does not publish a Tryouts page");
+    expect(render(null)).toContain("does not publish a Tryouts page");
     expect(probe.render).not.toHaveBeenCalled();
   });
   it("rejects an unsupported presentation before mounting classic controls", () => {
-    expect(render("classic", "clubhouse@1")).toContain("does not publish a Tryouts page");
-    expect(probe.render).not.toHaveBeenCalled();
-  });
-  it("keeps the supported nonclassic original editor instead of classic controls", () => {
-    const html = render("reimagined", "academy@1");
-    expect(html).toContain("Save page");
-    expect(html).toContain("Loading tryout sections");
-    expect(html).not.toContain("data-classic-editor-probe");
+    expect(render("clubhouse@1")).toContain("does not publish a Tryouts page");
     expect(probe.render).not.toHaveBeenCalled();
   });
 });

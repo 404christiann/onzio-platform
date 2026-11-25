@@ -291,32 +291,6 @@ describe("DCFC-301 protected Programs admin surface", () => {
     expect(pageSource).not.toMatch(/club_id\s*:/);
   });
 
-  it("exposes every approved field, both media roles, and complete UX states", () => {
-    for (const label of [
-      "Navigation label",
-      "Display title",
-      "Kicker",
-      "Summary",
-      "Body",
-      "Highlights",
-      "Layout variant",
-      "Button label",
-      "Button link",
-      "Visibility",
-      "Hero image",
-      "Detail image",
-      "Create program",
-      "Save changes",
-      "No programs yet",
-      "Loading programs",
-      "Program saved",
-      "Unable to load programs",
-      "Upload failed",
-    ]) {
-      expect(pageSource).toContain(label);
-    }
-  });
-
   it("adds the Programs surface to secure media authorization and payload attachment", () => {
     expect(MEDIA_SURFACES).toContain("programs");
     expect(clientSource).toContain(

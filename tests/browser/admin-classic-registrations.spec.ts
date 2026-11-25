@@ -332,10 +332,6 @@ test.describe("bounded controls",()=>{
   await page.getByRole("button",{name:"Delete",exact:true}).click();await dialog(page).getByRole("button",{name:"Delete form",exact:true}).click();await expect(page.locator(".registration-workspace-heading")).toHaveCount(0);
   expect(state.forms.some(f=>f.id===formIds[3])).toBe(false);expect(state.writes.at(-1).values).toEqual({action:"delete",formId:formIds[3]});expect(state.errors).toEqual([]);
  });
- test("legacy retains original builder and live structure restrictions",async({page})=>{
-  const state=await backend(page,origin);await open(page,"light","&legacy",false);await expect(page.getByRole("button",{name:"Fall Academy 6 paid registrants",exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"Winter Skills Clinic 0 paid registrants",exact:true}).click();await expect(page.getByLabel("Form name",{exact:true})).toHaveValue("Winter Skills Clinic");await page.getByLabel("Form name",{exact:true}).fill("Legacy update");await page.getByRole("button",{name:"Save form",exact:true}).click();await expect(page.getByText("Form saved.",{exact:true})).toBeVisible();expect(state.forms.find(f=>f.id===formIds[1]).title).toBe("Legacy update");expect(state.errors).toEqual([]);
- });
  test("payment account failure does not expose data before pending form list settles",async({page})=>{
   const state=await backend(page,origin);state.failConnect=true;state.readGate=gate();
   try {await open(page,"light","",false);await expect(page.locator("[data-admin-loading-region]")).toHaveAttribute("data-phase","skeleton");await expect(page.getByRole("button",{name:"New form",exact:true})).toBeDisabled();await expect(page.locator(".registration-form-card-title")).toHaveCount(0);state.readGate.release();state.readGate=null;await expect(page.locator("[data-admin-loading-region]")).toHaveAttribute("data-phase","content");await expect(page.getByText("Could not load Stripe Connect status.",{exact:true})).toBeVisible();expect(state.errors).toEqual([]);}finally{state.readGate?.release();}

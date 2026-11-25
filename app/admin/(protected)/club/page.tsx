@@ -1,14 +1,8 @@
-import { TabPage } from "@/components/admin/reimagined/TabPage";
-import { loadAdminTabPage } from "@/lib/admin-tab-page";
-import { getAdminTab, getAdminTabPages } from "@/lib/admin-tabs";
+import { redirectRetiredAdminRoute } from "@/lib/retired-admin-route";
 
-// ADMIN-RE-24: the Club tab (design: admin-plain-search-two-clubs.html). Your
-// club, who can sign in, payments and plan; owner-only pages follow the
-// manifest's owner and billing rules.
-
+// Retired reimagined-admin address: a classic club goes on to /admin/branding, as before.
 export const dynamic = "force-dynamic";
 
-export default async function ClubTabPage() {
-  const { access } = await loadAdminTabPage("club");
-  return <TabPage tab="club" title={getAdminTab("club").title} pages={getAdminTabPages("club", access)} />;
+export default async function RetiredAdminPage(): Promise<never> {
+  return redirectRetiredAdminRoute("/admin/branding");
 }

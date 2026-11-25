@@ -8,8 +8,6 @@ import styles from "@/components/admin/club-settings/ClubSettings.module.css";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminPendingButton } from "@/components/admin/ui/AdminPendingButton";
 import { useAnimatedList } from "@/components/admin/ui/useAnimatedList";
-import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
-import { SignInPeople } from "@/components/admin/reimagined/SignInPeople";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { siteFor } from "@/lib/site-for";
@@ -186,12 +184,8 @@ function membershipErrorTone(code: unknown): MessageTone {
   return "destructive";
 }
 
-// ADMIN-RE-18: a club on the reimagined admin gets "Who can sign in" (design:
-// cd-signin-final), which talks to the same members route. A club still on the
-// classic admin uses the shared Club settings frame below.
 export default function MembersPage() {
-  const reimagined = useAdminPortal().portal === "reimagined";
-  return reimagined ? <SignInPeople /> : <ClassicMembersPage />;
+  return <ClassicMembersPage />;
 }
 
 function ClassicMembersPage() {

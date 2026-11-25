@@ -164,9 +164,8 @@ describe("Rose City Schedule editor: same edits, same saves", () => {
 });
 
 describe("Rose City Schedule editor: scope", () => {
-  it("branches only cinematic@2 in the classic portal, with one template read", () => {
+  it("branches only cinematic@2, with one template read", () => {
     const main = page.slice(page.indexOf("export default function SchedulePage()"), page.indexOf("function ClassicSchedulePage()"));
-    expect(main).toContain('if (portal.portal === "reimagined") return <LegacySchedulePage />;');
     expect(main).toContain('return isCinematic ? <RoseCityScheduleEditor /> : <ClassicSchedulePage />;');
     expect(page.match(/presentationTemplateKey/g)).toHaveLength(1);
     expect(page.match(/"cinematic@2"/g)).toHaveLength(1);

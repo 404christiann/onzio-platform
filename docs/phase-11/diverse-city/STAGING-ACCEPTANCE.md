@@ -268,8 +268,8 @@ media posture and route staging path checks through tenant ID plus surface
 entitlement. Christian approved restoring the temporary Diverse City admin
 membership for `christianalcala3@yahoo.com`; the row was marked `removed` at
 `2026-08-06T20:15:19.430016+00:00` and post-cleanup reconciliation confirmed it
-removed for Diverse City while `christianjavieralcala@gmail.com` remains active.
-Accepted fixture exception: `christianjavieralcala@gmail.com` intentionally
+removed for Diverse City while `<platform owner email>` remains active.
+Accepted fixture exception: `<platform owner email>` intentionally
 remains an active owner on both Alpha and Diverse City in staging, so those two
 tenant memberships are treated as Christian-owned staging fixtures rather than
 a cross-tenant leak.
@@ -296,8 +296,8 @@ a cross-tenant leak.
 
 ## Platform Billing Foundation (`PLAT-102`)
 
-Closed out 2026-08-05 on Bravo staging. Evidence recorded in `HANDOFF.md` and
-`docs/phase-11/diverse-city/STATUS.md`; each box below was independently
+Closed out 2026-08-05 on Bravo staging. Evidence recorded in `HANDOFF.md` (onzio-ops) and
+`docs/phase-11/diverse-city/STATUS.md` (onzio-ops); each box below was independently
 re-verified against the linked staging project rather than taken on claim.
 
 - [x] Migration `20260804024349_plat_102_billing_entitlement.sql` is applied
@@ -351,8 +351,8 @@ re-verified against the linked staging project rather than taken on claim.
 ## Stripe Test and Lifecycle (`DCFC-601`)
 
 Closed out 2026-08-06 on Diverse City staging
-(`d88bf71b-9820-49ae-9dc0-7556b0813885`). Evidence recorded in `HANDOFF.md`
-and `docs/phase-11/diverse-city/STATUS.md`. Before this pass could run, a
+(`d88bf71b-9820-49ae-9dc0-7556b0813885`). Evidence recorded in `HANDOFF.md` (onzio-ops)
+and `docs/phase-11/diverse-city/STATUS.md` (onzio-ops). Before this pass could run, a
 latent issue was found and fixed: `diverse-city-onzio-staging.vercel.app` was
 still pinned to a pre-`PLAT-101`/`PLAT-102` deployment (`8e3cde2`, "Prepare
 Diverse City Phase 5 release") and was reassigned to the current deployment
@@ -406,7 +406,7 @@ Diverse City Phase 5 release") and was reassigned to the current deployment
 ### DCFC-603 closeout review snapshot (`2026-08-06`)
 
 - Scope: read-only staging inspection only. No hosted mutation executed in this closeout review pass.
-- Verified: `DCFC-601` and `DCFC-602` are complete in `STATUS.md`, and their latest entries report no unresolved blockers or pending `DCFC-601`/`DCFC-602` rollback/reconciliation needs.
+- Verified: `DCFC-601` and `DCFC-602` are complete in `STATUS.md` (onzio-ops), and their latest entries report no unresolved blockers or pending `DCFC-601`/`DCFC-602` rollback/reconciliation needs.
 - Verified: temporary probe/user/session/factor/media/content exceptions are reconciled and recorded in the `DCFC-602` evidence stream.
 - Verified: staging host/project state references remain within `fxefqnoqxbezeccjvrsw`, `alpha-onzio-staging.vercel.app`, `bravo-onzio-staging.vercel.app`, and `diverse-city-onzio-staging.vercel.app` boundaries.
 - Accepted: Christian explicitly accepted the `DCFC-603` staging gate in this thread on 2026-08-06.

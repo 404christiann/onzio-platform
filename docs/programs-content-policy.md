@@ -113,7 +113,7 @@ The rollback-scoped test checks table fingerprints and ACLs around the migration
 the forward migration is installed through the actual local Supabase migration
 runner. Its SQL replaces the four existing procedures and removes only their
 Academy-availability blocks. Full serial validation, the exact reviewed revision,
-and the remaining limits are recorded in [HANDOFF.md](../HANDOFF.md) and the
+and the remaining limits are recorded in HANDOFF.md (onzio-ops `HANDOFF.md`) and the
 [SITE ledger](site-architecture.md).
 
 This package changes SQL and API policy. It claims no new browser, hosted

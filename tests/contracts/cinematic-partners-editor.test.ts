@@ -119,8 +119,10 @@ describe("Partners editor draft", () => {
 
   it("is reachable from the Website Hub and Sponsors for cinematic@2 owners", () => {
     expectHubRoute("partners", "/admin/partners");
-    const sponsors = readFileSync(resolve(process.cwd(), "app/admin/(protected)/sponsors/page.tsx"), "utf8");
-    // Every other design returns the plain Sponsors page before the Partners link.
-    expect(sponsors).toMatch(/if \(club\.presentationTemplateKey !== "cinematic@2"\) return page;[^]*href="\/admin\/partners"/);
+    const page = readFileSync(resolve(process.cwd(), "app/admin/(protected)/sponsors/page.tsx"), "utf8");
+    const sponsors = readFileSync(resolve(process.cwd(), "components/admin/sponsors/rose-city/RoseCitySponsorsEditor.tsx"), "utf8");
+    // Only cinematic@2 gets the editor that carries the Partners link; every other design keeps the plain Sponsors page.
+    expect(page).toContain('if (club.presentationTemplateKey === "cinematic@2") return <RoseCitySponsorsEditor />;');
+    expect(sponsors).toContain('href="/admin/partners"');
   });
 });

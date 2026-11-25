@@ -594,8 +594,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
       ).toContain(field);
     }
 
-    const brandingAdmin = source("components/admin/club-settings/LegacyBranding.tsx");
-    expect(brandingAdmin).toContain("footer_tagline");
+    const brandingAdmin = source("components/admin/club-settings/ClassicBranding.tsx");
     expect(brandingAdmin).toContain("footerTagline");
   });
 });

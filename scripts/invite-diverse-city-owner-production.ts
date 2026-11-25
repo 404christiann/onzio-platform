@@ -6,7 +6,7 @@ loadEnv({ path: ".env.local", quiet: true });
 
 // DCFC-803: "Production private Auth/admin acceptance" — invites the real
 // Diverse City FC owner into production as `role: "owner"`. Per DCFC-D113
-// (docs/phase-11/diverse-city/DECISIONS.md), the designed end state is
+// (docs/phase-11/diverse-city/DECISIONS.md (onzio-ops)), the designed end state is
 // exactly one owner — the real one, adding admins himself through the
 // Team Access flow (PLAT-101) rather than Onzio provisioning any. Christian
 // currently holds `owner` on this club from the DCFC-801 provisioning step;

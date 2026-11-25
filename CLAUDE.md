@@ -2,10 +2,15 @@
 
 This repository uses the same contract-first workflow for every coding agent.
 
+Internal ops docs (`HANDOFF.md`, every `STATUS.md` / `DECISIONS.md`, rollback
+SQL, operator SQL, verification screenshots) live in the private
+`404christiann/onzio-ops` repo at the same paths. Clone it next to this repo
+(`../onzio-ops`); paths below marked *(onzio-ops)* are relative to that checkout.
+
 Before changing the repository, read in this order:
 
 1. `AGENTS.md`
-2. `HANDOFF.md`
+2. `HANDOFF.md` *(onzio-ops)*
 3. `docs/onzio-platform-plan.md`
 4. `tests/README.md`
 5. the documentation and tests for the assigned milestone
@@ -13,9 +18,9 @@ Before changing the repository, read in this order:
 For Diverse City FC Phase 0-3 work, also read:
 
 1. `docs/phase-11/diverse-city/EPIC.md`
-2. `docs/phase-11/diverse-city/DECISIONS.md`
+2. `docs/phase-11/diverse-city/DECISIONS.md` *(onzio-ops)*
 3. `docs/phase-11/diverse-city/WORK-PACKAGES.md`
-4. `docs/phase-11/diverse-city/STATUS.md`
+4. `docs/phase-11/diverse-city/STATUS.md` *(onzio-ops)*
 5. the content or visual matrix relevant to the assigned package
 
 Work on only the assigned work-package ID. Do not infer permission for later
@@ -39,9 +44,12 @@ branch, this check is mandatory and must pass first — no exceptions, no
 "the build succeeded so it's probably fine":**
 
 ```bash
-supabase link --project-ref ioalthwsdrlzrubomrow
+supabase link --project-ref <production project ref>
 supabase migration list --linked
 ```
+
+The production project ref is recorded in `HANDOFF.md` *(onzio-ops)*; it is
+kept out of this public repo.
 
 Confirm every migration file under `supabase/migrations/` in the branch
 being deployed shows as applied on the **Remote** side. Any migration
@@ -59,7 +67,7 @@ now matches the branch exactly, and only then deploy the code.
 
 This is the same discipline already used for every prior Diverse City FC
 production migration (see `docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md`
-and `docs/phase-11/diverse-city/STATUS.md` for the established pattern) — the
+and `docs/phase-11/diverse-city/STATUS.md` *(onzio-ops)* for the established pattern) — the
 gap on 2026-08-14 was that this step was skipped for a deploy that carried
 schema changes bundled in with unrelated feature work, not that the pattern
 was unknown.
@@ -73,7 +81,7 @@ Connect profile questionnaire) that no code, test, or env-var check in this
 repo could surface.
 
 Before ending any implementation turn, update
-`docs/phase-11/diverse-city/STATUS.md` with:
+`docs/phase-11/diverse-city/STATUS.md` *(onzio-ops)* with:
 
 - agent and work-package ID
 - current status
@@ -83,6 +91,6 @@ Before ending any implementation turn, update
 - blockers or unresolved decisions
 - exact next step
 
-After meaningful integrated repository work, update `HANDOFF.md` as required by
+After meaningful integrated repository work, update `HANDOFF.md` *(onzio-ops)* as required by
 `AGENTS.md`. Never report a package complete without recording its acceptance
 evidence.

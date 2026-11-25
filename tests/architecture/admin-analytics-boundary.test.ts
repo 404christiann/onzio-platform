@@ -92,7 +92,5 @@ describe("ADMIN-POSTHOG analytics boundary", () => {
       (file) => file !== PROVIDER && /<AdminAnalyticsProvider\b/.test(readFileSync(resolve(ROOT, file), "utf8")),
     );
     expect(mounts).toEqual(["app/admin/(protected)/layout.tsx"]);
-    // Classic portal only: the reimagined shell never starts analytics.
-    expect(readFileSync(resolve(ROOT, mounts[0]), "utf8")).toMatch(/\{!shell && \(\s*<AdminAnalyticsProvider\b/);
   });
 });

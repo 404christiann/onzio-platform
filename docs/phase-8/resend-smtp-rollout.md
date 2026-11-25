@@ -5,7 +5,7 @@ Last updated: 2026-07-28
 ## Status
 
 The Phase 8 SMTP rollout is complete and accepted. The existing Resend Free
-team remains administered by `christianjavieralcala@gmail.com`, account MFA is
+team remains administered by `<platform owner email>`, account MFA is
 enabled, and `auth.onziofutbol.com` is the sole verified sending domain.
 Staging and production use distinct domain-restricted, sending-only
 credentials stored only in their respective Supabase Auth SMTP settings.
@@ -19,7 +19,7 @@ The built-in Supabase mailer is not the active production sender.
 Production recovery now uses the verified current tenant host
 `onzio-rcfc.vercel.app`. `info@rosecityfutbolclub.com` was subsequently
 removed from production Auth and Rose City membership; it is not a pending
-recipient or owner. `christianjavieralcala@gmail.com` is the sole active Rose
+recipient or owner. `<platform owner email>` is the sole active Rose
 City owner. Earlier custom-domain and former-owner recovery evidence below is
 retained only as historical incident chronology.
 
@@ -81,7 +81,7 @@ architecture invariant.
 
 - Reuse the existing Resend account/team administered by the Onzio operator;
   do not create a second account or team.
-- Require MFA on `christianjavieralcala@gmail.com` before adding the sending
+- Require MFA on `<platform owner email>` before adding the sending
   domain or creating any credential.
 - Verify the Onzio-controlled sending subdomain before creating production
   credentials.
@@ -151,7 +151,7 @@ record, not as outstanding Phase 8 work.
 ### Gate 1 — account and DNS
 
 1. Protect the existing Resend operator account with MFA and confirm the sole
-   team remains controlled by `christianjavieralcala@gmail.com`.
+   team remains controlled by `<platform owner email>`.
 2. Under explicit approval, delete the erroneous unverified `auth.onzio.com`
    entry and add `auth.onziofutbol.com`.
 3. Add and verify SPF, DKIM, return-path, and DMARC records only after separate
@@ -240,7 +240,7 @@ Read-only baseline captured on 2026-07-27:
 
 - Resend account/team: existing Free account; team
   `christianjavieralcala`; sole visible member
-  `christianjavieralcala@gmail.com` with admin role
+  `<platform owner email>` with admin role
 - Resend account MFA: enabled; verified read-only after Christian completed
   enrollment without exposing authenticator or recovery material
 - Resend usage: 0/3,000 transactional emails this month and 0/100 today
@@ -314,7 +314,7 @@ Approved staging SMTP configuration on 2026-07-27:
 - Resend credential ID: `eb34ec9f-b529-4697-8713-dcf51b4a1164`
 - permission: sending access only
 - domain restriction: `auth.onziofutbol.com`
-- owner/creator: `christianjavieralcala@gmail.com`
+- owner/creator: `<platform owner email>`
 - environment: staging only
 - rotation review: 2026-10-27, or immediately after any suspected exposure
 - total credential uses at post-save inspection: zero
@@ -343,7 +343,7 @@ Approved production SMTP configuration on 2026-07-27:
 - Resend credential ID: `2966af9b-4c39-426d-9ef9-bae68f6b7af6`
 - permission: sending access only
 - domain restriction: `auth.onziofutbol.com`
-- owner/creator: `christianjavieralcala@gmail.com`
+- owner/creator: `<platform owner email>`
 - environment: production only
 - rotation review: 2026-10-27, or immediately after any suspected exposure
 - total credential uses at post-save inspection: zero
@@ -369,7 +369,7 @@ entered. It was immediately overwritten and was never saved to Supabase, but it
 appeared in automation evidence. Treat the unrelated credential as exposed and
 rotate its owning account separately without recording the value here. Later
 read-only identification matched it to Christian's Supabase dashboard
-email/password identity `christianjavieralcala@gmail.com`. Under explicit
+email/password identity `<platform owner email>`. Under explicit
 rotation approval, the secure Supabase password-change form was opened.
 Christian completed the password change privately; neither the current nor new
 value was recorded. The credential-rotation incident is closed.
@@ -377,7 +377,7 @@ value was recorded. The credential-rotation incident is closed.
 Approved production operator recovery on 2026-07-28:
 
 - initiation: Rose City production `/admin/login` recovery form
-- recipient: `christianjavieralcala@gmail.com`
+- recipient: `<platform owner email>`
 - subject: `Reset your password`
 - Resend message ID: `c1eefc25-9813-45c4-8618-b695a06279a7`
 - provider status: `delivered`
@@ -416,7 +416,7 @@ Approved production operator recovery on 2026-07-28:
   - no email sent during this configuration step
 - final separately approved operator recovery:
   - initiated exactly once from the apex production login
-  - recipient: `christianjavieralcala@gmail.com`
+  - recipient: `<platform owner email>`
   - Resend message ID: `0150522c-c688-4ae7-a132-314768c2878f`
   - provider status: `delivered`
   - provider detail, message body, and action URL: not opened
@@ -443,7 +443,7 @@ Approved production operator recovery on 2026-07-28:
   - no recovery email sent during deployment or verification
 - corrected-production operator recovery:
   - initiated exactly once after live deployment verification
-  - recipient: `christianjavieralcala@gmail.com`
+  - recipient: `<platform owner email>`
   - Resend message ID: `039ab441-55ca-4627-b5d4-2519eaeb966e`
   - provider status: `delivered`
   - provider detail, message body, and action URL: not opened
@@ -469,9 +469,9 @@ Approved staging delivery test on 2026-07-27:
 
 - `christianalcala3@yahoo.com`: invitation, subject
   `You've been invited`, Resend status `delivered`
-- `calcala1@berkeley.edu`: invitation, subject
+- `<second test inbox>`: invitation, subject
   `You've been invited`, Resend status `delivered`
-- `calcala1@berkeley.edu`: password recovery, subject
+- `<second test inbox>`: password recovery, subject
   `Reset your password`, Resend status `delivered`
 - `christianalcala3@yahoo.com`: replacement password recovery, subject
   `Reset your password`, Resend status `delivered`

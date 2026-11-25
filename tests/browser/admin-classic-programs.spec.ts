@@ -227,9 +227,6 @@ test.describe("edge controls", () => {
   test("unsupported template never reads or mounts program data", async ({ page }) => {
     const state = await backend(page, origin); await page.goto(origin + "/tests/browser/fixtures/admin-cl-21/?unsupported=1"); await expect(page.locator(".classic-programs")).toHaveCount(0); await page.waitForTimeout(100); expect(state.reads).toEqual([]); expect(state.posts).toEqual([]); expect(state.errors).toEqual([]);
   });
-  test("legacy portal retains inspector layout and original field controls", async ({ page }) => {
-    const state = await backend(page, origin); await page.setViewportSize({ width: 1280, height: 900 }); await open(page, "light", "&legacy=1", false); await expect(page.locator(".program-editor-navigation").getByRole("button", { name: /^Manage programs/ })).toBeVisible(); await expect(page.locator(".classic-programs")).toHaveCount(0); await expect(page.locator(".program-canvas-browser iframe")).toBeVisible(); expect(state.errors).toEqual([]);
-  });
   test("gallery preserves the actual twelve image limit and image validation", async ({ page }) => {
     const state = await backend(page, origin);
     state.media = Array.from({ length: 12 }, (_, index) => ({ id: "gallery-" + index, program_id: ids[0], media_asset_id: "asset-" + index, alt: "Training " + index, sort_order: index, updated_at: state.rows[0].updated_at, url: origin + "/__cl21__/asset/" + index }));

@@ -76,18 +76,10 @@ describe("one public-site visibility decider", () => {
     "lib/club-access.ts": "the decider itself, plus resolvePublicAccess (TS mirror of the DB rule)",
     "middleware.ts": "suspended admin/billing lockdown and redirect; public visibility goes through isPublicSiteOpen",
     "lib/billing-lifecycle.ts": "billing writer: decides whether a transition stores a suspended access",
-    "lib/save-status.ts": "admin 'saved / your website is paused' wording",
     "lib/tenant-routing.ts": "tenant-resolution contract helper: SUSPENDED_TENANT error",
     "lib/admin-tab-page.ts": CAN_MUTATE,
     "app/admin/(protected)/page.tsx": CAN_MUTATE,
-    "app/admin/(protected)/score/page.tsx": CAN_MUTATE,
-    "app/admin/(protected)/score/[matchId]/page.tsx": CAN_MUTATE,
-    "app/admin/(protected)/seasons/page.tsx": CAN_MUTATE,
-    "app/admin/(protected)/seasons/totals/page.tsx": CAN_MUTATE,
-    "app/admin/(protected)/your-club/page.tsx": CAN_MUTATE,
-    "components/admin/reimagined/Sponsors.tsx": CAN_MUTATE,
     "components/AdminShell.tsx": "canMutateContent plus the admin grace and suspended banners",
-    "components/admin/reimagined/ReimaginedShell.tsx": "admin grace and suspended banners",
   };
 
   const MAPPING =

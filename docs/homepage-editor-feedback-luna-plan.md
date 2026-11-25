@@ -8,8 +8,8 @@ fresh restricted schema/data dumps were verified before the exact two-file
 dry run and migration application. The linked ledger now matches the branch;
 the post-apply dry run is empty. SQL readback found both migrations and 40
 media guards, and Diverse City's four checked public routes returned HTTP 200.
-Files changed for this release entry: `HANDOFF.md`, the main HP ledger, and
-this ledger. Full backup and verification evidence is in `HANDOFF.md`. Status:
+Files changed for this release entry: `HANDOFF.md` (onzio-ops), the main HP ledger, and
+this ledger. Full backup and verification evidence is in `HANDOFF.md` (onzio-ops). Status:
 **release gate passed; PR merge and post-deploy live checks pending**. Exact
 next step: push this release evidence, merge the verified PR head, and check
 the resulting production deployment and live tenants.
@@ -59,7 +59,7 @@ the already-applied pathway migration was restored to this branch in `e32db49`.
 It was applied after verified physical and restricted logical backups. The
 post-apply migration ledger matches the branch, the dry run is empty, and
 read-only SQL confirms the tables, RPCs and triggers. Files changed for this
-release step: the recovered pathway migration, `HANDOFF.md`, the main HP ledger,
+release step: the recovered pathway migration, `HANDOFF.md` (onzio-ops), the main HP ledger,
 this ledger and the closeout handoff. Christian paused step 3. Next: wait for
 his instruction to merge PR #5, then verify deployment and live tenant sites.
 Current `origin/main` was merged into the feature branch to resolve the PR's
@@ -88,7 +88,7 @@ HP-06/HP-08C keyboard-open acceptance passes in real Mobile Safari (iOS 26.5
 Simulator, software keyboard on): Save, focused field, next field and Done stay
 visible; save failure/retry/success notifications render inside the modal sheet.
 VoiceOver/TalkBack remains open — the Simulator has no screen reader. See
-HANDOFF.md 2026-09-22 and `npm run dev:device-proxy`.
+HANDOFF.md (onzio-ops) 2026-09-22 and `npm run dev:device-proxy`.
 
 ## Christian review round 2 — 2026-09-21
 
@@ -116,7 +116,7 @@ on phones, and no replay when the sheet remounts.
 The outstanding photo/recovery failures were **fixture contamination, proven not
 environmental**: Alpha was left published on a clubhouse fixture by an interrupted
 templates run, and the specs' fixed marker text made them unable to restore
-themselves. See HANDOFF.md (2026-09-21) for the full diagnosis.
+themselves. See HANDOFF.md (onzio-ops) (2026-09-21) for the full diagnosis.
 
 Verification: Homepage browser 32/32, full suite 1535/1535, contracts 910/910,
 architecture 21/21, local DB 239/239, admin-loading 12/12, media 4/4, tsc/lint/
@@ -125,7 +125,7 @@ build clean. Real-device keyboard and screen-reader acceptance remains pending.
 ## Stabilization status — 2026-09-20
 
 Christian reports remaining bugs and is transferring continuation to Claude.
-See `docs/homepage-editor-claude-stabilization-handoff.md` for current evidence
+See `docs/homepage-editor-claude-stabilization-handoff.md` (onzio-ops) for current evidence
 and exact next steps. HP-08C is **in_progress** for notification requirement gaps
 (warnings, dismissal/timer behavior, notification ownership) pending reproduction
 and correction; the older complete-locally row below is superseded. HP-08B/D
@@ -189,7 +189,7 @@ clear colored feedback that works on phones, including with the keyboard open.
 
 Work directly in `/Users/christianalcala/Downloads/onzio-platform`, existing
 `codex/homepage-editor-redesign` branch. Preserve all uncommitted/untracked work.
-Read AGENTS.md, HANDOFF.md, docs/onzio-platform-plan.md, tests/README.md, then
+Read AGENTS.md, HANDOFF.md (onzio-ops), docs/onzio-platform-plan.md, tests/README.md, then
 relevant tests and this plan. Check for deeper AGENTS.md before editing.
 
 The latest HANDOFF checkpoint and Christian's recorded visual approval supersede
@@ -334,7 +334,7 @@ active Save homepage control per layout; a retry action is not another save flow
 Last reported local app: http://alpha.localhost:3110/admin/homepage and
 http://alpha.localhost:3110/ . Auth state stays private outside the repository at
 /private/tmp/onzio-homepage-tests/local-auth.json; never expose or commit it.
-Follow tests/README.md and HANDOFF.md for auth/environment commands.
+Follow tests/README.md and HANDOFF.md (onzio-ops) for auth/environment commands.
 
 ## Status ledger
 
@@ -353,6 +353,6 @@ tsc/lint/local build clean. Seeded Alpha presentation confirmed before and
 after the browser run; database and browser checks used loopback Supabase.
 HP-08 remains complete. The production migration gate and release are pending.
 
-Update this ledger, the main scoped ledger and HANDOFF.md with actual changed
+Update this ledger, the main scoped ledger and HANDOFF.md (onzio-ops) with actual changed
 files, checks, evidence, limitations and next step before ending implementation.
 Do not mark packages complete without their acceptance evidence.

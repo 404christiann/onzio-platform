@@ -59,7 +59,7 @@ The HTTP case persists a nonempty third-kit strip through loopback PostgREST,
 reads the row back and denies an unaffiliated actor without side effects.
 
 Exact commands, revisions, suite results, security/fixture checks and independent
-reviews are recorded in HANDOFF.md and the local evidence directory
+reviews are recorded in HANDOFF.md (onzio-ops) and the local evidence directory
 `/home/coder/.codex/visualizations/2026/10/22/onzio-site06-shop-content-policy`.
 No browser or prior Academy acceptance rerun is claimed for this SQL/API package.
 

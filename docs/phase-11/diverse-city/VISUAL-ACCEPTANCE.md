@@ -134,7 +134,7 @@ or Tryouts).
 - **Open/closed/upcoming presentation**: verified in the DCFC-002 work by
   temporarily toggling the `tryoutStatus` constant through all three values
   and confirming each renders distinct, correct copy and CTA behavior (see
-  `STATUS.md`'s DCFC-002 records for the detailed verification). Not
+  `STATUS.md` (onzio-ops)'s DCFC-002 records for the detailed verification). Not
   re-toggled during this DCFC-003 pass since the underlying code did not
   change after that verification.
 

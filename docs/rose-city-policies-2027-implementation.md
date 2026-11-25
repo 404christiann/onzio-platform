@@ -108,7 +108,7 @@ seed.
 
 - `lib/database.generated.ts`: the `cinematic_policy_content` table only.
 - `components/admin/homepage/HomepageEditor.tsx`: one shortcut line.
-- `HANDOFF.md`: a top entry.
+- `HANDOFF.md` (onzio-ops): a top entry.
 
 The Robinson editor package can change `/stadium` and `/admin/stadium` without touching these
 files.

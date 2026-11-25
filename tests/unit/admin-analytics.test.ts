@@ -194,7 +194,7 @@ describe("adminTabForPath", () => {
     expect(adminTabForPath("/admin/homepage")).toBe("homepage");
     expect(adminTabForPath("/admin/seasons/totals")).toBe("seasons");
     expect(adminTabForPath("/admin/season-membership")).toBe("season-membership");
-    expect(adminTabForPath("/admin/score/0d9c1f7e-1234")).toBe("score");
+    expect(adminTabForPath("/admin/schedule/0d9c1f7e-1234")).toBe("schedule");
     expect(adminTabForPath("/admin/not-a-route")).toBe("other");
   });
 });

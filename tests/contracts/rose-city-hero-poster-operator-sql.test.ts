@@ -1,17 +1,18 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ROSE_CITY_CLUB_ID } from "../../scripts/rose-city-2027-operator-sql";
+import { hasOpsFile, readOpsFile } from "../helpers/ops-repo";
 
 // RC-HERO-POSTER-05: the operator SQL that flags Rose City's live hero video for its poster and keeps the original
 // pairing for a revert. tests/database/rose-city-hero-poster-backfill.test.ts runs both files for real.
 
-const DIR = resolve(process.cwd(), "scripts/operator-sql");
-const rehearsal = readFileSync(resolve(DIR, "rose-city-hero-poster-backfill.rehearsal.sql"), "utf8").replaceAll("\r\n", "\n");
-const commit = readFileSync(resolve(DIR, "rose-city-hero-poster-backfill.commit.sql"), "utf8").replaceAll("\r\n", "\n");
+const REHEARSAL = "scripts/operator-sql/rose-city-hero-poster-backfill.rehearsal.sql";
+const COMMIT = "scripts/operator-sql/rose-city-hero-poster-backfill.commit.sql";
+const present = hasOpsFile(REHEARSAL) && hasOpsFile(COMMIT);
+const rehearsal = present ? readOpsFile(REHEARSAL) : "";
+const commit = present ? readOpsFile(COMMIT) : "";
 const statements = (sql: string) => sql.split("\n").filter((line) => !line.startsWith("--"));
 
-describe("Rose City hero poster backfill SQL", () => {
+describe.skipIf(!present)("Rose City hero poster backfill SQL", () => {
   it("is one transaction: the rehearsal ends in ROLLBACK, the commit file in COMMIT, and nothing else differs", () => {
     const body = (sql: string) => statements(sql).join("\n").trim();
     expect(body(rehearsal).startsWith("begin;")).toBe(true);

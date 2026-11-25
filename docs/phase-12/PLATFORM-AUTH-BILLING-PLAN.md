@@ -39,7 +39,7 @@ removes.
 ## Sources of Truth
 
 - Stable repository rules: `AGENTS.md`
-- Current implementation state: `HANDOFF.md`
+- Current implementation state: `HANDOFF.md` (onzio-ops)
 - Platform architecture: `docs/onzio-platform-plan.md`
 - Open platform findings: `docs/platform-findings.md` (`PF-002` is resolved by
   `PLAT-102`; `PF-001` and `PF-004` remain out of scope)
@@ -59,7 +59,7 @@ Unchanged from `DCFC-EPIC-002`:
 
 ## Decisions
 
-Promoted into the governed platform decision log at `docs/phase-12/DECISIONS.md`
+Promoted into the governed platform decision log at `docs/phase-12/DECISIONS.md` (onzio-ops)
 on 2026-08-03, satisfying prerequisite `P2`, and **accepted by Christian the
 same day** — all fourteen unamended, including the risks explicitly accepted in
 `PLAT-D006` and `PLAT-D012`. The dated record is in that file's Acceptance
@@ -124,7 +124,7 @@ remains withheld because it triggers a protected Vercel deployment, a Class 3
 action that is not approved.
 
 **P2 — Promote the decisions.** **Complete 2026-08-03.** `PLAT-D001`–`PLAT-D014`
-are recorded in `docs/phase-12/DECISIONS.md`, including the accepted risks in
+are recorded in `docs/phase-12/DECISIONS.md` (onzio-ops), including the accepted risks in
 `PLAT-D006` and `PLAT-D012` and the deferred/rejected options. They are
 promoted, not accepted: `PLAT-101` and `PLAT-102` still require the dated
 acceptance recorded in that file before either is assigned.
@@ -153,7 +153,7 @@ factors. Hosted owner/admin UI, AAL1 operator refusal, fresh-AAL2 operator
 success, Yahoo delivery, and the unknown-address negative path all pass.
 Christian explicitly accepted a reduced delivery matrix by waiving AOL and
 ISP-hosted checks; those providers were not tested and are not passed. Exact
-evidence is in `HANDOFF.md` and the Phase 11 status ledger.
+evidence is in `HANDOFF.md` (onzio-ops) and the Phase 11 status ledger.
 
 - **Objective:** replace password-plus-mandatory-MFA admin authentication with
   passwordless email-code sign-in for club accounts, confine AAL2 to operator
@@ -197,7 +197,7 @@ is then sufficient to mint another `admin`, and that row is what gives an
 application route a path into the operator module. Christian reaffirmed the
 table as written, so the row stands at `aal1` deliberately and the added
 `admin` gains content edits only. The accepted risk is recorded in the
-Accepted Risk Register in `docs/phase-12/DECISIONS.md`.
+Accepted Risk Register in `docs/phase-12/DECISIONS.md` (onzio-ops).
 
 This closed `PLAT-101`'s sign-off gate. The later exact staging approval is
 recorded in the execution status above.
@@ -257,7 +257,7 @@ recorded in the execution status above.
   AAL2 **does** survive session refresh — proven, not assumed — so operator
   re-auth is per-session, which is why `PLAT-D015` is required. The `amr`
   approach is plan-independent and rehearses fully on Free staging. Evidence is
-  in `docs/phase-12/DECISIONS.md`.
+  in `docs/phase-12/DECISIONS.md` (onzio-ops).
 - **Invitations:** generalize the server-only invitation and membership workflow
   built during `DCFC-504` so a club owner can add an `admin`, including
   server-side creation of the Auth user (required, because
@@ -307,7 +307,7 @@ recorded in the execution status above.
 - **Expected documentation updates:** `docs/onzio-platform-plan.md` (auth model),
   `STAGING-ACCEPTANCE.md`, `docs/platform-findings.md` (retire the leaked-password
   exception), a `DCFC-504` amendment covering the superseded sign-in evidence,
-  this plan, and `HANDOFF.md`.
+  this plan, and `HANDOFF.md` (onzio-ops).
 
 ---
 
@@ -408,7 +408,7 @@ recorded in the execution status above.
   production, live Stripe, Auth, DNS, Bunny.net, or public-access mutation.
 - **Expected documentation updates:** `docs/onzio-platform-plan.md` (entitlement
   and billing model), `docs/platform-findings.md` (`PF-002` resolved),
-  `STAGING-ACCEPTANCE.md`, this plan, and `HANDOFF.md`.
+  `STAGING-ACCEPTANCE.md`, this plan, and `HANDOFF.md` (onzio-ops).
 
 ---
 
@@ -430,7 +430,7 @@ recorded in the execution status above.
   instead asserts full content availability plus unchanged Alpha/Bravo/DCFC
   isolation, at aal1 for club actions.
 - **Expected documentation updates:** `ROLLOUT-WORK-PACKAGES.md`,
-  `ROLLOUT-EPIC.md`, `STAGING-ACCEPTANCE.md`, `STATUS.md`, `HANDOFF.md`.
+  `ROLLOUT-EPIC.md`, `STAGING-ACCEPTANCE.md`, `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ---
 
@@ -498,7 +498,7 @@ having been modelled on Rose City. Serving multi-team academies requires:
 design review that probed the loopback stack and the live local schema rather
 than reasoning from this document — and three of the five turned out not to be
 package-level detail at all, because this plan's framing of them was wrong.
-Outcomes, rationale, and evidence are in `docs/phase-12/DECISIONS.md`.
+Outcomes, rationale, and evidence are in `docs/phase-12/DECISIONS.md` (onzio-ops).
 
 - ~~Grace warning schedule~~ — **settled:** day 7 and day 17 of the 20-day
   window, as proposed.
@@ -518,7 +518,7 @@ Both verification tasks opened in their place are now also resolved: session
 `timebox` / `inactivity_timeout` are Pro-and-above (closed by `PLAT-D021`), and
 Vercel records cron failures without notifying (closed by `PLAT-D022`).
 
-What remains tracked in `DECISIONS.md` is not a decision but two `PLAT-101`
+What remains tracked in `DECISIONS.md` (onzio-ops) is not a decision but two `PLAT-101`
 implementation obligations found by probe: `PLAT-D014`'s explicit
 unknown-address message must be produced by mapping Supabase's generic
 `Signups not allowed for otp` error in the application, and the stock Magic Link

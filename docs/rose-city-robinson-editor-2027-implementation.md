@@ -157,5 +157,5 @@ All results below were run locally on 2026-11-04.
 - Before any hosted release, migration `20261112190000` must pass the CLAUDE.md production
   migration gate. It must be applied before code that reads `cinematic_robinson_content` is
   deployed.
-- Merging this branch will conflict in `HANDOFF.md`, `docs/phase-11/diverse-city/STATUS.md`,
+- Merging this branch will conflict in `HANDOFF.md` (onzio-ops), `docs/phase-11/diverse-city/STATUS.md` (onzio-ops),
   `lib/database.generated.ts` and `components/admin/homepage/HomepageEditor.tsx`.

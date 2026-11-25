@@ -541,37 +541,6 @@ test("new player sends complete add payload and Staff edits persist", async ({ p
   }
 });
 
-test("reimagined roster stays isolated from classic-only hooks", async ({ page, baseURL }) => {
-  if (new URL(baseURL!).hostname !== "alpha.localhost") throw new Error("Synthetic tenant required.");
-  const db = new Client({ host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" });
-  await db.connect();
-  const original = (await db.query("select admin_portal, updated_at::text as updated_at from onzio.clubs where id=$1", [ALPHA])).rows[0];
-  const errors: string[] = [];
-  page.on("pageerror", error => errors.push(error.message));
-  try {
-    await db.query("update onzio.clubs set admin_portal='reimagined' where id=$1", [ALPHA]);
-    await page.goto("/admin/roster");
-    await expect(page.getByRole("heading", { level: 1, name: "Your players" })).toBeVisible();
-    await expect(page.locator("[data-classic-roster-list]")).toHaveCount(0);
-    await page.getByRole("main").getByRole("button").filter({ hasText: "Alpha Keeper" }).first().click();
-    const editor = page.getByRole("dialog", { name: "Edit Alpha Keeper", exact: true });
-    await editor.locator("#player-number").fill("");
-    await editor.getByRole("button", { name: "Save changes", exact: true }).click();
-    await expect(editor.getByText("Jersey number must be greater than 0.", { exact: true })).toBeVisible();
-    await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-    expect(errors).toEqual([]);
-  } finally {
-    await db.query("begin");
-    try {
-      await db.query("set local session_replication_role=replica");
-      await db.query("update onzio.clubs set admin_portal=$2, updated_at=$3 where id=$1", [ALPHA, original.admin_portal, original.updated_at]);
-      await db.query("commit");
-    } catch (error) { await db.query("rollback"); throw error; }
-    expect((await db.query("select admin_portal, updated_at::text as updated_at from onzio.clubs where id=$1", [ALPHA])).rows[0]).toEqual(original);
-    await db.end();
-  }
-});
-
 test("inline stats and player drafts save together, retain partial failures, and Undo uses current position", async ({ page, baseURL }) => {
   test.setTimeout(90000);
   if (new URL(baseURL!).hostname !== "alpha.localhost") throw new Error("Synthetic tenant required.");

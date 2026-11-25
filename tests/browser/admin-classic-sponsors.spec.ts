@@ -18,7 +18,6 @@ test.beforeAll(async () => {
     resolve: { alias: [
       { find: "@/lib/queries", replacement: resolve(repo, "tests/browser/fixtures/admin-cl-23/queries.ts") },
       { find: "@/lib/admin-client", replacement: resolve(repo, "tests/browser/fixtures/admin-cl-23/admin-client.ts") },
-      { find: "@/components/admin/reimagined/Sponsors", replacement: resolve(repo, "tests/browser/fixtures/admin-cl-23/reimagined.tsx") },
       { find: "next/image", replacement: resolve(repo, "tests/browser/fixtures/admin-cl-23/next-image.tsx") },
       { find: "@", replacement: repo },
     ] },

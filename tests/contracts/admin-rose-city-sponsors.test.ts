@@ -232,9 +232,9 @@ describe("Rose City sponsors: the editor", () => {
     expect(source).toContain("diffRoseCitySponsors");
     expect(source).not.toMatch(/delete forever/i);
   });
-  it("branches to it for the classic portal on cinematic@2 only, with one template read", () => {
+  it("branches to it on cinematic@2 only, with one template read", () => {
     expect(page).toContain("RoseCitySponsorsEditor");
     expect(page.match(/presentationTemplateKey/g)).toHaveLength(1);
-    expect(page).toMatch(/if \(club.presentationTemplateKey !== "cinematic@2"\) return page;\s*[^]*if \(portal === "classic"\) return <RoseCitySponsorsEditor \/>;/);
+    expect(page).toMatch(/if \(club.presentationTemplateKey === "cinematic@2"\) return <RoseCitySponsorsEditor \/>;\s*return <ClassicSponsorsPage \/>;/);
   });
 });

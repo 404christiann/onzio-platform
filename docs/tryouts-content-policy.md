@@ -83,7 +83,7 @@ failure. Initial loads still reject incomplete form hydration.
 The package adds 205 behavior cases. Focused acceptance passes 139 SQL, HTTP,
 race, and atomic cases and 150 pure route and regression cases. Full serial
 validation, exact-revision reviews, and limits are recorded in
-[HANDOFF.md](../HANDOFF.md) and the local evidence handoff. The acceptance creates a
+HANDOFF.md (onzio-ops `HANDOFF.md`) and the local evidence handoff. The acceptance creates a
 genuine receipt through the old function before applying the complete migration
 in rollback scope. Final installation uses the actual local migration runner.
 Installed bodies, grants, helpers, triggers, RLS, raw types, fixtures, and cleanup

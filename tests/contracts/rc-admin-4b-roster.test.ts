@@ -66,12 +66,11 @@ describe("RC-ADMIN-4b-roster: who gets the kit Roster", () => {
     expect(usesKitRoster("")).toBe(false);
   });
 
-  it("branches the page in one guarded return and leaves the classic render, and the legacy page, as they were", () => {
+  it("branches the page in one guarded return and leaves the classic render as it was", () => {
     const page = read("app/admin/(protected)/roster/page.tsx");
-    expect(page).toContain("if (!reimagined && usesKitRoster(club.slug)) {");
+    expect(page).toContain("if (usesKitRoster(club.slug)) {");
     expect(page).toContain("<RoseCityRosterPage StaffComponent={StaffTab} />");
     expect(page).toContain("<AdminToastProvider><ClassicRosterPage StaffComponent={StaffTab} PlayerFields={PlayerFormFields} /></AdminToastProvider>");
-    expect(page).toContain('return reimagined ? <LegacyRosterPage /> : (');
     expect(page).not.toMatch(/presentationTemplateKey|cinematic@2/);
   });
 
