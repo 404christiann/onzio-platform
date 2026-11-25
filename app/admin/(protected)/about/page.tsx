@@ -275,7 +275,7 @@ function AboutEditor({ classic = false }: { classic?: boolean }) {
     fileRef.current?.click();
   }
 
-  async function handleImageUpload(file: File | null) {
+  async function handleImageUpload(file: File | null): Promise<boolean | { error: string }> {
     const target = uploadTargetRef.current;
     if (!file || !target) return false;
 
@@ -344,8 +344,9 @@ function AboutEditor({ classic = false }: { classic?: boolean }) {
       markDirty(dirtySection);
       return true;
     } catch (uploadError: unknown) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
-      return false;
+      const reason = uploadError instanceof Error && uploadError.message ? uploadError.message : "Upload failed";
+      setError(reason);
+      return { error: reason };
     } finally {
       setUploading(false);
       uploadTargetRef.current = null;

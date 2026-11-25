@@ -157,5 +157,5 @@ export function RobinsonSectionFields({ api, id }: { api: RobinsonFieldsApi; id:
       <div><EditorActionButton disabled={locked || draft.directions.blocks.length >= MAX_ROBINSON_BLOCKS} onClick={() => change(addBlock)}>Add section</EditorActionButton></div>
     </>; break;
   }
-  return <div className={styles.fields}>{visible}<div className={kit.stack}>{body}</div>{["seating", "match", "lockers", "food", "route"].includes(id) && <p className={styles.note}>Images: PNG or WebP, up to 5 MB and 3000 pixels per side.</p>}</div>;
+  return <div className={styles.fields}>{visible}<div className={kit.stack}>{body}</div>{["seating", "match", "lockers", "food", "route"].includes(id) && <p className={styles.note}>Images: PNG or WebP, up to 5 MB and 6000 pixels per side.</p>}</div>;
 }

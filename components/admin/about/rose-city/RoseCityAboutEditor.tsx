@@ -172,7 +172,7 @@ export default function RoseCityAboutEditor() {
     setSaveFailed(current => ({ ...current, [target]: false }));
   }
 
-  async function upload(target: UploadTarget, file: File): Promise<boolean> {
+  async function upload(target: UploadTarget, file: File): Promise<boolean | { error: string }> {
     const current = latest.current.drafts;
     if (!current || latest.current.busy || latest.current.uploading) return false;
     setUploading(true); setFailed(false); setStatus("Adding your image…");
@@ -195,7 +195,10 @@ export default function RoseCityAboutEditor() {
       }
       setStatus("Image ready. Save the page to use it.");
       return true;
-    } catch (error) { setFailed(true); setMessage(error instanceof Error ? error.message : "Upload failed"); return false; }
+    } catch (error) {
+      const reason = error instanceof Error && error.message ? error.message : "Upload failed";
+      setFailed(true); setMessage(reason); return { error: reason };
+    }
     finally { setUploading(false); }
   }
 

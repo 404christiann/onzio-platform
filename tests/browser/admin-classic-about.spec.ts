@@ -125,7 +125,7 @@ test("heading and values validation mark their regions and Undo preserves later 
 test("values cap remains 24 and rejects SVG using real 15 MB photo rules", async ({ page }) => {
   await fixture(page, { values: 24 }); await page.goto("/admin/about");
   await open(page, "Edit Club values"); await expect(page.getByText("Values · 24 of 24", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "Add value", exact: true })).toBeDisabled(); await done(page);
-  await open(page, "Edit Club story"); await expect(page.getByText("JPG, PNG, WebP up to 15 MB", { exact: true })).toBeVisible();
+  await open(page, "Edit Club story"); await expect(page.getByText("JPG, PNG or WebP up to 15 MB", { exact: true })).toBeVisible();
   await page.locator('[data-admin-image-field] input[type=file]').setInputFiles({ name: "unsafe.svg", mimeType: "image/svg+xml", buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>') });
   await expect(page.locator('[data-admin-image-error]')).toContainText("not a supported image");
 });

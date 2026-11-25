@@ -1,5 +1,26 @@
 # Diverse City FC Status
 
+## 2026-11-24 - UPLOAD-FIX: large admin graphics are downscaled; finalize errors reach the field
+
+- **Agent / package:** Claude Code (Opus 5.5 orchestrating, one Sonnet worker for the client side), `UPLOAD-FIX`, asked for by Christian. Branch `claude/graphic-upload-fix` from main `fe5c8cb6`. Classic admin only. No migration, no production write.
+- **Status:** `ready for review` (PR open for onzio-bot, not merged).
+- **Cause confirmed (red tests first):** a graphic over 3000 px on a side was refused with `DIMENSIONS_TOO_LARGE` in both `validateMediaUpload` and `normalizeGraphic`. A graphic over 36 MP came back as `CORRUPT_IMAGE`. A PNG with cut-off pixel data leaked a raw sharp error, which became `MEDIA_FINALIZATION_FAILED`. Finalize returned `{ error: { code } }` with no message, so the field showed only "The image could not be uploaded". The Rose City Club Logo graphic fields also said "JPG, PNG, WebP up to 15 MB" when graphics are PNG/WebP up to 5 MB, so a JPG or a 6 MB file passed the field and was refused at finalize. The `failOn: "warning"` theory did not reproduce: 16-bit PNGs, odd or broken iCCP, bad ancillary CRCs, gAMA/sRGB/pHYs junk and trailing bytes all pass at both `warning` and `error` on sharp 0.35 / libpng 1.6.58. Truly broken data fails at both.
+- **Completed:**
+  - `lib/media-validation.ts`, `lib/media-processing.ts`: graphics accept up to 6000 px / 36 MP (the `media_assets` check). `normalizeGraphic` resizes to fit 2400 px and keeps alpha, using `failOn: "error"`. A sharp pixel-limit refusal maps to `DIMENSIONS_TOO_LARGE`, and an undecodable graphic maps to `CORRUPT_IMAGE`. Photos are unchanged.
+  - `lib/media-finalize-errors.ts` (new), `app/api/admin/media/finalize/route.ts`: every known code gets a plain message (too large, too many pixels, unreadable, wrong file type, plus the reservation messages). Unexpected failures are `console.error`ed and return 500 with a generic message.
+  - `lib/admin-client.ts`, `lib/about-editor/upload.ts`, `AdminImageField` (`onUpload` may return `{ error }`), `RoseCityAboutEditor`, classic `about/page.tsx`: the server message reaches the field.
+  - `AboutSectionFields.tsx`: `PHOTO_RULES` (JPG/PNG/WebP, 15 MB) for the Feature image only. `GRAPHIC_RULES` (PNG/WebP, 5 MB) for the crest, map, patch, icon and swatch. `imageHint` now reads "PNG or WebP up to 5 MB". The five "3000 pixels per side" hints (ticket pages, Chick-fil-A, Foothill, Robinson, cinematic homepage) now say 6000.
+- **Files changed:** the files above, plus `tests/contracts/media-graphic-downscale.test.ts`, `tests/contracts/media-finalize-errors.test.ts`, `tests/contracts/admin-image-upload-errors.test.ts` (new), `tests/browser/admin-classic-about.spec.ts` (hint string), this file and `HANDOFF.md`.
+- **Verification:** `npx tsc --noEmit` clean. `npx vitest run --project unit`: 457 files / 6931 tests pass. This includes the 4000 px PNG that now succeeds (it comes out at 2400 x 1200 with alpha) and 6000 x 6000. `next build` passes with placeholder local Supabase env (CI does not build). The Playwright about spec was not run.
+- **Blockers / decisions:** none. On upload failure the RC About editor shows the reason both in the field and in its status line.
+- **Review follow-up (onzio-bot on `d8d5338`, 2026-11-24):** all three findings fixed.
+  - `docs/onzio-platform-plan.md` graphic rules now say 6000×6000 / 36 MP, resize to fit 2400 px, and `failOn: "error"`.
+  - `fitWithin` keeps each side at least 1 px, so a 6000×1 graphic comes out at 2400×1 instead of failing with a 500. Covered by a new test.
+  - The About image rules moved to `ABOUT_IMAGE_RULES` in `about-sections.ts`. `tests/contracts/about-image-field-rules.test.ts` covers the hint text, the browser refusing a JPG and a 5 MB+ graphic, a 15 MB+ photo, and which field gets which rules.
+  - Undoing each fix makes its test fail.
+  - `npx tsc --noEmit` is clean, and the unit suite passes 458 files / 6937 tests.
+- **Exact next step:** onzio-bot review, then Christian's "go" to merge. There is no migration, so no production gate.
+
 ## 2026-11-24 - DCFC-D134: indexing approval recorded; D117 and D135 superseded
 
 - **Agent / package:** Claude Code (Opus 5.5), the decision-log update for `DCFC-1003`, asked for by Christian. Docs and one code comment only.

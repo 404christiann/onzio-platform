@@ -115,7 +115,7 @@ export function FoothillSectionFields({ api, id }: { api: FoothillFieldsApi; id:
       <TextField label="Subtitle" value={draft.subtitle} max={120} disabled={locked} target={FOOTHILL_TARGETS.headingSubtitle} onChange={value => update(content => { content.subtitle = value; })} />
     </div>; break;
     case "images": body = <>
-      <p className={styles.note}>PNG or WebP, up to 5 MB and 3000 pixels per side. Words inside artwork change when you replace its image.</p>
+      <p className={styles.note}>PNG or WebP, up to 5 MB and 6000 pixels per side. Words inside artwork change when you replace its image.</p>
       <ImageSlot api={api} slot="bus" /><ImageSlot api={api} slot="map" />
     </>; break;
     case "map": body = <PhoneMapControl api={api} />; break;
