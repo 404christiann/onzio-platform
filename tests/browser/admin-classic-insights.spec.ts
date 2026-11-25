@@ -115,7 +115,6 @@ test("the classic sidebar lists Insights and opens the page in the classic frame
   await expect(page.getByRole("heading", { level: 1, name: /^Your sponsors were seen 250 times in March 2004$/ })).toBeVisible();
   await expect(page.locator("[data-sponsor-table]")).toContainText("T06 Fixture Bakery");
   await expect(page.locator('[data-admin-insights-page="classic"]')).toBeVisible();
-  await expect(page.locator('[data-admin-shell="reimagined"]')).toHaveCount(0);
   await expect(link).toHaveAttribute("data-active", "true");
   await mkdir(OUT, { recursive: true });
   await page.screenshot({ path: `${OUT}/insights-classic.png`, fullPage: true });
@@ -125,7 +124,6 @@ test("print: the classic frame and the pickers go, the sheet stays", async ({ pa
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(`/admin/insights/report?month=${MONTH}&sponsor=${SPONSOR.id.toLowerCase()}`);
   await expect(page.locator("[data-report-page]")).toHaveCount(1);
-  await expect(page.locator('[data-admin-shell="reimagined"]')).toHaveCount(0);
 
   const sidebar = page.locator('[data-slot="sidebar"]');
   const header = page.locator(".admin-portal > div > header");

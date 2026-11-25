@@ -321,7 +321,7 @@ export function ClassicProgramsEditor({ editor, previews }: { editor: ProgramsEd
               }}>
                 {previews.detail(editor.preview.previewProgram, editor.preview.previewOtherPrograms)}
               </ProgramCanvasFrame>
-            </div> : <ProgramFields editor={editor} classic section={section as ProgramEditorTab} disabled={locked} />}
+            </div> : <ProgramFields editor={editor} section={section as ProgramEditorTab} disabled={locked} />}
           </div>
         </div>
       </div>

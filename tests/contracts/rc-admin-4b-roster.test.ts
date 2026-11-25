@@ -253,7 +253,7 @@ describe("RC-ADMIN-4b-roster: page shape", () => {
   });
 
   it("keeps Staff as the classic list and dialog", () => {
-    expect(page).toContain("<StaffComponent addRequest={staffAdd} classic />");
+    expect(page).toContain("<StaffComponent addRequest={staffAdd} />");
   });
 
   it("marks every card's Edit button as a kit edit control and keeps the data-player-id hook", () => {

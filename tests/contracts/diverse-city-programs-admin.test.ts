@@ -316,16 +316,6 @@ describe("DCFC-301 protected Programs admin surface", () => {
     ]) {
       expect(pageSource).toContain(branch);
     }
-    // This switcher pill shape used to match /admin/about's SectionNav
-    // sub-panel switcher. The admin-portal redesign (docs/
-    // admin-portal-redesign-plan.md) later flattened About's two-level
-    // tab/sub-panel structure into a single AdminSectionRail, removing
-    // SectionNav (and this className) from about/page.tsx entirely — so the
-    // comparison against About's source is gone, but Programs' own pill
-    // switcher is unaffected and still asserted below.
-    const switcherClass =
-      'className="mt-3 grid gap-1 rounded-lg bg-card p-1 sm:grid-cols-3"';
-    expect(pageSource).toContain(switcherClass);
   });
 
   it("keeps the academy@1 slug hide working inside the Content tab", () => {

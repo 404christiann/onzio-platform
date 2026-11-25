@@ -55,7 +55,7 @@ async function loadTotals(clubId: string): Promise<SeasonTotals | null> {
  * a show/hide switch on each card (the existing players.active), and a two-pane dialog with its own Save for one player.
  * There is no page Save and no way to change the order, as in the classic editor. Staff keeps the classic list and dialog.
  */
-export default function RoseCityRosterPage({ StaffComponent }: { StaffComponent: ComponentType<{ addRequest: number; classic?: boolean }> }) {
+export default function RoseCityRosterPage({ StaffComponent }: { StaffComponent: ComponentType<{ addRequest: number }> }) {
   const clubId = useClubId();
   const toast = useAdminToast();
   const [tab, setTab] = useState("players");
@@ -210,7 +210,7 @@ export default function RoseCityRosterPage({ StaffComponent }: { StaffComponent:
             </Button>
           </div>
           <div role="tabpanel" id={`classic-roster-panel-${tab}`} aria-labelledby={`classic-roster-tab-${tab}`}>
-            {tab === "staff" ? <StaffComponent addRequest={staffAdd} classic /> : players_}
+            {tab === "staff" ? <StaffComponent addRequest={staffAdd} /> : players_}
           </div>
         </div>
       </PageFrame>

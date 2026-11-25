@@ -19,7 +19,7 @@ type ProgramsPolicy = NonNullable<ReturnType<typeof codeSiteAdminFor>>["programs
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
-export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = false }: { clubId: string; clubName: string; programsPolicy: ProgramsPolicy; classic?: boolean }) {
+export function useProgramsEditor({ clubId, clubName, programsPolicy }: { clubId: string; clubName: string; programsPolicy: ProgramsPolicy }) {
   const hidesSlugField = programsPolicy ? !programsPolicy.showSlugField : false;
   // Diverse City's four programs are fixed for this rollout: the club edits
   // them, it does not add new ones. Hiding the creation entry points leaves the
@@ -138,7 +138,7 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
   pendingDirectoryCommand.current = unconfirmedManagement;
   const [programConflict, setProgramConflict] = useState<SavedProgramPage | null>(null);
   const [managementConflict, setManagementConflict] = useState<DBProgram[] | null>(null);
-  const editorLocked = saving || managementSaving || Boolean(unconfirmedProgram || unconfirmedManagement) || (classic && batchSaving);
+  const editorLocked = saving || managementSaving || Boolean(unconfirmedProgram || unconfirmedManagement) || batchSaving;
 
   const loadPrograms = useCallback(async (preferredId?: string | null) => {
     setLoading(true);
@@ -223,10 +223,7 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
 
   function selectProgram(program: ProgramDraft) {
     if (operationInFlight.current || editorLocked) return;
-    if (!classic) {
-      if ((dirty || pageCopyDirty || managementDirty) && !window.confirm("Discard unsaved page changes?")) return;
-    }
-    const managementBaseline = classic ? confirmedDirectory.current : savedManagement;
+    const managementBaseline = confirmedDirectory.current;
     if (managementDirty) {
       setPrograms((current) => current.map((item) => {
         const saved = managementBaseline.find((entry) => entry.id === item.id);
@@ -249,9 +246,6 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
 
   function showDirectory() {
     if (operationInFlight.current || editorLocked) return;
-    if (!classic) {
-      if (dirty && !window.confirm("Discard unsaved program changes?")) return;
-    }
     if (dirty) discardDraftChanges();
     setSelectedSection(null);
     setPageView("directory");
@@ -259,38 +253,10 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
 
   function showManage() {
     if (operationInFlight.current || editorLocked) return;
-    if (!classic) {
-      if (dirty && !window.confirm("Discard unsaved program changes?")) return;
-    }
     if (dirty) discardDraftChanges();
     setSelectedSection(null);
     setPageView("manage");
   }
-
-  // ADMIN-RE-12a: after a click on the page's heading or closing band, the
-  // words box takes the cursor once React has drawn the clicked section, in
-  // that section's first field, and never away from a field already in use.
-  // An effect (not a frame timer) so the field is certain to exist.
-  // A new object per click, so a second click on the same section asks again.
-  const [wordsFocus, setWordsFocus] = useState<{ section: PageCopySection } | null>(null);
-  useEffect(() => {
-    if (!wordsFocus) return;
-    if (classic) { setWordsFocus(null); return; }
-    // Drop a request the person has moved on from (another section chosen, or
-    // the words box gone), so it never takes the cursor later.
-    if (hidesPageCopyEditor || wordsFocus.section !== activePageCopySection) {
-      setWordsFocus(null);
-      return;
-    }
-    const panel = pageCopyPanel.current;
-    const field = panel?.querySelector<HTMLElement>(
-      `[data-page-copy-section="${wordsFocus.section}"] input, [data-page-copy-section="${wordsFocus.section}"] textarea`,
-    );
-    if (!panel || !field) return;
-    setWordsFocus(null);
-    panel.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (!panel.contains(document.activeElement)) field.focus({ preventScroll: true });
-  }, [wordsFocus, activePageCopySection, hidesPageCopyEditor, classic]);
 
   function selectCanvasSection(section: string) {
     setSelectedSection(section);
@@ -299,19 +265,12 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
     else if (section === "Page heading") selectPageCopySection("pageHeader");
     else if (section === "Closing band") selectPageCopySection("closingBand");
     // ADMIN-RE-22: where the club edits its own Programs words, a click on the
-    // page opens those words (no "managed by Onzio" note), and the words box
-    // takes the cursor.
-    if (!hidesPageCopyEditor && (section === "Page heading" || section === "Closing band")) {
-      setSelectedSection(null);
-      setWordsFocus({ section: section === "Page heading" ? "pageHeader" : "closingBand" });
-    }
+    // page opens those words (no "managed by Onzio" note).
+    if (!hidesPageCopyEditor && (section === "Page heading" || section === "Closing band")) setSelectedSection(null);
   }
 
   function startCreate() {
     if (operationInFlight.current || editorLocked) return;
-    if (!classic) {
-      if (dirty && !window.confirm("Discard unsaved program changes?")) return;
-    }
     setDraft(emptyProgramDraft(programs.length));
     setGallery([]);
     setRemovedGalleryIds([]);
@@ -399,12 +358,10 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
       if (uploadError || !data?.assetId) {
         throw new Error(uploadError?.message ?? "Upload failed");
       }
-      if (classic) {
-        ownedUploads.current.set(data.assetId, data.path);
-        if (!alive.current) {
-          await cleanupUploads(false);
-          return false;
-        }
+      ownedUploads.current.set(data.assetId, data.path);
+      if (!alive.current) {
+        await cleanupUploads(false);
+        return false;
       }
       const { data: publicData, error: publicError } = client.storage
         .from("programs")
@@ -458,12 +415,10 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
       if (uploadError || !data?.assetId) {
         throw new Error(uploadError?.message ?? "Upload failed");
       }
-      if (classic) {
-        ownedUploads.current.set(data.assetId, data.path);
-        if (!alive.current) {
-          await cleanupUploads(false);
-          return false;
-        }
+      ownedUploads.current.set(data.assetId, data.path);
+      if (!alive.current) {
+        await cleanupUploads(false);
+        return false;
       }
       const { data: publicData, error: publicError } = client.storage
         .from("programs")
@@ -524,7 +479,7 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
   }
 
   async function saveProgram() {
-    if (!draft || operationInFlight.current || managementSaving || (classic ? pendingDirectoryCommand.current : unconfirmedManagement) || uploadingRole !== null || uploadingGallery || programConflict || pendingPickers.current.size) return false;
+    if (!draft || operationInFlight.current || managementSaving || pendingDirectoryCommand.current || uploadingRole !== null || uploadingGallery || programConflict || pendingPickers.current.size) return false;
     // A slug is derived once, at creation, and never again: it is the public
     // URL of the program page. Editing the navigation label later leaves the
     // slug — and every link to it — exactly as it was.
@@ -556,7 +511,7 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
     operationInFlight.current = true;
     const baseline = programs.find((program) => program.id === pending.id);
     const baselineGallery = pending.id ? (galleryByProgram[pending.id] ?? []) : [];
-    const confirmedMetadata = classic && pending.id ? confirmedDirectory.current.find(item => item.id === pending.id) : undefined;
+    const confirmedMetadata = pending.id ? confirmedDirectory.current.find(item => item.id === pending.id) : undefined;
     const request: ProgramPageSaveRequest = unconfirmedProgram ?? {
       operationId: crypto.randomUUID(),
       programId: pending.id,
@@ -594,26 +549,14 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
       setGallery(savedGallery);
       setRemovedGalleryIds([]);
       if (savedDraft.id) setGalleryByProgram((current) => ({ ...current, [savedDraft.id!]: savedGallery }));
-      const stagedMetadata = classic ? directoryDraft.current.find(program => program.id === savedDraft.id) : undefined;
+      const stagedMetadata = directoryDraft.current.find(program => program.id === savedDraft.id);
       const reconciledDraft = stagedMetadata ? { ...savedDraft, status: stagedMetadata.status, sortOrder: stagedMetadata.sortOrder } : savedDraft;
-      if (classic) {
-        const current = directoryDraft.current;
-        const exists = current.some(program => program.id === savedDraft.id);
-        const next = (exists ? current.map(program => program.id === savedDraft.id ? reconciledDraft : program) : [...current, reconciledDraft])
-          .sort((left, right) => left.sortOrder - right.sortOrder);
-        directoryDraft.current = next;
-        setPrograms(next);
-      } else {
-      setPrograms((current) => {
-        const exists = current.some((program) => program.id === savedDraft.id);
-        const next = exists
-          ? current.map((program) =>
-              program.id === savedDraft.id ? savedDraft : program,
-            )
-          : [...current, savedDraft];
-        return next.sort((left, right) => left.sortOrder - right.sortOrder);
-      });
-      }
+      const current = directoryDraft.current;
+      const exists = current.some(program => program.id === savedDraft.id);
+      const next = (exists ? current.map(program => program.id === savedDraft.id ? reconciledDraft : program) : [...current, reconciledDraft])
+        .sort((left, right) => left.sortOrder - right.sortOrder);
+      directoryDraft.current = next;
+      setPrograms(next);
       const entry = { id: savedDraft.id, updatedAt: savedDraft.updatedAt, sortOrder: savedDraft.sortOrder, status: savedDraft.status };
       confirmedDirectory.current = confirmedDirectory.current.some(item => item.id === savedDraft.id)
         ? confirmedDirectory.current.map(item => item.id === savedDraft.id ? entry : item)
@@ -654,7 +597,7 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
     field: K,
     value: ProgramsPageDraft[K],
   ) {
-    if (classic && editorLocked) return;
+    if (editorLocked) return;
     setPageCopy((current) => ({ ...current, [field]: value }));
     setPageCopyErrors((current) => ({ ...current, [field]: undefined }));
     setPageCopyDirtySections((current) => {
@@ -734,9 +677,9 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
 
   function persistProgramOrder(next: ProgramDraft[]) {
     if (operationInFlight.current || editorLocked) return;
-    if (classic) directoryDraft.current = next;
+    directoryDraft.current = next;
     setPrograms(next);
-    if (classic) setDraft(current => {
+    setDraft(current => {
       const metadata = next.find(item => item.id === current?.id);
       return current && metadata ? { ...current, sortOrder: metadata.sortOrder, status: metadata.status } : current;
     });
@@ -746,29 +689,23 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
 
   function toggleProgramVisibility(programId: string) {
     if (operationInFlight.current || editorLocked) return;
-    if (classic) {
-      const next = directoryDraft.current.map(program => program.id === programId
-        ? { ...program, status: program.status === "active" ? "hidden" as const : "active" as const } : program);
-      directoryDraft.current = next;
-      setPrograms(next);
-    } else {
-    setPrograms((current) => current.map((program) => program.id === programId
-      ? { ...program, status: program.status === "active" ? "hidden" : "active" }
-      : program));
-    }
-    if (classic) setDraft(current => current?.id === programId ? { ...current, status: current.status === "active" ? "hidden" : "active" } : current);
+    const next = directoryDraft.current.map(program => program.id === programId
+      ? { ...program, status: program.status === "active" ? "hidden" as const : "active" as const } : program);
+    directoryDraft.current = next;
+    setPrograms(next);
+    setDraft(current => current?.id === programId ? { ...current, status: current.status === "active" ? "hidden" : "active" } : current);
     setManagementSaved(false);
     setManagementError(null);
   }
 
   async function saveManagement() {
-    if ((!managementDirty && !unconfirmedManagement) || operationInFlight.current || saving || (classic ? pendingProgramCommand.current : unconfirmedProgram) || managementConflict) return false;
+    if ((!managementDirty && !unconfirmedManagement) || operationInFlight.current || saving || pendingProgramCommand.current || managementConflict) return false;
     operationInFlight.current = true;
     setManagementSaving(true); setManagementSaved(false); setManagementError(null);
     const request: DirectorySaveRequest = unconfirmedManagement ?? {
       operationId: crypto.randomUUID(),
       expected: confirmedDirectory.current.map((item) => ({ id: item.id, updatedAt: item.updatedAt })),
-      programs: (classic ? directoryDraft.current : programs).map((item) => ({ id: item.id, sortOrder: item.sortOrder, status: item.status })),
+      programs: directoryDraft.current.map((item) => ({ id: item.id, sortOrder: item.sortOrder, status: item.status })),
     };
     try {
       const result = await submitPageSave<{ programs: DBProgram[] }>(() => fetch("/api/admin/programs-directory", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(unconfirmedManagement ? { "X-Editor-Recovery": "1" } : {}) }, body: JSON.stringify(request) }), `/api/admin/programs-directory?operationId=${encodeURIComponent(request.operationId)}`);
@@ -801,13 +738,13 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
       return keepDraft && old ? { ...fresh, status: old.status, sortOrder: old.sortOrder } : fresh;
     }).sort((left, right) => left.sortOrder - right.sortOrder).map((program, sortOrder) => ({ ...program, sortOrder }));
     // Programs added elsewhere are included; deleted rows are removed only after review.
-    if (classic) directoryDraft.current = next;
+    directoryDraft.current = next;
     setPrograms(next);
     confirmedDirectory.current = rows.map((row) => ({ id: row.id, updatedAt: row.updated_at, status: row.status === "hidden" ? "hidden" : "active", sortOrder: row.sort_order }));
     setSavedManagement(confirmedDirectory.current);
     setDraft((current) => {
       const fresh = rows.find((row) => row.id === current?.id);
-      const desired = classic && keepDraft ? next.find(item => item.id === current?.id) : null;
+      const desired = keepDraft ? next.find(item => item.id === current?.id) : null;
       return current && fresh ? { ...current, status: desired?.status ?? (fresh.status === "hidden" ? "hidden" : "active"), sortOrder: desired?.sortOrder ?? fresh.sort_order, updatedAt: fresh.updated_at } : current;
     });
     setManagementConflict(null);
@@ -817,7 +754,7 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
     if (!programConflict || !draft) return;
     const fresh = programToDraft(programConflict.program);
     const freshGallery = programConflict.gallery.map(programMediaToDraft);
-    const staged = classic && managementDirty ? programs.find(item => item.id === fresh.id) : null;
+    const staged = managementDirty ? programs.find(item => item.id === fresh.id) : null;
     const reviewed = staged ? { ...fresh, status: staged.status, sortOrder: staged.sortOrder } : fresh;
     setPrograms((current) => current.map((program) => program.id === fresh.id ? reviewed : program));
     if (fresh.id) setGalleryByProgram((current) => ({ ...current, [fresh.id!]: freshGallery }));
@@ -970,9 +907,9 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
     alive.current = true;
     return () => {
       alive.current = false;
-      if (classic) void cleanupLatest.current(false).catch(() => console.warn("Unused program photo cleanup did not finish."));
+      void cleanupLatest.current(false).catch(() => console.warn("Unused program photo cleanup did not finish."));
     };
-  }, [classic]);
+  }, []);
 
   const pageCopySectionItems: AdminSectionRailItem[] = PAGE_COPY_SECTION_ORDER.map(
     (section) => ({
@@ -992,7 +929,7 @@ export function useProgramsEditor({ clubId, clubName, programsPolicy, classic = 
   return {
     actions: { saveAll, discardAll, discardProgramConflict },
     registrationForms,
-    policy: { hidesSlugField, hidesProgramCreation, hidesPageCopyEditor, classic },
+    policy: { hidesSlugField, hidesProgramCreation, hidesPageCopyEditor },
     state: { loading, error, batchSaving, pickerPending, cleanupError, hasOwnedUploads: ownedUploads.current.size > 0 },
     program: { draft, errors, dirty, saving, saved, editorLocked, activeTab, tabDirection, programConflict, unconfirmedProgram, updateDraft, selectTab, saveProgram, discardDraftChanges, derivedSlugForNewProgram, resolveProgramConflict, addHighlight, setHighlight, removeHighlight, reorderHighlight },
     media: { setPickerPending, gallery, galleryInput, uploadingRole, uploadingGallery, uploadMedia, uploadGalleryImage, setGalleryAlt, reorderGallery, removeGalleryImage },

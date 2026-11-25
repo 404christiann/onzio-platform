@@ -12,12 +12,12 @@ import {
 
 const root = process.cwd();
 const css = parse(readFileSync(resolve(root, "styles/globals.css"), "utf8"));
-const classicPortal = String.raw`\.admin-portal:not\(\[data-admin-shell="reimagined"\]\)`;
+const portal = String.raw`\.admin-portal`;
 const portalScope = new RegExp(
-  String.raw`^(?:\.admin-theme\[data-admin-theme="(?:light|dark)"\]\s+)?${classicPortal}$`,
+  String.raw`^(?:\.admin-theme\[data-admin-theme="(?:light|dark)"\]\s+)?${portal}$`,
 );
 const pressScope = new RegExp(
-  String.raw`^(?:(?:${classicPortal}|:where\(${classicPortal}\))\s+\.admin-press(?![\w-])|:where\(${classicPortal}\s+\.admin-press\)$)`,
+  String.raw`^(?:(?:${portal}|:where\(${portal}\))\s+\.admin-press(?![\w-])|:where\(${portal}\s+\.admin-press\)$)`,
 );
 
 function motionProperty(key: string) {

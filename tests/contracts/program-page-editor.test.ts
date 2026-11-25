@@ -56,16 +56,6 @@ describe("Programs public-page editor contract", () => {
     expect(frame).toContain("onProgramLink?.(");
   });
 
-  it("keeps an incompatible unsaved page draft when navigation is declined", () => {
-    const page = source("app/admin/(protected)/programs/page.tsx");
-    const selectStart = page.indexOf("function selectProgram(program: ProgramDraft)");
-    const nextFunction = page.indexOf("function showDirectory()", selectStart);
-    const selection = page.slice(selectStart, nextFunction);
-    expect(selection).toContain('window.confirm("Discard unsaved page changes?")');
-    expect(selection).toMatch(/if\s*\(\(dirty\s*\|\|\s*pageCopyDirty\s*\|\|\s*managementDirty\)\s*&&\s*!window\.confirm\([\s\S]*?\)\)\s*return;/);
-    expect(selection.indexOf("window.confirm")).toBeLessThan(selection.indexOf("setDraft("));
-  });
-
   it("shows the linked open registration form in the detail canvas", () => {
     const page = source("app/admin/(protected)/programs/page.tsx");
     const route = source("app/api/admin/programs-preview-forms/route.ts");

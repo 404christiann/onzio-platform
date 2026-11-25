@@ -6,7 +6,6 @@ const read = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
 const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
-const SIDE_PANEL = "components/admin/AdminSidePanel.tsx";
 const FILE_UPLOAD = "components/admin/FileUpload.tsx";
 
 function section(source: string, start: string, end: string): string {
@@ -18,43 +17,16 @@ function section(source: string, start: string, end: string): string {
   return source.slice(startIndex, endIndex);
 }
 
-function openingTag(source: string, component: string): string {
-  const match = source.match(new RegExp(`<${component}[\\s\\S]*?\\n\\s*>`));
-  expect(match, `Missing opening tag: ${component}`).not.toBeNull();
-  return match![0];
-}
-
 describe("admin roster player editor UX", () => {
   const roster = read(ROSTER_ADMIN);
-  const sidePanel = read(SIDE_PANEL);
   const fileUpload = read(FILE_UPLOAD);
 
   const staffTab = section(roster, "function StaffTab", "function SeasonStatsPanel");
   const actionPhotos = section(roster, "function ActionPhotosPanel", "function PlayerFormFields");
   const playerFields = section(roster, "function PlayerFormFields", "function StaffFormFields");
 
-  it("keeps the shared panel default narrow for Staff", () => {
-    expect(sidePanel).toContain("className?: string;");
-    expect(sidePanel).toMatch(/max-w-md/);
-
-    const staffPanel = section(staffTab, "<AdminSidePanel", "</AdminSidePanel>");
-    expect(openingTag(staffPanel, "AdminSidePanel")).not.toMatch(/\bclassName=/);
-  });
-
-  it("supports an optional fixed footer outside the panel's scrolling form region", () => {
-    expect(sidePanel).toContain("footer?: ReactNode;");
-    expect(sidePanel).toMatch(/function AdminSidePanel\([\s\S]*?footer/);
-    expect(sidePanel).toMatch(
-      /overflow-y-auto[\s\S]*?<SlidingPanel[\s\S]*?<\/SlidingPanel>\s*<\/div>\s*\{footer\s*&&/,
-    );
-
-    const footerBlock = sidePanel.slice(sidePanel.indexOf("{footer &&"));
-    expect(footerBlock).toContain("flex-none");
-    expect(footerBlock).toContain("border-t");
-  });
-
   it("uses friendly player-photo copy and a compact action-photo uploader", () => {
-    expect(playerFields).toContain('previewLabel="Player photo"');
+    expect(playerFields).toContain('label="Player photo"');
     expect(actionPhotos).toMatch(
       /<FileUpload[\s\S]*?label="Add action photos"[\s\S]*?density="compact"/,
     );
@@ -62,11 +34,7 @@ describe("admin roster player editor UX", () => {
 
   it("keeps fields mobile-first and restores wider responsive groupings", () => {
     expect(playerFields).toContain("grid-cols-1");
-    expect(playerFields).toMatch(
-      /sm:grid-cols-\[[^\]]*minmax\(0,1fr\)[^\]]*\]/,
-    );
     expect(playerFields).toContain("sm:grid-cols-2");
-    expect(playerFields).toContain("sm:grid-cols-3");
   });
 
   it("keeps action-photo removal visible and usable by touch and keyboard", () => {
@@ -89,11 +57,9 @@ describe("admin roster player editor UX", () => {
     expect(playerFields).toContain("playerId && !hidesInlineSeasonStats");
   });
 
-  it("does not opt Staff into the player-specific width or footer treatment", () => {
-    const staffPanel = section(staffTab, "<AdminSidePanel", "</AdminSidePanel>");
-    expect(staffPanel).not.toContain("footer={");
-    expect(openingTag(staffPanel, "AdminSidePanel")).not.toMatch(/\bclassName=/);
-    expect(roster.match(/<AdminSidePanel/g)).toHaveLength(1);
+  it("keeps Staff in the classic dialog rather than the shared side panel", () => {
+    expect(staffTab).toContain("<ClassicStaffDialog");
+    expect(roster).not.toContain("<AdminSidePanel");
   });
 
   it("adds FileUpload presentation options without changing its existing defaults", () => {

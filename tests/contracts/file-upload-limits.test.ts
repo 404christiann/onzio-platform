@@ -90,9 +90,7 @@ describe("FileUpload refuses a file over maxBytes before onUpload", () => {
       const opens = [...text.matchAll(/<FileUpload\b/g)].map((match) => match.index!);
       expect(opens.length, path).toBeGreaterThan(0);
       const withLimit = opens.filter((start) => /maxBytes=|fileUploadRules\(/.test(text.slice(start, text.indexOf("/>", start))));
-      // The roster page also has a reimagined-only player photo field that keeps its old behavior.
-      const exempt = path === "app/admin/(protected)/roster/page.tsx" ? 1 : 0;
-      expect(withLimit.length, path).toBe(opens.length - exempt);
+      expect(withLimit.length, path).toBe(opens.length);
     }
   });
 });

@@ -242,8 +242,7 @@
 
   /* The frame: side nav, both top bars, the phone tab bar, every nav, billing
      notices, the page header and the pickers. Nothing but the sheets prints.
-     .admin-portal is the shell's root in both admins (the reimagined one also
-     carries data-admin-shell); the classic sidebar is its [data-slot="sidebar"]
+     .admin-portal is the shell's root; the sidebar is its [data-slot="sidebar"]
      child, named that way so it outranks the shell's child reset below. */
   :global(body):has(.report) :global(aside),
   :global(body):has(.report) :global(nav),
