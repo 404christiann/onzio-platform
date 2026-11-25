@@ -14,6 +14,7 @@
     "test:contracts": "vitest run tests/contracts",
     "test:db": "SUPABASE_LOCAL=1 vitest run --project db",
     "test:architecture": "vitest run tests/architecture",
+    "test:ops": "ONZIO_OPS_REQUIRED=1 vitest run --project unit tests/contracts/hero-video-poster-migration.test.ts tests/contracts/rose-city-telemetry-operator-sql.test.ts tests/contracts/rose-city-hero-poster-operator-sql.test.ts",
     "test:pilot": "vitest run --project pilot",
     "test:browser:admin-classic": "playwright test --config=playwright.admin-classic.config.ts",
     "test:browser:roster": "playwright test --config=playwright.roster.config.ts",
