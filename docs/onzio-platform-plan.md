@@ -658,7 +658,9 @@ Finalization must be idempotent and safe to retry.
 
 - input: PNG or WebP
 - maximum raw size: 5 MB
-- maximum decoded dimensions: 3000×3000
+- maximum decoded dimensions: 6000×6000 and 36 MP, the same ceiling as photos and the `media_assets` check
+- resize to fit a 2400px long edge without upscaling
+- decode with `failOn: "error"`
 - preserve transparency
 - strip metadata
 - keep optimized PNG when WebP would be larger

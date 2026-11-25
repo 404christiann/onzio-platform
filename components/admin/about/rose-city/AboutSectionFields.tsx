@@ -11,7 +11,7 @@ import styles from "./AboutEditor.module.css";
 import { CrestIconSizing } from "./CrestIconSizing";
 import { ABOUT_TARGETS, colorTarget, featureTarget, storyParagraphTarget, valueTarget } from "./about-edit-targets";
 import {
-  ABOUT_LIMITS, moveCard, newCardId,
+  ABOUT_IMAGE_RULES, ABOUT_LIMITS, moveCard, newCardId,
   type AboutDraft, type AboutDrafts, type AboutErrors, type KeyedColorCard, type KeyedFeature, type KeyedValue, type LogoDraft, type SectionId,
 } from "./about-sections";
 
@@ -33,11 +33,6 @@ export type AboutFieldsApi = {
   upload: (target: UploadTarget, file: File) => Promise<boolean | { error: string }>;
   onMediaPending: (pending: boolean) => void;
 };
-
-/** Photographs (the Feature image) keep the wide photo limits. */
-const PHOTO_RULES = { allowedTypes: ["image/jpeg", "image/png", "image/webp"], maxBytes: 15 * 1024 * 1024 } as const;
-/** Graphics (crest, map, patch, icon, swatch) are uploaded as kind "graphic": PNG or WebP only, 5 MB. */
-const GRAPHIC_RULES = { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 } as const;
 
 /** A text field with its limit and, once a save was refused, the message the rules give for it. */
 function Field({ label, value, max, locked, error, hint, multiline, target, onChange }: {
@@ -92,7 +87,7 @@ export function AboutSectionFields({ api, id }: { api: AboutFieldsApi; id: Secti
   if (id === "story") return <div className={styles.stack}>
     <StringListField label="Story paragraphs" description="Each paragraph is its own block on the page. Empty paragraphs are left out when you save." items={about.story_paragraphs} max={ABOUT_LIMITS.paragraphs}
       itemLabel="paragraph" maxLength={ABOUT_LIMITS.paragraph} multiline disabled={locked} itemTarget={storyParagraphTarget} onChange={items => api.setAbout(draft => ({ ...draft, story_paragraphs: items }))} />
-    <ImageFieldWithDescription label="Feature image" description="Shown beside the story. Leave it empty and the story runs full width." previewUrl={about.feature_image_url} initials="Add a feature image" size={96} {...PHOTO_RULES} target={ABOUT_TARGETS.storyImage}
+    <ImageFieldWithDescription label="Feature image" description="Shown beside the story. Leave it empty and the story runs full width." previewUrl={about.feature_image_url} initials="Add a feature image" size={96} {...ABOUT_IMAGE_RULES.photo} target={ABOUT_TARGETS.storyImage}
       disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending}
       onUpload={files => api.upload({ kind: "aboutFeature" }, files[0])}
       onRemove={() => { api.retire("about", about.feature_image_url); api.setAbout(draft => ({ ...draft, feature_image_url: "" })); }} />
@@ -118,9 +113,9 @@ export function AboutSectionFields({ api, id }: { api: AboutFieldsApi; id: Secti
   </div>;
 
   if (id === "images") return <div className={styles.stack}>
-    <ImageFieldWithDescription label="Annotated crest image" description="Shown large at the top of the Club Logo page." previewUrl={logo.annotated_image_url} initials="Add the annotated crest" size={96} {...GRAPHIC_RULES} target={ABOUT_TARGETS.imagesAnnotated}
+    <ImageFieldWithDescription label="Annotated crest image" description="Shown large at the top of the Club Logo page." previewUrl={logo.annotated_image_url} initials="Add the annotated crest" size={96} {...ABOUT_IMAGE_RULES.graphic} target={ABOUT_TARGETS.imagesAnnotated}
       disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoAnnotated" }, files[0])} />
-    <ImageFieldWithDescription label="Map image" description="Shown above the color cards." previewUrl={logo.map_image_url} initials="Add the map image" size={96} {...GRAPHIC_RULES} target={ABOUT_TARGETS.imagesMap}
+    <ImageFieldWithDescription label="Map image" description="Shown above the color cards." previewUrl={logo.map_image_url} initials="Add the map image" size={96} {...ABOUT_IMAGE_RULES.graphic} target={ABOUT_TARGETS.imagesMap}
       disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoMap" }, files[0])} />
   </div>;
 
@@ -137,9 +132,9 @@ export function AboutSectionFields({ api, id }: { api: AboutFieldsApi; id: Secti
         <Field label="Title" value={feature.title} max={ABOUT_LIMITS.featureTitle} locked={locked} target={featureTarget(feature._id, "title")} onChange={title => update({ title })} />
         <Field label="Description" value={feature.description} max={ABOUT_LIMITS.featureDescription} locked={locked} multiline target={featureTarget(feature._id, "description")} onChange={description => update({ description })} />
         <div className={styles.row2}>
-          <ImageFieldWithDescription label="Patch" description="The patch picture beside the text." previewUrl={feature.patch_url} initials="Add a patch" size={72} {...GRAPHIC_RULES} target={featureTarget(feature._id, "patch")}
+          <ImageFieldWithDescription label="Patch" description="The patch picture beside the text." previewUrl={feature.patch_url} initials="Add a patch" size={72} {...ABOUT_IMAGE_RULES.graphic} target={featureTarget(feature._id, "patch")}
             disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoFeaturePatch", id: feature._id }, files[0])} />
-          <ImageFieldWithDescription label="Icon" description="The small icon on the crest." previewUrl={feature.icon_url} initials="Add an icon" size={72} {...GRAPHIC_RULES} target={featureTarget(feature._id, "icon")}
+          <ImageFieldWithDescription label="Icon" description="The small icon on the crest." previewUrl={feature.icon_url} initials="Add an icon" size={72} {...ABOUT_IMAGE_RULES.graphic} target={featureTarget(feature._id, "icon")}
             disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoFeatureIcon", id: feature._id }, files[0])} />
         </div>
         {/* By id and from the latest draft: a drag commits at low priority, so this card's render may be a frame behind. */}
@@ -159,7 +154,7 @@ export function AboutSectionFields({ api, id }: { api: AboutFieldsApi; id: Secti
       renderItem={(card, index, update) => <>
         <MoveTools index={index} length={logo.color_cards.length} name={`color card ${index + 1}`} locked={locked} onMove={delta => api.setLogo(draft => ({ ...draft, color_cards: moveCard(draft.color_cards, card._id, delta) }))} />
         <Field label="Color label" value={card.label} max={ABOUT_LIMITS.colorLabel} locked={locked} target={colorTarget(card._id, "label")} onChange={label => update({ label })} />
-        <ImageFieldWithDescription label="Swatch image" description="The picture of this color." previewUrl={card.image_url} initials="Add a swatch" size={72} {...GRAPHIC_RULES} target={colorTarget(card._id, "image")}
+        <ImageFieldWithDescription label="Swatch image" description="The picture of this color." previewUrl={card.image_url} initials="Add a swatch" size={72} {...ABOUT_IMAGE_RULES.graphic} target={colorTarget(card._id, "image")}
           disabled={locked} uploading={uploading} onPendingChange={api.onMediaPending} onUpload={files => api.upload({ kind: "logoColorCard", id: card._id }, files[0])} />
       </>} />
   </div>;

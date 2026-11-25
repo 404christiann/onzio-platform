@@ -40,6 +40,13 @@ describe("graphic uploads larger than 3000px", () => {
     await expect(normalizeGraphic(bytes)).resolves.toMatchObject({ width: 2400, height: 2400 });
   });
 
+  it("keeps a 6000 x 1 graphic at least one pixel tall when it is shrunk", async () => {
+    const bytes = await graphicPng(6000, 1);
+    const result = await normalizeGraphic(bytes);
+    expect(result).toMatchObject({ width: 2400, height: 1 });
+    await expect(sharp(result.bytes).metadata()).resolves.toMatchObject({ width: 2400, height: 1 });
+  });
+
   it("leaves a graphic already within 2400px at its size", async () => {
     const bytes = await graphicPng(1200, 800);
     await expect(normalizeGraphic(bytes)).resolves.toMatchObject({ width: 1200, height: 800 });

@@ -13,6 +13,12 @@
 - **Files changed:** the files above, plus `tests/contracts/media-graphic-downscale.test.ts`, `tests/contracts/media-finalize-errors.test.ts`, `tests/contracts/admin-image-upload-errors.test.ts` (new), `tests/browser/admin-classic-about.spec.ts` (hint string), this file and `HANDOFF.md`.
 - **Verification:** `npx tsc --noEmit` clean. `npx vitest run --project unit`: 457 files / 6931 tests pass. This includes the 4000 px PNG that now succeeds (it comes out at 2400 x 1200 with alpha) and 6000 x 6000. `next build` passes with placeholder local Supabase env (CI does not build). The Playwright about spec was not run.
 - **Blockers / decisions:** none. On upload failure the RC About editor shows the reason both in the field and in its status line.
+- **Review follow-up (onzio-bot on `d8d5338`, 2026-11-24):** all three findings fixed.
+  - `docs/onzio-platform-plan.md` graphic rules now say 6000×6000 / 36 MP, resize to fit 2400 px, and `failOn: "error"`.
+  - `fitWithin` keeps each side at least 1 px, so a 6000×1 graphic comes out at 2400×1 instead of failing with a 500. Covered by a new test.
+  - The About image rules moved to `ABOUT_IMAGE_RULES` in `about-sections.ts`. `tests/contracts/about-image-field-rules.test.ts` covers the hint text, the browser refusing a JPG and a 5 MB+ graphic, a 15 MB+ photo, and which field gets which rules.
+  - Undoing each fix makes its test fail.
+  - `npx tsc --noEmit` is clean, and the unit suite passes 458 files / 6937 tests.
 - **Exact next step:** onzio-bot review, then Christian's "go" to merge. There is no migration, so no production gate.
 
 ## 2026-11-24 - DCFC-D134: indexing approval recorded; D117 and D135 superseded

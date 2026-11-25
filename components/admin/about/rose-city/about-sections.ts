@@ -18,6 +18,12 @@ export type AboutSectionId = "hero" | "story" | "values" | "closing";
 export type LogoSectionId = "images" | "features" | "colors";
 export type SectionId = AboutSectionId | LogoSectionId;
 
+/** What each image field accepts in the browser. The feature image is a photo; the Club Logo crest, map, patches, icons and swatches are graphics. The server enforces the same limits. */
+export const ABOUT_IMAGE_RULES = {
+  photo: { allowedTypes: ["image/jpeg", "image/png", "image/webp"], maxBytes: 15 * 1024 * 1024 },
+  graphic: { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 },
+} as const;
+
 export const ABOUT_LIMITS = { hero: 140, paragraph: 10000, paragraphs: 100, heading: 500, values: 24, valueTitle: 500, valueDescription: 10000, closing: 10000, cta: 200, features: 24, featureTitle: 500, featureDescription: 10000, colors: 6, colorLabel: 500 } as const;
 
 export const PAGE_LABELS: Record<AboutPageId, string> = { about: "About page", logo: "Club Logo page" };
