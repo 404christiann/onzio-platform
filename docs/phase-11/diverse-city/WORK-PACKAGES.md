@@ -20,7 +20,7 @@ Only acceptance evidence may move a package to `complete`.
 ## Mandatory Agent Completion Record
 
 Before ending any work turn, the assigned agent must append a record to
-`STATUS.md` containing:
+`STATUS.md` (onzio-ops) containing:
 
 ```text
 Date and agent:
@@ -35,13 +35,13 @@ Hosted mutations: none, or explicit approved evidence
 ```
 
 This record is required even when the package remains `in_progress` or becomes
-`blocked`. The agent must also update the package row in `STATUS.md`.
+`blocked`. The agent must also update the package row in `STATUS.md` (onzio-ops).
 
 ## Standard Package Instructions
 
 Every package inherits these rules:
 
-- Read `AGENTS.md`, `HANDOFF.md`, the platform plan, test README, this epic,
+- Read `AGENTS.md`, `HANDOFF.md` (onzio-ops), the platform plan, test README, this epic,
   decisions, and status before editing.
 - Confirm the correct repository and worktree before making changes.
 - Preserve unrelated user and agent changes.
@@ -271,5 +271,5 @@ Acceptance:
 - desktop/mobile public and admin checks pass
 - TypeScript, contracts, architecture, database, complete suite, database type
   check, lint, build, and diff checks pass
-- `STATUS.md` and `HANDOFF.md` contain final evidence and exact next step
+- `STATUS.md` (onzio-ops) and `HANDOFF.md` (onzio-ops) contain final evidence and exact next step
 - hosted mutation count is zero

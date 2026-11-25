@@ -25,7 +25,7 @@ regression test. It excludes:
 - local Claude settings/locks
 - `supabase-image-loader.js`
 
-Rose City's historical Markdown is retained under `docs/rose-city-legacy/`.
+Rose City's historical Markdown is retained under `docs/rose-city-legacy/` (onzio-ops).
 It is evidence about the source application, not Onzio architecture authority.
 
 The source application was upgraded during bootstrap from vulnerable

@@ -47,7 +47,7 @@ for launch without a receipt on 2026-11-19 (see LEMON MILK launch decision below
 
 ## Launch decision — 2026-11-17
 
-On 2026-11-17 Christian knowingly accepted hosting the FontsGeek Avenir files for launch, with no Avenir webfont license on file. `Avenir-Medium.ttf` and `Avenir-Heavy.ttf` are not in Git. Anyone can download them from the public production Supabase Storage bucket `onzio-fonts`. The site loads them from `NEXT_PUBLIC_FONT_BASE_URL` (`components/cinematic/CinematicAvenirFonts.tsx`) and falls back to the self-hosted Figtree (SIL OFL 1.1, `public/fonts/figtree/`), then sans-serif. The bucket was a deliberate one-off production change made outside migrations; see `HANDOFF.md`.
+On 2026-11-17 Christian knowingly accepted hosting the FontsGeek Avenir files for launch, with no Avenir webfont license on file. `Avenir-Medium.ttf` and `Avenir-Heavy.ttf` are not in Git. Anyone can download them from the public production Supabase Storage bucket `onzio-fonts`. The site loads them from `NEXT_PUBLIC_FONT_BASE_URL` (`components/cinematic/CinematicAvenirFonts.tsx`) and falls back to the self-hosted Figtree (SIL OFL 1.1, `public/fonts/figtree/`), then sans-serif. The bucket was a deliberate one-off production change made outside migrations; see `HANDOFF.md` (onzio-ops).
 
 - Exit plan: delete the two objects from the `onzio-fonts` bucket, or unset `NEXT_PUBLIC_FONT_BASE_URL` in Vercel production and redeploy (the value is baked in at build time). Either way the site falls back to Figtree, with no code change.
 - Follow-up: buy an Avenir webfont license (see Verified licensing paths above) and record the license holder, domain and receipt here, or switch fonts.

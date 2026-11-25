@@ -8,7 +8,7 @@ platform behavior, `tests/database` exercises local PostgreSQL and RLS, and
 
 The project began with failing contracts for unimplemented features. That is
 historical context, not an expectation that the current suites should fail.
-Use the current requirements and recorded baseline in [HANDOFF.md](../HANDOFF.md)
+Use the current requirements and recorded baseline in HANDOFF.md (onzio-ops `HANDOFF.md`)
 when investigating a failure. Do not skip, weaken, or broadly mock a contract
 to obtain a passing run.
 
@@ -138,7 +138,7 @@ files never overlap the serial ones.
 
 The `db` and `pilot` files share state outside their own process. Database files share the tenant
 singleton fixtures. Pilot proofs start servers and own process groups, and parallel files collide
-on ports and processes (see `HANDOFF.md`, 2026-11-01). `tests/global-setup/serial-project-guard.ts`
+on ports and processes (see `HANDOFF.md` (onzio-ops), 2026-11-01). `tests/global-setup/serial-project-guard.ts`
 makes both projects fail before any test runs when the command line sets `--fileParallelism` or
 `--isolate=false`, instead of racing. Do not set `isolate: false` on `unit` either. Two runs with
 `--project unit --isolate=false` failed 55 tests in 7 files, then 28 tests in 4 other files, and
@@ -495,7 +495,7 @@ adapter appears on main its counts can only shrink. #56 reduced the inventory
 from 455 mentions in 63 files to 300 in 53 files. The initial inventory
 included 51 presentation-package mentions.
 The 461-mention, 61-file recovery snapshot at `eb82ba3` remains in
-[the inventory comparison](../docs/verification/site08-selector-check/initial-inventory.json).
+the inventory comparison (onzio-ops `docs/verification/site08-selector-check/initial-inventory.json`).
 Accepted Competition changes remove 17 mentions, Sponsors and Shop add five outer
 adapter mentions, and locally accepted registration pages add six outer adapter
 mentions across two more files. The guard itself adds no application selector.

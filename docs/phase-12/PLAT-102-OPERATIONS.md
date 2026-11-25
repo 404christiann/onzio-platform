@@ -1,7 +1,7 @@
 # PLAT-102 staging operations
 
-Status: complete. Hosted acceptance closed out 2026-08-05 — see `HANDOFF.md`
-and `docs/phase-11/diverse-city/STATUS.md` for the full evidence record. The
+Status: complete. Hosted acceptance closed out 2026-08-05 — see `HANDOFF.md` (onzio-ops)
+and `docs/phase-11/diverse-city/STATUS.md` (onzio-ops) for the full evidence record. The
 protocol below is retained as the historical runbook; two follow-ups were
 flagged but not fixed in this pass: `/api/cron/lifecycle` is not exempted from
 `middleware.ts` tenant-domain resolution the way `/api/stripe/webhook` is, and

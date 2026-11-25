@@ -24,17 +24,17 @@ not supply are explicitly deferred in `ROLLOUT-INPUT-APPROVAL-MANIFEST.md`, so
 ## Sources of Truth
 
 - Stable repository rules: `AGENTS.md`
-- Current implementation and verification state: `HANDOFF.md`
+- Current implementation and verification state: `HANDOFF.md` (onzio-ops)
 - Platform architecture: `docs/onzio-platform-plan.md`
 - Test semantics: `tests/README.md`
 - Completed local epic: `EPIC.md`
 - Rollout packages: `ROLLOUT-WORK-PACKAGES.md`
-- Existing decisions: `DECISIONS.md`
+- Existing decisions: `DECISIONS.md` (onzio-ops)
 - Content and media gate: `CONTENT-MEDIA-READINESS.md`
 - Staging gate: `STAGING-ACCEPTANCE.md`
 - Production gate and rollback: `PRODUCTION-CUTOVER-ROLLBACK.md`
 - Phase 4 rollout input lock: `ROLLOUT-INPUT-APPROVAL-MANIFEST.md`
-- Shared execution ledger: `STATUS.md`
+- Shared execution ledger: `STATUS.md` (onzio-ops)
 - Approved visual specification: `VISUAL-ACCEPTANCE.md`
 
 The snapshot remains a visual specification. It is not a deployable tenant,
@@ -239,7 +239,7 @@ Each arrow means dependency eligibility, not authorization.
 - Public launch and indexing have separate recorded approvals.
 - The agreed observation window finishes without an unresolved stop condition,
   or rollback is completed and reconciled.
-- `STATUS.md` and `HANDOFF.md` contain package evidence, blockers, the exact
+- `STATUS.md` (onzio-ops) and `HANDOFF.md` (onzio-ops) contain package evidence, blockers, the exact
   next step, and per-package hosted-mutation counts.
 
 ## Phase 4 Completion Boundary

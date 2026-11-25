@@ -595,7 +595,7 @@ executed: the three deliberate test-mode-only gates were lifted, a
 backward-compatible migration re-scoped the registration RPCs to
 `test`/`production`, a live Connect webhook was registered, and the code was
 deployed via the narrow cherry-pick branch `hotfix/registration-live-mode-prod`
-(see `HANDOFF.md`). However, the first live "Connect to Stripe" click then
+(see `HANDOFF.md` (onzio-ops)). However, the first live "Connect to Stripe" click then
 failed on a prerequisite outside this repo entirely: Stripe's one-time
 **platform Connect profile questionnaire**
 (<https://dashboard.stripe.com/connect/settings/profile>), which live

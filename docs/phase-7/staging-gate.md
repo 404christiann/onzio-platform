@@ -135,7 +135,7 @@ Phase 7 passes only when:
 - deployment protection remains enabled
 - runtime logs show no unresolved authorization, webhook, media, or tenant
   isolation errors from the acceptance run
-- `HANDOFF.md` records the deployment, verification results, blockers, and
+- `HANDOFF.md` (onzio-ops) records the deployment, verification results, blockers, and
   Phase 8 readiness
 
 Do not begin Phase 8 until Christian explicitly authorizes the Rose City

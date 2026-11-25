@@ -113,7 +113,7 @@ record the exception and show a candidate before changing its meaning.
    focus, active/disabled/destructive states, drawer and panel behavior, and no
    overflow. Report baseline failures with evidence; never weaken assertions.
    Review shared consumers for public/auth visual changes. Update this ledger
-   and `HANDOFF.md`, then return the scoped diff and before/after screenshots.
+   and `HANDOFF.md` (onzio-ops), then return the scoped diff and before/after screenshots.
 
 Build in the isolated worktree so it cannot disrupt the existing development
 server's `.next` directory. Use loopback Supabase and test-mode billing fixtures

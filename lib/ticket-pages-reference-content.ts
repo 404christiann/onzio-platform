@@ -3,7 +3,7 @@ import type { KnowBeforeYouGoContent, SeasonMembershipContent } from "@/lib/cine
 // Sam's copy, transcribed from "Rose City FC Season Ticket Membership page Drop Down Menu 2027 Final Master.jpg"
 // and "Rose City FC KBYG page Drop Down Menu 2027 Final Master.jpg" (Dropbox, 2026-11-07/08). Local seed and tests only.
 // Every image starts empty: Sam is sending the icons, logos and the PlayStation photo. Open questions for Sam are
-// recorded in docs/phase-11/diverse-city/STATUS.md (RC2027-TICKET-PAGES).
+// recorded in docs/phase-11/diverse-city/STATUS.md (onzio-ops) (RC2027-TICKET-PAGES).
 
 const empty = (alt = "") => ({ assetId: null, alt });
 

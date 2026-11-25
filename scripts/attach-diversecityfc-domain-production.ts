@@ -5,7 +5,7 @@ import { acquireOperatorAccessToken } from "@/scripts/operator-session";
 loadEnv({ path: ".env.local", quiet: true });
 
 const EXPECTED_PROJECT_REF = "ioalthwsdrlzrubomrow";
-// Diverse City FC, production — from HANDOFF.md's 2026-08-07 DCFC-801 entry
+// Diverse City FC, production — from HANDOFF.md's (onzio-ops) 2026-08-07 DCFC-801 entry
 // ("club d7a41762-5158-496e-b415-c83c01ab5c70, slug diverse-city").
 const CLUB_ID = "d7a41762-5158-496e-b415-c83c01ab5c70";
 

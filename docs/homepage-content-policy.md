@@ -95,7 +95,7 @@ before and after, while the existing committed-type mismatch still causes
 `npm run db:types:check` to fail. That unrelated file remains unchanged.
 
 Actual commands, logs, final revision, independent advisory review and fixture
-restoration are recorded in HANDOFF.md and
+restoration are recorded in HANDOFF.md (onzio-ops) and
 `/home/coder/.codex/visualizations/2026/10/22/onzio-site06-homepage-content-policy`.
 The complete suites cover the unchanged implementation before the final
 evidence-only documentation update. Prior Academy browser acceptance remains

@@ -41,7 +41,7 @@ Outside the lock (no shared state touched):
    any edit to `tests/architecture/cinematic-2-selector-debt.json`, any added/removed `.rpc(` line,
    or a changed count of references to a database function name (from origin/main's migrations)
    in app code. Files outside `app components lib styles public packages types tests middleware.ts`
-   are warnings (HANDOFF.md/STATUS.md updates are expected; package.json changes need a reason).
+   are warnings (HANDOFF.md (onzio-ops)/STATUS.md updates are expected; package.json changes need a reason).
    A gate 1 failure stops the run right there (non-zero exit, report written): no doctor, build,
    lock, db reset or any other database action happens for an out-of-scope package.
 2a. Doctor (below), which also refuses any env file that does not point at the shared local stack.

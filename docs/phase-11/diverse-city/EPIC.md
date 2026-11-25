@@ -24,7 +24,7 @@ a staging or production tenant.
 
 - Platform architecture: `docs/onzio-platform-plan.md`
 - Stable repository rules: `AGENTS.md`
-- Current shipped state: `HANDOFF.md`
+- Current shipped state: `HANDOFF.md` (onzio-ops)
 - Test semantics: `tests/README.md`
 - Diverse City visual baseline:
   `/Users/christianalcala/Downloads/onzioProspects/diverse-city-fc/site`
@@ -155,9 +155,9 @@ Phase 0 is being designed, but it cannot be finalized before the visual freeze.
 - One designated integrator merges packages and runs broad verification.
 - A work-package assignment does not authorize commits, pushes, deployments,
   hosted writes, or later work packages.
-- Before ending, every agent updates `STATUS.md` using its required completion
+- Before ending, every agent updates `STATUS.md` (onzio-ops) using its required completion
   record. This applies to completed, in-progress, and blocked work.
-- The integrating agent updates `HANDOFF.md` after meaningful merged work.
+- The integrating agent updates `HANDOFF.md` (onzio-ops) after meaningful merged work.
 
 ## Epic Definition of Done
 
@@ -171,7 +171,7 @@ Phase 0 is being designed, but it cannot be finalized before the visual freeze.
 - No registration submission, payment, waiver, medical, or participant data is
   stored in Onzio.
 - All focused and required broad local verification passes.
-- `STATUS.md` and `HANDOFF.md` describe the actual state and exact next step.
+- `STATUS.md` (onzio-ops) and `HANDOFF.md` (onzio-ops) describe the actual state and exact next step.
 - No hosted or production resource was mutated.
 
 ## Later Work Explicitly Excluded

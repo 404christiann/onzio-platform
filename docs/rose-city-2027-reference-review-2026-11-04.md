@@ -159,7 +159,7 @@ stadium files as the policy pages.
 Risks to manage:
 
 - Christian reviewing several previews at once.
-- Merge conflicts in shared files: `lib/database.generated.ts`, `HANDOFF.md` and migration
+- Merge conflicts in shared files: `lib/database.generated.ts`, `HANDOFF.md` (onzio-ops) and migration
   timestamps.
 - Every session sharing one local database and dev server on port 3198.
 

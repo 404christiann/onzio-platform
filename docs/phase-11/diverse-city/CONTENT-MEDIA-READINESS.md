@@ -281,7 +281,7 @@ approved database row, object, pointer, state fingerprint, or import-audit
 count. No raw source, excluded image, SVG, video, runtime transformation,
 optimizer URL, temporary registration URL, or preview-only fact was uploaded
 or referenced. Full counts and presentation evidence are in
-`STAGING-ACCEPTANCE.md` and `STATUS.md`.
+`STAGING-ACCEPTANCE.md` and `STATUS.md` (onzio-ops).
 
 ## Production Import Record (`DCFC-802`)
 
@@ -301,4 +301,4 @@ row, proving idempotency for real (not only simulated). No raw source,
 excluded image, SVG, video, runtime transformation, optimizer URL, or
 preview-only fact was uploaded or referenced. Rose City confirmed
 unchanged. Full counts and evidence are in `PRODUCTION-CUTOVER-ROLLBACK.md`
-and `STATUS.md`.
+and `STATUS.md` (onzio-ops).

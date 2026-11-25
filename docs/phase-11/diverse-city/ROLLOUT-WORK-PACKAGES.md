@@ -22,9 +22,9 @@ Only recorded acceptance evidence may move a package to `complete`.
 
 Every package inherits these rules:
 
-- Read `AGENTS.md`, `HANDOFF.md`, `docs/onzio-platform-plan.md`,
-  `tests/README.md`, `ROLLOUT-EPIC.md`, this file, `DECISIONS.md`, and
-  `STATUS.md` before acting.
+- Read `AGENTS.md`, `HANDOFF.md` (onzio-ops), `docs/onzio-platform-plan.md`,
+  `tests/README.md`, `ROLLOUT-EPIC.md`, this file, `DECISIONS.md` (onzio-ops), and
+  `STATUS.md` (onzio-ops) before acting.
 - Inspect branch and worktree status first; preserve all unrelated and
   intentional changes.
 - Confirm the action class, target environment, exact resources, approver, and
@@ -41,8 +41,8 @@ Every package inherits these rules:
 - Restore temporary test mutations before completion and reconcile the
   restored state.
 - Update the package row and append the mandatory completion record in
-  `STATUS.md` before ending, even when blocked or incomplete. Update
-  `HANDOFF.md` after meaningful work.
+  `STATUS.md` (onzio-ops) before ending, even when blocked or incomplete. Update
+  `HANDOFF.md` (onzio-ops) after meaningful work.
 
 ## Phase 4 — Lock Production-Ready Inputs
 
@@ -75,7 +75,7 @@ Every package inherits these rules:
   provider metadata checks must not authenticate with mutation-capable
   credentials.
 - **Expected documentation updates:** `CONTENT-MEDIA-READINESS.md`,
-  `DECISIONS.md`, `STATUS.md`, `HANDOFF.md`.
+  `DECISIONS.md` (onzio-ops), `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-402 — Media and video readiness inventory
 
@@ -104,7 +104,7 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** zero. No Supabase Storage or Bunny.net
   read requiring private credentials and no hosted write/delete.
 - **Expected documentation updates:** `CONTENT-MEDIA-READINESS.md`,
-  `DECISIONS.md`, `STATUS.md`, `HANDOFF.md`.
+  `DECISIONS.md` (onzio-ops), `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-403 — Deterministic local import and rollback rehearsal
 
@@ -134,7 +134,7 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** zero; fail closed unless all Supabase and
   Postgres endpoints are loopback.
 - **Expected documentation updates:** `CONTENT-MEDIA-READINESS.md`,
-  `PRODUCTION-CUTOVER-ROLLBACK.md`, `STATUS.md`, `HANDOFF.md`; checked-in local
+  `PRODUCTION-CUTOVER-ROLLBACK.md`, `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops); checked-in local
   planner/test files only if separately within the assigned package scope.
 
 ### DCFC-404 — Rollout inputs and approval lock
@@ -159,8 +159,8 @@ Every package inherits these rules:
 - **Rollback expectations:** withdraw approval and return affected packages to
   `blocked`; no external state exists to restore.
 - **Exact hosted-mutation boundary:** zero.
-- **Expected documentation updates:** `DECISIONS.md`, all rollout checklists,
-  `STATUS.md`, `HANDOFF.md`.
+- **Expected documentation updates:** `DECISIONS.md` (onzio-ops), all rollout checklists,
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ## Phase 5 — Establish the Protected Staging Tenant
 
@@ -189,8 +189,8 @@ Every package inherits these rules:
   read-only access if created outside this package.
 - **Exact hosted-mutation boundary:** zero. Do not run `staging:provision` or
   hosted auth/media/stripe/lifecycle verifiers in this package.
-- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md`,
-  `HANDOFF.md`.
+- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md` (onzio-ops),
+  `HANDOFF.md` (onzio-ops).
 
 ### DCFC-502 — Staging release and private tenant provisioning
 
@@ -222,8 +222,8 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** staging Supabase schema/tenant/domain and
   Vercel Preview deployment/alias only. Zero production, Stripe, Bunny, DNS,
   email, or Auth invitation mutation.
-- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md`,
-  `HANDOFF.md`.
+- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md` (onzio-ops),
+  `HANDOFF.md` (onzio-ops).
 
 ### DCFC-503 — Staging content, media, and presentation import
 
@@ -254,7 +254,7 @@ Every package inherits these rules:
   Database/Storage/presentation rows and objects. Zero Auth/email, Stripe,
   Bunny, Vercel configuration, production, DNS, or public launch mutation.
 - **Expected documentation updates:** `CONTENT-MEDIA-READINESS.md`,
-  `STAGING-ACCEPTANCE.md`, `STATUS.md`, `HANDOFF.md`.
+  `STAGING-ACCEPTANCE.md`, `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-504 — Staging owner/admin invitation and MFA acceptance
 
@@ -285,8 +285,8 @@ Every package inherits these rules:
   for retry or removed through the audited operator boundary.
 - **Exact hosted-mutation boundary:** named staging Auth users, memberships,
   audit rows, sessions/factors, and approved email sends only.
-- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md`,
-  `HANDOFF.md`.
+- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md` (onzio-ops),
+  `HANDOFF.md` (onzio-ops).
 
 ## Phase 6 — Staging Acceptance and Billing Rehearsal
 
@@ -324,8 +324,8 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** Stripe test-mode Customer/Checkout/
   Subscription/Portal events plus named staging projection/lifecycle rows for
   Diverse City only.
-- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md`,
-  `HANDOFF.md`.
+- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md` (onzio-ops),
+  `HANDOFF.md` (onzio-ops).
 
 ### DCFC-602 — Staging public/admin and tenant-isolation acceptance
 
@@ -357,8 +357,8 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** temporary writes and reads only within
   Alpha/Bravo/DCFC staging rows explicitly named by the test plan; zero
   production, Stripe, DNS, Bunny, or email mutation.
-- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md`,
-  `HANDOFF.md`.
+- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md` (onzio-ops),
+  `HANDOFF.md` (onzio-ops).
 
 ### DCFC-603 — Staging gate review and production eligibility
 
@@ -379,8 +379,8 @@ Every package inherits these rules:
 - **Rollback expectations:** if rejected, mark the relevant package blocked and
   execute only its approved rollback; production remains untouched.
 - **Exact hosted-mutation boundary:** zero.
-- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md`,
-  `HANDOFF.md`.
+- **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md` (onzio-ops),
+  `HANDOFF.md` (onzio-ops).
 
 ## Phase 7 — Production Go/No-Go Package
 
@@ -406,7 +406,7 @@ Every package inherits these rules:
 - **Rollback expectations:** none; no state changes.
 - **Exact hosted-mutation boundary:** zero.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md`.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-702 — Local production cutover and rollback rehearsal
 
@@ -430,7 +430,7 @@ Every package inherits these rules:
   evidenced during the rehearsal.
 - **Exact hosted-mutation boundary:** zero; loopback only.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md`.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-703 — Production go/no-go and mutation approval packet
 
@@ -452,7 +452,7 @@ Every package inherits these rules:
   the relevant prerequisite to `blocked`.
 - **Exact hosted-mutation boundary:** zero.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `DECISIONS.md`, `STATUS.md`, `HANDOFF.md`.
+  `DECISIONS.md` (onzio-ops), `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ## Phase 8 — Establish Production Private Preview
 
@@ -481,7 +481,7 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** production Supabase migrations/tenant/
   private domain and Vercel production deployment/alias only.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md`.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-802 — Production content, media, and presentation import
 
@@ -506,7 +506,7 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** named Diverse City production content,
   media, and presentation resources only.
 - **Expected documentation updates:** `CONTENT-MEDIA-READINESS.md`,
-  `PRODUCTION-CUTOVER-ROLLBACK.md`, `STATUS.md`, `HANDOFF.md`.
+  `PRODUCTION-CUTOVER-ROLLBACK.md`, `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-803 — Production private Auth and admin acceptance
 
@@ -535,7 +535,7 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** named Diverse City production Auth/
   membership/audit/session/factor/email and temporary content probes only.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md`.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ## Phase 9 — Billing, Domain, and Public Launch
 
@@ -570,7 +570,7 @@ Every package inherits these rules:
   Customer/subscription and named Diverse City billing projection only; no
   Product/Price/webhook configuration changes.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md`.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-902 — Final domain, DNS, and Auth callback attachment
 
@@ -599,7 +599,7 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** named Diverse City DNS records, Vercel
   domains, `club_domains`, and exact Auth URL configuration only.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md`.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ### DCFC-903 — Public launch with indexing retained off
 
@@ -626,7 +626,7 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** Diverse City lifecycle/runtime access and
   necessary cache/deployment observation only. Indexing remains unchanged.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md`.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops).
 
 ## Phase 10 — Observation, Rollback, and Closeout
 
@@ -652,7 +652,7 @@ Every package inherits these rules:
   and blocks indexing.
 - **Exact hosted-mutation boundary:** zero.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md` at every checkpoint.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops) at every checkpoint.
 
 ### DCFC-1002 — Conditional production rollback
 
@@ -679,7 +679,7 @@ Every package inherits these rules:
 - **Exact hosted-mutation boundary:** only exact Diverse City resources and
   pre-recorded rollback targets; no hard deletion.
 - **Expected documentation updates:** `PRODUCTION-CUTOVER-ROLLBACK.md`,
-  `STATUS.md`, `HANDOFF.md`, and a scoped incident record if needed.
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops), and a scoped incident record if needed.
 
 ### DCFC-1003 — Indexing approval and rollout closeout
 
@@ -706,8 +706,8 @@ Every package inherits these rules:
   verified configuration if scope or canonical behavior is wrong.
 - **Exact hosted-mutation boundary:** Diverse City production robots/indexing
   configuration and required Vercel deployment only.
-- **Expected documentation updates:** `DECISIONS.md`, all rollout checklists,
-  `STATUS.md`, `HANDOFF.md`; mark `DCFC-EPIC-002` complete only with final
+- **Expected documentation updates:** `DECISIONS.md` (onzio-ops), all rollout checklists,
+  `STATUS.md` (onzio-ops), `HANDOFF.md` (onzio-ops); mark `DCFC-EPIC-002` complete only with final
   evidence.
 
 ## Next Package Boundary

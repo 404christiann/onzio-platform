@@ -147,7 +147,7 @@ Christian approved building real self-hosted video via a third-party video
 CDN — **Bunny.net Stream** — rather than in-house Vercel/Supabase
 transcoding or adopting the YouTube-embed pattern. Rationale, researched with
 live pricing (not memorized figures) and recorded in full in
-`DECISIONS.md`'s `DCFC-D105` row:
+`DECISIONS.md` (onzio-ops)'s `DCFC-D105` row:
 
 - In-house transcoding was rejected: Vercel serverless functions are a poor
   fit for video encoding (execution-time/memory limits — the same class of
@@ -231,7 +231,7 @@ own — it does not write the migrations or tests.
   for Tryouts, a new template registered as `academy@1` rather than mapping
   to `cinematic@1`, and building real self-hosted video via Bunny.net Stream
   rather than in-house Vercel/Supabase transcoding or a YouTube-embed
-  fallback — see `DECISIONS.md`. All decisions this analysis flagged as
+  fallback — see `DECISIONS.md` (onzio-ops). All decisions this analysis flagged as
   needed before `DCFC-103` are now resolved.
 - Does not propose club-specific conditionals anywhere as a substitute for
   registering real, reusable capabilities.

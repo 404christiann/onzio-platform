@@ -121,8 +121,8 @@ If deployment fails, restore the prior protected release. Keep additive schema
 intact unless a separately reviewed down migration exists. If provisioning or
 domain verification fails, archive/detach only the newly created Diverse City
 tenant through audited operator tooling; do not delete rows ad hoc. A mismatch
-at any step stops the package and must be recorded in `STATUS.md`,
-`STAGING-ACCEPTANCE.md`, and `HANDOFF.md`.
+at any step stops the package and must be recorded in `STATUS.md` (onzio-ops),
+`STAGING-ACCEPTANCE.md`, and `HANDOFF.md` (onzio-ops).
 
 ## Execution Record — 2026-08-02
 

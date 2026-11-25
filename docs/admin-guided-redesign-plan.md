@@ -32,7 +32,7 @@ without repeated approvals; material scope/design departures must be raised.
   in the adjacent README. The HTML uses fictional data and simplified forms.
   Its illustrations must never become runtime data, truncated field sets, or
   replacements for existing save/recovery logic.
-- Read `AGENTS.md`, current `HANDOFF.md`, `docs/onzio-platform-plan.md`,
+- Read `AGENTS.md`, current `HANDOFF.md` (onzio-ops), `docs/onzio-platform-plan.md`,
   `tests/README.md`, and the relevant contracts before each application package.
 - The session-supplied repository instructions explicitly retire hosted
   Supabase staging. The branch's historical AGENTS/architecture files still
@@ -284,7 +284,7 @@ shared public/auth consumers, including legitimate template-hidden pages.
 Run narrow regressions during each package, then the required whole-portal
 checks below. Use an independent review subagent; fix findings and verify the
 affected behavior. Record evidence and remaining limitations in this ledger
-and `HANDOFF.md`. Provide a coherent local diff and final screenshots. Do not
+and `HANDOFF.md` (onzio-ops). Provide a coherent local diff and final screenshots. Do not
 publish a partial portal migration or infer release approval from this plan.
 
 Acceptance: exact final source/commit and icon integration record, checks and

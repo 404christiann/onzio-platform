@@ -4,7 +4,7 @@ The pilot is complete. This workspace-write sandbox cannot run the full verifica
 
 Run date: 2026-10-31 America/Los_Angeles (2026-11-01 UTC). Branch: `agent/site59-pilot-prove-the-codex-loop-can-run-the-v`. Source revision: `bc4abfe204d5dffa8df62f64b3a7b85198766cda`, identical to `origin/main`. The initial working tree was clean. Node v22.23.4; npm 10.9.9; Vitest v4.1.10; Next.js 15.5.22.
 
-This ticket evaluates the loop itself and is outside spec #41. Only this report and one new top entry in `HANDOFF.md` change. No product, test, migration, configuration, dependency, or SITE ledger change was made. No commit, publication, merge, deployment, hosted-data mutation, Supabase CLI, Stripe, DNS administration, or email operation was performed. The authorized local API probes were read-only.
+This ticket evaluates the loop itself and is outside spec #41. Only this report and one new top entry in `HANDOFF.md` (onzio-ops) change. No product, test, migration, configuration, dependency, or SITE ledger change was made. No commit, publication, merge, deployment, hosted-data mutation, Supabase CLI, Stripe, DNS administration, or email operation was performed. The authorized local API probes were read-only.
 
 ## Verification set
 

@@ -4,7 +4,7 @@
  * Real video, uploaded and transcoded via Bunny Stream library `723074`
  * ("onzio"), per `DCFC-D105` (approved capability) and the decision that
  * superseded `DCFC-D114`'s interim crest-only hero — see
- * `docs/phase-11/diverse-city/DECISIONS.md` and `STATUS.md` for the full
+ * `docs/phase-11/diverse-city/DECISIONS.md` (onzio-ops) and `STATUS.md` (onzio-ops) for the full
  * record, including verification that both GUIDs below finished transcoding
  * (status 4/"Finished") before being wired up here.
  *
