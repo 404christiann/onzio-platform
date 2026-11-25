@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { hasOpsFile, readOpsFile } from "../helpers/ops-repo";
 
 // RC-HERO-POSTER-02: static checks on the migration and its rollback. tests/database/hero-video-poster.test.ts runs
 // the functions for real.
@@ -8,7 +9,8 @@ import { describe, expect, it } from "vitest";
 const NAME = "20261124120000_hero_video_poster.sql";
 const MIGRATIONS = resolve(process.cwd(), "supabase/migrations");
 const sql = readFileSync(resolve(MIGRATIONS, NAME), "utf8");
-const rollback = readFileSync(resolve(process.cwd(), "docs/phase-11/diverse-city/RC-HERO-POSTER-02-ROLLBACK.sql"), "utf8");
+const ROLLBACK = "docs/phase-11/diverse-city/RC-HERO-POSTER-02-ROLLBACK.sql";
+const rollback = hasOpsFile(ROLLBACK) ? readOpsFile(ROLLBACK) : "";
 const code = (text: string) => text.split("\n").filter((line) => !line.startsWith("--")).join("\n");
 
 /** The text of one function definition, from its create line to the closing $$. */
@@ -97,7 +99,7 @@ describe("the poster migration", () => {
   });
 });
 
-describe("the poster rollback", () => {
+describe.skipIf(!rollback)("the poster rollback", () => {
   it("is one transaction that restores the previous definitions and drops what the migration added", () => {
     expect(rollback).toMatch(/^begin;$/m);
     expect(rollback).toMatch(/^commit;$/m);

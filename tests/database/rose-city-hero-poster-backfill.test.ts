@@ -1,16 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { Client } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 import { localPostgresConfig } from "../helpers/local-postgres";
 import { cinematicHomepageStorageRecord, defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { ROSE_CITY_CLUB_ID } from "../../scripts/rose-city-2027-operator-sql";
+import { hasOpsFile, readOpsFile } from "../helpers/ops-repo";
 
 // RC-HERO-POSTER-05: runs the rehearsal and commit files as written, inside one rolled-back transaction.
 
-const DIR = resolve(__dirname, "../../scripts/operator-sql");
+const SQL = (kind: "rehearsal" | "commit") => `scripts/operator-sql/rose-city-hero-poster-backfill.${kind}.sql`;
 const ORIGINAL = "d17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91";
 const LIVE = "f76d5e76-0000-4000-8000-000000000001";
 const HAND_ALT = "Hand-written description";
@@ -29,7 +28,7 @@ async function asset(): Promise<string> {
 
 async function run(kind: "rehearsal" | "commit"): Promise<Record<string, unknown>> {
   await db.query("reset role");
-  const sql = readFileSync(resolve(DIR, `rose-city-hero-poster-backfill.${kind}.sql`), "utf8")
+  const sql = readOpsFile(SQL(kind))
     .replace(/^begin;$/m, "savepoint operator_sql;")
     .replace(/^commit;$/m, "release savepoint operator_sql;")
     .replace(/^rollback;$/m, "rollback to savepoint operator_sql;");
@@ -90,7 +89,7 @@ afterEach(async () => {
   }
 });
 
-describe("Rose City hero poster backfill", () => {
+describe.skipIf(!hasOpsFile(SQL("commit")))("Rose City hero poster backfill", () => {
   it("copies the hand-set poster and alt into the previous slot, flags the live video, and records one audit event", async () => {
     const before = await state();
     const result = await run("commit");

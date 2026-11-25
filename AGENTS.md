@@ -4,14 +4,14 @@
 
 This file defines stable repository-wide instructions for agents working on Onzio Platform.
 
-It is not the progress log. Current state, completed work, verification results, and the next milestone belong in `HANDOFF.md`.
+It is not the progress log. Current state, completed work, verification results, and the next milestone belong in `HANDOFF.md`, which lives with the other internal ops docs (every `STATUS.md` / `DECISIONS.md`, rollback SQL, operator SQL, verification screenshots) in the private `404christiann/onzio-ops` repo at the same paths. Clone it next to this repo (`../onzio-ops`).
 
 ## Required Reading Order
 
 Before changing the repository, read:
 
 1. `AGENTS.md`
-2. `HANDOFF.md`
+2. `HANDOFF.md` (onzio-ops)
 3. `docs/onzio-platform-plan.md`
 4. `tests/README.md`
 5. the tests relevant to the phase being implemented
@@ -22,7 +22,7 @@ Treat the architecture plan and contract tests as authoritative. If they conflic
 
 - The repository contains the club website application, admin tools,
   multi-tenant migrations, and regression suites.
-- Use `HANDOFF.md` for current work and recorded verification. Keep milestone
+- Use `HANDOFF.md` (onzio-ops) for current work and recorded verification. Keep milestone
   status and test counts out of these stable instructions.
 - Investigate failing tests against the current requirements and baseline.
   Do not assume a failure is expected because early project documents describe
@@ -128,7 +128,7 @@ npm test
 
 After meaningful work:
 
-- update `HANDOFF.md` with completed work, verification, blockers, and the next step
+- update `HANDOFF.md` (onzio-ops) with completed work, verification, blockers, and the next step
 - when working from a scoped epic or work package, update its status ledger
   before ending the turn; record the package ID, status, completed work, files
   changed, verification, blockers, and exact next step so another agent can
