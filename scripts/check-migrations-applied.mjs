@@ -1,6 +1,6 @@
 // Production migration gate (CLAUDE.md): every migration in the branch must already be applied to production.
 // Read-only: it only compares lists.
-//   node scripts/check-migrations-applied.mjs --changes < `git diff --no-renames --name-status <base> HEAD -- supabase/migrations`
+//   node scripts/check-migrations-applied.mjs --changes < `git diff --no-renames --name-status -z <base> HEAD -- supabase/migrations`
 //     fails when the pull request edits or deletes an existing migration; prints changed=true|false.
 //   node scripts/check-migrations-applied.mjs < `supabase migration list --linked --output-format json`
 //     fails when the branch has a migration production does not.
@@ -21,16 +21,22 @@ export function compareMigrations(list) {
 }
 
 /**
- * Classifies `git diff --no-renames --name-status` lines for supabase/migrations.
+ * Classifies `git diff --no-renames --name-status -z` output (status NUL path NUL, paths never quoted) for
+ * supabase/migrations. Anything else (a quoted or tab-joined line, a path outside the directory, a missing
+ * path) throws, so a name git rendered differently can never slip past as "no change".
  * @param {string} nameStatus
  */
 export function classifyMigrationChanges(nameStatus) {
   const added = [];
   const edited = [];
-  for (const line of nameStatus.split("\n")) {
-    if (!line.trim()) continue;
-    const [status, path] = line.split("\t");
-    if (!path?.startsWith("supabase/migrations/")) continue;
+  const fields = nameStatus.split("\0");
+  if (fields.at(-1) === "") fields.pop();
+  if (fields.length % 2 !== 0) throw new Error(`unparseable diff output: ${JSON.stringify(nameStatus)}`);
+  for (let index = 0; index < fields.length; index += 2) {
+    const [status, path] = [fields[index], fields[index + 1]];
+    if (!/^[ACDMTUXB]$/.test(status) || !path.startsWith("supabase/migrations/")) {
+      throw new Error(`unparseable diff entry: ${JSON.stringify(`${status}\0${path}`)}`);
+    }
     if (status === "A") added.push(path);
     else edited.push(`${status} ${path}`);
   }

@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { classifyMigrationChanges, compareMigrations, EDITED_MESSAGE, NOT_APPLIED_MESSAGE } from "../../scripts/check-migrations-applied.mjs";
 
@@ -68,7 +69,7 @@ describe("production migration gate", () => {
   });
 
   it("marks a pull request that adds a migration for the production check", () => {
-    const diff = "A\tsupabase/migrations/20261126000000_new.sql\n";
+    const diff = "A\0supabase/migrations/20261126000000_new.sql\0";
     expect(classifyMigrationChanges(diff)).toEqual({ added: ["supabase/migrations/20261126000000_new.sql"], edited: [] });
     const result = runGate(diff, ["--changes"]);
     expect(result.status).toBe(0);
@@ -76,11 +77,45 @@ describe("production migration gate", () => {
   });
 
   it("fails a pull request that edits or deletes an existing migration, even one production already has", () => {
-    for (const diff of ["M\tsupabase/migrations/20261124120000_hero_video_poster.sql", "D\tsupabase/migrations/20261124120000_hero_video_poster.sql"]) {
+    for (const diff of ["M\0supabase/migrations/20261124120000_hero_video_poster.sql\0", "D\0supabase/migrations/20261124120000_hero_video_poster.sql\0"]) {
       expect(classifyMigrationChanges(diff).edited).toHaveLength(1);
       const result = runGate(diff, ["--changes"]);
       expect(result.status, diff).toBe(1);
       expect(result.stderr?.trim()).toBe(EDITED_MESSAGE);
+    }
+  });
+
+  it("reads a non-ASCII migration name as itself, from real git -z output", () => {
+    const repo = mkdtempSync(join(tmpdir(), "migration-gate-"));
+    try {
+      const git = (...args: string[]) => execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" });
+      git("init", "-q");
+      git("-c", "user.email=t@example.test", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "base");
+      mkdirSync(join(repo, "supabase/migrations"), { recursive: true });
+      const name = "supabase/migrations/20261126000000_caf\u00e9.sql";
+      writeFileSync(join(repo, name), "select 1;\n");
+      git("add", ".");
+      git("-c", "user.email=t@example.test", "-c", "user.name=t", "commit", "-q", "-m", "add");
+      // Without -z git quotes the name ("supabase/migrations/...caf\303\251.sql"), which a line parser misses.
+      expect(git("diff", "--no-renames", "--name-status", "HEAD~1", "HEAD", "--", "supabase/migrations")).toContain('"supabase/');
+      const diff = git("diff", "--no-renames", "--name-status", "-z", "HEAD~1", "HEAD", "--", "supabase/migrations");
+      expect(classifyMigrationChanges(diff)).toEqual({ added: [name], edited: [] });
+      expect(runGate(diff, ["--changes"]).stdout).toContain("changed=true");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("fails on diff output it cannot parse instead of reading it as no change", () => {
+    for (const bad of [
+      'A\t"supabase/migrations/20261126000000_caf\\303\\251.sql"\n',
+      "A\0supabase/migrations/one.sql\0M\0",
+      'A\0"supabase/migrations/quoted.sql"\0',
+      "R100\0supabase/migrations/old.sql\0",
+      "A\0docs/not-a-migration.md\0",
+    ]) {
+      expect(() => classifyMigrationChanges(bad), JSON.stringify(bad)).toThrow(/unparseable/);
+      expect(runGate(bad, ["--changes"]).status, JSON.stringify(bad)).toBe(1);
     }
   });
 

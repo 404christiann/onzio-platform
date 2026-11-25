@@ -51,7 +51,8 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git diff --no-renames --name-status "$BASE_SHA" HEAD -- supabase/migrations > "$RUNNER_TEMP/changes.txt"
+          # -z: NUL-separated and never quoted, so a non-ASCII file name is read as itself.
+          git diff --no-renames --name-status -z "$BASE_SHA" HEAD -- supabase/migrations > "$RUNNER_TEMP/changes.txt"
           status=0
           node scripts/check-migrations-applied.mjs --changes < "$RUNNER_TEMP/changes.txt" > "$RUNNER_TEMP/changes.out" || status=$?
           cat "$RUNNER_TEMP/changes.out"
