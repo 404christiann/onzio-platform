@@ -356,7 +356,7 @@ attempted — those checklist items below remain unticked and untouched.
   slug `diverse-city`, name `Diverse City FC`, `lifecycle=onboarding`,
   `public_access=preview`, `tier=starter`. Owner: reused Christian's existing
   production Auth user `199d8437-1237-4098-99dd-8b089411255e`
-  (`christianjavieralcala@gmail.com`) as `role=owner`/`status=active` — he
+  (`<platform owner email>`) as `role=owner`/`status=active` — he
   explicitly chose to act as owner for this step rather than a separate
   recipient. One `audit_events` row recorded (`operation=provision`,
   `actor_type=operator`). Verified read-only against production immediately
@@ -369,7 +369,7 @@ attempted — those checklist items below remain unticked and untouched.
   and verified. See the 2026-08-07 "clubs.kind gap fixed" entry in
   `STATUS.md` for full detail. This item no longer blocks `DCFC-901`.
   **Also note:** provisioning triggered a real owner sign-in-code email to
-  `christianjavieralcala@gmail.com` as part of the same function call — this
+  `<platform owner email>` as part of the same function call — this
   is technically `DCFC-803` scope (invitations/email) bundled into `DCFC-801`;
   Christian explicitly accepted that bundling in chat since he is the
   recipient this time.

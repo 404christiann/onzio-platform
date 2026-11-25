@@ -268,8 +268,8 @@ media posture and route staging path checks through tenant ID plus surface
 entitlement. Christian approved restoring the temporary Diverse City admin
 membership for `christianalcala3@yahoo.com`; the row was marked `removed` at
 `2026-08-06T20:15:19.430016+00:00` and post-cleanup reconciliation confirmed it
-removed for Diverse City while `christianjavieralcala@gmail.com` remains active.
-Accepted fixture exception: `christianjavieralcala@gmail.com` intentionally
+removed for Diverse City while `<platform owner email>` remains active.
+Accepted fixture exception: `<platform owner email>` intentionally
 remains an active owner on both Alpha and Diverse City in staging, so those two
 tenant memberships are treated as Christian-owned staging fixtures rather than
 a cross-tenant leak.
