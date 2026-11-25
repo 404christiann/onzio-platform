@@ -10,9 +10,3 @@ ce629c1148e67cc3b21fcc1fee9f1e92a6a9abf3:scripts/provision-diverse-city-producti
 da21728f091ce0caf4acd6e6b829e4e785c6ce6a:lib/__tests__/stripe-config.test.ts:stripe-access-token:35
 da21728f091ce0caf4acd6e6b829e4e785c6ce6a:lib/__tests__/stripe-config.test.ts:stripe-access-token:36
 e3c4714b65af5b4ef0cc6cbb3eb6899b8be290ab:docs/rose-city-remaining-pages-2027.md:generic-api-key:40
-docs/phase-8/resend-smtp-rollout.md:generic-api-key:314
-docs/phase-8/resend-smtp-rollout.md:generic-api-key:343
-docs/rose-city-remaining-pages-2027.md:generic-api-key:40
-lib/__tests__/stripe-config.test.ts:stripe-access-token:37
-lib/__tests__/stripe-config.test.ts:stripe-access-token:38
-scripts/provision-diverse-city-production.ts:generic-api-key:12
