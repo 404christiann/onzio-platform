@@ -6,7 +6,7 @@ import { EditorGroup, kit } from "@/components/admin/cinematic-editor/CinematicE
 import { StringListField, TableEditor } from "@/components/admin/ui/editor-kit";
 import { MAX_SEASON_BENEFITS, MAX_SEASON_HIGHLIGHTS, MAX_SEASON_INCLUDES, MAX_SEASON_PRICE_ROWS, type SeasonMembershipContent } from "@/lib/cinematic-ticket-pages-content";
 import { addListItem, moveListItem, removeListItem } from "@/lib/cinematic-ticket-pages-editor";
-import { AddButton, IMAGE_NOTE, ImageSlot, ReorderTools, ShowRow, TextField } from "./editor-parts";
+import { AddButton, ICON_HINT, IMAGE_NOTE, IMAGE_TYPES, ImageSlot, ReorderTools, ShowRow, TextField } from "./editor-parts";
 import TicketPageEditor, { type TicketPageFieldsApi } from "./TicketPageEditor";
 import { SEASON_SPEC, ticketPageSectionShown, type SeasonSectionId } from "./ticket-page-sections";
 import {
@@ -15,7 +15,6 @@ import {
 } from "./ticket-page-edit-targets";
 import styles from "./ticket-editors.module.css";
 
-const ICON_HINT = "Leave the description empty: the label says what it is. Upload icons on the 752 × 350 canvas (PNG or WebP) so every icon keeps its size and lines up.";
 const LINK_HINT = "Starts with https://, mailto: or / for a page on this site. Leave empty until the link is ready: the button then shows but does nothing.";
 const SWITCH_COPY: Partial<Record<SeasonSectionId, string>> = {
   button: "Hides both Buy buttons on the page: the one under the price table and the one in the closing call to action.",
@@ -76,7 +75,7 @@ function PriceTable({ api }: { api: Api }) {
 function badge(api: Api, slot: string, name: string): ReactNode {
   const { draft, view, locked, uploading, change, upload, removeImage } = api;
   if (!draft.images[slot]) return null;
-  return <ImageSlot key={slot} bare label={`Badge for ${name}`} description="PNG or WebP. Sam's round “G” badge for General Seating." size={64} previewUrl={view.images[slot]?.url ?? null} alt={draft.images[slot].alt}
+  return <ImageSlot key={slot} bare label={`Badge for ${name}`} description={`${IMAGE_TYPES}. Sam's round “G” badge for General Seating.`} size={64} previewUrl={view.images[slot]?.url ?? null} alt={draft.images[slot].alt}
     hasImage={!!draft.images[slot].assetId} disabled={locked} uploading={uploading === slot} hint="Leave the description empty." altTarget={seasonBadgeAltTarget(slot)}
     onUpload={file => upload(slot, file)} onRemove={() => removeImage(slot)}
     onAlt={alt => change(content => ({ ...content, images: { ...content.images, [slot]: { ...content.images[slot], alt } } }))} />;
@@ -115,7 +114,7 @@ export function fields(api: Api, id: string): ReactNode {
       <div className={styles.grid}>{benefits.items.map((item, index) => <fieldset key={item.id} className={styles.tile}>
         <legend>Benefit {index + 1}</legend>
         <TextField label="Label" value={item.label} max={120} disabled={locked} target={seasonBenefitLabelTarget(item.id)} onChange={label => set("benefits", { items: benefits.items.map((current, position) => position === index ? { ...current, label } : current) })} />
-        {draft.images[item.id] && <ImageSlot bare label={`Icon for benefit ${index + 1}`} description="PNG or WebP." size={64} hint={ICON_HINT} previewUrl={view.images[item.id]?.url ?? null} alt={draft.images[item.id].alt}
+        {draft.images[item.id] && <ImageSlot bare label={`Icon for benefit ${index + 1}`} description={`${IMAGE_TYPES}.`} size={64} hint={ICON_HINT} previewUrl={view.images[item.id]?.url ?? null} alt={draft.images[item.id].alt}
           hasImage={!!draft.images[item.id].assetId} disabled={locked} uploading={uploading === item.id} altTarget={seasonBenefitIconAltTarget(item.id)} onUpload={file => upload(item.id, file)} onRemove={() => removeImage(item.id)}
           onAlt={alt => change(content => ({ ...content, images: { ...content.images, [item.id]: { ...content.images[item.id], alt } } }))} />}
         <ReorderTools index={index} length={benefits.items.length} disabled={locked} noun="benefit" onMove={delta => change(content => moveListItem("season-membership", content, "benefits", index, delta))}
@@ -127,7 +126,7 @@ export function fields(api: Api, id: string): ReactNode {
     case "closing": body = <>
       <TextField label="Heading" value={closing.heading} max={120} disabled={locked} target={SEASON_TARGETS.closingHeading} onChange={value => set("closing", { heading: value })} />
       <p className={styles.note}>The Buy button under the heading is the one from the Buy button card.</p>
-      {draft.images.ticket && <ImageSlot label="Ticket graphic" description="PNG or WebP. Shown under the button." previewUrl={view.images.ticket?.url ?? null} alt={draft.images.ticket.alt} hasImage={!!draft.images.ticket.assetId}
+      {draft.images.ticket && <ImageSlot label="Ticket graphic" description={`${IMAGE_TYPES}. Shown under the button.`} previewUrl={view.images.ticket?.url ?? null} alt={draft.images.ticket.alt} hasImage={!!draft.images.ticket.assetId}
         disabled={locked} uploading={uploading === "ticket"} altTarget={SEASON_TARGETS.closingTicketImageAlt} hint="Describe what the ticket shows, for people using screen readers." onUpload={file => upload("ticket", file)} onRemove={() => removeImage("ticket")}
         onAlt={alt => change(content => ({ ...content, images: { ...content.images, ticket: { ...content.images.ticket, alt } } }))} />}
     </>; break;

@@ -2,7 +2,10 @@
 
 import { useRef, useState } from "react";
 import Image from "@/components/ResilientImage";
+import { adminImageRules, imageFileIssue } from "@/components/admin/ui/adminImageFiles";
 import { createClient } from "@/lib/admin-client";
+import { mediaHint } from "@/lib/media-rules";
+import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_TYPES_LABEL, isGraphicUploadType } from "@/lib/media-upload-types";
 
 export default function LeagueLogoUpload({ inputId, logoUrl, leagueName, onUploaded, onRemove }: {
   inputId: string;
@@ -16,8 +19,17 @@ export default function LeagueLogoUpload({ inputId, logoUrl, leagueName, onUploa
   const [error, setError] = useState<string | null>(null);
   async function upload(file?: File) {
     if (!file) return;
-    if (!["image/png", "image/webp"].includes(file.type)) {
-      setError("Choose a PNG or WebP logo."); return;
+    if (!isGraphicUploadType(file.type)) {
+      setError(`Choose a ${GRAPHIC_UPLOAD_TYPES_LABEL} logo.`);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    // League logos upload to a graphic bucket: refuse an oversize or unreadable file here, with the reason.
+    const issue = await imageFileIssue(file, adminImageRules("graphic"));
+    if (issue) {
+      setError(issue);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
     }
     setUploading(true); setError(null);
     try {
@@ -42,8 +54,8 @@ export default function LeagueLogoUpload({ inputId, logoUrl, leagueName, onUploa
     </button>
     {logoUrl && !uploading && <button type="button" onClick={() => { void Promise.resolve().then(onRemove).catch(() => setError("The logo could not be removed. Try again.")); }}
       aria-label="Remove league logo" className="min-h-11 rounded-lg px-3 py-2.5 font-body text-sm font-semibold text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Remove</button>}
-    <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP. Clear the logo to show the competition name instead.</p>
-    <input id={inputId} ref={fileRef} type="file" accept="image/png,image/webp" aria-describedby={`${inputId}-format-hint`} className="hidden" onChange={event => { void upload(event.target.files?.[0]); }} />
+    <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">{mediaHint("graphic")}. Clear the logo to show the competition name instead.</p>
+    <input id={inputId} ref={fileRef} type="file" accept={GRAPHIC_UPLOAD_ACCEPT} aria-describedby={`${inputId}-format-hint`} className="hidden" onChange={event => { void upload(event.target.files?.[0]); }} />
     {error && <p role="alert" className="w-full font-body text-xs text-destructive">{error}</p>}
   </div>;
 }

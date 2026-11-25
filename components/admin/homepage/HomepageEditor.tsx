@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "@/components/admin/icons";
+import { mediaAccept } from "@/lib/media-rules";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { EditBar } from "@/components/admin/reimagined/EditBar";
@@ -302,7 +303,7 @@ function ExistingHomepageEditor() {
       </dialog>}
     </div>
     {mobile && !navigationOpen && !disclosure && !destination && <div className="hp-mobile-notification-slot"><HomepageNotifications {...notificationProps} /></div>}
-    <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
+    <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept={mediaAccept("photo")} multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
     <div ref={thumbBar} className="hp-thumb-bar" hidden={navigationOpen}><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div>{!reimagined && <div className="hp-thumb-save">{thumbSaveButton}</div>}{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
     <dialog ref={dialog} className="hp-leave-dialog" aria-labelledby="hp-leave-title" onCancel={event => { if (editor.isDiscardingUnsaved()) event.preventDefault(); else setDestination(null); }}><h2 id="hp-leave-title">{reimagined ? "Save your changes first?" : "Save your homepage changes?"}</h2><p>Your changes have not been saved yet.</p>{(state.submitted || editor.recoveryConflict) && <p>Your browser draft and any unconfirmed save will be kept when you leave.</p>}{destination && <HomepageNotifications {...notificationProps} inModal />}<div><button className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict || editor.discardingUnsaved} onClick={async () => { if (await editor.save()) { setDestination(null); if (destination) router.push(destination); } }}>Save and continue</button><button className="hp-button" disabled={editor.discardingUnsaved} onClick={() => { if (!editor.isDiscardingUnsaved()) setDestination(null); }}>Keep editing</button><button className="hp-button" disabled={state.save === "saving" || editor.discardingUnsaved} onClick={async () => { if (!await editor.discardUnsavedUploads()) return; setDestination(null); if (destination) router.push(destination); }}>Leave without saving</button></div></dialog>
   </div>;

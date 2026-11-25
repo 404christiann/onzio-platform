@@ -1,31 +1,33 @@
-export type AdminImageMime = "image/jpeg" | "image/png" | "image/webp";
+import { MEDIA_RULES, mediaAccept, mediaHint, mediaTypesLabel, megabytesLabel, type MediaKind, type MediaMimeType } from "@/lib/media-rules";
+
+export type AdminImageMime = MediaMimeType;
 
 export type AdminImageRules = {
   allowedTypes: readonly AdminImageMime[];
   maxBytes: number;
 };
 
-const labels: Record<AdminImageMime, string> = {
-  "image/jpeg": "JPG",
-  "image/png": "PNG",
-  "image/webp": "WebP",
-};
+/** The picker rules for a media kind, straight from lib/media-rules.ts. */
+export function adminImageRules(kind: MediaKind): AdminImageRules {
+  return { allowedTypes: MEDIA_RULES[kind].mimeTypes, maxBytes: MEDIA_RULES[kind].maxBytes };
+}
+
+/**
+ * `accept`, `maxBytes` and `hint` for a `FileUpload` that uploads to a media bucket of this kind, straight
+ * from lib/media-rules.ts: `<FileUpload {...fileUploadRules("photo")} />`.
+ */
+export function fileUploadRules(kind: MediaKind, options: { pixels?: boolean } = {}) {
+  return { accept: mediaAccept(kind), maxBytes: MEDIA_RULES[kind].maxBytes, hint: mediaHint(kind, options) };
+}
+
+const SUPPORTED: readonly string[] = MEDIA_RULES.photo.mimeTypes;
 
 export function imageAccept(rules: AdminImageRules) {
   return rules.allowedTypes.join(",");
 }
 
-function typeList(rules: AdminImageRules) {
-  const names = rules.allowedTypes.map((type) => labels[type]);
-  return names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names.join("");
-}
-
 export function imageHint(rules: AdminImageRules) {
-  const types = typeList(rules);
-  const limit = Number.isInteger(rules.maxBytes / 1048576)
-    ? String(rules.maxBytes / 1048576)
-    : (rules.maxBytes / 1048576).toFixed(1);
-  return `${types} up to ${limit} MB`;
+  return `${mediaTypesLabel(rules.allowedTypes)} up to ${megabytesLabel(rules.maxBytes)}`;
 }
 
 function readableImage(file: File) {
@@ -51,11 +53,11 @@ function readableImage(file: File) {
 }
 
 export async function imageFileIssue(file: File, rules: AdminImageRules): Promise<string | null> {
-  if (!(file.type in labels) || !rules.allowedTypes.includes(file.type as AdminImageMime)) {
-    return `“${file.name}” is not a supported image. Use ${typeList(rules)}.`;
+  if (!SUPPORTED.includes(file.type) || !rules.allowedTypes.includes(file.type as AdminImageMime)) {
+    return `“${file.name}” is not a supported image. Use ${mediaTypesLabel(rules.allowedTypes)}.`;
   }
   if (file.size > rules.maxBytes) {
-    return `“${file.name}” is too large. The limit is ${imageHint(rules).split(" up to ")[1]}.`;
+    return `“${file.name}” is too large. The limit is ${megabytesLabel(rules.maxBytes)}.`;
   }
   if (file.size === 0 || !(await readableImage(file))) {
     return `“${file.name}” is not a readable image.`;
@@ -63,3 +65,14 @@ export async function imageFileIssue(file: File, rules: AdminImageRules): Promis
   return null;
 }
 
+
+/**
+ * The text to show for a refused upload: the server's reason when it is written for people, otherwise the
+ * caller's friendly line. Some refusals carry only their code as the message (an expired session at authorize
+ * says `AUTHENTICATION_REQUIRED`), and a code is not something to show an admin.
+ */
+export function readableUploadError(error: { code?: string; message?: string } | null | undefined, fallback: string): string {
+  const message = error?.message?.trim();
+  if (!message || /^[A-Z][A-Z0-9_]*$/.test(message)) return fallback;
+  return message;
+}

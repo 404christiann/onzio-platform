@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useId, type ReactNode } from "react";
 import { kit, EditorGroup } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ValidationMessage, useStableKeys } from "@/components/admin/ui/editor-kit";
-import { AddButton, IMAGE_NOTE, ImageSlot, ReorderTools, ShowRow, TextField } from "@/components/admin/ticket-pages/editor-parts";
+import { AddButton, IMAGE_NOTE, IMAGE_TYPES, ImageSlot, ReorderTools, ShowRow, TextField } from "@/components/admin/ticket-pages/editor-parts";
 import styles from "@/components/admin/ticket-pages/ticket-editors.module.css";
 import { isTicketPurchaseUrl, type TicketArtworkSlot, type TicketVisibilityKey, type TicketsContent, type TicketsPageContent } from "@/lib/tickets-content";
 import { moveItem } from "@/lib/cinematic-robinson-editor";
@@ -84,16 +84,16 @@ export function TicketsSectionFields({ api, id }: { api: TicketsFieldsApi; id: T
         </div>
         {text("Message until a purchase link is available", "missingPurchaseLabel", TICKETS_TARGETS.pageMissingPurchaseLabel)}
       </div>
-      {picture("banner", "Banner", "PNG or WebP. Shown across the top of the page, with the title.", { altTarget: TICKETS_TARGETS.pageBannerImageAlt })}
+      {picture("banner", "Banner", `${IMAGE_TYPES}. Shown across the top of the page, with the title.`, { altTarget: TICKETS_TARGETS.pageBannerImageAlt })}
       <BannerHeight value={draft.bannerHeightFraction} disabled={locked} onChange={fraction => update(v => { v.bannerHeightFraction = fraction; })} />
-      {picture("partner", "Partner logo", "PNG or WebP. Shown under the next home match, beside the Buy button.", { altTarget: TICKETS_TARGETS.pagePartnerImageAlt })}
+      {picture("partner", "Partner logo", `${IMAGE_TYPES}. Shown under the next home match, beside the Buy button.`, { altTarget: TICKETS_TARGETS.pagePartnerImageAlt })}
     </>; break;
     case "perks": body = <>
       {text("Perks heading", "perksHeading", TICKETS_TARGETS.perksHeading)}
       <div className={styles.perk}>
         {(["seat", "card", "raffle"] as const).map((slot, index) => <EditorGroup key={slot} legend={`Perk ${index + 1}`}>
           <TextField label="Label" value={draft.perkLabels[index]} max={120} disabled={locked} target={perkLabelTarget(index)} onChange={value => update(v => { v.perkLabels[index] = value; })} />
-          {picture(slot, `Perk ${index + 1} image`, slot === "seat" ? "PNG or WebP. White artwork: it sits on a dark tile on the page." : "PNG or WebP. A small icon above the label.", { dark: slot === "seat", size: 64 })}
+          {picture(slot, `Perk ${index + 1} image`, slot === "seat" ? `${IMAGE_TYPES}. White artwork: it sits on a dark tile on the page.` : `${IMAGE_TYPES}. A small icon above the label.`, { dark: slot === "seat", size: 64 })}
         </EditorGroup>)}
       </div></>; break;
     case "includes": body = <>
@@ -104,8 +104,8 @@ export function TicketsSectionFields({ api, id }: { api: TicketsFieldsApi; id: T
     case "transit": body = <>
       <div className={styles.two}>{text("Bus section heading", "transitHeading", TICKETS_TARGETS.transitHeading)}{text("Bus section subtitle", "transitSubtitle", TICKETS_TARGETS.transitSubtitle)}</div>
       <div className={styles.two}>
-        {picture("bus", "Bus", "PNG or WebP. The bus illustration.", { altTarget: TICKETS_TARGETS.transitBusImageAlt })}
-        {picture("map", "Bus and parking map", "PNG or WebP. Shown full width under the bus.", { altTarget: TICKETS_TARGETS.transitMapImageAlt })}
+        {picture("bus", "Bus", `${IMAGE_TYPES}. The bus illustration.`, { altTarget: TICKETS_TARGETS.transitBusImageAlt })}
+        {picture("map", "Bus and parking map", `${IMAGE_TYPES}. Shown full width under the bus.`, { altTarget: TICKETS_TARGETS.transitMapImageAlt })}
       </div></>; break;
     case "directions": body = <>
       <div className={styles.two}>{text("Directions heading", "directionsHeading", TICKETS_TARGETS.directionsHeading)}{text("Parking heading", "parkingHeading", TICKETS_TARGETS.directionsParkingHeading)}</div>

@@ -30,6 +30,8 @@ import ClassicRosterPage from "@/components/admin/roster/ClassicRosterPage";
 import RoseCityRosterPage from "@/components/admin/roster/rose-city/RoseCityRosterPage";
 import { usesKitRoster } from "@/lib/admin-roster-variant";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules, fileUploadRules } from "@/components/admin/ui/adminImageFiles";
+import { mediaAccept } from "@/lib/media-rules";
 import guided from "@/components/admin/AdminGuided.module.css";
 import {
   AdminPage,
@@ -1591,7 +1593,7 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
 
       <FileUpload
         label="Add action photos"
-        accept="image/*"
+        {...fileUploadRules("photo")}
         multiple
         onUpload={(files) => void handleUpload(files)}
         uploading={uploading}
@@ -1662,8 +1664,7 @@ function PlayerFormFields({
             initials={form.name.trim().split(/\s+/).map(part => part[0]).slice(0, 2).join("").toUpperCase() || "?"}
             size={72}
             shape="circle"
-            allowedTypes={["image/png", "image/jpeg", "image/webp"]}
-            maxBytes={15 * 1024 * 1024}
+            {...adminImageRules("photo")}
             uploading={uploading}
             onPendingChange={onPhotoPendingChange}
             onUpload={async files => { onPhotoChange(files[0]); return true; }}
@@ -1674,7 +1675,7 @@ function PlayerFormFields({
           label="Upload player photo"
           previewLabel="Player photo"
           density="compact"
-          accept="image/*"
+          accept={mediaAccept("photo")}
           onUpload={(files) => onPhotoChange(files?.[0] ?? null)}
           previewUrl={previewIsClubLogo ? null : preview}
           onRemove={previewIsClubLogo ? undefined : () => {
@@ -1866,7 +1867,7 @@ function StaffFormFields({
       {/* Photo picker — deferred: the File is stored locally and uploaded at save time. */}
       <FileUpload
         label="Upload staff photo"
-        accept="image/*"
+        {...fileUploadRules("photo")}
         onUpload={(files) => onPhotoChange(files?.[0] ?? null)}
         previewUrl={previewIsClubLogo ? null : preview}
         onRemove={previewIsClubLogo ? undefined : () => {

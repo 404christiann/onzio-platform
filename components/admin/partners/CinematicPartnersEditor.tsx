@@ -5,6 +5,7 @@ import { memo, useDeferredValue, useEffect, useMemo, useRef, useState, type Mous
 import { z } from "zod";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { adminImageRules, imageFileIssue } from "@/components/admin/ui/adminImageFiles";
 import { ShimmerRegion, Shimmer } from "@/components/admin/ui/Shimmer";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
@@ -21,6 +22,7 @@ import { partnerPageState } from "@/components/admin/stadium/partner-page-state"
 import CinematicPartners from "@/components/cinematic/CinematicPartners";
 import CinematicShell from "@/components/cinematic/CinematicShell";
 import { createClient } from "@/lib/admin-client";
+import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { fetchCinematicHomepageContent, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import {
   MAX_PARTNERS, cinematicPartnersContentSchema, cinematicPartnersDraftSchema, cinematicPartnersSaveSchema, starterCinematicPartnersContent,
@@ -218,6 +220,9 @@ export default function CinematicPartnersEditor() {
     const generation = epoch.current;
     setUploading(partnerId); setFailed(false); setStatus("Adding the logo…");
     try {
+      // Partner logos upload to the sponsors bucket, so they are graphics: the graphic types from the rules, never JPEG.
+      const issue = await imageFileIssue(file, adminImageRules("graphic"));
+      if (issue) throw new Error(issue);
       const result = await createClient().storage.from("sponsors").upload(`partners/${crypto.randomUUID()}`, file);
       if (result.error || !result.data?.assetId) throw new Error(result.error?.message ?? "Logo upload failed.");
       const bitmap = await createImageBitmap(file), dimensions = { width: bitmap.width, height: bitmap.height };
@@ -345,7 +350,7 @@ export default function CinematicPartnersEditor() {
             <h2 id="partners-list-heading">Partners</h2>
             <span className={styles.count}>{draft.partners.length} of {MAX_PARTNERS}</span>
           </div>
-          <p className={styles.note}>Each card is a partner as it appears on both pages, in this order. Open one to edit it beside a live preview. Choose a logo already used in <Link href="/admin/sponsors">Sponsors</Link>, or upload a new one (PNG, JPEG or WebP).</p>
+          <p className={styles.note}>Each card is a partner as it appears on both pages, in this order. Open one to edit it beside a live preview. Choose a logo already used in <Link href="/admin/sponsors">Sponsors</Link>, or upload a new one ({GRAPHIC_UPLOAD_TYPES_LABEL}).</p>
           {draft.partners.length === 0 && <p className={styles.empty}>No partners yet. The pages hide the partner grid until one is added.</p>}
           <ItemPreviewCards items={partnerItems} noun="partner" label="Partners" disabled={locked} previewClassName={card.single}
             renderPreview={id => partnerPreviewOf(id)}

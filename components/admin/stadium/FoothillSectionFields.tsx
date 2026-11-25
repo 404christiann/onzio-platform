@@ -5,20 +5,25 @@ import { useId, useState, type ReactNode } from "react";
 import { IconDelete } from "@/components/admin/icons";
 import NativeImage from "@/components/ResilientNativeImage";
 import { EditorGroup, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import type { StadiumArtworkSlot, StadiumContent, StadiumCrop, StadiumPageContent } from "@/lib/stadium-content";
 import type { EditTargetId } from "@/lib/admin-edit-targets";
+import { mediaHint } from "@/lib/media-rules";
+import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { FOOTHILL_TARGETS, benefitDetailTarget, benefitTitleTarget, sectionBodyTarget, sectionBulletTarget, sectionHeadingTarget, sectionNoteTarget } from "./foothill-edit-targets";
 import { applyFoothillCrop, cropPercentLabel, foothillSectionTitle, FOOTHILL_FLAGS, type FoothillSectionId } from "./foothill-sections";
 import { ActionButton, AlwaysShownRow, ReorderButtons, ShowRow, TextField } from "./PartnerPageParts";
 import styles from "./PartnerPageParts.module.css";
 
-const IMAGE_RULES = { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 } as const;
+// Stadium artwork uploads to the homepage-artwork bucket, so every slot takes a graphic.
+const IMAGE_RULES = adminImageRules("graphic");
+const TYPES = GRAPHIC_UPLOAD_TYPES_LABEL;
 const ART_LABELS: Record<StadiumArtworkSlot, string> = { bus: "Bus", map: "Route card and walking map", partner: "Ticket partner" };
 const ART_DESCRIPTIONS: Record<StadiumArtworkSlot, string> = {
-  bus: "PNG or WebP. Shown beside the page heading.",
-  map: "PNG or WebP. Shown full width. Replacing it resets the phone layout to a full image.",
-  partner: "PNG or WebP. Shown under the match card.",
+  bus: `${TYPES}. Shown beside the page heading.`,
+  map: `${TYPES}. Shown full width. Replacing it resets the phone layout to a full image.`,
+  partner: `${TYPES}. Shown under the match card.`,
 };
 const CROP_FIELDS = [["x", "Left"], ["y", "Top"], ["width", "Width"], ["height", "Height"]] as const;
 const CROP_CARDS = [["phoneCardCrop", "Route card"], ["phoneMapCrop", "Walking map"]] as const;
@@ -115,7 +120,7 @@ export function FoothillSectionFields({ api, id }: { api: FoothillFieldsApi; id:
       <TextField label="Subtitle" value={draft.subtitle} max={120} disabled={locked} target={FOOTHILL_TARGETS.headingSubtitle} onChange={value => update(content => { content.subtitle = value; })} />
     </div>; break;
     case "images": body = <>
-      <p className={styles.note}>PNG or WebP, up to 5 MB and 6000 pixels per side. Words inside artwork change when you replace its image.</p>
+      <p className={styles.note}>{mediaHint("graphic", { pixels: true })}. Words inside artwork change when you replace its image.</p>
       <ImageSlot api={api} slot="bus" /><ImageSlot api={api} slot="map" />
     </>; break;
     case "map": body = <PhoneMapControl api={api} />; break;

@@ -5,15 +5,18 @@ import { useId } from "react";
 import { kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ListField, PositionTools } from "@/components/admin/list-cards/ListField";
 import styles from "@/components/admin/list-cards/ListEditor.module.css";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import type { CinematicInjuryReportContent } from "@/lib/cinematic-injury-report-content";
 import { availablePlayers, type InjuryRosterPlayer } from "@/lib/cinematic-injury-report-editor";
+import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { INJURY_TARGETS, injuryEntryTarget } from "./injury-edit-targets";
 import { parseInjuryDialogId, playerLabel, type InjuryDialogId } from "./injury-sections";
 
 export type InjurySlot = "logo" | "band";
-const LOGO_RULES = { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 } as const;
-const BAND_RULES = { allowedTypes: ["image/png", "image/jpeg", "image/webp"], maxBytes: 5 * 1024 * 1024 } as const;
+// The partner logo uploads to the sponsors bucket (a graphic); the photo band uploads to news (a photo).
+const LOGO_RULES = adminImageRules("graphic");
+const BAND_RULES = adminImageRules("photo");
 
 export type InjuryFieldsApi = {
   draft: CinematicInjuryReportContent;
@@ -67,7 +70,7 @@ function PresenterFields({ api }: { api: InjuryFieldsApi }) {
   return <div className={styles.fields}>
     <ListField label="Partner name" value={draft.page.presenterName} max={60} disabled={locked} hint="Also the logo's description for screen readers." error={errors["page.presenterName"]} target={INJURY_TARGETS.presenterName}
       onChange={value => update(content => { content.page.presenterName = value; })} />
-    <ImageFieldWithDescription label="Partner logo" target={INJURY_TARGETS.presenterLogo} description="PNG or WebP, ideally with a transparent background. Until a logo is uploaded, the page shows the partner's name."
+    <ImageFieldWithDescription label="Partner logo" target={INJURY_TARGETS.presenterLogo} description={`${GRAPHIC_UPLOAD_TYPES_LABEL}, ideally with a transparent background. Until a logo is uploaded, the page shows the partner's name.`}
       previewUrl={mediaUrls.logo} initials="" disabled={locked} uploading={uploading === "logo"} {...LOGO_RULES}
       onUpload={async files => { const file = files[0]; return file ? upload("logo", file) : false; }}
       onRemove={draft.presenterLogoAssetId ? () => update(content => { content.presenterLogoAssetId = null; }) : undefined} />

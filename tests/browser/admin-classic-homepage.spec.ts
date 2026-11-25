@@ -229,7 +229,7 @@ for (const width of [320, 390, 1280])
                     await frame(page).locator('[data-homepage-piece="photos"]').click();
                     state.failUpload = true;
                     await dialog.locator('input[type="file"]').setInputFiles({ name: "retry.png", mimeType: "image/png", buffer: png });
-                    await expect(dialog.locator(".hc-photo-status").getByRole("alert")).toContainText("This photo could not be added");
+                    await expect(dialog.locator(".hc-photo-status").getByRole("alert")).toContainText("This file could not be added");
                     await dialog.getByRole("button", { name: "Try this photo again", exact: true }).click();
                     await expect(dialog.locator("[data-photo-id]")).toHaveCount(3);
                     await expect(dialog.locator(".hc-photo-status")).toHaveCount(0);

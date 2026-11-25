@@ -6,12 +6,19 @@ import NativeImage from "@/components/ResilientNativeImage";
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
 import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
 import { EditorField, EditorGroup } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
+import { mediaHint } from "@/lib/media-rules";
+import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import styles from "./ticket-editors.module.css";
 
-export const IMAGE_RULES = { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 } as const;
-export const IMAGE_NOTE = "Images: PNG or WebP, up to 5 MB and 6000 pixels per side.";
+/** The artwork on these pages uploads to the homepage-artwork bucket, so every slot takes a graphic. */
+export const IMAGE_RULES = adminImageRules("graphic");
+/** The graphic type list from the rules, for each slot's description. */
+export const IMAGE_TYPES = GRAPHIC_UPLOAD_TYPES_LABEL;
+export const IMAGE_NOTE = `Images: ${mediaHint("graphic", { pixels: true })}.`;
+export const ICON_HINT = `Leave the description empty: the label says what it is. Upload icons on the 752 × 350 canvas (${IMAGE_TYPES}) so every icon keeps its size and lines up.`;
 
 /** Move up, move down and remove for one list item, with the icons.download glyphs. */
 export function ReorderTools({ index, length, disabled, noun, onMove, onRemove }: { index: number; length: number; disabled: boolean; noun: string; onMove: (delta: -1 | 1) => void; onRemove: () => void }) {

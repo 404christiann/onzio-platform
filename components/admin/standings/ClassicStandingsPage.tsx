@@ -8,11 +8,11 @@ import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import { AdminDialog, AdminDialogFooter, AdminDialogSection } from "@/components/admin/ui/AdminDialog";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { AdminSaveButton } from "@/components/admin/ui/AdminSaveButton";
 import { Shimmer, ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { Button } from "@/components/ui/button";
-import { GRAPHIC_UPLOAD_MIME_TYPES } from "@/lib/media-upload-types";
 import { LEAGUE_TEAM_NAME_LIMIT } from "@/lib/admin-data-contract";
 import { newStandingRow, type StandingDraftRow } from "@/lib/admin-standings-draft";
 import { normalizeStandingsRows, sortStandingsRows, teamAbbreviation } from "@/lib/standings-content";
@@ -184,7 +184,7 @@ export default function ClassicStandingsPage() {
           <label className={styles.field}><span>Team name</span><input ref={teamName} required maxLength={LEAGUE_TEAM_NAME_LIMIT} value={edit.row.team_name} onChange={(event) => updateRow({ team_name: event.target.value })} /></label>
           <label className={styles.field}><span>Short name</span><input value={edit.row.team_abbreviation ?? ""} onChange={(event) => updateRow({ team_abbreviation: event.target.value })} /></label>
           <label className={styles.checkbox}><input type="checkbox" checked={edit.row.is_club} disabled={busy} onChange={(event) => { if (!latest.current.busy && !latest.current.model.isWorking()) updateRow({ is_club: event.target.checked }); }} />Our team’s row</label>
-          {edit.row.is_club ? <p className={styles.note}>Uses your club crest. Logo controls are locked.</p> : <AdminImageField label="Team logo" previewUrl={edit.row.logo_url} initials={edit.row.team_abbreviation || teamAbbreviation(edit.row.team_name)} size={64} allowedTypes={GRAPHIC_UPLOAD_MIME_TYPES} maxBytes={5 * 1024 * 1024}
+          {edit.row.is_club ? <p className={styles.note}>Uses your club crest. Logo controls are locked.</p> : <AdminImageField label="Team logo" previewUrl={edit.row.logo_url} initials={edit.row.team_abbreviation || teamAbbreviation(edit.row.team_name)} size={64} {...adminImageRules("graphic")}
             onPendingChange={model.pendingMedia}
             onUpload={async (files) => {
               const session = editor.current;

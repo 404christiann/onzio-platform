@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/admin-client";
+import { adminImageRules, imageFileIssue, readableUploadError } from "@/components/admin/ui/adminImageFiles";
 import { fetchHomepagePresentation, fetchHomepageRevision } from "./hero-video-client";
 import { applySwapRevision } from "./hero-video-upload";
 import { buildHomepageSaveRequest, type HomepageEditorSnapshot } from "./adapter";
@@ -400,10 +401,14 @@ export function useHomepageEditor(clubId: string) {
     const run = generation.current;
     uploading.current.add(id); updatePhoto(id, { upload: "uploading", error: undefined });
     try {
+      // The same type, size and readability check the picker runs, so a file the server would refuse never leaves the browser.
+      const issue = await imageFileIssue(file, adminImageRules("photo"));
+      if (issue) throw new Error(issue);
       const storage = createClient().storage.from("homepage");
       const path = `${id}-${file.name}`;
       const result = await storage.upload(path, file);
-      if (result.error || !result.data) throw new Error("This photo could not be added. Your other changes are still here.");
+      // The server says why it refused ("too large", "not readable"); a bare code or silence gets the friendly line.
+      if (result.error || !result.data) throw new Error(readableUploadError(result.error, "This photo could not be added. Your other changes are still here."));
       const url = storage.getPublicUrl(path).data.publicUrl;
       const stillInDraft = generation.current === run && current.current?.draft.photos.items.some(photo => photo.clientId === id);
       if (stillInDraft) updatePhoto(id, { assetId: result.data.assetId, url, upload: "ready", error: undefined });
@@ -452,9 +457,11 @@ export function useHomepageEditor(clubId: string) {
     const run = generation.current;
     uploading.current.add(id); setArtwork(slot, { upload: "uploading", error: undefined });
     try {
+      const issue = await imageFileIssue(file, adminImageRules("graphic"));
+      if (issue) throw new Error(issue);
       const storage = createClient().storage.from("homepage-artwork");
       const result = await storage.upload(`${id}-${file.name}`, file);
-      if (result.error || !result.data) throw new Error("This artwork could not be added. Try again.");
+      if (result.error || !result.data) throw new Error(readableUploadError(result.error, "This artwork could not be added. Try again."));
       const currentArt = current.current?.draft.revamp ? cinematicArtwork(current.current.draft.revamp, slot) : null;
       if (generation.current === run && currentArt?.localFileKey === id) {
         const previous = currentArt.assetId;

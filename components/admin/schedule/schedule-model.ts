@@ -3,6 +3,7 @@ import { createClient } from "@/lib/admin-client";
 import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { EMPTY_MATCH_SUMMARY, type MatchSummary } from "@/lib/match-summary";
+import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 
 export type Match = {
   id: string;
@@ -120,7 +121,7 @@ export function formatTime12h(timeValue: string): string {
   return `${hours}:${String(minutes).padStart(2, "0")} ${ampm}`;
 }
 
-export const LOGO_FILE_GUIDANCE = "Choose a PNG or WebP logo.";
+export const LOGO_FILE_GUIDANCE = `Choose a ${GRAPHIC_UPLOAD_TYPES_LABEL} logo.`;
 
 export function logoUploadErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.includes("UNSUPPORTED_MEDIA_TYPE")) return LOGO_FILE_GUIDANCE;

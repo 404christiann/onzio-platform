@@ -4,7 +4,7 @@ import { useId, useRef } from "react";
 import { IconCaretDown, IconCaretUp, IconUpload, IconWarning } from "@/components/admin/icons";
 import FileUpload from "@/components/admin/FileUpload";
 import ResilientImage from "@/components/ResilientImage";
-import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
+import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_MAX_BYTES, GRAPHIC_UPLOAD_MAX_SIZE_LABEL, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { SPONSOR_NAME_LIMIT, SPONSOR_WEBSITE_LIMIT, type SponsorDraft } from "@/lib/sponsor-content";
 import { editTargetProps } from "@/lib/admin-edit-targets";
 import { sponsorTarget } from "./sponsors-edit-targets";
@@ -57,7 +57,8 @@ export function RoseCitySponsorFields({ api, place }: { api: SponsorFieldsApi; p
       <FileUpload
         label="Add sponsor logos"
         accept={GRAPHIC_UPLOAD_ACCEPT}
-        hint={`${GRAPHIC_UPLOAD_TYPES_LABEL}, up to 5 MB`}
+        maxBytes={GRAPHIC_UPLOAD_MAX_BYTES}
+        hint={`${GRAPHIC_UPLOAD_TYPES_LABEL}, up to ${GRAPHIC_UPLOAD_MAX_SIZE_LABEL}`}
         multiple
         onUpload={(files) => api.add(place, files)}
         uploading={api.uploading}

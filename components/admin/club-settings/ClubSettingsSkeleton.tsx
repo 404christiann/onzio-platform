@@ -1,12 +1,13 @@
 "use client";
 
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { Textarea } from "@/components/ui/textarea";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import Footer from "@/components/Footer";
 import ScaledPagePreview from "@/components/admin/ScaledPagePreview";
-import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
+import { GRAPHIC_UPLOAD_MAX_SIZE_LABEL, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { DEFAULT_SITE_SOCIAL_LINKS } from "@/lib/social-links";
 import styles from "./ClubSettings.module.css";
 
@@ -25,8 +26,8 @@ export function BrandingSkeleton({ tagline }: { tagline: boolean }) {
           <ul className={styles.where}>{["Website navigation", "Website footer", "Next match card", "Admin login and menu", "Players without a photo", "Browser tab icon"].map((place) => <li key={place}><Shimmer>{place}</Shimmer></li>)}</ul>
         </div>
         <div className={styles.upload}>
-          <Shimmer><div style={{ visibility: "hidden" }}><AdminImageField label="Club logo" initials="?" shape="square" size={64} allowedTypes={["image/png", "image/webp"]} maxBytes={5 * 1024 * 1024} disabled onUpload={async () => false} /></div></Shimmer>
-          <p className={styles.hint}><Shimmer>{GRAPHIC_UPLOAD_TYPES_LABEL}, up to 5 MB. Use a transparent background. Drop an image on the preview or choose a file.</Shimmer></p>
+          <Shimmer><div style={{ visibility: "hidden" }}><AdminImageField label="Club logo" initials="?" shape="square" size={64} {...adminImageRules("graphic")} disabled onUpload={async () => false} /></div></Shimmer>
+          <p className={styles.hint}><Shimmer>{GRAPHIC_UPLOAD_TYPES_LABEL}, up to {GRAPHIC_UPLOAD_MAX_SIZE_LABEL}. Use a transparent background. Drop an image on the preview or choose a file.</Shimmer></p>
         </div>
       </div>
     </section>

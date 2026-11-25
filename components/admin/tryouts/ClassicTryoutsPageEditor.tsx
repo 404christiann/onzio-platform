@@ -11,6 +11,7 @@ import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminSaveButton } from "@/components/admin/ui/AdminSaveButton";
 import { AdminPendingButton } from "@/components/admin/ui/AdminPendingButton";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { PreviewToggle } from "@/components/admin/ui/PreviewToggle";
 import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { useDelayedLoading } from "@/components/admin/ui/useDelayedLoading";
@@ -457,7 +458,7 @@ export default function ClassicTryoutsPageEditor({ policy }: { policy: { showPro
             {group === "photo" && policy?.showHeroImageField && <>
               <AdminImageField label="Event photo" shape="square" size={96}
                 previewUrl={selectedEvent.heroMediaPreviewUrl || null} disabled={busy || Boolean(unconfirmed)}
-                allowedTypes={["image/jpeg", "image/png", "image/webp"]} maxBytes={15 * 1024 * 1024}
+                {...adminImageRules("photo")}
                 onPendingChange={(pending) => { imagePending.current = pending; setUploadPending(pending); }}
                 onUpload={uploadHero}
                 onRemove={selectedEvent.heroMediaAssetId ? () => {

@@ -31,8 +31,9 @@ import {
   GRAPHIC_UPLOAD_TYPES_LABEL,
   isGraphicUploadType,
 } from "@/lib/media-upload-types";
+import { MEDIA_RULES, megabytesLabel } from "@/lib/media-rules";
 
-const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+const MAX_LOGO_BYTES = MEDIA_RULES.graphic.maxBytes;
 
 function fileExtension(file: File): string {
   return file.type === "image/webp" ? "webp" : "png";
@@ -136,7 +137,7 @@ export default function BrandingPage() {
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
-      setError("The logo must be 5 MB or smaller.");
+      setError(`The logo must be ${megabytesLabel(MAX_LOGO_BYTES)} or smaller.`);
       return;
     }
 
@@ -322,7 +323,7 @@ export default function BrandingPage() {
               Main club logo
             </h2>
             <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
-              For the cleanest result, use a square PNG with a transparent background. {GRAPHIC_UPLOAD_TYPES_LABEL} files up to 5 MB are accepted.
+              For the cleanest result, use a square PNG with a transparent background. {GRAPHIC_UPLOAD_TYPES_LABEL} files up to {megabytesLabel(MAX_LOGO_BYTES)} are accepted.
             </p>
           </div>
 

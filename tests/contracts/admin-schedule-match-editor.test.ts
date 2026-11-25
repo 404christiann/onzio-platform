@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 
 const read = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
@@ -147,8 +148,9 @@ describe("admin schedule match editor UX", () => {
     );
     expect(schedule).toContain('<AdminImageField');
     expect(schedule).toContain('size={64}');
-    expect(schedule).toContain('allowedTypes={["image/png", "image/webp"]}');
-    expect(schedule).toContain('maxBytes={5 * 1024 * 1024}');
+    // The logo fields take the graphic rules from lib/media-rules.ts (PNG or WebP, 5 MB), not a copy of them.
+    expect(schedule).toContain('{...adminImageRules("graphic")}');
+    expect(adminImageRules("graphic")).toEqual({ allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 });
     expect(schedule).toContain('label="Opponent logo"');
     expect(schedule).toContain('label="Sponsor logo"');
     expect(schedule).toContain('uploadPhoto(files[0], bucket, folder)');

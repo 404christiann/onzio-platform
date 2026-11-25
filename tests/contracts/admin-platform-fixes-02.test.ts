@@ -6,6 +6,7 @@ import {
   type AdminRouteAccessContext,
 } from "@/lib/admin-route-manifest";
 import { clubLogoRedirectPath } from "@/lib/club-branding";
+import { authorizeMediaRequestSchema } from "@/lib/media-api-contract";
 import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_MIME_TYPES } from "@/lib/media-upload-types";
 import { validateClaimedMetadata } from "@/lib/media-validation";
 import { DEFAULT_PROGRAM_REGISTRATION_CONTENT } from "@/lib/program-content";
@@ -84,8 +85,10 @@ describe("3. Logo and sponsor uploads match what the server accepts", () => {
     expect(adminClient).toContain('sponsors: { surface: "branding", kind: "graphic" }');
     expect(adminClient).toContain('"/api/admin/media/authorize"');
     expect(adminClient).toContain("kind: configuration.kind");
-    const authorize = source("app/api/admin/media/authorize/route.ts");
-    expect(authorize).toMatch(/kind === "graphic" &&\s*parsed\.data\.mimeType === "image\/jpeg"/);
+    expect(source("app/api/admin/media/authorize/route.ts")).toContain("authorizeMediaRequestSchema.safeParse");
+    const graphicJpeg = { surface: "branding", kind: "graphic", fileName: "logo.jpg", mimeType: "image/jpeg", size: 1000 };
+    expect(authorizeMediaRequestSchema.safeParse(graphicJpeg).success).toBe(false);
+    expect(authorizeMediaRequestSchema.safeParse({ ...graphicJpeg, fileName: "logo.png", mimeType: "image/png" }).success).toBe(true);
     for (const page of ["components/admin/club-settings/LegacyBranding.tsx", "components/admin/sponsors/ClassicSponsorsPage.tsx"]) {
       const text = source(page);
       expect(text).toContain('import { createClient } from "@/lib/admin-client";');

@@ -1,8 +1,8 @@
 import sharp from "sharp";
 import { failContract } from "@/lib/contract-error";
-import { GRAPHIC_UPLOAD_MIME_TYPES } from "@/lib/media-upload-types";
+import { MEDIA_MAX_DIMENSION, MEDIA_MAX_PIXELS, MEDIA_RULES, type MediaKind } from "@/lib/media-rules";
 
-export type MediaKind = "photo" | "graphic";
+export type { MediaKind } from "@/lib/media-rules";
 export type DetectedMediaFormat = "jpeg" | "png" | "webp";
 
 export type MediaUploadMetadata = {
@@ -26,9 +26,9 @@ export type ValidatedMedia = {
   kind: MediaKind;
 };
 
-/** Graphics and photos share the media_assets 6000px / 36 MP ceiling; graphics are downscaled after this check. */
-export const MAXIMUM_MEDIA_DIMENSION = 6000;
-export const MAXIMUM_MEDIA_PIXELS = 36_000_000;
+/** Kept for existing importers; the values live in lib/media-rules.ts. */
+export const MAXIMUM_MEDIA_DIMENSION = MEDIA_MAX_DIMENSION;
+export const MAXIMUM_MEDIA_PIXELS = MEDIA_MAX_PIXELS;
 
 const FORMAT_MIME = {
   jpeg: "image/jpeg",
@@ -126,33 +126,26 @@ export function validateClaimedMetadata(metadata: MediaUploadMetadata): void {
     failContract("INVALID_MEDIA_METADATA");
   }
 
+  const rules = MEDIA_RULES[metadata.kind];
   const extension = normalizedExtension(metadata.fileName);
-  const allowedExtensions =
-    metadata.kind === "graphic"
-      ? new Set(["png", "webp"])
-      : new Set(["jpg", "jpeg", "png", "webp"]);
-  const allowedMimes =
-    metadata.kind === "graphic"
-      ? new Set<string>(GRAPHIC_UPLOAD_MIME_TYPES)
-      : new Set(["image/jpeg", "image/png", "image/webp"]);
-
-  if (!allowedExtensions.has(extension) || !allowedMimes.has(metadata.mimeType)) {
+  if (
+    !(rules.extensions as readonly string[]).includes(extension) ||
+    !(rules.mimeTypes as readonly string[]).includes(metadata.mimeType)
+  ) {
     failContract("UNSUPPORTED_MEDIA_TYPE");
   }
 
-  const maximumBytes =
-    metadata.kind === "photo" ? 15 * 1024 * 1024 : 5 * 1024 * 1024;
-  if (metadata.size > maximumBytes) failContract("FILE_TOO_LARGE");
+  if (metadata.size > rules.maxBytes) failContract("FILE_TOO_LARGE");
 
   if (
     (metadata.width !== undefined &&
       (!Number.isSafeInteger(metadata.width) ||
         metadata.width <= 0 ||
-        metadata.width > MAXIMUM_MEDIA_DIMENSION)) ||
+        metadata.width > rules.maxDimension)) ||
     (metadata.height !== undefined &&
       (!Number.isSafeInteger(metadata.height) ||
         metadata.height <= 0 ||
-        metadata.height > MAXIMUM_MEDIA_DIMENSION))
+        metadata.height > rules.maxDimension))
   ) {
     failContract("DIMENSIONS_TOO_LARGE");
   }
@@ -174,9 +167,8 @@ export async function validateMediaUpload(input: {
   const metadata = input.metadata as MediaUploadMetadata;
   validateClaimedMetadata(metadata);
 
-  const maximumBytes =
-    metadata.kind === "photo" ? 15 * 1024 * 1024 : 5 * 1024 * 1024;
-  if (input.bytes.length > maximumBytes) failContract("FILE_TOO_LARGE");
+  const rules = MEDIA_RULES[metadata.kind];
+  if (input.bytes.length > rules.maxBytes) failContract("FILE_TOO_LARGE");
   const format = detectFormat(input.bytes);
   if (!format) {
     if (looksLikeCorruptClaimedImage(input.bytes, metadata.mimeType)) {
@@ -194,7 +186,7 @@ export async function validateMediaUpload(input: {
       ? extension === "jpg" || extension === "jpeg"
       : extension === format;
   if (!formatMatchesExtension) failContract("SIGNATURE_MISMATCH");
-  if (metadata.kind === "graphic" && format === "jpeg") {
+  if (!(rules.mimeTypes as readonly string[]).includes(FORMAT_MIME[format])) {
     failContract("UNSUPPORTED_MEDIA_TYPE");
   }
 
@@ -206,8 +198,8 @@ export async function validateMediaUpload(input: {
   };
   try {
     imageMetadata = await sharp(input.bytes, {
-      failOn: metadata.kind === "graphic" ? "error" : "warning",
-      limitInputPixels: MAXIMUM_MEDIA_PIXELS,
+      failOn: rules.failOn,
+      limitInputPixels: rules.maxPixels,
     }).metadata();
   } catch (error) {
     if (exceedsPixelLimit(error)) failContract("DIMENSIONS_TOO_LARGE");
@@ -227,9 +219,9 @@ export async function validateMediaUpload(input: {
   if (!width || !height) failContract("CORRUPT_IMAGE");
 
   if (
-    width > MAXIMUM_MEDIA_DIMENSION ||
-    height > MAXIMUM_MEDIA_DIMENSION ||
-    width * height > MAXIMUM_MEDIA_PIXELS
+    width > rules.maxDimension ||
+    height > rules.maxDimension ||
+    width * height > rules.maxPixels
   ) {
     failContract("DIMENSIONS_TOO_LARGE");
   }

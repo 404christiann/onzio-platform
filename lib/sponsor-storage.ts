@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/admin-client";
-import { GRAPHIC_UPLOAD_TYPES_LABEL, isGraphicUploadType } from "@/lib/media-upload-types";
+import { GRAPHIC_UPLOAD_MAX_BYTES, GRAPHIC_UPLOAD_MAX_SIZE_LABEL, GRAPHIC_UPLOAD_TYPES_LABEL, isGraphicUploadType } from "@/lib/media-upload-types";
 import { sponsorStoragePathFromPublicUrl } from "@/lib/sponsor-content";
 
 // Sponsor logo files, shared by the classic Sponsors page and the one-list page
@@ -9,13 +9,23 @@ import { sponsorStoragePathFromPublicUrl } from "@/lib/sponsor-content";
 // publishes a versioned file and remembers its asset id for the row's
 // media_asset_id.
 
+/** Why a sponsor logo cannot be uploaded (wrong type or over the graphic size limit), or null when it can. */
+export function sponsorLogoFileIssue(file: Pick<File, "name" | "type" | "size">): string | null {
+  if (!isGraphicUploadType(file.type)) {
+    return `${file.name} is not a ${GRAPHIC_UPLOAD_TYPES_LABEL} image. Sponsor logos must be ${GRAPHIC_UPLOAD_TYPES_LABEL}.`;
+  }
+  if (file.size > GRAPHIC_UPLOAD_MAX_BYTES) {
+    return `${file.name} is too large. Sponsor logos must be ${GRAPHIC_UPLOAD_MAX_SIZE_LABEL} or smaller.`;
+  }
+  return null;
+}
+
 /** Uploads one logo and returns its public address. `folder` only names the path. */
 export async function uploadSponsorLogo(file: File, folder: string): Promise<string> {
-  // The media server accepts only PNG or WebP for sponsor logos; say so here
-  // instead of letting a JPG fail after upload.
-  if (!isGraphicUploadType(file.type)) {
-    throw new Error(`${file.name} is not a ${GRAPHIC_UPLOAD_TYPES_LABEL} image. Sponsor logos must be ${GRAPHIC_UPLOAD_TYPES_LABEL}.`);
-  }
+  // The media server accepts only the graphic types and sizes in the rules for sponsor logos; say so here
+  // instead of letting a JPG or an oversize file fail after upload.
+  const issue = sponsorLogoFileIssue(file);
+  if (issue) throw new Error(issue);
   const supabase = createClient();
   const extension = file.name.split(".").pop() ?? "png";
   const path = `site-sponsors/${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;

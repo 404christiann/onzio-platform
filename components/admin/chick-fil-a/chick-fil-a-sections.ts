@@ -1,3 +1,5 @@
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
+import { mediaHint } from "@/lib/media-rules";
 import {
   CHICK_FIL_A_SECTIONS, chickFilAContentSchema, chickFilADraftFingerprint, emptyChickFilAContent,
   type ChickFilAArtworkSlot, type ChickFilAContent, type ChickFilASaveRequest, type ChickFilASection, type ChickFilASnapshot,
@@ -84,9 +86,9 @@ export function buildChickFilASaveInput(args: {
 
 export const chickFilADirty = (draft: ChickFilAContent, saved: ChickFilAContent | null) => chickFilADraftFingerprint(draft) !== chickFilADraftFingerprint(saved ?? emptyChickFilAContent());
 
-/** What each picture slot accepts. The restaurant photo also takes JPEG; everything else is PNG or WebP. */
+/** What each picture slot accepts, from lib/media-rules.ts. The restaurant photo is a photo (JPEG too); everything else is a graphic. */
 export const CHICK_FIL_A_IMAGE_RULES = {
-  restaurant: { allowedTypes: ["image/jpeg", "image/png", "image/webp"], maxBytes: 15 * 1024 * 1024, hint: "JPG, PNG or WebP, up to 15 MB and 6000 pixels per side.", bucket: "homepage" },
-  default: { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024, hint: "PNG or WebP, up to 5 MB and 6000 pixels per side.", bucket: "homepage-artwork" },
+  restaurant: { ...adminImageRules("photo"), hint: `${mediaHint("photo", { pixels: true })}.`, bucket: "homepage" },
+  default: { ...adminImageRules("graphic"), hint: `${mediaHint("graphic", { pixels: true })}.`, bucket: "homepage-artwork" },
 } as const;
 export const chickFilAImageRules = (slot: ChickFilAArtworkSlot) => slot === "restaurant" ? CHICK_FIL_A_IMAGE_RULES.restaurant : CHICK_FIL_A_IMAGE_RULES.default;

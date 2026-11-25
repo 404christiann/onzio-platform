@@ -2,6 +2,7 @@
 
 import { useId, type ReactNode } from "react";
 import { EditorImage } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import { mediaAccept, mediaHint } from "@/lib/media-rules";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { ValidationMessage } from "@/components/admin/ui/editor-kit";
 import { NEWS_CATEGORIES, NEWS_LIMITS, newsSlug } from "@/lib/cinematic-news";
@@ -83,7 +84,7 @@ export function NewsArticleFields({ api, id }: { api: NewsFieldsApi; id: NewsSec
     </div>;
   }
   if (id === "photo") return <div className={styles.fields}>
-    <div {...editTargetProps(at("cover"))}><EditorImage label="Cover photo" noun="photo" url={draft.coverUrl} alt={draft.coverAlt || "Cover photo"} accept="image/png,image/jpeg,image/webp" shape="wide"
+    <div {...editTargetProps(at("cover"))}><EditorImage label="Cover photo" noun="photo" url={draft.coverUrl} alt={draft.coverAlt || "Cover photo"} accept={mediaAccept("photo")} hint={mediaHint("photo")} shape="wide"
       empty="No photo yet. The website shows a dark box here." uploading={api.uploading} disabled={locked || api.uploading} hasImage={!!draft.coverAssetId}
       onFile={api.upload} onRemove={draft.coverAssetId ? api.removeCover : undefined} /></div>
     {text("coverAlt", "Photo description", NEWS_LIMITS.coverAlt, "Describe the photo for people using screen readers.")}

@@ -262,7 +262,7 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"] as const)
       expect(state.retired.flat().some((path) => path.startsWith("site-sponsors/carousel/"))).toBe(true);
       const before = state.uploads;
       await page.locator('[data-slot="file-upload-input"]').setInputFiles({ name: "bad.svg", mimeType: "image/svg+xml", buffer: Buffer.from("<svg/>") });
-      await expect(page.locator('[data-slot="file-upload-error"]')).toContainText("isn't supported");
+      await expect(page.locator('[data-slot="file-upload-error"]')).toContainText("“bad.svg” is not a supported file. Use PNG or WebP.");
       expect(state.uploads).toBe(before);
       expect(state.errors).toEqual([]);
     });

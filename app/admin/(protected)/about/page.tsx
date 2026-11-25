@@ -10,6 +10,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "re
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules, imageFileIssue } from "@/components/admin/ui/adminImageFiles";
+import { mediaAccept, type MediaKind } from "@/lib/media-rules";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { PreviewToggle } from "@/components/admin/ui/PreviewToggle";
 import { ClassicAboutActions, ClassicAboutTools, ClassicAboutValues, ClassicAboutToastBoundary } from "@/components/admin/about/ClassicAboutTools";
@@ -70,6 +72,11 @@ type UploadTarget =
   | { kind: "logoColorCard"; index: number }
   | { kind: "logoFeaturePatch"; index: number }
   | { kind: "logoFeatureIcon"; index: number };
+
+/** The feature image is a photo; the Club Logo crest, map, patches, icons and color swatches are graphics. */
+function uploadKindFor(target: UploadTarget): MediaKind {
+  return target.kind === "aboutFeature" ? "photo" : "graphic";
+}
 
 function toAboutDraft(content: DBAboutPageContent): DBAboutPageContent {
   return {
@@ -272,7 +279,24 @@ function AboutEditor({ classic = false }: { classic?: boolean }) {
 
   function openUploader(target: UploadTarget) {
     uploadTargetRef.current = target;
+    // One shared input serves photo and graphic targets; set what it accepts for this one before opening it.
+    if (fileRef.current) fileRef.current.accept = mediaAccept(uploadKindFor(target));
     fileRef.current?.click();
+  }
+
+  /** The shared picker: refuse a file the server would refuse (type, size, unreadable) before uploading it. */
+  async function handlePickedFile(file: File | null): Promise<boolean | { error: string }> {
+    const target = uploadTargetRef.current;
+    if (file && target) {
+      const issue = await imageFileIssue(file, adminImageRules(uploadKindFor(target)));
+      if (issue) {
+        setError(issue);
+        uploadTargetRef.current = null;
+        if (fileRef.current) fileRef.current.value = "";
+        return { error: issue };
+      }
+    }
+    return handleImageUpload(file);
   }
 
   async function handleImageUpload(file: File | null): Promise<boolean | { error: string }> {
@@ -285,11 +309,7 @@ function AboutEditor({ classic = false }: { classic?: boolean }) {
       const stableColorPath = target.kind === "logoColorCard"
         ? `content/club-logo-colors/color-${target.index + 1}.png`
         : undefined;
-      const nextUrl = await uploadAboutImage(
-        file,
-        stableColorPath,
-        target.kind === "aboutFeature" ? "photo" : "graphic",
-      );
+      const nextUrl = await uploadAboutImage(file, stableColorPath, uploadKindFor(target));
       let dirtySection: SectionId = "story";
       if (target.kind === "aboutFeature") {
         queueReplacedUrl(aboutDraft.feature_image_url, "about");
@@ -611,7 +631,7 @@ function AboutEditor({ classic = false }: { classic?: boolean }) {
                     </Field>
                   </div>
                   {classic ? <AdminImageField label="Feature image" previewUrl={aboutDraft.feature_image_url} size={96} shape="square" initials="Add a feature image"
-                    allowedTypes={["image/jpeg", "image/png", "image/webp"]} maxBytes={15 * 1024 * 1024}
+                    {...adminImageRules("photo")}
                     disabled={draftLocked} uploading={uploading} onPendingChange={onMediaPending}
                     onUpload={files => { uploadTargetRef.current = { kind: "aboutFeature" }; return handleImageUpload(files[0]); }}
                     onRemove={() => { queueReplacedUrl(aboutDraft.feature_image_url, "about"); setAboutField("feature_image_url", "", "story"); }}
@@ -856,9 +876,9 @@ function AboutEditor({ classic = false }: { classic?: boolean }) {
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept={mediaAccept("graphic")}
               className="hidden"
-              onChange={(event) => handleImageUpload(event.target.files?.[0] ?? null)}
+              onChange={(event) => void handlePickedFile(event.target.files?.[0] ?? null)}
             />
 
             {error && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { IconClose } from "@/components/admin/icons";
 import FileUpload from "@/components/admin/FileUpload";
+import { fileUploadRules } from "@/components/admin/ui/adminImageFiles";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { createClient } from "@/lib/admin-client";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
@@ -72,7 +73,7 @@ export function RosterActionPhotos({ playerId }: { playerId: string }) {
           ))}
         </div>
       )}
-      <FileUpload label="Add action photos" accept="image/*" multiple onUpload={files => void handleUpload(files)} uploading={uploading} density="compact" />
+      <FileUpload label="Add action photos" {...fileUploadRules("photo")} multiple onUpload={files => void handleUpload(files)} uploading={uploading} density="compact" />
     </div>
   );
 }

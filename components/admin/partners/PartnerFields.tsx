@@ -9,6 +9,7 @@ import styles from "@/components/admin/list-cards/ListEditor.module.css";
 import NativeImage from "@/components/ResilientNativeImage";
 import { PARTNER_LOGO_TONES, PARTNERSHIP_ROUTE, type CinematicPartnersContent, type PartnerLogoMedia, type PartnerLogoTone, type PartnerPage } from "@/lib/cinematic-partners-content";
 import { editTargetProps } from "@/lib/admin-edit-targets";
+import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_MAX_SIZE_LABEL, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { partnerPageTarget, partnerTarget } from "./partners-edit-targets";
 import { PAGE_ROUTES, TONES, TONE_SHORT, parseDialogId, partnerName, type PartnersDialogId } from "./partners-sections";
 
@@ -73,8 +74,8 @@ function LogoPicker({ api, partnerId, selected }: { api: PartnersFieldsApi; part
     <div className={styles.tools}>
       <button type="button" className={`admin-press ${styles.tool}`} disabled={locked} onClick={() => file.current?.click()}><IconUpload size={16} aria-hidden="true" />{uploading === partnerId ? "Uploading…" : "Upload new logo"}</button>
     </div>
-    <span className={kit.hint}>PNG, JPEG or WebP. Choose a logo already used in <Link className={kit.inlineLink} href="/admin/sponsors">Sponsors</Link>, or upload a new one.</span>
-    <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" hidden tabIndex={-1} aria-hidden="true" onChange={event => {
+    <span className={kit.hint}>{GRAPHIC_UPLOAD_TYPES_LABEL}, up to {GRAPHIC_UPLOAD_MAX_SIZE_LABEL}. Choose a logo already used in <Link className={kit.inlineLink} href="/admin/sponsors">Sponsors</Link>, or upload a new one.</span>
+    <input ref={file} type="file" accept={GRAPHIC_UPLOAD_ACCEPT} hidden tabIndex={-1} aria-hidden="true" onChange={event => {
       const chosen = event.target.files?.[0];
       event.target.value = "";
       if (chosen) upload(partnerId, chosen);

@@ -26,6 +26,7 @@ import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
 import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
+import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_TYPES_LABEL, isGraphicUploadType } from "@/lib/media-upload-types";
 import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
@@ -187,7 +188,7 @@ function formatTime12h(timeValue: string): string {
   return `${hours}:${String(minutes).padStart(2, "0")} ${ampm}`;
 }
 
-const LOGO_FILE_GUIDANCE = "Choose a PNG or WebP logo.";
+const LOGO_FILE_GUIDANCE = `Choose a ${GRAPHIC_UPLOAD_TYPES_LABEL} logo.`;
 
 function logoUploadErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.includes("UNSUPPORTED_MEDIA_TYPE")) return LOGO_FILE_GUIDANCE;
@@ -1266,7 +1267,7 @@ function OpponentLogoUpload({
 
   async function handleFile(file: File | null) {
     if (!file) return;
-    if (file.type !== "image/png" && file.type !== "image/webp") {
+    if (!isGraphicUploadType(file.type)) {
       setError(LOGO_FILE_GUIDANCE);
       if (fileRef.current) fileRef.current.value = "";
       return;
@@ -1305,12 +1306,12 @@ function OpponentLogoUpload({
           Remove
         </button>
       )}
-      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP</p>
+      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">{GRAPHIC_UPLOAD_TYPES_LABEL}</p>
       <input
         id={inputId}
         ref={fileRef}
         type="file"
-        accept="image/png,image/webp"
+        accept={GRAPHIC_UPLOAD_ACCEPT}
         aria-describedby={`${inputId}-format-hint`}
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
@@ -1341,7 +1342,7 @@ function SponsorLogoUpload({
 
   async function handleFile(file: File | null) {
     if (!file) return;
-    if (file.type !== "image/png" && file.type !== "image/webp") {
+    if (!isGraphicUploadType(file.type)) {
       setError(LOGO_FILE_GUIDANCE);
       if (fileRef.current) fileRef.current.value = "";
       return;
@@ -1396,12 +1397,12 @@ function SponsorLogoUpload({
           Remove
         </button>
       )}
-      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP</p>
+      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">{GRAPHIC_UPLOAD_TYPES_LABEL}</p>
       <input
         id={inputId}
         ref={fileRef}
         type="file"
-        accept="image/png,image/webp"
+        accept={GRAPHIC_UPLOAD_ACCEPT}
         aria-describedby={`${inputId}-format-hint`}
         className="hidden"
         onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
