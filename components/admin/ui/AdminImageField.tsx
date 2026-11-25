@@ -97,7 +97,7 @@ export function AdminImageField({
       const transfer = new DataTransfer();
       transfer.items.add(file);
       const saved = await onUpload(transfer.files);
-      trackAdminEvent("admin_media_uploaded", { slot, ok: saved });
+      trackAdminEvent("admin_media_uploaded", { slot, ok: saved === true });
       if (!mounted.current || attemptRef.current !== attempt) return;
       if (saved === true) onDirty?.();
       else if (saved && typeof saved === "object" && saved.error) setMessage(saved.error);

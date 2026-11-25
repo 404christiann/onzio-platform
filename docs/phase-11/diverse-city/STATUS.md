@@ -21,7 +21,8 @@
   - Kept the name `lib/admin-analytics.ts`: Christian's brief names it.
   - Verification: `tsc` clean; `npm run test:unit` 457 files / 6940 tests passed; `next build` passed (local placeholder Supabase env); PostHog chunks on 28 pages, none outside `/admin/(protected)`.
 - **Re-review (onzio-bot @ `6494854`): clean.** Rebased onto `origin/main` `fe5c8cb6` (#257); only the HANDOFF/STATUS top entries conflicted, both kept. After the rebase: `tsc` clean, `npm run test:unit` 457 files / 6940 tests passed, `next build` passed; lockfile diff vs main is additions only.
-- **Exact next step:** Christian's "go" to merge; separately, he sets `NEXT_PUBLIC_POSTHOG_KEY` in Vercel Production (analytics stays off until then).
+- **Second rebase (2026-11-24):** onto `origin/main` `c9984d20` (#259 UPLOAD-FIX). HANDOFF/STATUS top entries conflicted, both kept. #259 widened `AdminImageField`'s `onUpload` result to `boolean | { error }`, so `admin_media_uploaded` now sends `ok: saved === true`. `tsc` clean, `npx vitest run --project unit` 461 files / 6967 tests passed, `next build` passed. `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set in Vercel Production (Christian, 2026-11-24); production still runs main without this code.
+- **Exact next step:** merge (Christian's grokbot). Merging to main auto-deploys production and the build picks up the PostHog key. No migration in this PR; the CLAUDE.md migration-list check still applies to that deploy.
 
 ## 2026-11-24 - UPLOAD-FIX: large admin graphics are downscaled; finalize errors reach the field
 
