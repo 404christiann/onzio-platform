@@ -4,9 +4,10 @@ import ws from "ws";
 import { isValidTimeZone } from "../lib/club-time";
 
 /**
- * ADMIN-RE-02: operator-only CLI for a club's reimagined-admin settings on
- * onzio.clubs -- admin_portal (which admin the club sees), admin_flags (which
- * later slices are on) and time_zone (Onzio's correction of the automatic
+ * ADMIN-RE-02: operator-only CLI for a club's admin settings on onzio.clubs --
+ * admin_portal (kept at classic: the reimagined admin was removed, so
+ * --portal=classic only resets a stale value), admin_flags (which add-ons are
+ * on) and time_zone (Onzio's correction of the automatic
  * browser set). Never wired into an app route or admin UI: switching a club's
  * admin is Onzio's job (plan decision 3), like store_enabled.
  *
@@ -16,17 +17,17 @@ import { isValidTimeZone } from "../lib/club-time";
  * NEXT_PUBLIC_SUPABASE_URL, an audited update and post-write reconciliation.
  *
  *   npx tsx scripts/set-club-admin-portal.ts <club-slug>
- *     [--portal=classic|reimagined] [--on=<flag>]... [--off=<flag>]...
+ *     [--portal=classic] [--on=<flag>]... [--off=<flag>]...
  *     [--time-zone=<IANA zone>] [--execute] [--confirm-project=<ref>]
  */
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const FLAG_NAME = /^[a-z][a-z0-9_]{0,39}$/;
 const USAGE =
-  "Usage: npx tsx scripts/set-club-admin-portal.ts <club-slug> [--portal=classic|reimagined] " +
+  "Usage: npx tsx scripts/set-club-admin-portal.ts <club-slug> [--portal=classic] " +
   "[--on=<flag>] [--off=<flag>] [--time-zone=<zone>] [--execute] [--confirm-project=<ref>]";
 
-type Portal = "classic" | "reimagined";
+type Portal = "classic";
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
@@ -69,8 +70,8 @@ function parseArgs(): Args {
   const portals = valuesOf(raw, "--portal");
   if (portals.length > 1) throw new Error("Pass --portal at most once");
   const portal = portals[0] ?? null;
-  if (portal !== null && portal !== "classic" && portal !== "reimagined") {
-    throw new Error("--portal must be classic or reimagined");
+  if (portal !== null && portal !== "classic") {
+    throw new Error("--portal must be classic: the reimagined admin was removed");
   }
 
   const on = valuesOf(raw, "--on");
@@ -213,7 +214,7 @@ async function main(): Promise<void> {
         time_zone: current.timeZone,
       },
       new_value: { admin_portal: target.adminPortal, admin_flags: target.adminFlags, time_zone: target.timeZone },
-      reason: "Operator setting for the club's reimagined admin",
+      reason: "Operator setting for the club's admin",
     },
   });
   if (auditError) throw auditError;

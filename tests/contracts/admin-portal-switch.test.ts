@@ -35,7 +35,7 @@ describe("operator script: scripts/set-club-admin-portal.ts", () => {
   });
 
   it("validates every input before touching the database", () => {
-    expect(source).toContain('"--portal must be classic or reimagined"');
+    expect(source).toContain('"--portal must be classic: the reimagined admin was removed"');
     expect(source).toContain("const FLAG_NAME = /^[a-z][a-z0-9_]{0,39}$/;");
     expect(source).toMatch(/is in both --on and --off/);
     expect(source).toContain("isValidTimeZone(timeZone)");
