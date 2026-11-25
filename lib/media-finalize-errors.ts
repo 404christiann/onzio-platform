@@ -1,10 +1,12 @@
 import { ContractError } from "@/lib/contract-error";
 import { MEDIA_RESERVATION_MESSAGES } from "@/lib/media-quota";
+import { MEDIA_MAX_DIMENSION, MEDIA_RULES, mediaTypesLabel, megabytesLabel } from "@/lib/media-rules";
 
-const TOO_LARGE = "This image file is too large. Graphics can be up to 5 MB and photos up to 15 MB.";
-const TOO_MANY_PIXELS = "This image has too many pixels. Use one no larger than 6000 pixels on each side.";
+const { photo, graphic } = MEDIA_RULES;
+const TOO_LARGE = `This image file is too large. Graphics can be up to ${megabytesLabel(graphic.maxBytes)} and photos up to ${megabytesLabel(photo.maxBytes)}.`;
+const TOO_MANY_PIXELS = `This image has too many pixels. Use one no larger than ${MEDIA_MAX_DIMENSION} pixels on each side.`;
 const UNREADABLE = "This image could not be read. It may be damaged. Export it again and retry.";
-const WRONG_TYPE = "This file type can't be used here. Use PNG or WebP for graphics, or JPG, PNG or WebP for photos.";
+const WRONG_TYPE = `This file type can't be used here. Use ${mediaTypesLabel(graphic.mimeTypes)} for graphics, or ${mediaTypesLabel(photo.mimeTypes)} for photos.`;
 const UNEXPECTED = "The image could not be uploaded. Try again.";
 
 /** The plain message each media finalization refusal shows in the admin upload field. */

@@ -160,7 +160,7 @@ describe("Diverse City admin punch list", () => {
           size: 2_400_000,
         },
       );
-      expect(message).toContain("JPEG, PNG, or WebP");
+      expect(message).toContain("JPG, PNG or WebP");
       expect(message).toContain("HEIC");
       // The raw Zod shape must not survive into the admin-facing string.
       expect(message).not.toContain("invalid_value");
@@ -184,7 +184,7 @@ describe("Diverse City admin punch list", () => {
         parsed.error.issues,
         body,
       );
-      expect(message).toContain("JPEG, PNG, or WebP");
+      expect(message).toContain("JPG, PNG or WebP");
       expect(message).not.toContain("invalid_value");
     });
 
@@ -211,8 +211,9 @@ describe("Diverse City admin punch list", () => {
     it("still refuses to widen the accepted format list", () => {
       // Adding HEIC needs real sharp/libvips decode support and is an open
       // decision for Christian, not something a diagnostics change may imply.
-      expect(source("lib/media-api-contract.ts")).toContain(
-        'z.enum(["image/jpeg", "image/png", "image/webp"])',
+      expect(source("lib/media-api-contract.ts")).toContain("z.enum(MEDIA_MIME_TYPES)");
+      expect(source("lib/media-rules.ts")).toContain(
+        'MEDIA_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const',
       );
     });
   });

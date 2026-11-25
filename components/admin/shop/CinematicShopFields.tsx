@@ -3,6 +3,8 @@
 import { useId } from "react";
 import NativeImage from "@/components/ResilientNativeImage";
 import FileUpload from "@/components/admin/FileUpload";
+import { fileUploadRules } from "@/components/admin/ui/adminImageFiles";
+import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { EditorActionButton, EditorGroup, EditorPageLink, EditorRemoveButton, EditorSwitch, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { APPROVED_SHOP_MAP_CROP, MAX_SHOP_ATTRIBUTES, MAX_SHOP_DETAILS, MAX_SHOP_EDITIONS, MAX_SHOP_SIZE_COLUMNS, MAX_SHOP_SIZE_ROWS, isShopEditionShown, withShopEditionShown, type CinematicShopPresentation, type ShopDetailPresentation, type ShopEdition } from "@/lib/cinematic-shop-content";
 
@@ -48,7 +50,7 @@ export default function CinematicShopFields({ target, value, onChange, uploading
       {details.map((detail, index) => <EditorGroup key={index} legend={`Tile ${index + 1}`}>
         {detail.url ? <NativeImage src={detail.url} alt={detail.alt || `Tile ${index + 1} photo`} className="h-auto w-full rounded-lg border border-border" />
           : <p className={`${kit.hint} rounded-lg border border-dashed border-border p-3`}>No photo yet. The website shows a white box here.</p>}
-        <FileUpload label={detail.assetId ? "Replace photo" : "Upload photo"} accept="image/png,image/jpeg,image/webp" onUpload={files => onUploadDetail(index, files)} uploading={uploading} />
+        <FileUpload label={detail.assetId ? "Replace photo" : "Upload photo"} {...fileUploadRules("photo")} onUpload={files => onUploadDetail(index, files)} uploading={uploading} />
         {detail.assetId && <EditorRemoveButton disabled={uploading} label={`Remove tile ${index + 1} photo`} onClick={() => onRemoveDetail(index)}>Remove photo</EditorRemoveButton>}
         <Text label="Photo description" value={detail.alt} onChange={text => setDetail(index, { alt: text })} />
         <Text label="Title" value={detail.title} onChange={text => setDetail(index, { title: text })} />
@@ -84,8 +86,8 @@ export default function CinematicShopFields({ target, value, onChange, uploading
       <Toggle label="Show map on Shop page" value={value.mapVisible} onChange={show => onChange("mapVisible", show)} />
       <Text label="Map heading" value={value.mapHeading} onChange={text => onChange("mapHeading", text)} />
       {value.mapUrl && <NativeImage src={value.mapUrl} alt={value.mapAlt || "Shop map preview"} className="h-auto w-full rounded-lg border border-border" />}
-      <FileUpload label={value.mapUrl ? "Replace map image" : "Upload map image"} accept="image/png,image/webp" onUpload={onUploadMap} uploading={uploading} />
-      <p className={kit.hint}>Use PNG or WebP. The original map is kept; framing only changes what appears on this page.</p>
+      <FileUpload label={value.mapUrl ? "Replace map image" : "Upload map image"} {...fileUploadRules("graphic")} onUpload={onUploadMap} uploading={uploading} />
+      <p className={kit.hint}>Use {GRAPHIC_UPLOAD_TYPES_LABEL}. The original map is kept; framing only changes what appears on this page.</p>
       {value.mapAssetId && <EditorRemoveButton disabled={uploading} onClick={onRemoveMap}>Remove map</EditorRemoveButton>}
       <Text label="Map description" value={value.mapAlt} onChange={text => onChange("mapAlt", text)} />
       <Toggle label="Show the whole map image" value={!value.mapCrop} onChange={whole => onChange("mapCrop", whole ? null : { ...APPROVED_SHOP_MAP_CROP })} />

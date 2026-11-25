@@ -3,6 +3,7 @@ import ResilientImage from "@/components/ResilientImage";
 import FileUpload from "@/components/admin/FileUpload";
 import { AdminDialogSection } from "@/components/admin/ui/AdminDialog";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { AdminPanel } from "@/components/admin/AdminPage";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +11,7 @@ import { SlidingPanel } from "@/components/ui/sliding-panel";
 import { X as AdminRemoveIcon, ChevronUp as AdminOrderUp, ChevronDown as AdminOrderDown, IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { PROGRAM_MEDIA_LIMITS, PROGRAM_REGISTRATION_LIMITS } from "@/lib/program-content";
+import { MEDIA_RULES, mediaAccept, mediaTypesLabel } from "@/lib/media-rules";
 import type { ProgramDraft, ProgramValidationErrors } from "@/lib/program-admin";
 import { PROGRAM_EDITOR_TABS, type ProgramEditorTab } from "./program-editor-types";
 import type { ProgramsEditor } from "./useProgramsEditor";
@@ -168,8 +170,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                     label="Hero image"
                     size={96}
                     shape="square"
-                    allowedTypes={["image/jpeg", "image/png", "image/webp"]}
-                    maxBytes={15 * 1024 * 1024}
+                    {...adminImageRules("photo")}
                     previewUrl={draft.heroMediaPreviewUrl || null}
                     uploading={uploadingRole === "hero"}
                     disabled={mediaBusy}
@@ -182,7 +183,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                   /> : (
                   <FileUpload
                     label="Upload hero image"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept={mediaAccept("photo")}
                     onUpload={(files) => void uploadMedia("hero", files)}
                     uploading={uploadingRole === "hero"}
                     previewUrl={draft.heroMediaPreviewUrl || null}
@@ -199,8 +200,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                     label="Detail image"
                     size={96}
                     shape="square"
-                    allowedTypes={["image/jpeg", "image/png", "image/webp"]}
-                    maxBytes={15 * 1024 * 1024}
+                    {...adminImageRules("photo")}
                     previewUrl={draft.detailMediaPreviewUrl || null}
                     uploading={uploadingRole === "detail"}
                     disabled={mediaBusy}
@@ -213,7 +213,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                   /> : (
                   <FileUpload
                     label="Upload detail image"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept={mediaAccept("photo")}
                     onUpload={(files) => void uploadMedia("detail", files)}
                     uploading={uploadingRole === "detail"}
                     previewUrl={draft.detailMediaPreviewUrl || null}
@@ -383,15 +383,14 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                       <p className="mt-1 max-w-xl font-body text-xs leading-5 text-muted-foreground">
                         Photos beside the registration section. Two or more
                         cross-fade as a slideshow. Up to{" "}
-                        {PROGRAM_MEDIA_LIMITS.items} images; JPEG, PNG, or WebP.
+                        {PROGRAM_MEDIA_LIMITS.items} images; {mediaTypesLabel(MEDIA_RULES.photo.mimeTypes)}.
                       </p>
                     </div>
                     {classic ? <AdminImageField
                       label="Gallery image"
                       size={64}
                       shape="square"
-                      allowedTypes={["image/jpeg", "image/png", "image/webp"]}
-                      maxBytes={15 * 1024 * 1024}
+                      {...adminImageRules("photo")}
                       uploading={uploadingGallery}
                       disabled={mediaBusy || gallery.length >= PROGRAM_MEDIA_LIMITS.items}
                       onPendingChange={pending => editor.media.setPickerPending("gallery", pending)}
@@ -411,7 +410,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                     <input
                       ref={galleryInput}
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept={mediaAccept("photo")}
                       className="sr-only"
                       onChange={(event) =>
                         void uploadGalleryImage(event.target.files)

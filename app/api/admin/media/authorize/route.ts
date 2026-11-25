@@ -107,18 +107,7 @@ export async function POST(request: Request) {
       request,
       parsed.data.surface,
     );
-    const maximum =
-      parsed.data.kind === "photo" ? 15 * 1024 * 1024 : 5 * 1024 * 1024;
-    if (parsed.data.size > maximum) {
-      throw new ContractError("FILE_TOO_LARGE");
-    }
-    if (
-      parsed.data.kind === "graphic" &&
-      parsed.data.mimeType === "image/jpeg"
-    ) {
-      throw new ContractError("UNSUPPORTED_MEDIA_TYPE");
-    }
-
+    // The schema already held the file to its kind's type and size rules (lib/media-rules.ts).
     const uploadId = randomUUID();
     const sourceExtension =
       parsed.data.mimeType === "image/jpeg"

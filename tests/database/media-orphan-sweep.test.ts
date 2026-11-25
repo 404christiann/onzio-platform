@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runMediaOrphanSweep } from "@/lib/media-orphan-sweep";
+import { nestedJsonFields } from "@/lib/media-reference-fields";
 import { USER_IDS } from "../fixtures/entities";
 import { expectPostgrestError } from "../helpers/database-security";
 import { assertSafeTestEnvironment } from "../helpers/environment";
@@ -156,6 +157,43 @@ describe("the reference check", () => {
     expect(await retire(icon.id)).toEqual({ status: "referenced" });
     await db.query("delete from onzio.site_social_links where club_id = $1", [CLUB]);
     expect((await retire(icon.id)).status).toBe("retired");
+  });
+
+  it("never makes a Club Logo patch, icon or color-card image a sweep candidate while the page uses it", async () => {
+    // The form save_about_editor stores: a canonical public path with the origin and ?v= removed.
+    const stored = (path: string) => `/storage/v1/object/public/onzio-media/${path}`;
+    const used: { id: string; path: string; field: string }[] = [];
+    const columns: Record<string, Record<string, string>[]> = {};
+    for (const { json, keys } of nestedJsonFields("club_logo_page_content")) {
+      const item: Record<string, string> = {};
+      for (const key of keys) {
+        const image = await asset({ publishedAgo: "interval '3 days'", unreferencedAgo: "interval '3 days'" });
+        item[key] = stored(image.path);
+        used.push({ ...image, field: `${json}[].${key}` });
+      }
+      columns[json] = [item];
+    }
+    expect(used.map((u) => u.field)).toEqual(["features[].patch_url", "features[].icon_url", "color_cards[].image_url"]);
+    await db.query("delete from onzio.club_logo_page_content where club_id = $1", [CLUB]);
+    await db.query("insert into onzio.club_logo_page_content (club_id, features, color_cards) values ($1, $2::jsonb, $3::jsonb)",
+      [CLUB, JSON.stringify(columns.features), JSON.stringify(columns.color_cards)]);
+    try {
+      const { club } = await scan();
+      for (const image of used) {
+        expect(club.candidates.map((c: any) => c.assetId), image.field).not.toContain(image.id);
+        expect(club.waiting.map((w: any) => w.assetId), image.field).not.toContain(image.id);
+        expect(await clock(image.id), image.field).toBeNull();
+        expect(await retire(image.id), image.field).toEqual({ status: "referenced" });
+      }
+    } finally {
+      await db.query("delete from onzio.club_logo_page_content where club_id = $1", [CLUB]);
+    }
+    // Once the page stops using them, the clock starts again from now: waiting, not yet a candidate.
+    const { club } = await scan();
+    for (const image of used) {
+      expect(club.waiting.map((w: any) => w.assetId), image.field).toContain(image.id);
+      expect(club.candidates.map((c: any) => c.assetId), image.field).not.toContain(image.id);
+    }
   });
 
   it("still counts foreign keys and url columns", async () => {

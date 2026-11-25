@@ -8,6 +8,7 @@ import { IconUpload } from "@/components/admin/icons";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { EditorActionButton, EditorGroup, EditorReorderButtons, EditorRemoveButton, EditorSwitch, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
+import { mediaAccept, mediaHint } from "@/lib/media-rules";
 import { ARTWORK_TARGETS, HOMEPAGE_TARGETS, priceRowTarget } from "./homepage-edit-targets";
 
 /** One labelled text field. The wrapping label keeps the field's accessible name equal to its visible label. */
@@ -31,7 +32,7 @@ function ArtworkField({ legend, help, url, alt, uploading, failed, error, disabl
     <div className={kit.image}>
       <div className={kit.imagePreview} aria-busy={uploading || undefined}>{url ? <ResilientNativeImage src={url} alt={alt} /> : <span className={kit.imageEmpty}>No image yet</span>}</div>
       <div className={kit.imageActions}>
-        <input ref={input} type="file" className={kit.fileInput} tabIndex={-1} aria-label="Replace image" accept="image/png,image/webp" disabled={disabled || uploading} onChange={event => { const file = event.target.files?.[0]; if (file) onFile(file); event.target.value = ""; }} />
+        <input ref={input} type="file" className={kit.fileInput} tabIndex={-1} aria-label="Replace image" accept={mediaAccept("graphic")} disabled={disabled || uploading} onChange={event => { const file = event.target.files?.[0]; if (file) onFile(file); event.target.value = ""; }} />
         <button type="button" className={`admin-press ${kit.action}`} disabled={disabled || uploading} onClick={() => input.current?.click()}><IconUpload size={16} aria-hidden="true" />Replace image</button>
         {removeLabel && onRemove && <EditorRemoveButton disabled={disabled} onClick={onRemove}>{removeLabel}</EditorRemoveButton>}
       </div>
@@ -39,7 +40,7 @@ function ArtworkField({ legend, help, url, alt, uploading, failed, error, disabl
     {uploading && <p role="status" className={kit.hint}>Adding your image…</p>}
     {failed && <div role="alert" className={`${kit.notice} grid gap-2`} data-tone="error"><p>{error ?? "This image could not be added."}</p><div><EditorActionButton disabled={disabled} onClick={onRetry}>Try adding it again</EditorActionButton></div></div>}
     {children}
-    <p className={kit.hint}>PNG or WebP, up to 5 MB and 6000 pixels per side.</p>
+    <p className={kit.hint}>{mediaHint("graphic", { pixels: true })}.</p>
     <p className={kit.hint}>Words inside the supplied image are changed by replacing the image.</p>
   </EditorGroup>;
 }

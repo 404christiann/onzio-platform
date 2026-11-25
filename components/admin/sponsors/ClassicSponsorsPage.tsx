@@ -28,6 +28,8 @@ import {
 import FileUpload from "@/components/admin/FileUpload";
 import {
   GRAPHIC_UPLOAD_ACCEPT,
+  GRAPHIC_UPLOAD_MAX_BYTES,
+  GRAPHIC_UPLOAD_MAX_SIZE_LABEL,
   GRAPHIC_UPLOAD_TYPES_LABEL,
 } from "@/lib/media-upload-types";
 import {
@@ -500,7 +502,8 @@ export function ClassicSponsorsPage() {
                 className="col-span-2 sm:col-span-3"
                 label="Add sponsor logos"
                 accept={GRAPHIC_UPLOAD_ACCEPT}
-                hint={`${GRAPHIC_UPLOAD_TYPES_LABEL}, up to 5 MB`}
+                maxBytes={GRAPHIC_UPLOAD_MAX_BYTES}
+                hint={`${GRAPHIC_UPLOAD_TYPES_LABEL}, up to ${GRAPHIC_UPLOAD_MAX_SIZE_LABEL}`}
                 multiple
                 onUpload={(files) => void handleUpload(files)}
                 uploading={uploading}
@@ -612,7 +615,7 @@ function SponsorsSkeleton({ placement, count }: { placement: SponsorLogoPlacemen
             <Shimmer className="mt-2"><input aria-hidden="true" tabIndex={-1} disabled className={inputClass} style={{ visibility: "hidden" }} /></Shimmer>
             <div className="mt-1 flex gap-1"><Shimmer className="h-11 flex-1" /><Shimmer className="h-11 flex-1" /><Shimmer className="h-11 flex-1" /></div>
           </div>)}
-          <Shimmer className="col-span-2 rounded-xl sm:col-span-3"><div style={{ visibility: "hidden" }}><FileUpload label="Add sponsor logos" accept={GRAPHIC_UPLOAD_ACCEPT} hint={`${GRAPHIC_UPLOAD_TYPES_LABEL}, up to 5 MB`} multiple onUpload={() => {}} disabled /></div></Shimmer>
+          <Shimmer className="col-span-2 rounded-xl sm:col-span-3"><div style={{ visibility: "hidden" }}><FileUpload label="Add sponsor logos" accept={GRAPHIC_UPLOAD_ACCEPT} maxBytes={GRAPHIC_UPLOAD_MAX_BYTES} hint={`${GRAPHIC_UPLOAD_TYPES_LABEL}, up to ${GRAPHIC_UPLOAD_MAX_SIZE_LABEL}`} multiple onUpload={() => {}} disabled /></div></Shimmer>
         </div>
       </AdminPanel>
       <AdminPanel className="overflow-hidden p-4 sm:p-5">

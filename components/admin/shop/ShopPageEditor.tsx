@@ -19,6 +19,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
+import { mediaAccept } from "@/lib/media-rules";
 import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import ResilientImage from "@/components/ResilientImage";
 import ShopPreviewFrame from "./ShopPreviewFrame";
@@ -468,7 +469,7 @@ function PhotoEditor({ photos, label, uploading, onUpload, onRemove, onChange, s
       <button type="button" aria-label={`Move ${label} photo ${index + 1} down`} disabled={uploading || index === photos.length - 1} onClick={() => { const next = [...photos]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; onChange(orderPhotos(next)); }} className="min-h-11 min-w-11 rounded-md border border-border disabled:opacity-40"><AdminOrderDown size={14} className="inline-block align-middle" /></button>
       <button type="button" aria-label={`Remove ${label} photo ${index + 1}`} disabled={uploading} onClick={() => onRemove(photo)} className="min-h-11 min-w-11 rounded-md bg-destructive font-semibold text-destructive-foreground disabled:opacity-40"><AdminRemoveIcon size={14} className="inline-block align-middle" /></button>
     </div>)}
-    <FileUpload label={`Add ${label} photos`} accept="image/*" multiple onUpload={onUpload} uploading={uploading} disabled={photos.length >= 6} />
+    <FileUpload label={`Add ${label} photos`} accept={mediaAccept("photo")} multiple onUpload={onUpload} uploading={uploading} disabled={photos.length >= 6} />
     {label === "kit" && photos.length === 0 && <p className="text-xs text-destructive">Add at least one photo before saving this kit.</p>}
   </div>;
 }

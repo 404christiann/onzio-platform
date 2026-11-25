@@ -22,6 +22,8 @@
  * precondition, never an identifier, token, storage path, policy body, or SQL.
  */
 
+import { isMediaKind, MEDIA_MIME_TYPES, MEDIA_RULES, mediaTypesLabel, megabytesLabel } from "@/lib/media-rules";
+
 export const MEDIA_UPLOAD_NOT_PERMITTED = "MEDIA_UPLOAD_NOT_PERMITTED";
 export const MEDIA_STORAGE_UNAVAILABLE = "MEDIA_STORAGE_UNAVAILABLE";
 export const MEDIA_AUTH_FAILED = "MEDIA_AUTH_FAILED";
@@ -34,14 +36,6 @@ const ROW_LEVEL_SECURITY_REASON =
   "changes. Signing out and back in resolves the first; the others need an " +
   "Onzio operator.";
 
-export const ACCEPTED_MEDIA_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-] as const;
-
-const ACCEPTED_MEDIA_FORMATS_LABEL = "JPEG, PNG, or WebP";
-
 /**
  * Names the file type an admin actually picked, in words rather than a MIME
  * string. Browsers report an empty `file.type` for formats they do not
@@ -51,7 +45,7 @@ function describeMimeType(value: unknown): string | null {
   if (typeof value !== "string" || value.trim() === "") return null;
   const subtype = value.split("/")[1]?.split(";")[0]?.trim();
   if (!subtype) return null;
-  if (subtype === "jpeg") return "JPEG";
+  if (subtype === "jpeg") return "JPG";
   if (subtype === "svg+xml") return "SVG";
   return subtype.toUpperCase();
 }
@@ -84,20 +78,26 @@ export function describeMediaRequestValidationFailure(
   const request = (body ?? {}) as Record<string, unknown>;
   const paths = new Set(issues.map(issuePath));
 
+  // A body without a valid kind is held to the widest rules, so the message never promises less than a photo field.
+  const kind = isMediaKind(request.kind) ? request.kind : "photo";
+  const rules = MEDIA_RULES[kind];
+  const accepted = mediaTypesLabel(kind === "photo" ? MEDIA_MIME_TYPES : rules.mimeTypes);
+
   if (paths.has("mimeType")) {
     const actual = describeMimeType(request.mimeType);
     return actual
-      ? `Please upload a ${ACCEPTED_MEDIA_FORMATS_LABEL} image. ${actual} isn't supported — convert the file and try again.`
-      : `Please upload a ${ACCEPTED_MEDIA_FORMATS_LABEL} image. This file's type could not be read, so it can't be accepted — convert the file and try again.`;
+      ? `Please upload a ${accepted} image. ${actual} isn't supported here — convert the file and try again.`
+      : `Please upload a ${accepted} image. This file's type could not be read, so it can't be accepted — convert the file and try again.`;
   }
 
   if (paths.has("size")) {
     const size = request.size;
-    const megabytes =
+    const actual =
       typeof size === "number" && Number.isFinite(size) && size > 0
         ? ` (this one is ${(size / (1024 * 1024)).toFixed(1)} MB)`
         : "";
-    return `Images must be under 15 MB${megabytes}. Please resize the file and try again.`;
+    const noun = kind === "photo" ? "Photos" : "Graphics";
+    return `${noun} must be under ${megabytesLabel(rules.maxBytes)}${actual}. Please resize the file and try again.`;
   }
 
   if (paths.has("fileName")) {

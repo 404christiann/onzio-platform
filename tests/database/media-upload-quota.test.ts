@@ -385,6 +385,22 @@ describe("finalize consumes the reservation", () => {
     const { data } = await clients.service.storage.from("onzio-upload-staging").list(`${CLUB}/programs`, { search: authorization.uploadId });
     expect(data ?? []).toHaveLength(0);
   });
+  it("refuses an unreadable staged image, removes the file, and frees the reservation", async () => {
+    const { publishAuthorizedMedia } = await import("@/lib/media-processing");
+    const { getMediaUsage } = await import("@/lib/media-quota");
+    const whole = validTransparentPng();
+    const corrupt = Buffer.concat([whole.subarray(0, 8), Buffer.alloc(64)]);
+    const authorization = await stage(corrupt);
+    await reserve({ uploadId: authorization.uploadId, surface: "programs", extension: "png", claimedSize: corrupt.length });
+    const before = await getMediaUsage(CLUB);
+    await expect(publishAuthorizedMedia(authorization)).rejects.toMatchObject({ code: "CORRUPT_IMAGE" });
+    const { data } = await clients.service.storage.from("onzio-upload-staging").list(`${CLUB}/programs`, { search: authorization.uploadId });
+    expect(data ?? []).toHaveLength(0);
+    const after = await getMediaUsage(CLUB);
+    expect(after.openReservations).toBe(before.openReservations - 1);
+    expect(after.openBytes).toBe(before.openBytes - corrupt.length);
+    expect(after.publishedAssets).toBe(before.publishedAssets);
+  });
 });
 
 describe("reserveMediaUpload maps the RPC to contract errors", () => {

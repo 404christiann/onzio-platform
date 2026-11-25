@@ -1,5 +1,50 @@
 # Diverse City FC Status
 
+## 2026-11-24 - UPLOAD-AUDIT: one set of upload limits across every admin surface; failed finalizes clean up
+
+- **Agent / package:** Claude Code (Opus 5.5 orchestrating; Sonnet workers for the field inventory, the client rewiring and the browser smoke), `UPLOAD-AUDIT`, asked for by Christian. Branch `claude/upload-audit` from main `c9984d20` (after #259). Classic admin only. No migration, no production write.
+- **Status:** `ready for review` (PR open for onzio-bot, not merged).
+- **Inventory (before):** 42 upload fields across 20 `MEDIA_BUCKETS` aliases. The limits were copied into about 40 files. These were out of step with the server:
+  - The authorize zod schema capped every kind at 15 MB and said "Images must be under 15 MB" for graphics.
+  - The authorize route refused graphic JPEG and 5–15 MB graphics with the bare code as the message.
+  - The classic non-Rose City Club Logo picker (crest, map, patch, icon, swatch) took `image/*` with no checks.
+  - Partners promised JPEG on a graphic bucket.
+  - `FileUpload` had no size check, so Sponsors, Shop and Roster said "5 MB" or "Images" and enforced nothing.
+  - The injury photo band capped photos at 5 MB.
+  - News cover, league logos and the Rose City homepage slideshow and artwork had no client check. The homepage replaced the server's reason with a generic line.
+  - The full table is in the PR body.
+- **Completed:**
+  - `lib/media-rules.ts` (new) is the single source: per kind, the MIME types, extensions, bytes, max px, max MP, output long edge, output formats and `failOn`, plus the hint, label and accept helpers. These now read it:
+    - authorize schema, which checks type and size per kind with kind-specific messages
+    - authorize route (its duplicate caps are removed)
+    - `media-validation`, `media-processing`, `media-diagnostics`, `media-finalize-errors`, `media-upload-types`
+    - `adminImageRules` / `fileUploadRules`, and every classic and Rose City field
+    - `tests/contracts/media-rules.test.ts` also checks the rules still match the database checks that cannot change (reservation `claimed_size`, `media_assets` width and height).
+  - Architecture test `tests/architecture/media-rules-single-source.test.ts`: no byte, MB, pixel, type-list, `accept="image/..."` or literal `allowedTypes` outside the rules module. Exemptions:
+    - `components/admin/reimagined/`, the abandoned portal.
+    - `lib/bunny-thumbnail.ts`, Bunny's own video-thumbnail limit.
+  - Graphic authorize message: "Graphics must be under 5 MB (this one is 6.0 MB)…"; photos say 15 MB. A graphic JPG is refused at authorize with "Please upload a PNG or WebP image. JPG isn't supported here…".
+  - Failed finalize (`publishAuthorizedMedia`), once the reservation is spent (consumed, expired or too large):
+    - Any failure removes the staged file, or queues it (reason `abandoned-staging-object`, one the queue constraint already allows) when Storage refuses. Cleanup never throws over the real error.
+    - A reservation already used by another finalize, or one whose check failed, keeps its file for the retry.
+    - Consuming the reservation already takes it out of the club's open bytes and slots, so nothing is held for 5 minutes. A `rejected` outcome label for these would need a migration, which was not done.
+  - `MEDIA_REFERENCE_FIELDS` moved to `lib/media-reference-fields.ts`. `club_logo_page_content` now lists `features[].patch_url`, `features[].icon_url` and `color_cards[].image_url` as nested JSON references. Findings:
+    - The sweep never read the client map. It reads `onzio_private.media_reference_columns`, which already covers both columns.
+    - The new contract test ties each nested entry to that registry and to the editor's save keys.
+    - The new database test proves an image used only as a patch, icon or color card is never waiting or a candidate, and retire answers `referenced`.
+  - Client fields: `FileUpload` gains `maxBytes`. The classic Club Logo picker, Roster staff and action photos, Sponsors, Shop, league logos, Partners, Injury band, News cover and the homepage slideshow and artwork now check type and size before upload, using the rules. The homepage shows the server's reason.
+- **Stranded staging cleanup (proposed, not run; needs Christian's "go"):**
+  - Read-only preview first: the staging objects older than 1 hour with no open reservation.
+  - Then enqueue them into `onzio.media_cleanup_queue` (reason `abandoned-staging-object`; the queue constraint allows no new reason without a migration).
+  - The daily `/api/cron/media-cleanup` (10:00 UTC, 25 per run) removes them through the existing audited path. This avoids deleting while paging by offset.
+  - The SQL is in the PR body.
+- **Files changed:** the 5 new lib/component modules and 6 new tests listed in the PR, plus the edited files: `lib/media-*.ts`, `lib/admin-client.ts`, `lib/sponsor-storage.ts`, `lib/homepage-editor/useHomepageEditor.ts`, `app/api/admin/media/authorize/route.ts`, 4 classic admin pages and about 30 classic and Rose City field components, 4 existing tests, this file and `HANDOFF.md`.
+- **Verification:** `npx tsc --noEmit` clean. `npx vitest run --project unit` passes 464 files / 6989 tests. DB: `media-upload-quota` and `media-orphan-sweep` pass 42/42 on the shared local stack under the lock. Red first: 5 of the 10 cleanup tests and 4 of the 9 rules/message tests failed before the fix. Browser smoke: 9/9 pass on the local dev server (Chromium, synthetic Alpha owner, no Save clicked). Surfaces: Club settings logo (graphic), Sponsors drop zone (graphic) and About Feature image (photo). The 4000x3000 PNG (4.0 MB) succeeded everywhere (finalize 200, stored 2400x1800 WebP). The JPG was refused on both graphic fields before any authorize request and succeeded on the photo field. The GIF was refused everywhere with no authorize request. A 6.65 MB PNG was refused before upload. The Sponsors drop zone type refusal read "use PNG or WebP, up to 5 MB"; it now names the file and only the types ("“x” is not a supported file. Use PNG or WebP."), and `tests/browser/admin-classic-sponsors.spec.ts` expects that. The Playwright suites were not run.
+- **Blockers / decisions:** none. Open choices for Christian:
+  - the stranded-staging backfill ("go")
+  - whether to add a `rejected` reservation outcome later (needs a migration)
+- **Exact next step:** onzio-bot review, then Christian's "go" to merge. There is no migration, so no production gate.
+
 ## 2026-11-24 - ADMIN-POSTHOG: PostHog analytics + masked session replay in the classic admin
 
 - **Agent / package:** Claude Code (Opus 5.5 orchestrating, two Sonnet workers), ADMIN-POSTHOG. Branch `claude/admin-posthog` off `origin/main` (`e09ae725`).
@@ -23,6 +68,7 @@
 - **Re-review (onzio-bot @ `6494854`): clean.** Rebased onto `origin/main` `fe5c8cb6` (#257); only the HANDOFF/STATUS top entries conflicted, both kept. After the rebase: `tsc` clean, `npm run test:unit` 457 files / 6940 tests passed, `next build` passed; lockfile diff vs main is additions only.
 - **Second rebase (2026-11-24):** onto `origin/main` `c9984d20` (#259 UPLOAD-FIX). HANDOFF/STATUS top entries conflicted, both kept. #259 widened `AdminImageField`'s `onUpload` result to `boolean | { error }`, so `admin_media_uploaded` now sends `ok: saved === true`. `tsc` clean, `npx vitest run --project unit` 461 files / 6967 tests passed, `next build` passed. `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set in Vercel Production (Christian, 2026-11-24); production still runs main without this code.
 - **Exact next step:** merge (Christian's grokbot). Merging to main auto-deploys production and the build picks up the PostHog key. No migration in this PR; the CLAUDE.md migration-list check still applies to that deploy.
+
 
 ## 2026-11-24 - UPLOAD-FIX: large admin graphics are downscaled; finalize errors reach the field
 

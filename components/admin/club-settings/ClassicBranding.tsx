@@ -7,6 +7,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider, useClubBranding } from "@/components/ClubBrandingProvider";
 import ScaledPagePreview from "@/components/admin/ScaledPagePreview";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { BrandingSkeleton } from "./ClubSettingsSkeleton";
 import { AdminSaveActions } from "@/components/admin/ui/AdminSaveButton";
@@ -20,14 +21,13 @@ import { fetchClubBranding, fetchSiteSocialLinks } from "@/lib/queries";
 import { CLUB_LOGO_BUCKET, FOOTER_TAGLINE_LIMIT, clubLogoUrl, resolveFooterTagline, validateFooterTagline } from "@/lib/club-branding";
 import { normalizeSiteSocialLinks } from "@/lib/social-links";
 import { deleteStoragePaths } from "@/lib/storage-cleanup";
-import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
+import { GRAPHIC_UPLOAD_MAX_SIZE_LABEL, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import type { SiteSocialPlatform } from "@/lib/db-types";
 import { ClubSettingsFrame } from "./ClubSettingsFrame";
 import { validateChangedSocialLink, brandingDirty, brandingStages, confirmBrandingStage, advanceBrandingSave, rejectBrandingSave, brandingPrewriteRejectionMessage, type BrandingDraft, type BrandingSaveProgress } from "./branding-draft";
 import styles from "./ClubSettings.module.css";
 
 const where = ["Website navigation", "Website footer", "Next match card", "Admin login and menu", "Players without a photo", "Browser tab icon"];
-const graphicTypes = ["image/png", "image/webp"] as const;
 const errorText = (error: unknown) => error instanceof Error ? error.message : "The change could not be completed.";
 
 export function ClassicBranding() {
@@ -310,12 +310,12 @@ export function ClassicBranding() {
               <div ref={mediaField} className={styles.upload}>
                 <AdminImageField
                   label="Club logo" previewUrl={clubLogoUrl(draft.logoPath)} initials="?" shape="square" size={64}
-                  allowedTypes={graphicTypes} maxBytes={5 * 1024 * 1024} disabled={state === "saving" || cleanupPending} uploading={cleanupPending}
+                  {...adminImageRules("graphic")} disabled={state === "saving" || cleanupPending} uploading={cleanupPending}
                   onUpload={upload}
                   onPendingChange={(value) => { pending.current = value; setUploadPending(value); }}
                   onRemove={() => { void removeLogo(); }}
                 />
-                <p className={styles.hint}>{GRAPHIC_UPLOAD_TYPES_LABEL}, up to 5 MB. Use a transparent background. Drop an image on the preview or choose a file.</p>
+                <p className={styles.hint}>{GRAPHIC_UPLOAD_TYPES_LABEL}, up to {GRAPHIC_UPLOAD_MAX_SIZE_LABEL}. Use a transparent background. Drop an image on the preview or choose a file.</p>
                 {cleanupPending && <p role="status" className={styles.hint}>Removing unused upload… Save is available when cleanup finishes.</p>}
                 {uploadPending && <p role="status" className={styles.hint}>Uploading logo… Save is available when the upload finishes.</p>}
               </div>

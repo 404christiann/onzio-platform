@@ -31,6 +31,7 @@ import {
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { logoUrlsNoLongerUsed } from "@/lib/standings-logo-cleanup";
 import { createClient } from "@/lib/admin-client";
+import { mediaAccept } from "@/lib/media-rules";
 import { cn } from "@/lib/utils";
 
 type DraftRow = DBLeagueStandingRow & {
@@ -808,7 +809,7 @@ function LegacyStandingsPage() {
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept={mediaAccept("graphic")}
               className="hidden"
               onChange={(event) => handleLogoUpload(event.target.files?.[0] ?? null)}
             />

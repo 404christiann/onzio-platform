@@ -4,6 +4,8 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import NativeImage from "@/components/ResilientNativeImage";
 import ResilientImage from "@/components/ResilientImage";
 import FileUpload from "@/components/admin/FileUpload";
+import { fileUploadRules } from "@/components/admin/ui/adminImageFiles";
+import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { ChevronDown as OrderDown, ChevronUp as OrderUp, X as RemoveIcon } from "@/components/admin/icons";
 import { EditorActionButton, EditorGroup, EditorPageLink, EditorRemoveButton, EditorSegmented, EditorSwitch, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { TableEditor, ValidationMessage } from "@/components/admin/ui/editor-kit";
@@ -73,7 +75,7 @@ export function ShopPhotoList({ photos, label, uploading, min, onUpload, onRemov
       <button type="button" aria-label={`Move ${label} photo ${index + 1} down`} disabled={uploading || index === photos.length - 1} onClick={() => move(index, index + 1)} className="admin-press min-h-11 min-w-11 rounded-md border border-border disabled:opacity-40"><OrderDown size={16} className="inline-block align-middle" /></button>
       <button type="button" aria-label={`Remove ${label} photo ${index + 1}`} disabled={uploading} onClick={() => onRemove(photo)} className="admin-press min-h-11 min-w-11 rounded-md bg-destructive font-semibold text-destructive-foreground disabled:opacity-40"><RemoveIcon size={16} className="inline-block align-middle" /></button>
     </div>)}
-    <FileUpload label={`Add ${label} photos`} accept="image/*" multiple onUpload={onUpload} uploading={uploading} disabled={photos.length >= 6} />
+    <FileUpload label={`Add ${label} photos`} {...fileUploadRules("photo")} multiple onUpload={onUpload} uploading={uploading} disabled={photos.length >= 6} />
     {label === "kit" && photos.length === 0 && <ValidationMessage live="polite">Add at least one photo before saving this kit.</ValidationMessage>}
   </div>;
 }
@@ -172,7 +174,7 @@ export function RoseCityShopFields(props: ShopFieldsProps & { id: ShopSectionId 
     {details.map((detail, index) => <EditorGroup key={index} legend={`Tile ${index + 1}`}>
       {detail.url ? <NativeImage src={detail.url} alt={detail.alt || `Tile ${index + 1} photo`} className="h-auto w-full rounded-lg border border-border" />
         : <p className={`${kit.hint} rounded-lg border border-dashed border-border p-3`}>No photo yet. The website shows a white box here.</p>}
-      <FileUpload label={detail.assetId ? "Replace photo" : "Upload photo"} accept="image/png,image/jpeg,image/webp" onUpload={files => props.uploadDetail(index, files)} uploading={uploading} />
+      <FileUpload label={detail.assetId ? "Replace photo" : "Upload photo"} {...fileUploadRules("photo")} onUpload={files => props.uploadDetail(index, files)} uploading={uploading} />
       {detail.assetId && <EditorRemoveButton disabled={uploading} label={`Remove tile ${index + 1} photo`} onClick={() => props.removeDetail(index)}>Remove photo</EditorRemoveButton>}
       <Text target={tileTarget(index, "photoAlt")} label="Photo description" value={detail.alt} maxLength={600} onChange={text => setDetail(index, { alt: text })} />
       <Text target={tileTarget(index, "title")} label="Title" value={detail.title} maxLength={80} onChange={text => setDetail(index, { title: text })} />
@@ -202,8 +204,8 @@ export function RoseCityShopFields(props: ShopFieldsProps & { id: ShopSectionId 
     <Toggle target={SHOP_TARGETS.mapVisible} label="Show map on Shop page" value={value.mapVisible} onChange={show => updatePresentation("mapVisible", show)} />
     <Text target={SHOP_TARGETS.mapHeading} label="Map heading" value={value.mapHeading} maxLength={120} onChange={text => updatePresentation("mapHeading", text)} />
     {value.mapUrl && <NativeImage src={value.mapUrl} alt={value.mapAlt || "Shop map preview"} className="h-auto w-full rounded-lg border border-border" />}
-    <FileUpload label={value.mapUrl ? "Replace map image" : "Upload map image"} accept="image/png,image/webp" onUpload={props.uploadMap} uploading={uploading} />
-    <p className={kit.hint}>Use PNG or WebP. The original map is kept; framing only changes what appears on this page.</p>
+    <FileUpload label={value.mapUrl ? "Replace map image" : "Upload map image"} {...fileUploadRules("graphic")} onUpload={props.uploadMap} uploading={uploading} />
+    <p className={kit.hint}>Use {GRAPHIC_UPLOAD_TYPES_LABEL}. The original map is kept; framing only changes what appears on this page.</p>
     {value.mapAssetId && <EditorRemoveButton disabled={uploading} onClick={props.removeMap}>Remove map</EditorRemoveButton>}
     <Text target={SHOP_TARGETS.mapDescription} label="Map description" value={value.mapAlt} maxLength={600} onChange={text => updatePresentation("mapAlt", text)} />
     <Toggle target={SHOP_TARGETS.mapWholeImage} label="Show the whole map image" value={!value.mapCrop} onChange={whole => updatePresentation("mapCrop", whole ? null : { ...APPROVED_SHOP_MAP_CROP })} />

@@ -11,6 +11,7 @@ import HomepagePreviewFrame from "@/components/admin/homepage/HomepagePreviewFra
 import { IconAdd, IconSearch } from "@/components/admin/icons";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
+import { adminImageRules, imageFileIssue } from "@/components/admin/ui/adminImageFiles";
 import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
@@ -163,6 +164,9 @@ export default function CinematicNewsEditor() {
     const clubId = club.id, previous = entry.draft.coverAssetId, saved = entry.article;
     setUploading(true); clearNotices(); setStatus("Adding your photo…");
     try {
+      // The cover is a photo: refuse a wrong type, an oversize or an unreadable file here, with the reason, before it uploads.
+      const issue = await imageFileIssue(file, adminImageRules("photo"));
+      if (issue) throw new Error(issue);
       const client = createClient(), path = `covers/${crypto.randomUUID()}-${file.name}`;
       const result = await client.storage.from("news").upload(path, file);
       if (result.error || !result.data) throw new Error(result.error?.message ?? "Could not upload the photo.");

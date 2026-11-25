@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Upload, X } from "@/components/admin/icons";
 import pendingRing from "@/components/admin/ui/AdminImageField.module.css";
 import { currentAdminTab, trackAdminEvent } from "@/lib/admin-analytics";
+import { acceptHint, fileUploadIssue } from "@/components/admin/ui/fileUploadIssue";
 import ResilientImage from "@/components/ResilientImage";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,11 @@ type FileUploadProps = {
   previewLabel?: string;
   /** File-type filter, e.g. "image/jpeg,image/png,image/webp". */
   accept?: string;
+  /**
+   * Largest file in bytes. A larger file is refused here, before `onUpload`, with a message naming the
+   * limit. Image uploads pass `MEDIA_RULES.<kind>.maxBytes` (or `adminImageRules(kind).maxBytes`).
+   */
+  maxBytes?: number;
   /** When provided, renders a remove affordance for clearing the upload. */
   onRemove?: () => void;
   /** Accessible name + visible primary copy, e.g. "Upload hero image". */
@@ -42,46 +48,6 @@ type FileUploadProps = {
   analyticsSlot?: string;
   className?: string;
 };
-
-const ACCEPT_LABELS: Record<string, string> = {
-  "image/jpeg": "JPEG",
-  "image/jpg": "JPEG",
-  "image/png": "PNG",
-  "image/webp": "WebP",
-  "image/gif": "GIF",
-  "image/svg+xml": "SVG",
-  "image/*": "Images",
-};
-
-function acceptHint(accept?: string): string | null {
-  if (!accept) return null;
-  const labels = accept
-    .split(",")
-    .map((rule) => rule.trim())
-    .filter(Boolean)
-    .map(
-      (rule) =>
-        ACCEPT_LABELS[rule.toLowerCase()] ??
-        (rule.startsWith(".") ? rule.slice(1).toUpperCase() : rule),
-    );
-  return labels.length > 0 ? labels.join(", ") : null;
-}
-
-function matchesAccept(file: File, accept?: string): boolean {
-  if (!accept) return true;
-  const rules = accept
-    .split(",")
-    .map((rule) => rule.trim().toLowerCase())
-    .filter(Boolean);
-  if (rules.length === 0) return true;
-  const type = file.type.toLowerCase();
-  const name = file.name.toLowerCase();
-  return rules.some((rule) => {
-    if (rule.startsWith(".")) return name.endsWith(rule);
-    if (rule.endsWith("/*")) return type.startsWith(rule.slice(0, -1));
-    return type === rule;
-  });
-}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -114,6 +80,7 @@ function FileUpload({
   previewUrl,
   previewLabel,
   accept,
+  maxBytes,
   onRemove,
   label,
   hint,
@@ -126,7 +93,7 @@ function FileUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
   const [dragActive, setDragActive] = useState(false);
-  const [rejected, setRejected] = useState(false);
+  const [rejection, setRejection] = useState<string | null>(null);
   const [fileMeta, setFileMeta] = useState<{ name: string; size: number } | null>(
     null,
   );
@@ -160,33 +127,25 @@ function FileUpload({
   }
 
   function handleFiles(files: FileList | null) {
-    if (multiple) {
-      const picked = files ? Array.from(files) : [];
-      if (picked.length === 0) return;
-      if (!picked.every((entry) => matchesAccept(entry, accept))) {
-        setRejected(true);
+    const picked = files ? Array.from(files) : [];
+    if (picked.length === 0) return;
+    if (!multiple) picked.splice(1);
+    for (const entry of picked) {
+      const issue = fileUploadIssue(entry, { accept, maxBytes, hint: hintText });
+      if (issue) {
+        setRejection(issue);
         return;
       }
-      setRejected(false);
-      setFileMeta(
-        picked.length === 1
-          ? { name: picked[0].name, size: picked[0].size }
-          : {
-              name: `${picked.length} files`,
-              size: picked.reduce((total, entry) => total + entry.size, 0),
-            },
-      );
-      startUpload(files);
-      return;
     }
-    const file = files?.[0];
-    if (!file) return;
-    if (!matchesAccept(file, accept)) {
-      setRejected(true);
-      return;
-    }
-    setRejected(false);
-    setFileMeta({ name: file.name, size: file.size });
+    setRejection(null);
+    setFileMeta(
+      picked.length === 1
+        ? { name: picked[0].name, size: picked[0].size }
+        : {
+            name: `${picked.length} files`,
+            size: picked.reduce((total, entry) => total + entry.size, 0),
+          },
+    );
     startUpload(files);
   }
 
@@ -380,13 +339,13 @@ function FileUpload({
         </>
       )}
 
-      {rejected && (
+      {rejection && (
         <p
           role="alert"
           data-slot="file-upload-error"
           className="mt-2 font-body text-xs text-destructive"
         >
-          That file type isn&apos;t supported{hintText ? ` — use ${hintText}` : ""}.
+          {rejection}
         </p>
       )}
     </div>

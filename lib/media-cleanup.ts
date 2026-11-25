@@ -2,11 +2,20 @@ import { failContract } from "@/lib/contract-error";
 import { isUuid, parseStoragePath } from "@/lib/storage-path";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 
+/** The reasons onzio.media_cleanup_queue accepts (media_cleanup_queue_reason_check); any other value is refused by the database. */
+export const MEDIA_CLEANUP_REASONS = [
+  "post-finalization-staging-delete",
+  "published-object-retirement",
+  "abandoned-staging-object",
+  "unsaved-homepage-upload",
+] as const;
+export type MediaCleanupReason = (typeof MEDIA_CLEANUP_REASONS)[number];
+
 export async function queueMediaCleanup(input: {
   clubId: string;
   storageBucket: "onzio-upload-staging" | "onzio-media";
   storagePath: string;
-  reason: string;
+  reason: MediaCleanupReason;
 }): Promise<void> {
   const service = createServiceRoleClient();
   const { error } = await service.schema("onzio").from("media_cleanup_queue").upsert(

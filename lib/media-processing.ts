@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
-import { failContract } from "@/lib/contract-error";
+import { ContractError, failContract } from "@/lib/contract-error";
 import type { MediaAuthorization } from "@/lib/media-authorization-token";
 import { queueMediaCleanup } from "@/lib/media-cleanup";
 import {
@@ -8,12 +8,8 @@ import {
   getMediaUsage,
   type MediaUsage,
 } from "@/lib/media-quota";
-import {
-  exceedsPixelLimit,
-  MAXIMUM_MEDIA_DIMENSION,
-  MAXIMUM_MEDIA_PIXELS,
-  validateMediaUpload,
-} from "@/lib/media-validation";
+import { MEDIA_RULES } from "@/lib/media-rules";
+import { exceedsPixelLimit, validateMediaUpload } from "@/lib/media-validation";
 import {
   buildStoragePath,
   parseStoragePath,
@@ -59,19 +55,20 @@ export async function normalizePhoto(
   bytes: Buffer,
   source: SourceDimensions = {},
 ): Promise<NormalizedMedia> {
+  const rules = MEDIA_RULES.photo;
   const instance = sharp(bytes, {
-    failOn: "warning",
-    limitInputPixels: 36_000_000,
+    failOn: rules.failOn,
+    limitInputPixels: rules.maxPixels,
   }).rotate();
   const actual = await instance.metadata();
   const sourceWidth = source.width ?? actual.autoOrient?.width ?? actual.width;
   const sourceHeight = source.height ?? actual.autoOrient?.height ?? actual.height;
   if (!sourceWidth || !sourceHeight) failContract("CORRUPT_IMAGE");
-  if (sourceWidth > 6000 || sourceHeight > 6000) {
+  if (sourceWidth > rules.maxDimension || sourceHeight > rules.maxDimension) {
     failContract("DIMENSIONS_TOO_LARGE");
   }
 
-  const dimensions = fitWithin(sourceWidth, sourceHeight, 2400);
+  const dimensions = fitWithin(sourceWidth, sourceHeight, rules.outputLongEdge);
   let output: Buffer;
   try {
     output = await instance
@@ -112,23 +109,24 @@ export async function normalizePhoto(
   };
 }
 
-/** Graphics up to 6000px / 36 MP are accepted and downscaled to fit 2400px, keeping transparency. */
+/** Graphics within MEDIA_RULES.graphic are accepted and shrunk to its output long edge, keeping transparency. */
 export async function normalizeGraphic(
   bytes: Buffer,
   options: { simulatedWebpSize?: number } = {},
 ): Promise<NormalizedMedia> {
-  const input = { failOn: "error", limitInputPixels: MAXIMUM_MEDIA_PIXELS } as const;
+  const rules = MEDIA_RULES.graphic;
+  const input = { failOn: rules.failOn, limitInputPixels: rules.maxPixels };
   const unreadable = (error: unknown): never =>
     failContract(exceedsPixelLimit(error) ? "DIMENSIONS_TOO_LARGE" : "CORRUPT_IMAGE");
   const metadata = await sharp(bytes, input).metadata().catch(unreadable);
   const sourceWidth = metadata.autoOrient?.width ?? metadata.width;
   const sourceHeight = metadata.autoOrient?.height ?? metadata.height;
   if (!sourceWidth || !sourceHeight) failContract("CORRUPT_IMAGE");
-  if (sourceWidth > MAXIMUM_MEDIA_DIMENSION || sourceHeight > MAXIMUM_MEDIA_DIMENSION) {
+  if (sourceWidth > rules.maxDimension || sourceHeight > rules.maxDimension) {
     failContract("DIMENSIONS_TOO_LARGE");
   }
 
-  const dimensions = fitWithin(sourceWidth, sourceHeight, 2400);
+  const dimensions = fitWithin(sourceWidth, sourceHeight, rules.outputLongEdge);
   const base = sharp(bytes, input)
     .rotate()
     .resize({ ...dimensions, fit: "inside", withoutEnlargement: true });
@@ -254,7 +252,7 @@ export async function publishAuthorizedMedia(
   const sourceBytes = Buffer.from(await stagingBlob.arrayBuffer());
   // One-time use (RC-ADMIN-10b): the reservation authorize recorded must
   // match this club, actor and path, be unexpired and unused, and cover the
-  // staged size. A file larger than the size claimed at authorize is removed.
+  // staged size. Consuming it also takes it out of the club's open quota.
   try {
     await consumeMediaUploadReservation({
       uploadId: authorization.uploadId,
@@ -264,21 +262,55 @@ export async function publishAuthorizedMedia(
       actualSize: sourceBytes.length,
     });
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "MEDIA_SIZE_MISMATCH") {
-      const { error: removeError } = await service.storage
-        .from("onzio-upload-staging")
-        .remove([authorization.stagingPath]);
-      if (removeError) {
-        await queueMediaCleanup({
-          clubId: authorization.clubId,
-          storageBucket: "onzio-upload-staging",
-          storagePath: authorization.stagingPath,
-          reason: "abandoned-staging-object",
-        });
-      }
+    if (error instanceof ContractError && SPENT_RESERVATION_CODES.has(error.code)) {
+      await discardStagedUpload(service, authorization, "abandoned-staging-object");
     }
     throw error;
   }
+  // The reservation is spent: no later finalize can use this staged file, so
+  // any failure from here on removes it instead of stranding it.
+  let published: PublishedMediaResult;
+  try {
+    published = await publishConsumedUpload(service, authorization, sourceBytes);
+  } catch (error) {
+    await discardStagedUpload(service, authorization, "abandoned-staging-object");
+    throw error;
+  }
+  await discardStagedUpload(service, authorization, "post-finalization-staging-delete");
+  return published;
+}
+
+/** Reservation refusals after which nothing can ever finalize the staged file. */
+const SPENT_RESERVATION_CODES = new Set(["UPLOAD_AUTHORIZATION_EXPIRED", "MEDIA_SIZE_MISMATCH"]);
+
+/** Removes a staged file no finalize can use, or queues it when Storage refuses. Never throws, so it cannot hide the finalize result. */
+async function discardStagedUpload(
+  service: ReturnType<typeof createServiceRoleClient>,
+  authorization: MediaAuthorization,
+  reason: "abandoned-staging-object" | "post-finalization-staging-delete",
+): Promise<void> {
+  try {
+    const { error } = await service.storage
+      .from("onzio-upload-staging")
+      .remove([authorization.stagingPath]);
+    if (!error) return;
+    await queueMediaCleanup({
+      clubId: authorization.clubId,
+      storageBucket: "onzio-upload-staging",
+      storagePath: authorization.stagingPath,
+      reason,
+    });
+  } catch (cleanupError) {
+    console.error("[media finalize] staged file could not be removed or queued", cleanupError);
+  }
+}
+
+async function publishConsumedUpload(
+  service: ReturnType<typeof createServiceRoleClient>,
+  authorization: MediaAuthorization,
+  sourceBytes: Buffer,
+): Promise<PublishedMediaResult> {
+  const onzio = service.schema("onzio");
   await validateMediaUpload({
     bytes: sourceBytes,
     metadata: {
@@ -352,18 +384,6 @@ export async function publishAuthorizedMedia(
     await onzio.from("media_assets").delete().eq("id", authorization.uploadId);
     await service.storage.from("onzio-media").remove([publicPath]);
     failContract("FINALIZATION_ROLLED_BACK", auditError.message);
-  }
-
-  const { error: stagingDeleteError } = await service.storage
-    .from("onzio-upload-staging")
-    .remove([authorization.stagingPath]);
-  if (stagingDeleteError) {
-    await queueMediaCleanup({
-      clubId: authorization.clubId,
-      storageBucket: "onzio-upload-staging",
-      storagePath: authorization.stagingPath,
-      reason: "post-finalization-staging-delete",
-    });
   }
 
   return {

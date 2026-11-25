@@ -2,6 +2,7 @@
 
 import { createClient as createAuthClient } from "@/lib/supabase-browser";
 import { withoutClientTenantIdentity } from "@/lib/admin-payload";
+import { assetColumnPairs } from "@/lib/media-reference-fields";
 
 type Filter = {
   kind: "eq" | "neq" | "gt" | "in";
@@ -29,45 +30,11 @@ type MediaUploadAuthorization = {
 
 const publishedMedia = new Map<string, PublishedMedia>();
 
-const MEDIA_REFERENCE_FIELDS: Record<
-  string,
-  ReadonlyArray<{ source: string; asset: string }>
-> = {
-  about_page_content: [
-    { source: "feature_image_url", asset: "feature_image_asset_id" },
-  ],
-  club_logo_page_content: [
-    { source: "annotated_image_url", asset: "annotated_image_asset_id" },
-    { source: "map_image_url", asset: "map_image_asset_id" },
-  ],
-  homepage_slideshow_photos: [
-    { source: "url", asset: "media_asset_id" },
-  ],
-  league_standings: [{ source: "logo_url", asset: "logo_asset_id" }],
-  matches: [
-    { source: "opponent_logo_url", asset: "opponent_logo_asset_id" },
-    { source: "sponsor_logo_url", asset: "sponsor_logo_asset_id" },
-    { source: "league_logo_url", asset: "league_logo_asset_id" },
-  ],
-  player_photos: [{ source: "url", asset: "media_asset_id" }],
-  program_media: [{ source: "url", asset: "media_asset_id" }],
-  players: [{ source: "photo_url", asset: "photo_asset_id" }],
-  shop_carousel_photos: [{ source: "url", asset: "media_asset_id" }],
-  shop_kit_photos: [{ source: "url", asset: "media_asset_id" }],
-  site_branding: [
-    { source: "club_logo_path", asset: "club_logo_asset_id" },
-  ],
-  site_sponsor_logos: [
-    { source: "logo_url", asset: "media_asset_id" },
-  ],
-  staff: [{ source: "photo_url", asset: "photo_asset_id" }],
-};
-
 function attachMediaReferences(
   table: string,
   payload: unknown,
 ): unknown {
-  const fields = MEDIA_REFERENCE_FIELDS[table] ?? [];
+  const fields = assetColumnPairs(table);
   const attach = (value: unknown) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return value;

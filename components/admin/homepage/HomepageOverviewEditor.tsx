@@ -8,6 +8,7 @@ import { useLeaveGuard } from "@/components/admin/reimagined/TopBar";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { IconLink } from "@/components/admin/icons";
+import { mediaAccept } from "@/lib/media-rules";
 import {
   EditorDialog,
   PageFrame,
@@ -207,7 +208,7 @@ export default function HomepageOverviewEditor() {
 
       </div>
     </PageFrame>
-    <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
+    <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept={mediaAccept("photo")} multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
     <EditorDialog
       open={dialog.open}
       onClose={dialog.close}

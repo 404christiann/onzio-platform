@@ -3,11 +3,13 @@
 import { useId, type ReactNode } from "react";
 import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { IconCaretDown } from "@/components/admin/icons";
 import { NATIONALITIES } from "@/lib/nationalities";
+import { mediaHint } from "@/lib/media-rules";
 import { PLAYER_MAX_AGE, PLAYER_MIN_AGE } from "@/lib/roster-player-age";
 import { editTargetProps } from "@/lib/admin-edit-targets";
 import type { PlayerForm, Position } from "../roster-model";
@@ -62,13 +64,12 @@ export function PlayerBasicsFields({ playerId, form, onChange, problems, photoPr
       <ImageFieldWithDescription
         target={playerId ? rosterTarget(playerId, "photo") : undefined}
         label="Player photo"
-        description="PNG, JPG or WebP, up to 15 MB. It uploads when you save. Without one, the roster shows the club crest."
+        description={`${mediaHint("photo")}. It uploads when you save. Without one, the roster shows the club crest.`}
         previewUrl={photoPreview}
         initials={initialsOf(form.name)}
         size={72}
         shape="circle"
-        allowedTypes={["image/png", "image/jpeg", "image/webp"]}
-        maxBytes={15 * 1024 * 1024}
+        {...adminImageRules("photo")}
         uploading={uploading}
         onPendingChange={onPhotoPendingChange}
         onUpload={async files => { onPhotoChange(files[0]); return true; }}

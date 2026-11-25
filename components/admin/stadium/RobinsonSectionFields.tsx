@@ -6,12 +6,15 @@ import { IconAdd, IconCaretDown, IconCaretUp, IconDelete } from "@/components/ad
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
 import { trackAdminEvent } from "@/lib/admin-analytics";
 import { EditorField, EditorGroup, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { ImageFieldWithDescription, ValidationMessage } from "@/components/admin/ui/editor-kit";
 import {
   MAX_ROBINSON_BLOCKS, MAX_ROBINSON_BULLETS, MAX_ROBINSON_INFO_ROWS, MAX_ROBINSON_PARAGRAPHS,
   type RobinsonContent, type RobinsonImageSlot, type RobinsonPageContent,
 } from "@/lib/cinematic-robinson-content";
 import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
+import { mediaHint } from "@/lib/media-rules";
+import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { addBlock, addInfoRow, appendItem, moveItem, removeItem, setImage, updateBlock } from "@/lib/cinematic-robinson-editor";
 import { robinsonSectionTitle, type RobinsonSectionId } from "./robinson-sections";
 import {
@@ -20,7 +23,9 @@ import {
 } from "./robinson-edit-targets";
 import styles from "./RobinsonStadiumEditor.module.css";
 
-const IMAGE_RULES = { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 } as const;
+// Stadium artwork uploads to the homepage-artwork bucket, so every slot takes a graphic.
+const IMAGE_RULES = adminImageRules("graphic");
+const TYPES = GRAPHIC_UPLOAD_TYPES_LABEL;
 
 export type RobinsonFieldsApi = {
   draft: RobinsonContent;
@@ -101,7 +106,7 @@ export function RobinsonSectionFields({ api, id }: { api: RobinsonFieldsApi; id:
       <TextField label="Subtitle" value={draft.heading.subtitle} max={120} disabled={locked} target={ROBINSON_TARGETS.headingSubtitle} onChange={subtitle => patch("heading", { subtitle })} />
     </div>; break;
     case "seating": body = <>
-      <ImageSlot api={api} slot="seating" label="Seating map" hint="On phones, a link opens this image full size." description="PNG or WebP. Shown full width at the top of the page." altTarget={ROBINSON_TARGETS.seatingImageAlt} />
+      <ImageSlot api={api} slot="seating" label="Seating map" hint="On phones, a link opens this image full size." description={`${TYPES}. Shown full width at the top of the page.`} altTarget={ROBINSON_TARGETS.seatingImageAlt} />
       <div className="grid gap-5 md:grid-cols-2">
         <TextField label="Caption" value={draft.seating.caption} max={120} disabled={locked} target={ROBINSON_TARGETS.seatingCaption} onChange={caption => patch("seating", { caption })} />
         <TextField label="Full-size link (phones)" value={draft.seating.expandLabel} max={120} disabled={locked} target={ROBINSON_TARGETS.seatingExpandLabel} onChange={expandLabel => patch("seating", { expandLabel })} />
@@ -125,16 +130,16 @@ export function RobinsonSectionFields({ api, id }: { api: RobinsonFieldsApi; id:
     </>; break;
     case "match": body = <>
       <p className={styles.note}>Match wording comes from <Link className={kit.inlineLink} href="/admin/homepage">Homepage</Link>, fixtures from <Link className={kit.inlineLink} href="/admin/schedule">Schedule</Link>, and the purchase link from <Link className={kit.inlineLink} href="/admin/tickets">Tickets</Link>.</p>
-      <ImageSlot api={api} slot="partner" label="Partner logo under the match" description="PNG or WebP. Shown under the match card." altTarget={ROBINSON_TARGETS.matchPartnerImageAlt} />
+      <ImageSlot api={api} slot="partner" label="Partner logo under the match" description={`${TYPES}. Shown under the match card.`} altTarget={ROBINSON_TARGETS.matchPartnerImageAlt} />
     </>; break;
-    case "lockers": body = <ImageSlot api={api} slot="lockers" label="Lockers image" hint="Decorative. Leave the description empty unless the image carries information." description="PNG or WebP. A wide divider image." altTarget={ROBINSON_TARGETS.lockersImageAlt} />; break;
+    case "lockers": body = <ImageSlot api={api} slot="lockers" label="Lockers image" hint="Decorative. Leave the description empty unless the image carries information." description={`${TYPES}. A wide divider image.`} altTarget={ROBINSON_TARGETS.lockersImageAlt} />; break;
     case "food": body = <>
       <TextField label="Heading" value={draft.food.heading} max={120} disabled={locked} target={ROBINSON_TARGETS.foodHeading} onChange={heading => patch("food", { heading })} />
-      <ImageSlot api={api} slot="mealPass" label="Meal pass" description="PNG or WebP." altTarget={ROBINSON_TARGETS.foodMealPassImageAlt} />
+      <ImageSlot api={api} slot="mealPass" label="Meal pass" description={`${TYPES}.`} altTarget={ROBINSON_TARGETS.foodMealPassImageAlt} />
       <TextField label="Text" value={draft.food.body} max={4000} multiline disabled={locked} target={ROBINSON_TARGETS.foodBody} hint="Line breaks show on desktop." onChange={text => patch("food", { body: text })} />
       <div className="grid gap-5">{draft.food.steps.map((step, index) => <div key={index} className="grid min-w-0 gap-2">
         <TextField label={`Step ${index + 1}`} value={step.label} max={120} disabled={locked} target={foodStepLabelTarget(index)} onChange={label => patch("food", { steps: draft.food.steps.map((current, position) => position === index ? { label } : current) })} />
-        <ImageSlot api={api} slot={(["step1", "step2", "step3"] as const)[index]} label={`Step ${index + 1} icon`} description="PNG or WebP. A small icon." altTarget={foodStepIconAltTarget(index)} />
+        <ImageSlot api={api} slot={(["step1", "step2", "step3"] as const)[index]} label={`Step ${index + 1} icon`} description={`${TYPES}. A small icon.`} altTarget={foodStepIconAltTarget(index)} />
       </div>)}</div>
     </>; break;
     case "route": body = <>
@@ -142,8 +147,8 @@ export function RobinsonSectionFields({ api, id }: { api: RobinsonFieldsApi; id:
         <TextField label="Heading" value={draft.route.heading} max={120} disabled={locked} target={ROBINSON_TARGETS.routeHeading} onChange={heading => patch("route", { heading })} />
         <TextField label="Subheading" value={draft.route.subheading} max={120} disabled={locked} target={ROBINSON_TARGETS.routeSubheading} onChange={subheading => patch("route", { subheading })} />
       </div>
-      <ImageSlot api={api} slot="bus" label="Bus" description="PNG or WebP." altTarget={ROBINSON_TARGETS.routeBusImageAlt} />
-      <ImageSlot api={api} slot="routeMap" label="Route map" description="PNG or WebP. Shown full width." altTarget={ROBINSON_TARGETS.routeMapImageAlt} />
+      <ImageSlot api={api} slot="bus" label="Bus" description={`${TYPES}.`} altTarget={ROBINSON_TARGETS.routeBusImageAlt} />
+      <ImageSlot api={api} slot="routeMap" label="Route map" description={`${TYPES}. Shown full width.`} altTarget={ROBINSON_TARGETS.routeMapImageAlt} />
     </>; break;
     case "directions": body = <>
       <p className={styles.note}>The Stadium parking menu link opens the section whose page link ends in #parking-lot-no-5.</p>
@@ -158,5 +163,5 @@ export function RobinsonSectionFields({ api, id }: { api: RobinsonFieldsApi; id:
       <div><EditorActionButton disabled={locked || draft.directions.blocks.length >= MAX_ROBINSON_BLOCKS} onClick={() => change(addBlock)}>Add section</EditorActionButton></div>
     </>; break;
   }
-  return <div className={styles.fields}>{visible}<div className={kit.stack}>{body}</div>{["seating", "match", "lockers", "food", "route"].includes(id) && <p className={styles.note}>Images: PNG or WebP, up to 5 MB and 6000 pixels per side.</p>}</div>;
+  return <div className={styles.fields}>{visible}<div className={kit.stack}>{body}</div>{["seating", "match", "lockers", "food", "route"].includes(id) && <p className={styles.note}>Images: {mediaHint("graphic", { pixels: true })}.</p>}</div>;
 }

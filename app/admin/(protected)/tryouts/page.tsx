@@ -34,6 +34,7 @@ import type {
 import { mapTryout } from "@/lib/queries";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { clubToday } from "@/lib/club-time";
+import { mediaAccept } from "@/lib/media-rules";
 import {
   buildTryoutMutationPayload,
   buildTryoutsPageMutationPayload,
@@ -875,7 +876,7 @@ function LegacyAdminTryoutsPage() {
                       </span>
                       <FileUpload
                         label="Upload hero image"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept={mediaAccept("photo")}
                         onUpload={(files) => void uploadHero(files)}
                         uploading={uploading}
                         previewUrl={draft.heroMediaPreviewUrl || null}

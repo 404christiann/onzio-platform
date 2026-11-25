@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverPositioner, PopoverTrigger } from "@/components/ui/popover";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import LeagueLogoUpload from "@/components/admin/schedule/LeagueLogoUpload";
 import MatchSummaryFields from "@/components/admin/schedule/MatchSummaryFields";
 import { MAX_MATCH_SCORE, parseDateInput, formatDateInput, uploadPhoto, logoUploadErrorMessage, deleteUnusedMatchImageUrls, type FormState } from "./schedule-model";
@@ -499,7 +500,7 @@ function MatchLogoUpload({ inputId, logoUrl, onUploaded, onRemove, onUploadBusyC
       onDragEnterCapture={onMediaActivity} onDropCapture={onMediaActivity} className="[&_[data-admin-image-preview]_img]:object-contain [&_[data-admin-image-preview]_img]:p-[3px]">
       <AdminImageField label={label} previewUrl={logoUrl} initials={name.trim().slice(0, 2).toUpperCase() || "?"}
         size={64} shape={bucket === "opponent-logos" ? "circle" : "square"}
-        allowedTypes={["image/png", "image/webp"]} maxBytes={5 * 1024 * 1024}
+        {...adminImageRules("graphic")}
         onPendingChange={(pending) => onUploadBusyChange(pending ? 1 : -1)}
         onUpload={async (files) => {
           setError(null);

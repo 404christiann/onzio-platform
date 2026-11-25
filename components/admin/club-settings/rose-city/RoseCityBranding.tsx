@@ -10,6 +10,7 @@ import { kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ListField } from "@/components/admin/list-cards/ListField";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { ShimmerRegion } from "@/components/admin/ui/Shimmer";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
@@ -20,7 +21,7 @@ import { createClient } from "@/lib/admin-client";
 import { fetchClubBranding, fetchSiteSocialLinks } from "@/lib/queries";
 import { CLUB_LOGO_BUCKET, FOOTER_TAGLINE_LIMIT, clubLogoUrl, resolveFooterTagline } from "@/lib/club-branding";
 import { deleteStoragePaths } from "@/lib/storage-cleanup";
-import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
+import { GRAPHIC_UPLOAD_MAX_SIZE_LABEL, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import type { SiteSocialPlatform } from "@/lib/db-types";
 import {
   brandingDirty, brandingStages, confirmBrandingStage, advanceBrandingSave, rejectBrandingSave, brandingPrewriteRejectionMessage,
@@ -39,7 +40,6 @@ const where = ["Website navigation", "Website footer", "Next match card", "Admin
 const FOOTER_LOGO_NOTE = "Your footer shows its own footer logo, set by Onzio, so this logo isn’t in the footer.";
 const NO_LOGO_NOTE = "No logo yet. The footer shows your club name instead.";
 const FOOTER_LOGO_TAGLINE_HINT = "Your footer shows its own footer logo in place of the club name and tagline, so this line isn’t shown there right now.";
-const graphicTypes = ["image/png", "image/webp"] as const;
 const errorText = (error: unknown) => error instanceof Error ? error.message : "The change could not be completed.";
 const TAGLINE_HINT = "Shown under the club name in the footer. Press Enter for a second line.";
 
@@ -355,11 +355,11 @@ export function RoseCityBranding() {
           <div ref={mediaField} className={classic.upload}>
             <AdminImageField
               label="Club logo" previewUrl={clubLogoUrl(draft.logoPath)} initials="?" shape="square" size={64}
-              allowedTypes={graphicTypes} maxBytes={5 * 1024 * 1024} disabled={locked} uploading={cleanupPending}
+              {...adminImageRules("graphic")} disabled={locked} uploading={cleanupPending}
               onUpload={upload}
               onRemove={() => { void removeLogo(); }}
             />
-            <p className={classic.hint}>{GRAPHIC_UPLOAD_TYPES_LABEL}, up to 5 MB. Use a transparent background. The file uploads when you choose it and goes live when you press Save.</p>
+            <p className={classic.hint}>{GRAPHIC_UPLOAD_TYPES_LABEL}, up to {GRAPHIC_UPLOAD_MAX_SIZE_LABEL}. Use a transparent background. The file uploads when you choose it and goes live when you press Save.</p>
             {cleanupPending && <p role="status" className={classic.hint}>Removing unused upload… Save is available when cleanup finishes.</p>}
             {uploadPending && <p role="status" className={classic.hint}>Uploading logo… Save is available when the upload finishes.</p>}
           </div>

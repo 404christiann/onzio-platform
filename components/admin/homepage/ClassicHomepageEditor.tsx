@@ -11,6 +11,7 @@ import { AdminToastProvider } from "@/components/admin/ui/AdminToast";
 import { AdminPhotoManager, type AdminPhoto } from "@/components/admin/ui/AdminPhotoManager";
 import { AdminSwitch } from "@/components/admin/ui/AdminSwitch";
 import { trackAdminEvent } from "@/lib/admin-analytics";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { PreviewToggle, type PreviewSize } from "@/components/admin/ui/PreviewToggle";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
 import { useSaveState } from "@/components/admin/ui/useSaveState";
@@ -246,7 +247,7 @@ function PersistentPhotos({ editor, known, destination, onWork, onUndoWork, onIn
   const ready = photos.filter(photo => photo.upload === "ready" && !preparing.current.has(photo.clientId));
   const item = (photo: HomepagePhoto): AdminPhoto => ({ id: photo.clientId, url: photo.url ?? "", description: photo.alt });
   return <><div ref={parking} hidden />{host && createPortal(<>
-    <AdminPhotoManager collectionId={editor.snapshot!.designRevision} label="Slideshow photos" descriptionLabel="Describe this photo" emptyUploadMessage="" variant="rows" photos={ready.map(item)} allowedTypes={["image/jpeg", "image/png", "image/webp"]} maxBytes={15 * 1024 * 1024} removalMessage="Photo removed" disabled={!!editor.state?.submitted || !!editor.recoveryConflict}
+    <AdminPhotoManager collectionId={editor.snapshot!.designRevision} label="Slideshow photos" descriptionLabel="Describe this photo" emptyUploadMessage="" variant="rows" photos={ready.map(item)} {...adminImageRules("photo")} removalMessage="Photo removed" disabled={!!editor.state?.submitted || !!editor.recoveryConflict}
       onPendingChange={onWork} onUndoPendingChange={onUndoWork} onDirty={onInteraction}
       onChange={next => {
         for (const photo of next) preparing.current.delete(photo.id);

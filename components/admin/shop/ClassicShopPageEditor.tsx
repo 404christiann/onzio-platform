@@ -15,6 +15,7 @@ import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminSaveActions } from "@/components/admin/ui/AdminSaveButton";
 import { AdminToastProvider } from "@/components/admin/ui/AdminToast";
 import { AdminPhotoManager, type AdminPhoto } from "@/components/admin/ui/AdminPhotoManager";
+import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { PreviewToggle } from "@/components/admin/ui/PreviewToggle";
 import { Shimmer } from "@/components/admin/ui/Shimmer";
 import { useUnsavedGuard } from "@/components/admin/ui/useUnsavedGuard";
@@ -461,7 +462,7 @@ function PersistentPhotos({ collectionId, destination, photos, onChange, onUploa
   useLayoutEffect(() => { if (host) (destination ?? parking.current)?.appendChild(host); }, [host, destination]);
   const items: AdminPhoto[] = photos.map((photo) => ({ id: photoKey(photo), url: photo.url, description: "" }));
   return <><div ref={parking} hidden />{host && createPortal(<AdminPhotoManager label={collectionId.endsWith("strip") ? "Shop photo row" : "Kit photos"} collectionId={collectionId} variant="tiles" photos={items}
-    allowedTypes={["image/jpeg", "image/png", "image/webp"]} maxBytes={15 * 1024 * 1024}
+    {...adminImageRules("photo")}
     onDirty={onInteraction} onPendingChange={onWork} onUndoPendingChange={onUndoWork} showDescriptions={false} removalMessage="Photo removed" reorderLabels="earlier-later"
     onChange={(next) => onChange(next.map((photo, order) => ({ ...known.current.get(photo.id)!, order })))}
     onAbandonedUpload={(added) => onAbandoned(added.map((photo) => known.current.get(photo.id)!))}
