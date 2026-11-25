@@ -35,10 +35,6 @@ function offenders(needle: string | RegExp) {
 // original native confirm inside one named function; each entry allows exactly that call, in that function, in that file.
 // Anything else in the same file, or a second copy of the call, still fails.
 const REIMAGINED_CONFIRM_ALLOWLIST: { file: string; within: string; call: string; why: string }[] = [
-  { file: "components/admin/programs/useProgramsEditor.ts", within: "function selectProgram(", call: 'window.confirm("Discard unsaved page changes?")', why: "reimagined Programs: opening another program while the page is dirty (`if (!classic)` branch)" },
-  { file: "components/admin/programs/useProgramsEditor.ts", within: "function showDirectory(", call: 'window.confirm("Discard unsaved program changes?")', why: "reimagined Programs: back to the directory (`if (!classic)` branch)" },
-  { file: "components/admin/programs/useProgramsEditor.ts", within: "function showManage(", call: 'window.confirm("Discard unsaved program changes?")', why: "reimagined Programs: open Manage programs (`if (!classic)` branch)" },
-  { file: "components/admin/programs/useProgramsEditor.ts", within: "function startCreate(", call: 'window.confirm("Discard unsaved program changes?")', why: "reimagined Programs: start a new program (`if (!classic)` branch)" },
   { file: "app/admin/(protected)/tryouts/page.tsx", within: "function selectTryout(", call: 'window.confirm("Discard unsaved tryout changes?")', why: "LegacyAdminTryoutsPage (not rendered; kept because contract tests read its text)" },
   { file: "app/admin/(protected)/tryouts/page.tsx", within: "function startCreate(", call: 'window.confirm("Discard unsaved tryout changes?")', why: "LegacyAdminTryoutsPage (not rendered; kept because contract tests read its text)" },
 ];

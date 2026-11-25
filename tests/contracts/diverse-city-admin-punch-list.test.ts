@@ -343,7 +343,8 @@ describe("Diverse City admin punch list", () => {
       const conditionalRemoveCount = roster.split(
         "onRemove={previewIsClubLogo ? undefined :",
       ).length - 1;
-      expect(conditionalRemoveCount).toBe(2);
+      expect(conditionalRemoveCount).toBe(1);
+      expect(roster).toContain('onRemove={() => { onPhotoChange(null); onChange({ ...form, photo_url: "" }); }}');
 
       const fileUpload = source("components/admin/FileUpload.tsx");
       expect(fileUpload).toContain("{onRemove && (");

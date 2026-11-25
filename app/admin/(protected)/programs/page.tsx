@@ -35,6 +35,6 @@ export default function AdminProgramsPage() {
 }
 
 function ProgramsWorkspace({ clubId, clubName, programsPolicy, previews }: Parameters<typeof useProgramsEditor>[0] & { previews: ProgramPreviews }) {
-  const editor = useProgramsEditor({ clubId, clubName, programsPolicy, classic: true });
+  const editor = useProgramsEditor({ clubId, clubName, programsPolicy });
   return <ClassicProgramsEditor editor={editor} previews={previews} />;
 }

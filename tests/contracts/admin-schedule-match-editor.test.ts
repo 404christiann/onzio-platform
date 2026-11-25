@@ -7,7 +7,6 @@ const read = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
 const SCHEDULE_ADMIN = "app/admin/(protected)/schedule/page.tsx";
-const SIDE_PANEL = "components/admin/AdminSidePanel.tsx";
 
 function section(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);
@@ -24,7 +23,6 @@ function count(source: string, value: string): number {
 
 describe("admin schedule match editor UX", () => {
   const schedule = read(SCHEDULE_ADMIN) + read("components/admin/schedule/ScheduleMatchForm.tsx") + read("components/admin/schedule/schedule-model.ts");
-  const sidePanel = read(SIDE_PANEL);
   const panel = section(schedule, "<AdminDialog open={panelOpen}", "</AdminDialog>");
   const panelProps = panel.slice(0, panel.indexOf("<MatchForm"));
   const panelBody = panel.slice(panel.indexOf("<MatchForm"));
@@ -38,8 +36,7 @@ describe("admin schedule match editor UX", () => {
   );
   const field = schedule.slice(schedule.indexOf("function Field("));
 
-  it("opts only the schedule editor into a wider panel with fixed actions", () => {
-    expect(sidePanel).toContain("max-w-md");
+  it("gives the schedule editor a wider dialog with fixed actions", () => {
     expect(panelProps).toContain('size="md"');
     expect(panelProps).toContain("footer={");
     expect(panelProps).toContain('role="alert"');

@@ -160,14 +160,18 @@ main.dark {
 .admin-theme[data-admin-theme="light"] .admin-portal {
   --admin-selected-foreground: 211 100% 36%;
   --success: 158 64% 27%;
+  --primary-foreground: 0 0% 100%;
+  --ios-green: #34C759;
 }
 
 .admin-theme[data-admin-theme="dark"] .admin-portal {
   --destructive: 0 72% 66%;
   --destructive-foreground: 220 20% 10%;
+  --primary-foreground: 0 0% 100%;
+  --ios-green: #30D158;
 }
 
-.admin-portal:not([data-admin-shell="reimagined"]) {
+.admin-portal {
   --admin-motion-ease-out: cubic-bezier(.23,1,.32,1);
   --admin-motion-drawer: cubic-bezier(.32,.72,0,1);
   --admin-motion-press: 120ms;
@@ -203,25 +207,15 @@ main.dark {
   --admin-motion-reduced-motion-fade: 120ms;
 }
 
-.admin-theme[data-admin-theme="light"] .admin-portal:not([data-admin-shell="reimagined"]) {
-  --primary-foreground: 0 0% 100%;
-  --ios-green: #34C759;
-}
-
-.admin-theme[data-admin-theme="dark"] .admin-portal:not([data-admin-shell="reimagined"]) {
-  --primary-foreground: 0 0% 100%;
-  --ios-green: #30D158;
-}
-
-:where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press {
+:where(.admin-portal) .admin-press {
   touch-action: manipulation;
 }
 
-:where(.admin-portal:not([data-admin-shell="reimagined"]) .admin-press) {
+:where(.admin-portal .admin-press) {
   position: relative;
 }
 
-:where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press::after {
+:where(.admin-portal) .admin-press::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -233,70 +227,70 @@ main.dark {
 }
 
 /* Replace the guided shell's brightness filter with the press overlay. */
-.admin-portal:not([data-admin-shell="reimagined"]) .admin-press:active:not(:disabled, [aria-disabled="true"]) {
+.admin-portal .admin-press:active:not(:disabled, [aria-disabled="true"]) {
   filter: none;
 }
 
-:where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press:active:not(:disabled, [aria-disabled="true"])::after {
+:where(.admin-portal) .admin-press:active:not(:disabled, [aria-disabled="true"])::after {
   opacity: .04;
 }
 
 /* Tailwind 3 emits ungated hover utilities. Keep touch on the resting styles
    inside the classic portal, including the calendar and billing overrides. */
 @media not all and (hover: hover) and (pointer: fine) {
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-primary/90"]):hover {
+  .admin-portal .admin-press:where([class~="hover:bg-primary/90"]):hover {
     background-color: hsl(var(--primary));
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-destructive/90"]):hover {
+  .admin-portal .admin-press:where([class~="hover:bg-destructive/90"]):hover {
     background-color: hsl(var(--destructive));
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-brand/90"]):hover {
+  .admin-portal .admin-press:where([class~="hover:bg-brand/90"]):hover {
     background-color: hsl(var(--brand));
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-secondary/80"]):hover {
+  .admin-portal .admin-press:where([class~="hover:bg-secondary/80"]):hover {
     background-color: hsl(var(--secondary));
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-accent"].bg-background):hover {
+  .admin-portal .admin-press:where([class~="hover:bg-accent"].bg-background):hover {
     background-color: hsl(var(--background));
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-accent"]:not(.bg-background)):not(:where([data-selected-single="true"], [data-range-start="true"], [data-range-middle="true"], [data-range-end="true"])):hover {
+  .admin-portal .admin-press:where([class~="hover:bg-accent"]:not(.bg-background)):not(:where([data-selected-single="true"], [data-range-start="true"], [data-range-middle="true"], [data-range-end="true"])):hover {
     background-color: transparent;
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:text-accent-foreground"]):not(:where([data-selected-single="true"], [data-range-start="true"], [data-range-middle="true"], [data-range-end="true"])):hover {
+  .admin-portal .admin-press:where([class~="hover:text-accent-foreground"]):not(:where([data-selected-single="true"], [data-range-start="true"], [data-range-middle="true"], [data-range-end="true"])):hover {
     color: hsl(var(--foreground));
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:bg-billing-warning"]):hover {
+  .admin-portal .admin-press:where([class~="hover:bg-billing-warning"]):hover {
     background-color: hsl(var(--billing-warning-soft));
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:text-billing-warning-foreground"]):hover {
+  .admin-portal .admin-press:where([class~="hover:text-billing-warning-foreground"]):hover {
     color: hsl(var(--billing-warning-foreground));
   }
 
-  .admin-portal:not([data-admin-shell="reimagined"]) .admin-press:where([class~="hover:underline"]):hover {
+  .admin-portal .admin-press:where([class~="hover:underline"]):hover {
     text-decoration-line: none;
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  :where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press:not(.admin-press-row) {
+  :where(.admin-portal) .admin-press:not(.admin-press-row) {
     transition: all 150ms cubic-bezier(.4,0,.2,1), transform var(--admin-motion-press) var(--admin-motion-ease-out);
   }
 
-  :where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press:active:not(.admin-press-row, :disabled, [aria-disabled="true"]) {
+  :where(.admin-portal) .admin-press:active:not(.admin-press-row, :disabled, [aria-disabled="true"]) {
     transform: scale(.98);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(.admin-portal:not([data-admin-shell="reimagined"])) .admin-press::after {
+  :where(.admin-portal) .admin-press::after {
     transition: opacity var(--admin-motion-reduced-motion-fade) var(--admin-motion-ease-out);
   }
 }

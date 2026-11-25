@@ -37,14 +37,13 @@ type PlayerFieldsProps = {
   photoFile: File | null;
   onPhotoChange: (file: File | null) => void;
   playerId?: string;
-  classic?: boolean;
   uploading?: boolean;
   validation?: string;
   onPhotoPendingChange?: (pending: boolean) => void;
 };
 type Editor = { key: number; player: Player | null; opener: HTMLElement | null };
 type Props = {
-  StaffComponent: ComponentType<{ addRequest: number; classic?: boolean }>;
+  StaffComponent: ComponentType<{ addRequest: number }>;
   PlayerFields: ComponentType<PlayerFieldsProps>;
 };
 
@@ -162,7 +161,7 @@ export default function ClassicRosterPage({ StaffComponent, PlayerFields }: Prop
       } />
       <AdminTabs items={TABS} value={tab} onChange={next => navigate(() => setTab(next), next === "staff" ? "Staff" : "Players")} tabsId="classic-roster" label="Roster sections" />
       <div role="tabpanel" id={`classic-roster-panel-${tab}`} aria-labelledby={`classic-roster-tab-${tab}`} className="mt-5">
-        {tab === "staff" ? <StaffComponent addRequest={staffAdd} classic /> : (
+        {tab === "staff" ? <StaffComponent addRequest={staffAdd} /> : (
           <>
             <div className={styles.tools}>
               <label className={styles.search}>
@@ -445,7 +444,7 @@ function PlayerEditor({ original, opener, PlayerFields, onSaved, onClose }: {
       <fieldset ref={mediaFieldset} disabled={saving} className={styles.fields} onPointerDownCapture={noteActivity} onKeyDownCapture={noteActivity} onClickCapture={event => pickerActivity(event, true)} onChangeCapture={event => { noteActivity(); pickerActivity(event, false); }} onDropCapture={noteActivity}>
         <RosterEditorStatsContext.Provider value={setStatsChanges}>
         <PlayerFields form={form} onChange={next => { setForm(next); setError(""); }} photoFile={photo} onPhotoChange={file => { noteActivity(); setPhoto(file); }}
-          playerId={persisted?.id} classic uploading={saving} validation={error} onPhotoPendingChange={photoPendingChanged} />
+          playerId={persisted?.id} uploading={saving} validation={error} onPhotoPendingChange={photoPendingChanged} />
         </RosterEditorStatsContext.Provider>
         <section className="space-y-3 border-t border-border pt-5">
           <h3 className="text-sm font-semibold">Visibility</h3>

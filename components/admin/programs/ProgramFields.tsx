@@ -1,27 +1,24 @@
 "use client";
 import ResilientImage from "@/components/ResilientImage";
-import FileUpload from "@/components/admin/FileUpload";
 import { AdminDialogSection } from "@/components/admin/ui/AdminDialog";
 import { AdminImageField } from "@/components/admin/ui/AdminImageField";
 import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import { AdminPanel } from "@/components/admin/AdminPage";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { SlidingPanel } from "@/components/ui/sliding-panel";
 import { X as AdminRemoveIcon, ChevronUp as AdminOrderUp, ChevronDown as AdminOrderDown, IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { PROGRAM_MEDIA_LIMITS, PROGRAM_REGISTRATION_LIMITS } from "@/lib/program-content";
-import { MEDIA_RULES, mediaAccept, mediaTypesLabel } from "@/lib/media-rules";
+import { MEDIA_RULES, mediaTypesLabel } from "@/lib/media-rules";
 import type { ProgramDraft, ProgramValidationErrors } from "@/lib/program-admin";
-import { PROGRAM_EDITOR_TABS, type ProgramEditorTab } from "./program-editor-types";
+import { type ProgramEditorTab } from "./program-editor-types";
 import type { ProgramsEditor } from "./useProgramsEditor";
-import { FormField as LegacyFormField, ClassicFormField, fieldError } from "./ProgramFormField";
+import { ClassicFormField as FormField, fieldError } from "./ProgramFormField";
 
-export function ProgramFields({ editor, classic = false, section, disabled = false }: { editor: ProgramsEditor; classic?: boolean; section?: ProgramEditorTab; disabled?: boolean }) {
-  const FormField = classic ? ClassicFormField : LegacyFormField;
+export function ProgramFields({ editor, section, disabled = false }: { editor: ProgramsEditor; section?: ProgramEditorTab; disabled?: boolean }) {
   const { hidesSlugField } = editor.policy;
-  const { draft, errors, activeTab: editorTab, tabDirection, selectTab, saving, updateDraft, derivedSlugForNewProgram, addHighlight, setHighlight, reorderHighlight, removeHighlight } = editor.program;
-  const { gallery, galleryInput, uploadingRole, uploadingGallery, uploadMedia, uploadGalleryImage, setGalleryAlt, reorderGallery, removeGalleryImage } = editor.media;
+  const { draft, errors, activeTab: editorTab, updateDraft, derivedSlugForNewProgram, addHighlight, setHighlight, reorderHighlight, removeHighlight } = editor.program;
+  const { gallery, uploadingRole, uploadingGallery, uploadMedia, uploadGalleryImage, setGalleryAlt, reorderGallery, removeGalleryImage } = editor.media;
   const { registrationForms } = editor;
   const activeTab = section ?? editorTab;
   const mediaBusy = disabled || editor.state.pickerPending || uploadingRole !== null || uploadingGallery;
@@ -157,7 +154,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                     <NativeSelectOption value="detail_focus">Detail focus</NativeSelectOption>
                   </NativeSelect>
                 </FormField>
-                <div className="rounded-lg border border-border p-3"><span className={ADMIN_LABEL_CLASS}>Visibility</span><p className="mt-2 font-body text-sm text-muted-foreground">{draft.status === "active" ? "Active — visible publicly" : "Hidden — admin only"}. {classic ? "Change visibility in the Visibility section." : "Change visibility in Manage programs."}</p></div>
+                <div className="rounded-lg border border-border p-3"><span className={ADMIN_LABEL_CLASS}>Visibility</span><p className="mt-2 font-body text-sm text-muted-foreground">{draft.status === "active" ? "Active — visible publicly" : "Hidden — admin only"}. Change visibility in the Visibility section.</p></div>
               </div>
               </>
               )}
@@ -165,8 +162,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
               {activeTab === "media" && (
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
                 <div>
-                  {!classic && <span className={ADMIN_LABEL_CLASS}>Hero image</span>}
-                  {classic ? <AdminImageField
+                  <AdminImageField
                     label="Hero image"
                     size={96}
                     shape="square"
@@ -180,23 +176,10 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                       updateDraft("heroMediaAssetId", null);
                       updateDraft("heroMediaPreviewUrl", "");
                     } : undefined}
-                  /> : (
-                  <FileUpload
-                    label="Upload hero image"
-                    accept={mediaAccept("photo")}
-                    onUpload={(files) => void uploadMedia("hero", files)}
-                    uploading={uploadingRole === "hero"}
-                    previewUrl={draft.heroMediaPreviewUrl || null}
-                    onRemove={draft.heroMediaAssetId ? () => {
-                      updateDraft("heroMediaAssetId", null);
-                      updateDraft("heroMediaPreviewUrl", "");
-                    } : undefined}
                   />
-                  )}
                 </div>
                 <div>
-                  {!classic && <span className={ADMIN_LABEL_CLASS}>Detail image</span>}
-                  {classic ? <AdminImageField
+                  <AdminImageField
                     label="Detail image"
                     size={96}
                     shape="square"
@@ -210,19 +193,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                       updateDraft("detailMediaAssetId", null);
                       updateDraft("detailMediaPreviewUrl", "");
                     } : undefined}
-                  /> : (
-                  <FileUpload
-                    label="Upload detail image"
-                    accept={mediaAccept("photo")}
-                    onUpload={(files) => void uploadMedia("detail", files)}
-                    uploading={uploadingRole === "detail"}
-                    previewUrl={draft.detailMediaPreviewUrl || null}
-                    onRemove={draft.detailMediaAssetId ? () => {
-                      updateDraft("detailMediaAssetId", null);
-                      updateDraft("detailMediaPreviewUrl", "");
-                    } : undefined}
                   />
-                  )}
                 </div>
               </div>
               )}
@@ -386,7 +357,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                         {PROGRAM_MEDIA_LIMITS.items} images; {mediaTypesLabel(MEDIA_RULES.photo.mimeTypes)}.
                       </p>
                     </div>
-                    {classic ? <AdminImageField
+                    <AdminImageField
                       label="Gallery image"
                       size={64}
                       shape="square"
@@ -395,28 +366,7 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                       disabled={mediaBusy || gallery.length >= PROGRAM_MEDIA_LIMITS.items}
                       onPendingChange={pending => editor.media.setPickerPending("gallery", pending)}
                       onUpload={uploadGalleryImage}
-                    /> : <>
-                    <button
-                      type="button"
-                      onClick={() => galleryInput.current?.click()}
-                      disabled={
-                        uploadingGallery ||
-                        gallery.length >= PROGRAM_MEDIA_LIMITS.items
-                      }
-                      className="min-h-11 rounded-lg border border-border px-3 py-2 font-body text-sm font-semibold normal-case tracking-normal text-muted-foreground transition hover:bg-accent disabled:opacity-30"
-                    >
-                      {uploadingGallery ? "Uploading…" : "Add image"}
-                    </button>
-                    <input
-                      ref={galleryInput}
-                      type="file"
-                      accept={mediaAccept("photo")}
-                      className="sr-only"
-                      onChange={(event) =>
-                        void uploadGalleryImage(event.target.files)
-                      }
                     />
-                    </>}
                   </div>
 
                   {gallery.length === 0 ? (
@@ -491,46 +441,5 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
               </div>
               )}
   </>;
-  return classic ? <fieldset className="classic-programs-fields" disabled={disabled}><AdminDialogSection title={activeTab === "content" ? "Program details" : activeTab === "media" ? "Program photos" : "Sign-up details"}>{content}</AdminDialogSection></fieldset> : <>
-              <ProgramTabs
-                value={activeTab}
-                onChange={selectTab}
-                disabled={saving || uploadingRole !== null || uploadingGallery}
-              />
-
-    <SlidingPanel activeKey={activeTab} direction={tabDirection}>{content}</SlidingPanel>
-  </>;
+  return <fieldset className="classic-programs-fields" disabled={disabled}><AdminDialogSection title={activeTab === "content" ? "Program details" : activeTab === "media" ? "Program photos" : "Sign-up details"}>{content}</AdminDialogSection></fieldset>
 }
-
-function ProgramTabs({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: ProgramEditorTab;
-  onChange: (value: ProgramEditorTab) => void;
-  disabled: boolean;
-}) {
-  return (
-    <div className="mt-3 grid gap-1 rounded-lg bg-card p-1 sm:grid-cols-3">
-      {PROGRAM_EDITOR_TABS.map((tab) => {
-        const selected = tab.id === value;
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            disabled={disabled}
-            aria-pressed={selected}
-            className={`min-h-11 font-body rounded-md px-3 py-2 text-sm normal-case tracking-normal transition-colors disabled:cursor-not-allowed ${
-              selected ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-background"
-            }`}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
