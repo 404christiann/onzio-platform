@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { compareMigrations, NOT_APPLIED_MESSAGE } from "../../scripts/check-migrations-applied.mjs";
+import { classifyMigrationChanges, compareMigrations, EDITED_MESSAGE, NOT_APPLIED_MESSAGE } from "../../scripts/check-migrations-applied.mjs";
 
 const root = process.cwd();
 const SCRIPT = resolve(root, "scripts/check-migrations-applied.mjs");
@@ -12,9 +12,10 @@ const WORKFLOW = WORKFLOW_FILE.split("\n").filter((line) => !line.trimStart().st
 
 const listed = (...rows: [string, string][]) => ({ migrations: rows.map(([local, remote]) => ({ local, remote, time: "" })) });
 
-function runGate(list: unknown) {
+function runGate(list: unknown, args: string[] = []) {
   try {
-    const stdout = execFileSync("node", [SCRIPT], { input: JSON.stringify(list), encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+    const input = typeof list === "string" ? list : JSON.stringify(list);
+    const stdout = execFileSync("node", [SCRIPT, ...args], { input, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
     return { status: 0, stdout };
   } catch (error) {
     const failed = error as { status: number; stdout: string; stderr: string };
@@ -59,8 +60,44 @@ describe("production migration gate", () => {
     expect(WORKFLOW).not.toMatch(/--project-ref [a-z]{20}\b/);
   });
 
-  it("skips fork pull requests and runs without secrets instead of failing", () => {
+  it("passes a pull request that changes no migration, without needing secrets", () => {
+    expect(classifyMigrationChanges("")).toEqual({ added: [], edited: [] });
+    const result = runGate("", ["--changes"]);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("changed=false");
+  });
+
+  it("marks a pull request that adds a migration for the production check", () => {
+    const diff = "A\tsupabase/migrations/20261126000000_new.sql\n";
+    expect(classifyMigrationChanges(diff)).toEqual({ added: ["supabase/migrations/20261126000000_new.sql"], edited: [] });
+    const result = runGate(diff, ["--changes"]);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("changed=true");
+  });
+
+  it("fails a pull request that edits or deletes an existing migration, even one production already has", () => {
+    for (const diff of ["M\tsupabase/migrations/20261124120000_hero_video_poster.sql", "D\tsupabase/migrations/20261124120000_hero_video_poster.sql"]) {
+      expect(classifyMigrationChanges(diff).edited).toHaveLength(1);
+      const result = runGate(diff, ["--changes"]);
+      expect(result.status, diff).toBe(1);
+      expect(result.stderr?.trim()).toBe(EDITED_MESSAGE);
+    }
+  });
+
+  it("fails, not passes, when a migration is added and a production secret is missing", () => {
+    const step = WORKFLOW.slice(WORKFLOW.indexOf("- name: Require production secrets"), WORKFLOW.indexOf("- name: Set up Supabase CLI"));
+    expect(step).toContain("if: steps.changes.outputs.changed == 'true'");
+    for (const secret of ["SUPABASE_ACCESS_TOKEN", "SUPABASE_DB_PASSWORD", "SUPABASE_PROJECT_REF"]) {
+      expect(step).toContain(`[ -n "$${secret}" ] || missing=`);
+    }
+    expect(step).toContain("exit 1");
+    expect(WORKFLOW).not.toContain("present=false");
+    // Every production step depends on the migration diff, never on whether secrets happen to be set.
+    expect(WORKFLOW.match(/if: steps\.changes\.outputs\.changed == 'true'/g)).toHaveLength(4);
+  });
+
+  it("runs on every pull request so it can be required, and skips only fork pull requests", () => {
+    expect(WORKFLOW).not.toMatch(/paths:/);
     expect(WORKFLOW).toContain("github.event.pull_request.head.repo.full_name == github.repository");
-    expect(WORKFLOW).toContain('echo "present=false" >> "$GITHUB_OUTPUT"');
   });
 });

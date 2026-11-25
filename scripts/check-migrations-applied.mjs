@@ -1,10 +1,15 @@
 // Production migration gate (CLAUDE.md): every migration in the branch must already be applied to production.
-// Reads `supabase migration list --linked --output-format json` on stdin and fails when the branch has a migration
-// production does not. Read-only: it only compares the two lists.
+// Read-only: it only compares lists.
+//   node scripts/check-migrations-applied.mjs --changes < `git diff --no-renames --name-status <base> HEAD -- supabase/migrations`
+//     fails when the pull request edits or deletes an existing migration; prints changed=true|false.
+//   node scripts/check-migrations-applied.mjs < `supabase migration list --linked --output-format json`
+//     fails when the branch has a migration production does not.
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const NOT_APPLIED_MESSAGE = "apply to prod first (needs christian's go), then re-run";
+export const EDITED_MESSAGE =
+  "an existing migration was edited or deleted; migrations are immutable once merged, add a new migration instead";
 
 /** @param {unknown} list */
 export function compareMigrations(list) {
@@ -15,7 +20,36 @@ export function compareMigrations(list) {
   return { localOnly, remoteOnly };
 }
 
-function main() {
+/**
+ * Classifies `git diff --no-renames --name-status` lines for supabase/migrations.
+ * @param {string} nameStatus
+ */
+export function classifyMigrationChanges(nameStatus) {
+  const added = [];
+  const edited = [];
+  for (const line of nameStatus.split("\n")) {
+    if (!line.trim()) continue;
+    const [status, path] = line.split("\t");
+    if (!path?.startsWith("supabase/migrations/")) continue;
+    if (status === "A") added.push(path);
+    else edited.push(`${status} ${path}`);
+  }
+  return { added, edited };
+}
+
+function checkChanges() {
+  const { added, edited } = classifyMigrationChanges(readFileSync(0, "utf8"));
+  for (const path of added) console.log(`Added: ${path}`);
+  if (edited.length > 0) {
+    for (const entry of edited) console.log(`Edited or deleted: ${entry}`);
+    console.log(`::error title=Existing migration changed::${EDITED_MESSAGE}`);
+    console.error(EDITED_MESSAGE);
+    process.exit(1);
+  }
+  console.log(`changed=${added.length > 0}`);
+}
+
+function checkApplied() {
   const { localOnly, remoteOnly } = compareMigrations(JSON.parse(readFileSync(0, "utf8")));
   for (const version of remoteOnly) {
     console.log(`::warning title=Branch is behind production::${version} is applied to production but not in this branch; rebase onto main.`);
@@ -29,4 +63,7 @@ function main() {
   console.log("Every migration in this branch is applied to production.");
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) main();
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  if (process.argv[2] === "--changes") checkChanges();
+  else checkApplied();
+}

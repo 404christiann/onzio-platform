@@ -1,16 +1,16 @@
 name: Production migration gate
 
-# CLAUDE.md's mandatory gate, run on every pull request that changes a migration: each migration file in the branch
-# must already be applied to production. Strictly read-only: `supabase link` and `supabase migration list` only.
-# Never add `db push`, `migration repair` or any other write here.
+# CLAUDE.md's mandatory gate: each migration file in the branch must already be applied to production, and a merged
+# migration is never edited. Strictly read-only: `supabase link` and `supabase migration list` only. Never add
+# `db push`, `migration repair` or any other write here.
 #
-# Needs the repository secrets SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD and SUPABASE_PROJECT_REF (the production
-# ref is kept out of this public repo). Fork pull requests and runs without those secrets skip instead of failing.
+# Runs on every pull request so it can be a required check; a pull request that changes no migration passes after
+# the diff. One that adds a migration needs the repository secrets SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD and
+# SUPABASE_PROJECT_REF (the production ref is kept out of this public repo) and fails without them. Fork pull
+# requests cannot read secrets, so the job is skipped for them.
 
 on:
   pull_request:
-    paths:
-      - supabase/migrations/**
   workflow_dispatch:
 
 permissions:
@@ -31,39 +31,58 @@ jobs:
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
 
     steps:
-      - name: Check for production secrets
-        id: secrets
-        run: |
-          if [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$SUPABASE_DB_PASSWORD" ] && [ -n "$SUPABASE_PROJECT_REF" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice title=Migration gate skipped::SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD or SUPABASE_PROJECT_REF is not set."
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Check out repository
-        if: steps.secrets.outputs.present == 'true'
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js 22
-        if: steps.secrets.outputs.present == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: 22
 
+      # A manual run checks the whole branch against production.
+      - name: Find migration changes
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --no-renames --name-status "$BASE_SHA" HEAD -- supabase/migrations > "$RUNNER_TEMP/changes.txt"
+          status=0
+          node scripts/check-migrations-applied.mjs --changes < "$RUNNER_TEMP/changes.txt" > "$RUNNER_TEMP/changes.out" || status=$?
+          cat "$RUNNER_TEMP/changes.out"
+          [ "$status" -eq 0 ] || exit "$status"
+          grep '^changed=' "$RUNNER_TEMP/changes.out" >> "$GITHUB_OUTPUT"
+
+      - name: Require production secrets
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          missing=""
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || missing="$missing SUPABASE_ACCESS_TOKEN"
+          [ -n "$SUPABASE_DB_PASSWORD" ] || missing="$missing SUPABASE_DB_PASSWORD"
+          [ -n "$SUPABASE_PROJECT_REF" ] || missing="$missing SUPABASE_PROJECT_REF"
+          if [ -n "$missing" ]; then
+            echo "::error title=Migration gate cannot check production::Missing repository secrets:$missing"
+            exit 1
+          fi
+
       # 2.122.0 is the CLI the gate has been run with by hand.
       - name: Set up Supabase CLI
-        if: steps.secrets.outputs.present == 'true'
+        if: steps.changes.outputs.changed == 'true'
         uses: supabase/setup-cli@v1
         with:
           version: 2.122.0
 
       - name: Link the production project (read-only)
-        if: steps.secrets.outputs.present == 'true'
+        if: steps.changes.outputs.changed == 'true'
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --agent no < /dev/null
 
       - name: Compare branch migrations with production
-        if: steps.secrets.outputs.present == 'true'
+        if: steps.changes.outputs.changed == 'true'
         run: |
           supabase migration list --linked --password "$SUPABASE_DB_PASSWORD" --agent no --output-format json > "$RUNNER_TEMP/migrations.json"
           node scripts/check-migrations-applied.mjs < "$RUNNER_TEMP/migrations.json"
