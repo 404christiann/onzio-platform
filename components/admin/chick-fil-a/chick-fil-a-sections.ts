@@ -87,6 +87,6 @@ export const chickFilADirty = (draft: ChickFilAContent, saved: ChickFilAContent 
 /** What each picture slot accepts. The restaurant photo also takes JPEG; everything else is PNG or WebP. */
 export const CHICK_FIL_A_IMAGE_RULES = {
   restaurant: { allowedTypes: ["image/jpeg", "image/png", "image/webp"], maxBytes: 15 * 1024 * 1024, hint: "JPG, PNG or WebP, up to 15 MB and 6000 pixels per side.", bucket: "homepage" },
-  default: { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024, hint: "PNG or WebP, up to 5 MB and 3000 pixels per side.", bucket: "homepage-artwork" },
+  default: { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024, hint: "PNG or WebP, up to 5 MB and 6000 pixels per side.", bucket: "homepage-artwork" },
 } as const;
 export const chickFilAImageRules = (slot: ChickFilAArtworkSlot) => slot === "restaurant" ? CHICK_FIL_A_IMAGE_RULES.restaurant : CHICK_FIL_A_IMAGE_RULES.default;

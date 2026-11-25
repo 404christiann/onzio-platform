@@ -39,7 +39,7 @@ function ArtworkField({ legend, help, url, alt, uploading, failed, error, disabl
     {uploading && <p role="status" className={kit.hint}>Adding your image…</p>}
     {failed && <div role="alert" className={`${kit.notice} grid gap-2`} data-tone="error"><p>{error ?? "This image could not be added."}</p><div><EditorActionButton disabled={disabled} onClick={onRetry}>Try adding it again</EditorActionButton></div></div>}
     {children}
-    <p className={kit.hint}>PNG or WebP, up to 5 MB and 3000 pixels per side.</p>
+    <p className={kit.hint}>PNG or WebP, up to 5 MB and 6000 pixels per side.</p>
     <p className={kit.hint}>Words inside the supplied image are changed by replacing the image.</p>
   </EditorGroup>;
 }

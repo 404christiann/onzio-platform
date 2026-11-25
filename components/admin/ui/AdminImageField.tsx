@@ -12,6 +12,9 @@ import {
 } from "./adminImageFiles";
 import styles from "./AdminImageField.module.css";
 
+/** `true` = saved, `false` = generic failure message, `{ error }` = show that text on the field. */
+export type AdminImageUploadResult = boolean | { error: string };
+
 export type AdminImageFieldProps = AdminImageRules & {
   label: string;
   previewUrl?: string | null;
@@ -20,7 +23,7 @@ export type AdminImageFieldProps = AdminImageRules & {
   shape?: "circle" | "square";
   uploading?: boolean;
   disabled?: boolean;
-  onUpload: (files: FileList) => Promise<boolean>;
+  onUpload: (files: FileList) => Promise<AdminImageUploadResult>;
   onRemove?: () => void;
   onDirty?: () => void;
   onPendingChange?: (pending: boolean) => void;
@@ -89,7 +92,8 @@ export function AdminImageField({
       transfer.items.add(file);
       const saved = await onUpload(transfer.files);
       if (!mounted.current || attemptRef.current !== attempt) return;
-      if (saved) onDirty?.();
+      if (saved === true) onDirty?.();
+      else if (saved && typeof saved === "object" && saved.error) setMessage(saved.error);
       else setMessage("The image could not be uploaded. Try again.");
     } catch {
       if (mounted.current && attemptRef.current === attempt) setMessage("The image could not be uploaded. Try again.");

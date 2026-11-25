@@ -389,11 +389,22 @@ export function createClient() {
             );
             const finalizeResult = await parseJson(finalizeResponse);
             if (!finalizeResponse.ok || !finalizeResult.data) {
+              // A missing `error` key means the response did not come from the
+              // finalize route (HTML error page, gateway timeout), so the HTTP
+              // status is the only useful detail to show.
+              const reported = finalizeResult.error as
+                | { code?: string; message?: string }
+                | undefined;
               return {
                 data: null,
-                error:
-                  finalizeResult.error ??
-                  mediaError("MEDIA_FINALIZATION_FAILED"),
+                error: mediaError(
+                  reported?.code ?? "MEDIA_FINALIZATION_FAILED",
+                  reported?.message ||
+                    (reported
+                      ? "The image could not be processed. Try a different file."
+                      : `The image could not be processed: the server responded ${finalizeResponse.status} ${finalizeResponse.statusText || ""}`.trim() +
+                        ". Try again."),
+                ),
               };
             }
             const media = finalizeResult.data as PublishedMedia;

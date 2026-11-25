@@ -10,7 +10,7 @@ import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import styles from "./ticket-editors.module.css";
 
 export const IMAGE_RULES = { allowedTypes: ["image/png", "image/webp"], maxBytes: 5 * 1024 * 1024 } as const;
-export const IMAGE_NOTE = "Images: PNG or WebP, up to 5 MB and 3000 pixels per side.";
+export const IMAGE_NOTE = "Images: PNG or WebP, up to 5 MB and 6000 pixels per side.";
 
 /** Move up, move down and remove for one list item, with the icons.download glyphs. */
 export function ReorderTools({ index, length, disabled, noun, onMove, onRemove }: { index: number; length: number; disabled: boolean; noun: string; onMove: (delta: -1 | 1) => void; onRemove: () => void }) {

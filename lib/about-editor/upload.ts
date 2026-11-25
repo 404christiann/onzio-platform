@@ -10,7 +10,7 @@ export async function uploadAboutImage(file: File, stablePath?: string, kind: "p
     cacheControl: stablePath ? "0" : undefined,
     upsert: Boolean(stablePath),
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(error.message || "The image could not be uploaded. Try again.");
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return stablePath ? `${data.publicUrl}?v=${Date.now()}` : data.publicUrl;
 }

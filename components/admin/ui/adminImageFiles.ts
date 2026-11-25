@@ -15,8 +15,13 @@ export function imageAccept(rules: AdminImageRules) {
   return rules.allowedTypes.join(",");
 }
 
+function typeList(rules: AdminImageRules) {
+  const names = rules.allowedTypes.map((type) => labels[type]);
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names.join("");
+}
+
 export function imageHint(rules: AdminImageRules) {
-  const types = rules.allowedTypes.map((type) => labels[type]).join(", ");
+  const types = typeList(rules);
   const limit = Number.isInteger(rules.maxBytes / 1048576)
     ? String(rules.maxBytes / 1048576)
     : (rules.maxBytes / 1048576).toFixed(1);
@@ -47,7 +52,7 @@ function readableImage(file: File) {
 
 export async function imageFileIssue(file: File, rules: AdminImageRules): Promise<string | null> {
   if (!(file.type in labels) || !rules.allowedTypes.includes(file.type as AdminImageMime)) {
-    return `“${file.name}” is not a supported image. Use ${rules.allowedTypes.map((type) => labels[type]).join(", ")}.`;
+    return `“${file.name}” is not a supported image. Use ${typeList(rules)}.`;
   }
   if (file.size > rules.maxBytes) {
     return `“${file.name}” is too large. The limit is ${imageHint(rules).split(" up to ")[1]}.`;

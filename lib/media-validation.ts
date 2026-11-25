@@ -26,6 +26,10 @@ export type ValidatedMedia = {
   kind: MediaKind;
 };
 
+/** Graphics and photos share the media_assets 6000px / 36 MP ceiling; graphics are downscaled after this check. */
+export const MAXIMUM_MEDIA_DIMENSION = 6000;
+export const MAXIMUM_MEDIA_PIXELS = 36_000_000;
+
 const FORMAT_MIME = {
   jpeg: "image/jpeg",
   png: "image/png",
@@ -140,19 +144,23 @@ export function validateClaimedMetadata(metadata: MediaUploadMetadata): void {
     metadata.kind === "photo" ? 15 * 1024 * 1024 : 5 * 1024 * 1024;
   if (metadata.size > maximumBytes) failContract("FILE_TOO_LARGE");
 
-  const maximumDimension = metadata.kind === "photo" ? 6000 : 3000;
   if (
     (metadata.width !== undefined &&
       (!Number.isSafeInteger(metadata.width) ||
         metadata.width <= 0 ||
-        metadata.width > maximumDimension)) ||
+        metadata.width > MAXIMUM_MEDIA_DIMENSION)) ||
     (metadata.height !== undefined &&
       (!Number.isSafeInteger(metadata.height) ||
         metadata.height <= 0 ||
-        metadata.height > maximumDimension))
+        metadata.height > MAXIMUM_MEDIA_DIMENSION))
   ) {
     failContract("DIMENSIONS_TOO_LARGE");
   }
+}
+
+/** sharp refuses an image over limitInputPixels with this message rather than a typed error. */
+export function exceedsPixelLimit(error: unknown): boolean {
+  return error instanceof Error && /pixel limit/i.test(error.message);
 }
 
 export async function validateMediaUpload(input: {
@@ -198,10 +206,11 @@ export async function validateMediaUpload(input: {
   };
   try {
     imageMetadata = await sharp(input.bytes, {
-      failOn: "warning",
-      limitInputPixels: 36_000_000,
+      failOn: metadata.kind === "graphic" ? "error" : "warning",
+      limitInputPixels: MAXIMUM_MEDIA_PIXELS,
     }).metadata();
-  } catch {
+  } catch (error) {
+    if (exceedsPixelLimit(error)) failContract("DIMENSIONS_TOO_LARGE");
     const webpDimensions =
       format === "webp" ? parseWebpDimensions(input.bytes) : null;
     if (!webpDimensions) failContract("CORRUPT_IMAGE");
@@ -217,8 +226,11 @@ export async function validateMediaUpload(input: {
   const height = imageMetadata.height;
   if (!width || !height) failContract("CORRUPT_IMAGE");
 
-  const maximumDimension = metadata.kind === "photo" ? 6000 : 3000;
-  if (width > maximumDimension || height > maximumDimension) {
+  if (
+    width > MAXIMUM_MEDIA_DIMENSION ||
+    height > MAXIMUM_MEDIA_DIMENSION ||
+    width * height > MAXIMUM_MEDIA_PIXELS
+  ) {
     failContract("DIMENSIONS_TOO_LARGE");
   }
 

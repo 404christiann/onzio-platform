@@ -8,7 +8,12 @@ import {
   getMediaUsage,
   type MediaUsage,
 } from "@/lib/media-quota";
-import { validateMediaUpload } from "@/lib/media-validation";
+import {
+  exceedsPixelLimit,
+  MAXIMUM_MEDIA_DIMENSION,
+  MAXIMUM_MEDIA_PIXELS,
+  validateMediaUpload,
+} from "@/lib/media-validation";
 import {
   buildStoragePath,
   parseStoragePath,
@@ -107,27 +112,30 @@ export async function normalizePhoto(
   };
 }
 
+/** Graphics up to 6000px / 36 MP are accepted and downscaled to fit 2400px, keeping transparency. */
 export async function normalizeGraphic(
   bytes: Buffer,
   options: { simulatedWebpSize?: number } = {},
 ): Promise<NormalizedMedia> {
-  const metadata = await sharp(bytes, {
-    failOn: "warning",
-    limitInputPixels: 9_000_000,
-  }).metadata();
-  if (!metadata.width || !metadata.height) failContract("CORRUPT_IMAGE");
-  if (metadata.width > 3000 || metadata.height > 3000) {
+  const input = { failOn: "error", limitInputPixels: MAXIMUM_MEDIA_PIXELS } as const;
+  const unreadable = (error: unknown): never =>
+    failContract(exceedsPixelLimit(error) ? "DIMENSIONS_TOO_LARGE" : "CORRUPT_IMAGE");
+  const metadata = await sharp(bytes, input).metadata().catch(unreadable);
+  const sourceWidth = metadata.autoOrient?.width ?? metadata.width;
+  const sourceHeight = metadata.autoOrient?.height ?? metadata.height;
+  if (!sourceWidth || !sourceHeight) failContract("CORRUPT_IMAGE");
+  if (sourceWidth > MAXIMUM_MEDIA_DIMENSION || sourceHeight > MAXIMUM_MEDIA_DIMENSION) {
     failContract("DIMENSIONS_TOO_LARGE");
   }
 
-  const base = sharp(bytes, {
-    failOn: "warning",
-    limitInputPixels: 9_000_000,
-  }).rotate();
+  const dimensions = fitWithin(sourceWidth, sourceHeight, 2400);
+  const base = sharp(bytes, input)
+    .rotate()
+    .resize({ ...dimensions, fit: "inside", withoutEnlargement: true });
   const [png, webp] = await Promise.all([
     base.clone().png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer(),
     base.clone().webp({ quality: 82, alphaQuality: 100 }).toBuffer(),
-  ]);
+  ]).catch(unreadable);
   const webpSize = options.simulatedWebpSize ?? webp.length;
   const keepPng = png.length <= webpSize;
   const output = keepPng ? png : webp;
@@ -135,8 +143,7 @@ export async function normalizeGraphic(
 
   return {
     bytes: output,
-    width: metadata.width,
-    height: metadata.height,
+    ...dimensions,
     format,
     mimeType: keepPng ? "image/png" : "image/webp",
     hasAlpha: metadata.hasAlpha === true,
