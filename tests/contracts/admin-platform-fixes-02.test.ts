@@ -13,7 +13,8 @@ import { DEFAULT_PROGRAM_REGISTRATION_CONTENT } from "@/lib/program-content";
 import { NEW_REGISTRATION_FORM_PARTICIPANT_MODE } from "@/lib/registration-fields";
 import { PLAYER_MAX_AGE, PLAYER_MIN_AGE, playerAgeError } from "@/lib/roster-player-age";
 import { nextSeasonAfter } from "@/lib/season-label";
-import { normalizeKitBuyLink, shopSaveRequestSchema } from "@/lib/shop-editor/contract";
+import { shopSaveRequestSchema } from "@/lib/shop-editor/contract";
+import { normalizeLinkDestination as normalizeKitBuyLink } from "@/lib/link-destination";
 import { siteRouteOptionsWithFallback } from "@/lib/site-routes";
 import {
   DEFAULT_STANDINGS_SETTINGS,

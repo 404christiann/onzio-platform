@@ -105,11 +105,11 @@ describe("RC-ADMIN-4a Contact editor: field messages", () => {
     const draft = starterCinematicContactContent();
     draft.title = "  "; draft.subtitle = "";
     draft.rows.media.prompt = ""; draft.rows.tryouts.action = " ";
-    draft.informationHref = "http://example.com";
+    draft.informationHref = "not a link";
     expect(contactFieldErrors(draft)).toEqual({
       title: "Enter a title.", subtitle: "Enter a subtitle.",
       "rows.media.prompt": "Enter row text.", "rows.tryouts.action": "Enter button text.",
-      informationHref: "Use an HTTPS URL, site path, or email address.",
+      informationHref: "That doesn't look like a link or email.",
     });
   });
   it("sends each message to the card that holds the field, and opens the first card in card order", () => {

@@ -512,7 +512,7 @@ describe("the Diverse City classic Shop editor and frame", () => {
   });
 
   it("every kit and purchase field in the dialog carries its id (kit fields under the kit being edited)", () => {
-    expect(editor.match(/<Field target=/g)).toHaveLength(15);
+    expect(editor.match(/<(?:Link)?Field target=/g)).toHaveLength(15);
     for (const field of ["eyebrow", "title", "description", "bullets", "storeNote", "buttonLabel", "buyLink"]) expect(editor).toContain(`target={kitTarget(variant, "${field}")}`);
     for (const field of ["label", "title", "body"]) expect(editor).toContain(`target={cardTarget(index, "${field}")}`);
     for (const name of ["purchaseHeading", "purchaseFooterLabel", "purchaseFooterText", "purchaseButtonLabel", "purchaseButtonLink"]) expect(editor).toContain(`target={SHOP_TARGETS.${name}}`);

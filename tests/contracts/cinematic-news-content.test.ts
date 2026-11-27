@@ -59,8 +59,12 @@ describe("RC2027-NEWS content rules", () => {
     expect(valid({ actionHref: "https://foothilltransit.org/routes" })).toBe(true);
     expect(valid({ actionLabel: "" })).toBe(false);
     expect(valid({ actionHref: "" })).toBe(false);
-    for (const href of ["javascript:alert(1)", "//other.example", "http://example.com", "https://user:pass@example.com", "https://localhost/x", "/news\nbreak", " /tickets", "mailto:office@example.com"]) {
+    for (const href of ["javascript:alert(1)", "//other.example", "https://user:pass@example.com", "https://localhost/x", "/news\nbreak"]) {
       expect(valid({ actionHref: href }), href).toBe(false);
+    }
+    // The shared link rule (lib/link-destination.ts): http:// is upgraded, spaces are trimmed and an email is a link too.
+    for (const href of ["http://example.com", " /tickets", "mailto:office@example.com", "office@example.com"]) {
+      expect(valid({ actionHref: href }), href).toBe(true);
     }
   });
 

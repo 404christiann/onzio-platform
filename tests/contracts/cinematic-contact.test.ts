@@ -45,8 +45,12 @@ describe("cinematic Contact source and routing", () => {
     expect(renderToStaticMarkup(createElement(CinematicContact, { content }))).toContain('href="mailto:office@example.com"');
     expect(contactHref(content, "media")).toBe("/stadium/media-credentials");
   });
-  it.each(["javascript:alert(1)", "//other.example", "https://user:password@example.com", "http://example.com", "https://127.0.0.1/contact", "https://example.com/line\nbreak", "mailto:bad@example.com?subject=x"])("rejects unsafe Information destination %s", href => {
+  it.each(["javascript:alert(1)", "//other.example", "https://user:password@example.com", "https://127.0.0.1/contact", "https://example.com/line\nbreak", "mailto:mailto:bad@example.com"])("rejects unsafe Information destination %s", href => {
     expect(cinematicContactContentSchema.safeParse({ ...approved, informationHref: href }).success).toBe(false);
+  });
+  // The shared link rule (lib/link-destination.ts): a typed email, http:// and a mailto query are accepted and stored normalized.
+  it.each([["office@example.com", "mailto:office@example.com"], ["http://example.com", "https://example.com"], ["mailto:office@example.com?subject=Hi", "mailto:office@example.com?subject=Hi"]])("stores Information destination %s as %s", (href, stored) => {
+    expect(cinematicContactContentSchema.parse({ ...approved, informationHref: href }).informationHref).toBe(stored);
   });
   it("rejects missing or invented row keys", () => {
     const { media, ...missing } = approved.rows;

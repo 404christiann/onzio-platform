@@ -8,6 +8,7 @@ import {
 import { EMPTY_MATCH_SUMMARY, matchSummaryColumns, readMatchSummary, type MatchSummary } from "@/lib/match-summary";
 import { matchReplayEmbedUrl } from "@/lib/youtube-embed";
 import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
+import { linkDestinationProblem } from "@/lib/link-destination";
 
 const read = (path: string) => readFileSync(path, "utf8");
 const page = read("app/admin/(protected)/schedule/page.tsx");
@@ -55,10 +56,9 @@ function oldValidate(form: FormState): string | null {
     (opponentScore !== null && (!Number.isInteger(opponentScore) || opponentScore < 0))
   ) return "Scores must be whole numbers of 0 or higher.";
   if (form.sponsor_logo_url && !form.sponsor_name?.trim()) return "Sponsor name is required when a sponsor logo is uploaded.";
-  if (form.sponsor_link?.trim()) {
-    try { const url = new URL(form.sponsor_link); if (!["http:", "https:"].includes(url.protocol)) throw new Error(); }
-    catch { return "Sponsor website link must be a valid http or https address."; }
-  }
+  // Classic Schedule and Rose City both use the shared link rule (lib/link-destination.ts) for the sponsor website.
+  const sponsorLinkProblem = linkDestinationProblem(form.sponsor_link ?? "");
+  if (sponsorLinkProblem) return sponsorLinkProblem;
   if (matchReplayEmbedUrl(form.replay_video_url ?? "") === null) return "The stream or replay video must be a YouTube video link, like https://youtu.be/…";
   if (form.attendance !== null && (!Number.isInteger(form.attendance) || form.attendance < 0)) return "Attendance must be a whole number of 0 or higher.";
   return null;

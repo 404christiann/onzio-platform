@@ -67,7 +67,7 @@ describe("cinematic Partners content rules", () => {
     expect(partnerAction(content, "opportunities")).toBeNull();
   });
 
-  it.each(["javascript:alert(1)", "//other.example", "http://example.com", "https://user:pass@example.com", "https://127.0.0.1/form"])("rejects unsafe button destination %s", href => {
+  it.each(["javascript:alert(1)", "//other.example", "https://user:pass@example.com", "https://127.0.0.1/form"])("rejects unsafe button destination %s", href => {
     const content = sam();
     content.pages.opportunities.ctaHref = href;
     expect(cinematicPartnersContentSchema.safeParse(content).success).toBe(false);

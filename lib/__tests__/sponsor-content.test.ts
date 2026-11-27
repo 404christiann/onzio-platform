@@ -189,12 +189,14 @@ describe("one-list page", () => {
   it.each([
     ["", { ok: true, value: null }],
     ["  kimshardware.com ", { ok: true, value: "https://kimshardware.com" }],
-    ["http://kims.example/a?b=1", { ok: true, value: "http://kims.example/a?b=1" }],
-    ["HTTPS://Kims.Example", { ok: true, value: "HTTPS://Kims.Example" }],
+    // Shared link rule (lib/link-destination.ts): http:// is upgraded, only the scheme is lowercased, an email is accepted.
+    ["http://kims.example.com/a?b=1", { ok: true, value: "https://kims.example.com/a?b=1" }],
+    ["HTTPS://Kims.Example.com", { ok: true, value: "https://Kims.Example.com" }],
     ["kims hardware", { ok: false }],
     ["localhost", { ok: false }],
     ["javascript:alert(1)", { ok: false }],
-    ["mailto:kim@example.com", { ok: false }],
+    ["//kims.example.com", { ok: false }],
+    ["mailto:kim@example.com", { ok: true, value: "mailto:kim@example.com" }],
     [`https://e.com/${"a".repeat(2_040)}`, { ok: false }],
   ])("reads %j as a website", (input, expected) => {
     const result = normalizeSponsorWebsite(input);
@@ -216,7 +218,7 @@ describe("one-list page", () => {
     const shown = sponsorListProblems(many, true);
     expect(shown.fields).toEqual([
       { key: "k0", field: "name", message: "Give this sponsor a name." },
-      { key: "k1", field: "website", message: "Use a web address like theirshop.com." },
+      { key: "k1", field: "website", message: "That doesn't look like a link or email." },
     ]);
     expect(shown.footerOver).toBe(true);
     expect(shown.homepageOver).toBe(false);

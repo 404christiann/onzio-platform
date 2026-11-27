@@ -43,7 +43,7 @@ describe("RC2027-NEWS editor", () => {
     expect(result.ok).toBe(false);
     expect(!result.ok && result.problems).toEqual({
       title: "Enter a title.", publishedLocal: "Choose the date and time.", body: "Write the article text.",
-      actionHref: "Use an https link or a page on this site, like /community/partnership.",
+      actionHref: "That doesn't look like a link or email.",
     });
   });
 

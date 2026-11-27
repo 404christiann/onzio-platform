@@ -183,11 +183,19 @@ describe("exported Programs page handler media cleanup", () => {
 describe("exported Programs page handler destination boundary", () => {
   beforeEach(() => mocks.rpc.mockResolvedValue({ data: targets[0].snapshot(), error: null }));
 
-  it.each(["//evil.test", "javascript:alert(1)", "relative/path", "HTTPS://EXAMPLE.TEST"])("leaves the destination %j to the database predicate", async external_cta_href => {
+  // The route checks the destination itself now (the shared link rule), before the database predicate.
+  it.each(["//evil.test", "javascript:alert(1)", "relative/path"])("rejects the destination %j at the route", async external_cta_href => {
+    const body = pagePayload(); body.program.external_cta_href = external_cta_href;
+    const { POST } = await targets[0].route();
+    expect((await POST(post(targets[0], body))).status).toBe(400);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([["HTTPS://EXAMPLE.TEST", "https://EXAMPLE.TEST"], ["info@example.test", "mailto:info@example.test"]])("forwards the destination %j normalized as %j", async (external_cta_href, normalized) => {
     const body = pagePayload(); body.program.external_cta_href = external_cta_href;
     const { POST } = await targets[0].route();
     expect((await POST(post(targets[0], body))).status).toBe(200);
-    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("save_program_page", { p_club_id: clubId, p_request: body });
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("save_program_page", { p_club_id: clubId, p_request: { ...body, program: { ...body.program, external_cta_href: normalized } } });
   });
 
   it("bounds the destination at 2048 characters", async () => {

@@ -142,8 +142,8 @@ describe("Rose City footer tagline (RC-ADMIN-4c)", () => {
   it("rejects a changed link that is not https, and allows an untouched legacy value", async () => {
     const { roseCityBrandingErrors, roseCityBrandingInvalid } = await import("@/components/admin/club-settings/rose-city/rose-city-branding");
     expect(roseCityBrandingInvalid(roseCityBrandingErrors(saved, saved))).toBe(false);
-    const bad = { ...saved, links: saved.links.map((link) => (link.id === "x" ? { ...link, href: "http://x.com/new" } : link)) };
-    expect(roseCityBrandingErrors(bad, saved).links).toEqual({ x: "Use a complete link starting with https://." });
+    const bad = { ...saved, links: saved.links.map((link) => (link.id === "x" ? { ...link, href: "mailto:club@x.com" } : link)) };
+    expect(roseCityBrandingErrors(bad, saved).links).toEqual({ x: "That doesn't look like a full https:// link." });
   });
 });
 

@@ -106,7 +106,8 @@ describe("one row per sponsor", () => {
 
   it.each([
     ["https://kimshardware.com", true],
-    ["http://kimshardware.com/sponsors?ref=club", true],
+    ["https://kimshardware.com/sponsors?ref=club", true],
+    ["http://kimshardware.com/sponsors?ref=club", false],
     [`https://example.com/${"a".repeat(2028)}`, true],
     [`https://example.com/${"a".repeat(2029)}`, false],
     ["kimshardware.com", false],

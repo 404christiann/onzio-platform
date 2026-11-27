@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { emptyTicketsContent, hydrateTicketsContent, isTicketPurchaseUrl, ticketsDraftSchema, ticketsDraftFingerprint, ticketsSaveSchema } from "@/lib/tickets-content";
+import { emptyTicketsContent, hydrateTicketsContent, ticketsDraftSchema, ticketsDraftFingerprint, ticketsSaveSchema } from "@/lib/tickets-content";
+import { normalizeLinkDestination } from "@/lib/link-destination";
 import { randomUUID } from "node:crypto";
 describe("Tickets content boundaries", () => {
-    it.each(["/tickets", "//checkout.example.com", "javascript:alert(1)", "http://checkout.example.com", "https://user:secret@checkout.example.com", "https://127.0.0.1/tickets", "https://checkout.example.com\\evil", " https://checkout.example.com"])("rejects unsafe purchase URL %s", url => expect(isTicketPurchaseUrl(url)).toBe(false));
-    it.each(["", "https://checkout.example.com", "https://checkout.example.com/event?quantity=1#tickets"])("accepts optional external HTTPS URL %s", url => expect(isTicketPurchaseUrl(url)).toBe(true));
+    it.each(["//checkout.example.com", "javascript:alert(1)", "https://user:secret@checkout.example.com", "https://127.0.0.1/tickets", "https://checkout.example.com\\evil"])("rejects unsafe purchase URL %s", url => expect(normalizeLinkDestination(url)).toBeNull());
+    it.each(["", "https://checkout.example.com", "https://checkout.example.com/event?quantity=1#tickets"])("accepts optional external HTTPS URL %s", url => expect(normalizeLinkDestination(url)).toBe(url));
+    // The shared link rule (lib/link-destination.ts): a site path is kept, http:// is upgraded and spaces are trimmed.
+    it.each([["/tickets", "/tickets"], ["http://checkout.example.com", "https://checkout.example.com"], [" https://checkout.example.com", "https://checkout.example.com"]])("normalizes purchase link %s", (url, expected) => expect(normalizeLinkDestination(url)).toBe(expected));
     it("does not copy club offers or trust delivery URLs in a save", () => {
         const content = emptyTicketsContent();
         expect(JSON.stringify(content)).not.toContain("Rose City");

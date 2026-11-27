@@ -129,12 +129,12 @@ describe("Homepage Overview: what each part shows (the prototype's fields)", () 
     expect(HOMEPAGE_PARTS.map(part => part.id)).toHaveLength(11);
   });
 
-  it("the form links warn on a non-HTTPS address before Save", () => {
+  it("the form links warn on an address that is not a link before Save", () => {
     const value = draft();
-    value.revamp!.navigation.destinations.tryouts = "http://example.com/form";
+    value.revamp!.navigation.destinations.tryouts = "not a link";
     const html = renderToStaticMarkup(createElement(HomepagePartFields, { part: "forms", e: editorFor(value) }));
-    expect(html).toContain("Use a full HTTPS address");
-    expect(fieldsHtml("forms")).not.toContain("Use a full HTTPS address");
+    expect(html).toContain("That doesn&#x27;t look like a link or email.");
+    expect(fieldsHtml("forms")).not.toContain("That doesn&#x27;t look like a link or email.");
   });
 
   it("keeps the 7-photo, 10-option and 30-link limits", () => {

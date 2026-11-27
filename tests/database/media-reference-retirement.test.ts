@@ -156,7 +156,7 @@ it("keeps Club Logo JSONB images and serializes concurrent card updates", async 
     await cleaner.query("commit");
     await setup.query("update onzio.club_logo_page_content set features='[]'::jsonb where club_id=$1", [clubId]);
 
-    await setup.query("insert into onzio.site_social_links(club_id,id,label,href,icon) values($1,'media-link','Media','/',$2)",
+    await setup.query("insert into onzio.site_social_links(club_id,id,label,href,icon) values($1,'media-link','Media','https://media.example.com',$2)",
       [clubId, url]);
     expect(await retire()).toEqual({ status: "referenced" });
     await setup.query("delete from onzio.site_social_links where club_id=$1", [clubId]);
@@ -166,7 +166,7 @@ it("keeps Club Logo JSONB images and serializes concurrent card updates", async 
       [clubId, JSON.stringify([{ image_url: url }])])).rejects.toThrow("MEDIA_NOT_PUBLISHED");
     await expect(setup.query("update onzio.club_logo_page_content set features=$2::jsonb where club_id=$1",
       [clubId, JSON.stringify([{ patch_url: url }])])).rejects.toThrow("MEDIA_NOT_PUBLISHED");
-    await expect(setup.query("insert into onzio.site_social_links(club_id,id,label,href,icon) values($1,'media-link','Media','/',$2)",
+    await expect(setup.query("insert into onzio.site_social_links(club_id,id,label,href,icon) values($1,'media-link','Media','https://media.example.com',$2)",
       [clubId, url])).rejects.toThrow("MEDIA_NOT_PUBLISHED");
   } finally {
     await Promise.allSettled([linker.query("rollback"), cleaner.query("rollback")]);
