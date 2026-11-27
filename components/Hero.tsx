@@ -10,6 +10,7 @@ import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/prev
 import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import type { DBHomepageHeroContent } from "@/lib/db-types";
+import { SITE_PAGE_LINK, renderableLink } from "@/lib/link-destination";
 
 export default function Hero({
   initialContent,
@@ -88,8 +89,8 @@ export default function Hero({
     const headlineOne = heroContent.headline_line_one.trim() || club.name;
     const headlineTwo = heroContent.headline_line_two.trim();
     const intro = heroContent.intro.trim();
-    const primaryHref = heroContent.primary_cta_href.trim() || "/schedule";
-    const secondaryHref = heroContent.secondary_cta_href.trim() || "/roster";
+    const primaryHref = renderableLink(heroContent.primary_cta_href, SITE_PAGE_LINK) || "/schedule";
+    const secondaryHref = renderableLink(heroContent.secondary_cta_href, SITE_PAGE_LINK) || "/roster";
 
     return (
       <section className="clubhouse-hero">
@@ -129,8 +130,8 @@ export default function Hero({
     const headlineOne = heroContent.headline_line_one.trim() || club.name;
     const headlineTwo = heroContent.headline_line_two.trim();
     const intro = heroContent.intro.trim();
-    const primaryHref = heroContent.primary_cta_href.trim() || "/schedule";
-    const secondaryHref = heroContent.secondary_cta_href.trim() || "/roster";
+    const primaryHref = renderableLink(heroContent.primary_cta_href, SITE_PAGE_LINK) || "/schedule";
+    const secondaryHref = renderableLink(heroContent.secondary_cta_href, SITE_PAGE_LINK) || "/roster";
 
     return (
       <section

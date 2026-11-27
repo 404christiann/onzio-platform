@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { SITE_PAGE_LINK, linkDestinationSchema } from "@/lib/link-destination";
 import { cinematicHomepageSaveSchema } from "@/lib/cinematic-homepage-content";
 
 const text = z.string().max(20_000);
-const href = text.regex(/^(?:|\/[-A-Za-z0-9_/?#=&%.]*)$/);
+/** Picked from the club's own pages (blank allowed); never another site, so never `//host`. */
+const href = linkDestinationSchema({ ...SITE_PAGE_LINK, max: 20_000 });
 /**
  * The hero's small heading (the date line in the design demos). The
  * save function (20261022183955_homepage_content_policy.sql) still accepts up

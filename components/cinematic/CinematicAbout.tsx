@@ -6,6 +6,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import type { DBAboutPageContent } from "@/lib/db-types";
 import "./cinematic.css";
 import "./about.css";
+import { SITE_PAGE_LINK, renderableLink } from "@/lib/link-destination";
 
 /** The public page and admin canvas share authored content and section targets. */
 export default function CinematicAbout({ content, editorEmptySections = false }: {
@@ -13,7 +14,7 @@ export default function CinematicAbout({ content, editorEmptySections = false }:
   editorEmptySections?: boolean;
 }) {
   const club = useClubContext();
-  const hasClosing = Boolean(content.closing_text || (content.closing_cta_label && content.closing_cta_href));
+  const hasClosing = Boolean(content.closing_text || (content.closing_cta_label && renderableLink(content.closing_cta_href, SITE_PAGE_LINK)));
   return <div className="cinematic-site about-2027" data-cinematic-about>
     <header className="about-heading" data-about-editor-section="hero">
       <h1>{content.hero_title}</h1><div className="about-rule" aria-hidden="true" />
@@ -38,7 +39,7 @@ export default function CinematicAbout({ content, editorEmptySections = false }:
     </section>}
     {(hasClosing || editorEmptySections) && <section className="about-closing" data-about-editor-section="closing" aria-label="Closing invitation">
       {content.closing_text && <h2>{content.closing_text}</h2>}
-      {content.closing_cta_label && content.closing_cta_href && <Link className="about-schedule" href={content.closing_cta_href}>{content.closing_cta_label}</Link>}
+      {content.closing_cta_label && renderableLink(content.closing_cta_href, SITE_PAGE_LINK) && <Link className="about-schedule" href={renderableLink(content.closing_cta_href, SITE_PAGE_LINK)}>{content.closing_cta_label}</Link>}
       {editorEmptySections && !hasClosing && <p className="about-empty">Add a closing invitation</p>}
     </section>}
   </div>;

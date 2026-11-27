@@ -24,6 +24,7 @@ import CinematicEpisode from "./CinematicEpisode";
 import { cinematicMatchDate, cinematicMatchTime, latestResultFixture, nextHomeFixture } from "./next-home-fixture";
 import { CinematicLatestResult, CinematicReplay } from "./CinematicMatchResult";
 import type { CinematicHomeInitialData } from "./cinematic-home-data";
+import { SITE_PAGE_LINK, renderableLink } from "@/lib/link-destination";
 
 /**
  * With `initialData` (server-rendered public page) the body is complete on first paint and nothing is refetched.
@@ -75,7 +76,7 @@ export default function CinematicHome({ initialHeroContent, initialData }: { ini
   const raffleShown = !!revamp && isHomepageSectionShown(revamp.raffle);
   const matchShown = !!revamp && isHomepageSectionShown(revamp.match);
   const pricesShown = !!revamp && isHomepageSectionShown(revamp.prices);
-  const matchHref = revamp?.match.buttonHref || "/tickets";
+  const matchHref = renderableLink(revamp?.match.buttonHref, SITE_PAGE_LINK) || "/tickets";
   return <>
     <CinematicHero content={hero} />
     {revamp && <>
@@ -96,7 +97,7 @@ export default function CinematicHome({ initialHeroContent, initialData }: { ini
     <CinematicPhotos photos={photos} />
     {latest && <><CinematicLatestResult fixture={latest} clubLabel={clubLabel || club.name} crestUrl={branding.clubLogoUrl} /><CinematicReplay fixture={latest} clubLabel={clubLabel || club.name} crestUrl={branding.clubLogoUrl} /></>}
     {revamp && (revamp.championship.title || revamp.championship.trophy.url || championsPiece["data-homepage-piece"]) && <section {...championsPiece} className="champions"><div className="champion-copy"><p className="eyebrow">{revamp.championship.league}</p><h2>{revamp.championship.year}<br />{revamp.championship.title}</h2><div className="red-rule" /><p className="body-copy">{revamp.championship.body}</p></div>{revamp.championship.trophy.url && <NativeImage src={revamp.championship.trophy.url} alt={revamp.championship.trophy.alt} width={1500} height={1200} loading="lazy" />}</section>}
-    {club.storeEnabled && kit && player && <section {...shopPiece} className="jersey"><div className="player-image"><NativeImage src={player.url} alt={kit.title} loading="lazy" /></div><div className="jersey-copy"><p className="eyebrow">{kit.eyebrow}</p><h2>{kit.title}</h2><div className="red-rule" /><p className="body-copy">{kit.description}</p>{kit.bullet_points.some(Boolean) && <><p className="includes-label">Includes</p><ul>{kit.bullet_points.filter(Boolean).map((bullet, index) => <li key={index}>{bullet}</li>)}</ul></>}{kit.store_note && <p className="store-note">{kit.store_note}</p>}<Link className="button" href={kit.cta_link || "/shop"}>{kit.cta_label}</Link></div></section>}
+    {club.storeEnabled && kit && player && <section {...shopPiece} className="jersey"><div className="player-image"><NativeImage src={player.url} alt={kit.title} loading="lazy" /></div><div className="jersey-copy"><p className="eyebrow">{kit.eyebrow}</p><h2>{kit.title}</h2><div className="red-rule" /><p className="body-copy">{kit.description}</p>{kit.bullet_points.some(Boolean) && <><p className="includes-label">Includes</p><ul>{kit.bullet_points.filter(Boolean).map((bullet, index) => <li key={index}>{bullet}</li>)}</ul></>}{kit.store_note && <p className="store-note">{kit.store_note}</p>}<Link className="button" href={renderableLink(kit.cta_link) || "/shop"}>{kit.cta_label}</Link></div></section>}
     {video && <CinematicEpisode content={video} posterUrl={revamp?.presentation.episodePoster.url} crestUrl={branding.clubLogoUrl} />}
     <CinematicSponsors sponsors={sponsors} treatments={revamp?.presentation.sponsorTreatments ?? {}} heading={revamp?.sponsors.heading ?? ""} />
   </>;
