@@ -122,10 +122,12 @@ const row = z
  * the database only ever holds normalized links (onzio_private.normalize_link_destination
  * re-checks them).
  */
-export const ADMIN_LINK_FIELDS: Partial<Record<string, Record<string, LinkDestinationOptions>>> = {
+export const ADMIN_LINK_FIELDS: Partial<Record<string, Record<string, LinkDestinationOptions & { blankIsNull?: true }>>> = {
   site_social_links: { href: PROFILE_LINK },
-  site_sponsor_logos: { website_url: {} },
-  matches: { sponsor_link: {} },
+  // Nullable columns: blank means "no link" and is stored as NULL, as the editors send it
+  // (site_sponsor_logos_website_url_shape refuses '').
+  site_sponsor_logos: { website_url: { blankIsNull: true } },
+  matches: { sponsor_link: { blankIsNull: true } },
   programs: { external_cta_href: {} },
   tryouts: { registration_href: {} },
 };
@@ -146,7 +148,9 @@ export function normalizeAdminLinkFields<T extends Record<string, unknown> | Rec
     const next = { ...row };
     for (const [column, options] of Object.entries(fields)) {
       const value = next[column];
-      if (typeof value === "string") next[column] = normalizeLinkDestination(value, options) ?? value;
+      if (typeof value !== "string") continue;
+      const normalized = normalizeLinkDestination(value, options) ?? value;
+      next[column] = normalized === "" && options.blankIsNull ? null : normalized;
     }
     return next;
   };

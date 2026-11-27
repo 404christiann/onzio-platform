@@ -87,3 +87,16 @@ describe("existing link values re-save byte-identical", () => {
     expect(FIELDS.map(([field]) => field)).toHaveLength(24);
   });
 });
+
+describe("a blank link on a nullable data-route column is stored as null", () => {
+  it.each([["site_sponsor_logos", "website_url"], ["matches", "sponsor_link"]] as const)("%s.%s", (table, column) => {
+    for (const blank of ["", "   "]) {
+      expect(adminDataRequestSchema.safeParse({ table, operation: "update", payload: { [column]: blank } }).success).toBe(true);
+      expect(normalizeAdminLinkFields(table, { [column]: blank })).toEqual({ [column]: null });
+    }
+  });
+
+  it("keeps a blank social href as the empty string its NOT NULL column stores", () => {
+    expect(normalizeAdminLinkFields("site_social_links", { href: "" })).toEqual({ href: "" });
+  });
+});

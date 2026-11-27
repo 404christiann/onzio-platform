@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { cinematicShopContentSchema, EMPTY_CINEMATIC_SHOP_CONTENT, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import { shopPurchaseSchema } from "@/lib/shop-editor/contract";
+import { renderableLink } from "@/lib/link-destination";
 import type { DBShopPurchaseDetails } from "@/lib/db-types";
 
 /** Preserve intentionally blank/removed cards; legacy normalizers supply defaults. */
@@ -11,7 +12,8 @@ export async function fetchCinematicShopPurchase(clubId: string, client: typeof 
   if (result.error) throw new Error("Could not load jersey details.");
   if (!result.data) return null;
   const { updated_at, ...fields } = result.data;
-  return { id: 1, ...shopPurchaseSchema.parse(fields), updated_at };
+  // A link saved under an older rule renders the button inactive instead of failing the page.
+  return { id: 1, ...shopPurchaseSchema.parse({ ...fields, cta_link: renderableLink(fields.cta_link) }), updated_at };
 }
 
 const DETAIL_COLUMNS = ["detail_1_media_asset_id", "detail_2_media_asset_id", "detail_3_media_asset_id", "detail_4_media_asset_id", "detail_5_media_asset_id", "detail_6_media_asset_id"] as const;
@@ -27,6 +29,7 @@ export async function fetchCinematicShopContent(clubId: string, client: typeof s
   const stored = Array.isArray(row.content.details) ? row.content.details as Record<string, unknown>[] : [];
   const content = cinematicShopContentSchema.parse({
     ...row.content, mapAssetId: row.map_media_asset_id,
+    ...(Array.isArray(row.content.editions) ? { editions: (row.content.editions as Record<string, unknown>[]).map(edition => ({ ...edition, link: renderableLink(edition.link) })) } : {}),
     ...(Array.isArray(row.content.details) ? { details: stored.map((detail, i) => ({ ...detail, assetId: (row[DETAIL_COLUMNS[i]] as string | null | undefined) ?? null })) } : {}),
   });
   const ids = [content.mapAssetId, ...content.details.map(detail => detail.assetId)].filter((id): id is string => Boolean(id));

@@ -1,11 +1,16 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 import CinematicContact from "@/components/cinematic/CinematicContact";
 import CinematicShop, { type CinematicShopProps } from "@/components/cinematic/CinematicShop";
 import { cinematicContactContentSchema, starterCinematicContactContent } from "@/lib/cinematic-contact-content";
 import { EMPTY_CINEMATIC_SHOP_CONTENT } from "@/lib/cinematic-shop-content";
 import { shopSectionSchema } from "@/lib/shop-editor/contract";
+import { fetchCinematicContactContent } from "@/lib/cinematic-contact-query";
+import { fetchCinematicShopContent, fetchCinematicShopPurchase } from "@/lib/cinematic-shop-query";
+import { fetchCinematicPartners } from "@/lib/cinematic-partners-query";
+import { starterCinematicPartnersContent } from "@/lib/cinematic-partners-content";
 import { publicKit } from "@/lib/shop-editor/model";
 
 /** What staff type is what the public site links to, normalized once at save. */
@@ -46,5 +51,47 @@ describe("a saved bare email renders as a mailto: link on the public site", () =
     }));
     expect(html).not.toContain("javascript:");
     expect(html).toContain("shop-buy-unavailable");
+  });
+});
+
+/** A stored link the current rule refuses (saved under an older rule) blanks that one button instead of failing the page. */
+describe("public pages load when a stored link no longer passes the rule", () => {
+  const ODD = "tel:+15551234567";
+  const fakeClient = (rows: Record<string, unknown>) => {
+    const query = (table: string) => {
+      const result = { data: rows[table] ?? null, error: null };
+      const chain: Record<string, unknown> = {
+        select: () => chain, eq: () => chain, in: () => chain, is: () => chain, order: () => chain,
+        maybeSingle: async () => result, then: (resolve: (value: unknown) => unknown) => resolve(result),
+      };
+      return chain;
+    };
+    return { from: query } as never;
+  };
+
+  it("Contact: the Information button goes inactive", async () => {
+    const content = { ...starterCinematicContactContent(), informationHref: ODD };
+    const loaded = await fetchCinematicContactContent("club", fakeClient({ cinematic_contact_content: { content } }));
+    expect(loaded?.informationHref).toBe("");
+    expect(loaded?.title).toBe(content.title);
+  });
+
+  it("Shop: the purchase button and a jersey link go inactive, and good links stay", async () => {
+    const purchase = { heading: "H", cards: [], cta_eyebrow: "", cta_text: "", cta_label: "Buy", cta_link: ODD, updated_at: "2026-01-01" };
+    expect((await fetchCinematicShopPurchase("club", fakeClient({ shop_purchase_details: purchase })))?.cta_link).toBe("");
+    const content = { ...EMPTY_CINEMATIC_SHOP_CONTENT, editions: [
+      { label: "Home", price: "$1", line: "", link: ODD },
+      { label: "Away", price: "$1", line: "", link: "orders@club.com" },
+    ] };
+    const { mapUrl: _m, mapWidth: _w, mapHeight: _h, ...stored } = content as typeof content & { mapUrl?: string; mapWidth?: number; mapHeight?: number };
+    const loaded = await fetchCinematicShopContent("club", fakeClient({ cinematic_shop_content: { content: stored, map_media_asset_id: null } }));
+    expect(loaded.editions.map(edition => edition.link)).toEqual(["", "mailto:orders@club.com"]);
+  });
+
+  it("Partners: the opportunities button goes inactive", async () => {
+    const { pages } = starterCinematicPartnersContent();
+    const content = { pages: { ...pages, opportunities: { ...pages.opportunities, ctaHref: ODD } } };
+    const loaded = await fetchCinematicPartners("club", fakeClient({ cinematic_partners_content: { content }, cinematic_partners: [] }));
+    expect(loaded?.content.pages.opportunities.ctaHref).toBe("");
   });
 });

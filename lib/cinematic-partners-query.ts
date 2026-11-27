@@ -1,6 +1,7 @@
 import type { supabase } from "@/lib/supabase";
 import { mediaAssetUrl } from "@/lib/media-assets";
 import { cinematicPartnersContentSchema, type CinematicPartnersContent } from "@/lib/cinematic-partners-content";
+import { renderableLink } from "@/lib/link-destination";
 
 export type PublicCinematicPartners = { content: CinematicPartnersContent; logoUrls: Record<string, string> };
 
@@ -13,8 +14,10 @@ export async function fetchCinematicPartners(clubId: string, client: typeof supa
   if (page.error) throw new Error(`fetchCinematicPartners: ${page.error.message}`);
   if (!page.data) return null;
   if (rows.error) throw new Error(`fetchCinematicPartners rows: ${rows.error.message}`);
+  // A link saved under an older rule renders the button inactive instead of failing the page.
+  const pages = (page.data.content as { pages?: { opportunities?: Record<string, unknown> } }).pages;
   const content = cinematicPartnersContentSchema.parse({
-    pages: (page.data.content as { pages: unknown }).pages,
+    pages: pages?.opportunities ? { ...pages, opportunities: { ...pages.opportunities, ctaHref: renderableLink(pages.opportunities.ctaHref) } } : pages,
     partners: (rows.data ?? []).map(row => ({ id: row.id, name: row.name, role: row.role, logoAssetId: row.logo_media_asset_id, tone: row.logo_tone })),
   });
   const ids = content.partners.map(row => row.logoAssetId).filter((id): id is string => Boolean(id));
