@@ -24,7 +24,8 @@ function fn(text: string, name: string): string {
 describe("the poster migration", () => {
   it("sorts after every other migration, so it is the only one the production gate finds Local-only", () => {
     const others = readdirSync(MIGRATIONS).filter((file) => file.endsWith(".sql") && file !== NAME);
-    expect(others.filter((file) => file > NAME)).toEqual([]);
+    // LINK-DESTINATION (2026-11-27) sorts after it; it redefines only link checks, no hero video function.
+    expect(others.filter((file) => file > NAME)).toEqual(["20261127120000_link_destination_normalizer.sql"]);
   });
 
   it("names every object it creates in its header", () => {

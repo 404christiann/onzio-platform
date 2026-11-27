@@ -36,6 +36,7 @@ import { resolveTryoutsPageContent, TRYOUTS_PAGE_LIMITS } from "@/lib/tryouts-pa
 import { deletionCommand, eventFromSnapshot, orderedEvents, pageCommand, reconcileDeletedEvent,
   type EventDraft, type TryoutsCommand, type TryoutsSnapshot } from "./classic-tryouts-state";
 import styles from "./classic-tryouts.module.css";
+import { LINK_DESTINATION_HINT } from "@/lib/link-destination";
 
 type ProgramOption = Pick<DBProgram, "id" | "display_title">;
 type FormOption = Pick<DBRegistrationForm, "id" | "title" | "status">;
@@ -453,6 +454,7 @@ export default function ClassicTryoutsPageEditor({ policy }: { policy: { showPro
               <p className={styles.hint}>An open form launches native registration. Draft, closed, or unselected forms preserve the external or contact fallback. Submissions remain in Registrations.</p>
               <Field label="Button text" error={errorFor.ctaLabel}><input className={ADMIN_INPUT_CLASS} value={selectedEvent.ctaLabel} onChange={(event) => changeEvent("ctaLabel", event.target.value)} maxLength={40} /></Field>
               <Field label="External registration destination" error={errorFor.registrationHref}><input className={ADMIN_INPUT_CLASS} value={selectedEvent.registrationHref} onChange={(event) => changeEvent("registrationHref", event.target.value)} maxLength={2048} /></Field>
+              <p className={styles.hint}>{LINK_DESTINATION_HINT}</p>
               <Field label="Closed message" error={errorFor.closedMessage}><Textarea value={selectedEvent.closedMessage} onChange={(event) => changeEvent("closedMessage", event.target.value)} maxLength={320} /></Field>
             </>}
             {group === "photo" && policy?.showHeroImageField && <>

@@ -138,10 +138,16 @@ describe("classic changed social URL validation", () => {
     expect(validateChangedSocialLink(`  ${value}  `, value)).toBeUndefined();
     expect(validateChangedSocialLink("", value)).toBeUndefined();
     expect(validateChangedSocialLink("https://example.org/new", value)).toBeUndefined();
-    expect(validateChangedSocialLink(value + "/changed", value)).toContain("https://");
+    // An http:// baseline edited stays valid: the shared rule saves it as https.
+    if (value.startsWith("http://")) expect(validateChangedSocialLink(value + "/changed", value)).toBeUndefined();
+    else expect(validateChangedSocialLink(value + "/changed", value)).toContain("https://");
   });
-  it.each(["http://example.org/new", "mailto:new@example.org", "/new", "not a URL", "https://", "https:example.org", "https://example.org/" + "x".repeat(2048)])("rejects new non-HTTPS or invalid link %s", (value) => {
+  it.each(["mailto:new@example.org", "/new", "not a URL", "https://", "https:example.org", "https://example.org/" + "x".repeat(2048)])("rejects new non-HTTPS or invalid link %s", (value) => {
     expect(validateChangedSocialLink(value, "")).toContain("https://");
+  });
+  // The shared link rule (lib/link-destination.ts) upgrades http:// and adds https:// to a bare profile address.
+  it.each(["http://example.org/new", "instagram.com/club"])("accepts %s, which saves as https", (value) => {
+    expect(validateChangedSocialLink(value, "")).toBeUndefined();
   });
   it("compares against the latest confirmed baseline after a stage acknowledges", () => {
     const baseline = original();
@@ -149,6 +155,6 @@ describe("classic changed social URL validation", () => {
     const [stage] = brandingStages(submitted, baseline, true, timestamp);
     const saved = confirmBrandingStage(baseline, stage);
     expect(validateChangedSocialLink("https://example.org/saved", saved.links[0].href)).toBeUndefined();
-    expect(validateChangedSocialLink("http://example.org/newer", saved.links[0].href)).toContain("https://");
+    expect(validateChangedSocialLink("mailto:newer@example.org", saved.links[0].href)).toContain("https://");
   });
 });

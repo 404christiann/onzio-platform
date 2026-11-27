@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { renderableLink } from "@/lib/link-destination";
 
 // ADMIN-RE-15 (decision 4 of group 3): a sponsor with "Their website" is a
 // link to it, opened in a new tab; a sponsor without one is not tappable.
@@ -20,12 +21,12 @@ export default function SponsorLink({
   bareWithoutLink?: boolean;
   children: ReactNode;
 }) {
-  const link = href && /^https?:\/\//i.test(href) ? href : null;
+  const link = renderableLink(href) || null;
   if (!link) return bareWithoutLink ? <>{children}</> : <span className={className}>{children}</span>;
   return (
     <a
       href={link}
-      target="_blank"
+      target={link.startsWith("https://") ? "_blank" : undefined}
       rel="noopener noreferrer sponsored"
       className={className}
       aria-label={hidden ? undefined : `${name} (opens their website)`}

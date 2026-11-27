@@ -69,7 +69,7 @@ describe("Season Ticket Membership and Know Before You Go save rules", () => {
       const page = kbyg(); page.donor.buttonHref = href; page.match.watchHref = href;
       expect(okKbyg(page), href).toBe(true);
     }
-    for (const href of ["javascript:alert(1)", "http://tickets.example.com", "//evil.example.com", "https://localhost/x", " /contact"]) {
+    for (const href of ["javascript:alert(1)", "//evil.example.com", "https://localhost/x", "mailto:mailto:a@example.com"]) {
       const content = season(); content.button.href = href;
       expect(okSeason(content), href).toBe(false);
       const page = kbyg(); page.donor.buttonHref = href;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SITE_PAGE_LINK, linkDestinationSchema } from "@/lib/link-destination";
 import type { supabase } from "@/lib/supabase";
 
 
@@ -43,16 +44,9 @@ export const CINEMATIC_NAV_LABEL_IDS = CINEMATIC_NAV_ITEMS.flatMap(item => [item
 
 const copy = z.string().max(1200);
 const heading = z.string().max(120);
-export function isSafeCinematicDestination(value: string): boolean {
-  if (!value || value.length > 2000) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && url.hostname.length > 0;
-  } catch {
-    return false;
-  }
-}
-const externalDestination = z.string().max(2000).refine(value => value === "" || isSafeCinematicDestination(value), "Enter a valid HTTPS URL.");
+const externalDestination = linkDestinationSchema({ max: 2000 });
+/** Picked from a list of the club's own pages; never blank, never another site. */
+const sitePage = linkDestinationSchema({ ...SITE_PAGE_LINK, max: 2000 }).refine(value => value !== "", "Choose a page.");
 const artworkInput = z.object({ assetId: z.uuid().nullable(), alt: z.string().max(1000) }).strict();
 const artwork = artworkInput.extend({ url: z.string().nullable(), width: z.number().int().positive().nullable().optional(), height: z.number().int().positive().nullable().optional(), upload: z.enum(["queued", "uploading", "ready", "failed"]).optional(), localFileKey: z.string().optional(), error: z.string().optional() });
 /**
@@ -72,7 +66,7 @@ export const cinematicHomepageSaveSchema = z.object({
    * clears it. It lives in presentation (header_partner_media_asset_id) in stored and loaded content, never in the content JSON.
    */
   headerPartner: artworkInput.optional(),
-  match: z.object({ heading, buttonLabel: z.string().max(60), buttonHref: z.string().max(2000).regex(/^\/(?!\/)(?:[-A-Za-z0-9_/?#=&%.]*)$/), emptyMessage: copy, ...optionalVisibility }).strict(),
+  match: z.object({ heading, buttonLabel: z.string().max(60), buttonHref: sitePage, emptyMessage: copy, ...optionalVisibility }).strict(),
   prices: z.object({ heading, rows: z.array(z.object({ id: z.string().min(1).max(60), label: heading, price: z.string().max(60), description: copy, note: copy, accent: z.enum(["none", "aqua", "lime"]) }).strict()).max(10), footnote: copy, ...optionalVisibility }).strict().refine(value => new Set(value.rows.map(row => row.id)).size === value.rows.length, "Price row IDs must be unique."),
   championship: z.object({ league: heading, year: z.string().max(20), title: heading, body: copy, trophy: artworkInput }).strict(),
   navigation: z.object({

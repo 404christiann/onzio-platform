@@ -10,6 +10,7 @@ import { useHomepagePiece } from "@/lib/homepage-editor/preview-context";
 import { bunnyVideoMp4Url } from "@/lib/bunny-video";
 import { useCinematicMotion } from "./useCinematicMotion";
 import { useCinematicContent } from "./CinematicContent";
+import { SITE_PAGE_LINK, renderableLink } from "@/lib/link-destination";
 
 export default function CinematicHero({ content }: { content: DBHomepageHeroContent | HeroFields }) {
   const club = useClubContext();
@@ -35,6 +36,6 @@ export default function CinematicHero({ content }: { content: DBHomepageHeroCont
     {source?.heroVideoGuid && failedGuid !== source.heroVideoGuid && <video key={source.heroVideoGuid} ref={video} onError={() => setFailedGuid(source.heroVideoGuid)} src={bunnyVideoMp4Url(source.heroVideoGuid)} poster={source.heroPoster.url ?? undefined} muted playsInline loop autoPlay={playing} preload="metadata" aria-label={source.heroPoster.alt || `${club.name} film`} style={{ display: playing ? "block" : "none" }} />}
     <div className="hero-shade" />
     {visibleCopy ? <div className="hero-copy">{(content.eyebrow || eyebrowPiece["data-homepage-piece"]) && <p {...eyebrowPiece} className="eyebrow">{content.eyebrow}</p>}<h1 {...headingPiece}>{content.headline_line_one || club.name}{content.headline_line_two && <><br />{content.headline_line_two}</>}</h1>{(content.intro || introPiece["data-homepage-piece"]) && <p {...introPiece}>{content.intro}</p>}</div> : <h1 {...headingPiece} className="sr-only">{club.name}</h1>}
-    <div {...ctaPiece} className="hero-actions">{club.storeEnabled && <Link className="button" href={content.primary_cta_href || "/shop"}>{content.primary_cta_label || "SHOP"}</Link>}<Link className="button outline" href={content.secondary_cta_href || "/roster"}>{content.secondary_cta_label || "MEET THE SQUAD"}</Link></div>
+    <div {...ctaPiece} className="hero-actions">{club.storeEnabled && <Link className="button" href={renderableLink(content.primary_cta_href, SITE_PAGE_LINK) || "/shop"}>{content.primary_cta_label || "SHOP"}</Link>}<Link className="button outline" href={content.secondary_cta_href || "/roster"}>{content.secondary_cta_label || "MEET THE SQUAD"}</Link></div>
   </section>;
 }

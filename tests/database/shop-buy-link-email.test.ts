@@ -104,10 +104,16 @@ describe("Shop kit buy link may be an email address", () => {
     },
   );
 
-  it("keeps the purchase-details closing button web-only", async () => {
-    const purchase = { heading: "", cards: [], cta_eyebrow: "", cta_text: "", cta_label: "Order", cta_link: "mailto:orders@club.org" };
-    const request = await kitRequest("https://store.example.com/jersey", purchase);
-    await rejects(() => save(request), "INVALID_SHOP_PAYLOAD");
+  it("lets the purchase-details closing button use an email address or a page, and nothing unsafe", async () => {
+    const purchase = (cta_link: string) => ({ heading: "", cards: [], cta_eyebrow: "", cta_text: "", cta_label: "Order", cta_link });
+    for (const link of ["mailto:orders@club.org", "/shop", "https://store.example.com/jersey"]) {
+      const result = await save(await kitRequest("https://store.example.com/jersey", purchase(link)));
+      expect(result.purchase.cta_link).toBe(link);
+    }
+    for (const link of ["javascript:alert(1)", "//store.example.com/jersey", "http://store.example.com/jersey", "mailto:not-an-email"]) {
+      const request = await kitRequest("https://store.example.com/jersey", purchase(link));
+      await rejects(() => save(request), "INVALID_SHOP_PAYLOAD");
+    }
   });
 
   it("keeps the replaced validator invoker-only with narrow grants", async () => {

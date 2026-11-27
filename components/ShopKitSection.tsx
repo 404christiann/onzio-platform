@@ -15,6 +15,7 @@ import {
   titleLines,
 } from "@/lib/shop-kit";
 import KitImageGrid from "@/components/KitImageGrid";
+import { externalLinkProps, renderableLink } from "@/lib/link-destination";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -225,9 +226,8 @@ export default function ShopKitSection({
           ) : (
             <a
               data-shop-editor-target="cta"
-              href={section.cta_link}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={renderableLink(section.cta_link)}
+              {...externalLinkProps(section.cta_link)}
               className="font-display flex items-center justify-center gap-3 px-10 py-4 text-sm font-bold uppercase tracking-widest transition-all duration-200 md:inline-flex md:w-auto"
               style={{ backgroundColor: "var(--color-red)", color: "#fff" }}
               onMouseEnter={(event) => {

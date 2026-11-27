@@ -1,5 +1,6 @@
 /** RC2027-NEWS: Sam's News list and article pages for cinematic@2. */
 import { z } from "zod";
+import { normalizedLink, refineLinkDestination } from "@/lib/link-destination";
 
 /** Sam's legend, in his order and colours. `band` is the label on a card's colour band. */
 export const NEWS_CATEGORIES = [
@@ -20,16 +21,6 @@ export function newsCategory(key: NewsCategory) {
 export const NEWS_LIMITS = { cardHeading: 40, title: 140, subtitle: 200, coverAlt: 200, paragraphs: 40, paragraph: 4000, actionLabel: 40, actionHref: 2000, liveArticles: 200 } as const;
 
 /** A button link: https on a public host, or a path on this site. */
-export function isSafeNewsHref(value: string): boolean {
-  if (value.trim() !== value || /[\s\\]/.test(value) || value.length > NEWS_LIMITS.actionHref) return false;
-  if (/^\/(?!\/)[-A-Za-z0-9_/?#=&%.]*$/.test(value)) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && url.hostname.includes(".")
-      && !/^(?:localhost|127\.|0\.)|\.localhost$/i.test(url.hostname);
-  } catch { return false; }
-}
-
 const required = (max: number, message: string) => z.string().max(max).refine(value => value.trim() !== "", { message });
 export const newsArticleContentSchema = z.object({
   category: z.enum(NEWS_CATEGORY_KEYS),
@@ -42,8 +33,8 @@ export const newsArticleContentSchema = z.object({
   actionHref: z.string().max(NEWS_LIMITS.actionHref),
 }).strict().superRefine((value, context) => {
   if (!value.actionLabel.trim() !== !value.actionHref) context.addIssue({ code: "custom", path: [value.actionLabel.trim() ? "actionHref" : "actionLabel"], message: "A button needs both a label and a link." });
-  if (value.actionHref && !isSafeNewsHref(value.actionHref)) context.addIssue({ code: "custom", path: ["actionHref"], message: "Use an https link or a page on this site, like /community/partnership." });
-});
+  refineLinkDestination(context, ["actionHref"], value.actionHref, { max: NEWS_LIMITS.actionHref });
+}).transform(value => ({ ...value, actionHref: normalizedLink(value.actionHref) }));
 export type NewsArticleContent = z.infer<typeof newsArticleContentSchema>;
 
 /** "Friday, Nov 20, 2026 at 12:00 PM" in the club's time zone. */

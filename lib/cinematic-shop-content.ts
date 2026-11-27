@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { linkDestinationSchema } from "@/lib/link-destination";
 
 export const shopMapCropSchema = z.object({
   x: z.number().min(0).max(100),
@@ -18,7 +19,7 @@ export const MAX_SHOP_ATTRIBUTES = 8;
 export const MAX_SHOP_SIZE_COLUMNS = 8;
 export const MAX_SHOP_SIZE_ROWS = 8;
 
-const purchaseLink = z.string().max(2048).refine(value => value === "" || /^https?:\/\/\S+$/i.test(value), "Use a full https:// link.");
+const purchaseLink = linkDestinationSchema({ max: 2048 });
 export const shopEditionSchema = z.object({
   label: z.string().max(80), price: z.string().max(40), line: z.string().max(160), link: purchaseLink,
   // Sam: show or hide one jersey. Absent or true shows it; only an explicit false hides it. Saves send the key only for a hidden

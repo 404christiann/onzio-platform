@@ -7,6 +7,7 @@ import { fileUploadRules } from "@/components/admin/ui/adminImageFiles";
 import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { EditorActionButton, EditorGroup, EditorPageLink, EditorRemoveButton, EditorSwitch, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { APPROVED_SHOP_MAP_CROP, MAX_SHOP_ATTRIBUTES, MAX_SHOP_DETAILS, MAX_SHOP_EDITIONS, MAX_SHOP_SIZE_COLUMNS, MAX_SHOP_SIZE_ROWS, isShopEditionShown, withShopEditionShown, type CinematicShopPresentation, type ShopDetailPresentation, type ShopEdition } from "@/lib/cinematic-shop-content";
+import { LINK_DESTINATION_HINT, linkDestinationProblem } from "@/lib/link-destination";
 
 export type CinematicShopTarget = "map" | "sponsors" | "page" | "editions" | "details" | "attributes" | "sizeChart";
 /** Option i is the kit SHOP_EDITION_VARIANTS[i]: Home, Away, Third. */
@@ -39,7 +40,7 @@ export default function CinematicShopFields({ target, value, onChange, uploading
         <Text label="Button label" value={edition.label} onChange={text => setEdition(index, { label: text })} />
         <Text label="Price" value={edition.price} onChange={text => setEdition(index, { price: text })} />
         <Text label="Line under the title" value={edition.line} onChange={text => setEdition(index, { line: text })} />
-        <Text label="Purchase link (optional)" type="url" value={edition.link} onChange={text => setEdition(index, { link: text.trim() })} />
+        <LinkText label="Purchase link (optional)" value={edition.link} onChange={text => setEdition(index, { link: text })} />
         {/* Only the last option can be removed, so the others keep their kits. */}
         {index === editions.length - 1 && <EditorRemoveButton onClick={() => onChange("editions", editions.slice(0, -1))}>Remove {(EDITION_KIT_LABELS[index] ?? `option ${index + 1}`).toLowerCase()}</EditorRemoveButton>}
       </EditorGroup>)}
@@ -107,9 +108,18 @@ export default function CinematicShopFields({ target, value, onChange, uploading
   </div>;
 }
 
-function Text({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: "text" | "url" }) {
+function Text({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   const id = useId();
-  return <div className={kit.field}><label htmlFor={id}>{label}</label><input id={id} type={type} value={value} onChange={event => onChange(event.target.value)} /></div>;
+  return <div className={kit.field}><label htmlFor={id}>{label}</label><input id={id} type="text" value={value} onChange={event => onChange(event.target.value)} /></div>;
+}
+/** A link destination field: the shared hint, and the shared error while the value is not a link. */
+function LinkText({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const id = useId(), hintId = useId(), errorId = useId();
+  const problem = linkDestinationProblem(value);
+  return <div className={kit.field}><label htmlFor={id}>{label}</label>
+    <input id={id} type="text" value={value} aria-invalid={problem ? true : undefined} aria-describedby={problem ? `${hintId} ${errorId}` : hintId} onChange={event => onChange(event.target.value)} />
+    <span id={hintId} className={kit.hint}>{LINK_DESTINATION_HINT}</span>
+    {problem && <span id={errorId} role="alert">{problem}</span>}</div>;
 }
 function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   const id = useId();

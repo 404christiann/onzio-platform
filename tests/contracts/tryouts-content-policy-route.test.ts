@@ -90,7 +90,7 @@ describe("exported Tryouts handlers separate content maintenance from display", 
     for (const value of [null, false, 123, {}, [], "x".repeat(max[field] + 1)]) { const body: any = payload(); body.events[0][field] = value; expect((await POST(request("POST", body))).status).toBe(400); }
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
-  it.each(["//evil.test", "/\\evil.test", "javascript:alert(1)", "data:text/html,a", "tel:123", "https://", " https://example.test"])("rejects unsafe HTTP href %s", async registration_href => {
+  it.each(["//evil.test", "/\\evil.test", "javascript:alert(1)", "data:text/html,a", "tel:123", "https://", "mailto:invalid", "/path with-space"])("rejects unsafe HTTP href %s", async registration_href => {
     const body: any = payload(); body.events[0].registration_href = registration_href; const { POST } = await import("@/app/api/admin/tryouts-page/route"); expect((await POST(request("POST", body))).status).toBe(400); expect(mocks.rpc).not.toHaveBeenCalled();
   });
   it.each([null, 0, true, {}, [], "", "-1", "abc", "1".repeat(21)].map(value => ({ value })))("denies malformed revision $value before session", async ({ value }) => {
@@ -101,8 +101,13 @@ describe("exported Tryouts handlers separate content maintenance from display", 
     for (const value of [null, false, 123, {}, [], "x".repeat(321)]) { const body: any = payload(); body.page[field] = value; expect((await POST(request("POST", body))).status).toBe(400); }
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
-  it.each(["", "/noncatalog-registration", "/registration?team=first#form", "http://registration.example.test/form", "https://registration.example.test/form", "mailto:club@example.test", "mailto:invalid", "/path with-space"])("retains existing HTTP destination acceptance %s", async registration_href => {
+  it.each(["", "/noncatalog-registration", "/registration?team=first#form", "https://registration.example.test/form", "mailto:club@example.test"])("retains existing HTTP destination acceptance %s", async registration_href => {
     const body = payload(); body.events[0].registration_href = registration_href; const { POST } = await import("@/app/api/admin/tryouts-page/route"); expect((await POST(request("POST", body))).status).toBe(200); expect(mocks.rpc).toHaveBeenCalledWith("save_tryouts_page", { p_club_id: clubId, p_request: body });
+  });
+  // The shared link rule (lib/link-destination.ts): http:// is upgraded, spaces are trimmed, a bare email becomes mailto:.
+  it.each([["http://registration.example.test/form", "https://registration.example.test/form"], [" https://example.test", "https://example.test"], ["club@example.test", "mailto:club@example.test"]])("forwards %j normalized as %j", async (registration_href, normalized) => {
+    const body = payload(); body.events[0].registration_href = registration_href; const { POST } = await import("@/app/api/admin/tryouts-page/route"); expect((await POST(request("POST", body))).status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith("save_tryouts_page", { p_club_id: clubId, p_request: { ...body, events: [{ ...body.events[0], registration_href: normalized }, ...body.events.slice(1)] } });
   });
   it("preserves the existing HTTP date-shape boundary for later SQL calendar validation", async () => {
     const body = payload(); body.events[0].event_date = "2026-02-30"; const { POST } = await import("@/app/api/admin/tryouts-page/route"); expect((await POST(request("POST", body))).status).toBe(200); expect(mocks.rpc).toHaveBeenCalledWith("save_tryouts_page", { p_club_id: clubId, p_request: body });

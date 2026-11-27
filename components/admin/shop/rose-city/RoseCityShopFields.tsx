@@ -19,6 +19,7 @@ import type { ShopPageDraft } from "@/lib/shop-editor/model";
 import { SmoothSlider } from "./SmoothSlider";
 import { sizeColumnsFromText, sizeRowsFromTable, sizeTableRows } from "./shop-fields-model";
 import { SHOP_TARGETS, cardTarget, editionTarget, kitTarget, measurementCellTarget, tileTarget } from "../shop-edit-targets";
+import { LINK_DESTINATION_HINT, linkDestinationProblem } from "@/lib/link-destination";
 
 export type ShopSectionId = "editions" | "kitPhotos" | "kitText" | "photoRow" | "purchase" | "details" | "care" | "sizes" | "map" | "partners" | "labels";
 
@@ -46,9 +47,18 @@ export type ShopFieldsProps = {
   removeDetail: (index: number) => void;
 };
 
-function Text({ label, value, onChange, type = "text", maxLength, help, target }: { label: string; value: string; onChange: (value: string) => void; type?: "text" | "url"; maxLength?: number; help?: ReactNode; target?: EditTargetId }) {
+function Text({ label, value, onChange, maxLength, help, target }: { label: string; value: string; onChange: (value: string) => void; maxLength?: number; help?: ReactNode; target?: EditTargetId }) {
   const id = useId();
-  return <div className={kit.field} {...editTargetProps(target)}><label htmlFor={id}>{label}</label><input id={id} type={type} value={value} maxLength={maxLength} onChange={event => onChange(event.target.value)} />{help && <span className={kit.hint}>{help}</span>}</div>;
+  return <div className={kit.field} {...editTargetProps(target)}><label htmlFor={id}>{label}</label><input id={id} type="text" value={value} maxLength={maxLength} onChange={event => onChange(event.target.value)} />{help && <span className={kit.hint}>{help}</span>}</div>;
+}
+/** A link destination field: the shared hint, and the shared error while the value is not a link. */
+function LinkText({ label, value, onChange, target }: { label: string; value: string; onChange: (value: string) => void; target?: EditTargetId }) {
+  const id = useId(), hintId = useId(), errorId = useId();
+  const problem = linkDestinationProblem(value);
+  return <div className={kit.field} {...editTargetProps(target)}><label htmlFor={id}>{label}</label>
+    <input id={id} type="text" value={value} maxLength={2048} aria-invalid={problem ? true : undefined} aria-describedby={problem ? `${hintId} ${errorId}` : hintId} onChange={event => onChange(event.target.value)} />
+    <span id={hintId} className={kit.hint}>{LINK_DESTINATION_HINT}</span>
+    {problem && <ValidationMessage id={errorId} live="polite">{problem}</ValidationMessage>}</div>;
 }
 function TextArea({ label, value, onChange, maxLength, rows = 4, target }: { label: string; value: string; onChange: (value: string) => void; maxLength?: number; rows?: number; target?: EditTargetId }) {
   const id = useId();
@@ -120,7 +130,7 @@ export function RoseCityShopFields(props: ShopFieldsProps & { id: ShopSectionId 
     <Text target={kitTarget(kitId, "buttonLabel")} label="Button text" value={section.cta_label} maxLength={100} onChange={text => field("cta_label", text)} />
     {surface === "home"
       ? <p className={kit.hint}>The homepage button opens this club’s Shop page.</p>
-      : <Text target={kitTarget(kitId, "buyLink")} label="Buy link" value={section.cta_link} onChange={text => field("cta_link", text)} help="The full https:// address of your store or merchandise partner, or an email address if supporters order by email." />}
+      : <LinkText target={kitTarget(kitId, "buyLink")} label="Buy link" value={section.cta_link} onChange={text => field("cta_link", text)} />}
   </div>;
 
   if (id === "photoRow") return <div className={kit.stack}>
@@ -137,7 +147,7 @@ export function RoseCityShopFields(props: ShopFieldsProps & { id: ShopSectionId 
       <Text target={editionTarget(index, "label")} label="Button label" value={edition.label} maxLength={80} onChange={text => setEdition(index, { label: text })} />
       <Text target={editionTarget(index, "price")} label="Price" value={edition.price} maxLength={40} onChange={text => setEdition(index, { price: text })} />
       <Text target={editionTarget(index, "line")} label="Line under the title" value={edition.line} maxLength={160} onChange={text => setEdition(index, { line: text })} />
-      <Text target={editionTarget(index, "link")} label="Purchase link (optional)" type="url" value={edition.link} onChange={text => setEdition(index, { link: text.trim() })} />
+      <LinkText target={editionTarget(index, "link")} label="Purchase link (optional)" value={edition.link} onChange={text => setEdition(index, { link: text })} />
       {/* Only the last option can be removed, so the others keep their kits. */}
       {index === editions.length - 1
         ? <EditorRemoveButton onClick={() => updatePresentation("editions", editions.slice(0, -1))}>Remove {(EDITION_KIT_LABELS[index] ?? `option ${index + 1}`).toLowerCase()}</EditorRemoveButton>
@@ -165,7 +175,7 @@ export function RoseCityShopFields(props: ShopFieldsProps & { id: ShopSectionId 
     <Text target={SHOP_TARGETS.purchaseFooterLabel} label="Footer label" value={draft.purchase.cta_eyebrow} maxLength={120} onChange={text => updatePurchase("cta_eyebrow", text)} />
     <TextArea target={SHOP_TARGETS.purchaseFooterText} label="Footer text" value={draft.purchase.cta_text} maxLength={600} onChange={text => updatePurchase("cta_text", text)} />
     <Text target={SHOP_TARGETS.purchaseButtonLabel} label="Button text" value={draft.purchase.cta_label} maxLength={100} onChange={text => updatePurchase("cta_label", text)} />
-    <Text target={SHOP_TARGETS.purchaseButtonLink} label="Button link" type="url" value={draft.purchase.cta_link} onChange={text => updatePurchase("cta_link", text)} />
+    <LinkText target={SHOP_TARGETS.purchaseButtonLink} label="Button link" value={draft.purchase.cta_link} onChange={text => updatePurchase("cta_link", text)} />
   </div>;
 
   if (id === "details") return <div className={kit.stack}>

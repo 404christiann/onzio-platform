@@ -127,7 +127,8 @@ describe("sponsor click redirect: lookup and responses", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it.each(["javascript:alert(1)", "ftp://sponsor.example/x", "data:text/html,hi", "/relative", "not a url"])(
+  // A stored site path is a link destination under the shared rule; the redirect goes there (see below).
+  it.each(["javascript:alert(1)", "ftp://sponsor.example/x", "data:text/html,hi", "//sponsor.example/x", "not a url"])(
     "404s a non-http(s) stored url %s",
     async (url) => {
       mocks.maybeSingle.mockResolvedValueOnce({ data: { website_url: url }, error: null });
@@ -142,6 +143,13 @@ describe("sponsor click redirect: lookup and responses", () => {
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe(DEST);
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it.each([["/relative", "/relative"], ["mailto:offers@sponsor.example", "mailto:offers@sponsor.example"]])("redirects a stored site path or email link %s", async (url, location) => {
+    mocks.maybeSingle.mockResolvedValueOnce({ data: { website_url: url }, error: null });
+    const response = await call();
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(location);
   });
 
   it("looks the sponsor up with the header club id, not the slug param or URL", async () => {

@@ -9,6 +9,7 @@ import {
 } from "@/lib/shop-kit";
 import { useClubId } from "@/components/ClubContextProvider";
 import { AcademyInteriorLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
+import { renderableLink } from "@/lib/link-destination";
 
 const VIEW_LABELS = ["Front", "Back"] as const;
 
@@ -154,7 +155,7 @@ export default function AcademyShopPage({ editorContent }: { editorContent?: Sho
 
           <a
             data-shop-editor-target="cta"
-            href={section.cta_link}
+            href={renderableLink(section.cta_link)}
             className="mt-6 inline-flex w-fit bg-[#FF1616] px-8 py-4 font-nav text-sm font-bold uppercase text-white transition-colors hover:bg-[#1E3653]"
           >
             {section.cta_label}

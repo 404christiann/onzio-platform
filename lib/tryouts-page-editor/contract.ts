@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isAllowedPublicHref } from "@/lib/public-link";
+import { linkDestinationSchema } from "@/lib/link-destination";
 
 const uuid = z.string().uuid();
 const optionalText = (maximum: number) => z.string().max(maximum);
@@ -19,7 +19,7 @@ export const tryoutsPageEventSchema = z.object({
   location: optionalText(160),
   cost_text: optionalText(120),
   cta_label: optionalText(40),
-  registration_href: optionalText(2048).refine(isAllowedPublicHref),
+  registration_href: linkDestinationSchema({ max: 2048 }),
   registration_form_id: uuid.nullable(),
   closed_message: optionalText(320),
   sort_order: z.number().int().min(0),

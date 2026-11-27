@@ -8,6 +8,7 @@ import { SHOP_EDITION_VARIANTS, isShopEditionShown, withShopDefaults, type Cinem
 import CinematicSponsors from "./CinematicSponsors";
 import { useCinematicMotion } from "./useCinematicMotion";
 import "./shop.css";
+import { renderableLink } from "@/lib/link-destination";
 
 export type CinematicShopProps = {
   kits: Record<ShopKitVariant, ShopKitContent>;
@@ -23,8 +24,10 @@ export type CinematicShopProps = {
 
 function PurchaseLink({ label, href, small = false }: { label: string; href: string; small?: boolean }) {
   if (!label) return null;
-  const safe = /^https?:\/\//i.test(href) || /^\/(?!\/)[A-Za-z0-9_/?#=&%.\-]*$/.test(href);
-  return safe ? <a data-shop-editor-target={small ? "purchase" : "cta"} className={`shop-buy${small ? " shop-buy-small" : ""}`} href={href} target="_blank" rel="noopener noreferrer">{label}<span className="sr-only"> (opens in a new tab)</span></a>
+  const link = renderableLink(href);
+  // A store opens in a new tab; an order-by-email link opens the mail app and a site page opens in place.
+  const external = link.startsWith("https://");
+  return link ? <a data-shop-editor-target={small ? "purchase" : "cta"} className={`shop-buy${small ? " shop-buy-small" : ""}`} href={link} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{label}{external && <span className="sr-only"> (opens in a new tab)</span>}</a>
     : <span data-shop-editor-target={small ? "purchase" : "cta"} className={`shop-buy shop-buy-unavailable${small ? " shop-buy-small" : ""}`} aria-disabled="true">{label}</span>;
 }
 

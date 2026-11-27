@@ -12,6 +12,7 @@ import type { DBHomepageHeroContent } from "@/lib/db-types";
 import { AcademyHeroLoadingSkeleton } from "./LoadingSkeleton";
 import { loadAcademyHeroContent } from "./hero-content-load";
 import { academyHref } from "./routes";
+import { SITE_PAGE_LINK, renderableLink } from "@/lib/link-destination";
 
 export default function Hero({
   initialContent,
@@ -67,8 +68,8 @@ export default function Hero({
   const headlineOne = heroContent.headline_line_one.trim() || club.name;
   const headlineTwo = heroContent.headline_line_two.trim();
   const intro = heroContent.intro.trim();
-  const primaryHref = heroContent.primary_cta_href.trim() || academyHref("schedule");
-  const secondaryHref = heroContent.secondary_cta_href.trim() || academyHref("roster");
+  const primaryHref = renderableLink(heroContent.primary_cta_href, SITE_PAGE_LINK) || academyHref("schedule");
+  const secondaryHref = renderableLink(heroContent.secondary_cta_href, SITE_PAGE_LINK) || academyHref("roster");
 
   // Mockup-parity hero (DCFC-D132 pass): section frame, gradient, headline
   // scale/colors, and CTA treatment copied from the sales mockup's

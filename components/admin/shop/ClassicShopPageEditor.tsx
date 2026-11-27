@@ -34,6 +34,7 @@ import { shopSaveRequestSchemaFor, type ShopPhoto, type ShopSection, type ShopSn
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
 import { confirmShopDraft, currentShopPhotos, kitNeedsPhoto, photoKey } from "./classic-shop-state";
 import styles from "./ClassicShopPageEditor.module.css";
+import { LINK_DESTINATION_HINT, linkDestinationProblem } from "@/lib/link-destination";
 
 const KITS: ShopVariant[] = ["home", "away", "third"];
 const LABELS: Record<ShopVariant, string> = { home: "Home kit", away: "Away kit", third: "Third kit" };
@@ -384,8 +385,8 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
           <Field target={kitTarget(variant, "storeNote")} area label="Store information" value={kit.section.store_note} onChange={(value) => sectionField("store_note", value)} />
         </AdminDialogFields>{surface === "shop" && policy?.shopPageShows && <p className={styles.note}>Your Shop page shows the first {policy.shopPageShows.bullets} bullet points, split at the first colon into a label and value. Any more are saved but not shown.</p>}</AdminDialogSection>}
         {!nameOnly && <AdminDialogSection title="Button"><AdminDialogFields><Field target={kitTarget(variant, "buttonLabel")} label="Button text" value={kit.section.cta_label} onChange={(value) => sectionField("cta_label", value)} />
-          {surface === "shop" && <Field target={kitTarget(variant, "buyLink")} label="Buy link" value={kit.section.cta_link} onChange={(value) => sectionField("cta_link", value)} />}
-        </AdminDialogFields><p className={styles.note}>{surface === "home" ? "The button opens this club's Shop page." : "Use the full http or https address of your store, or an email address if supporters order by email."}</p></AdminDialogSection>}
+          {surface === "shop" && <LinkField target={kitTarget(variant, "buyLink")} label="Buy link" value={kit.section.cta_link} onChange={(value) => sectionField("cta_link", value)} />}
+        </AdminDialogFields>{surface === "home" && <p className={styles.note}>The button opens this club&apos;s Shop page.</p>}</AdminDialogSection>}
       </>}
       {(target === "photos" || target === "photoRows") && <div ref={setPhotoDestination} />}
       {target === "photos" && shownPhotos && <p className={styles.note}>{surface === "shop" ? "Your Shop page" : "The homepage shop feature"} shows the first {shownPhotos} photos (front, then back). Any more are saved but not shown.</p>}
@@ -404,7 +405,7 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
           <Field target={SHOP_TARGETS.purchaseFooterLabel} label="Footer label" value={draft.purchase.cta_eyebrow} onChange={(value) => purchaseField("cta_eyebrow", value)} />
           <Field target={SHOP_TARGETS.purchaseFooterText} area label="Footer text" value={draft.purchase.cta_text} onChange={(value) => purchaseField("cta_text", value)} />
           <Field target={SHOP_TARGETS.purchaseButtonLabel} label="Button text" value={draft.purchase.cta_label} onChange={(value) => purchaseField("cta_label", value)} />
-          <Field target={SHOP_TARGETS.purchaseButtonLink} label="Button link" value={draft.purchase.cta_link} onChange={(value) => purchaseField("cta_link", value)} />
+          <LinkField target={SHOP_TARGETS.purchaseButtonLink} label="Button link" value={draft.purchase.cta_link} onChange={(value) => purchaseField("cta_link", value)} />
         </AdminDialogFields></AdminDialogSection>
       </>}
     </AdminDialog>
@@ -446,6 +447,16 @@ function ShopEditor({ setToastHost }: { setToastHost: (host: HTMLElement | null)
 function Field({ label, value, onChange, area = false, target }: { label: string; value: string; onChange: (value: string) => void; area?: boolean; target?: EditTargetId }) {
   const id = useId();
   return <label htmlFor={id} className={styles.field} {...editTargetProps(target)}><span id={`${id}-label`}>{label}</span>{area ? <textarea id={id} aria-labelledby={`${id}-label`} rows={3} value={value} onChange={(event) => onChange(event.target.value)} /> : <input id={id} aria-labelledby={`${id}-label`} value={value} onChange={(event) => onChange(event.target.value)} />}</label>;
+}
+
+/** A link destination field: the shared hint, and the shared error while the value is not a link. */
+function LinkField({ label, value, onChange, target }: { label: string; value: string; onChange: (value: string) => void; target?: EditTargetId }) {
+  const id = useId();
+  const problem = linkDestinationProblem(value);
+  return <label htmlFor={id} className={styles.field} {...editTargetProps(target)}><span id={`${id}-label`}>{label}</span>
+    <input id={id} aria-labelledby={`${id}-label`} aria-describedby={problem ? `${id}-hint ${id}-error` : `${id}-hint`} aria-invalid={problem ? true : undefined} value={value} onChange={(event) => onChange(event.target.value)} />
+    <span id={`${id}-hint`} className={styles.note}>{LINK_DESTINATION_HINT}</span>
+    {problem && <span id={`${id}-error`} role="alert">{problem}</span>}</label>;
 }
 
 function PersistentPhotos({ collectionId, destination, photos, onChange, onUpload, onWork, onUndoWork, onInteraction, onAbandoned }: {

@@ -1,45 +1,13 @@
 import { z } from "zod";
+import { linkDestinationSchema } from "@/lib/link-destination";
 import { cinematicShopContentSchema, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import { CINEMATIC_KIT_BULLET_POINTS } from "@/lib/shop-kit";
 
 export const shopSurfaceSchema = z.enum(["home", "shop"]);
 export const shopVariantSchema = z.enum(["home", "third", "away"]);
 
-/**
- * An email buy link ("order by email", decision 0008 amended): `mailto:` with
- * one address and an optional query such as `?subject=`. Mirrors the SQL rule
- * in onzio_private.validate_shop_section.
- */
-const MAILTO_BUY_LINK = /^mailto:[^\s@?/]+@[^\s@?/]+\.[^\s@?/]+(\?\S*)?$/i;
-const PLAIN_EMAIL = /^[^\s@?/:]+@[^\s@?/]+\.[^\s@?/]+$/;
-
-/** Turns a typed email address into an email buy link; leaves anything else as typed. */
-export function normalizeKitBuyLink(value: string): string {
-  const trimmed = value.trim();
-  return PLAIN_EMAIL.test(trimmed) ? `mailto:${trimmed}` : trimmed;
-}
-
-const safePageOrExternalUrl = z.string().trim().max(2048).refine(
-  (value) => value === "" || /^\/[A-Za-z0-9_/?#=&%.\-]*$/.test(value) || MAILTO_BUY_LINK.test(value) || (() => {
-    try {
-      const url = new URL(value);
-      return url.protocol === "https:" || url.protocol === "http:";
-    } catch {
-      return false;
-    }
-  })(),
-  "Enter a full http or https address, a page on your site, or an email address.",
-);
-
-const safePurchaseUrl = z.string().trim().max(2048).refine((value) => {
-  if (value === "") return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
-}, "Enter a full http or https address.");
+/** Kit and purchase buy links: the shared link rule (a store link, a page on the site, or an order-by-email address). */
+const buyLink = linkDestinationSchema({ max: 2048 });
 
 export const shopSectionSchema = z.object({
   eyebrow: z.string().max(160),
@@ -49,7 +17,7 @@ export const shopSectionSchema = z.object({
   bullet_points: z.array(z.string().max(80)).max(CINEMATIC_KIT_BULLET_POINTS),
   store_note: z.string().max(180),
   cta_label: z.string().max(100),
-  cta_link: safePageOrExternalUrl,
+  cta_link: buyLink,
 }).strict();
 
 export const shopPhotoSchema = z.object({
@@ -73,7 +41,7 @@ export const shopPurchaseSchema = z.object({
   cta_eyebrow: z.string().max(120),
   cta_text: z.string().max(600),
   cta_label: z.string().max(100),
-  cta_link: safePurchaseUrl,
+  cta_link: buyLink,
 }).strict();
 
 export const shopSaveRequestSchema = z.object({

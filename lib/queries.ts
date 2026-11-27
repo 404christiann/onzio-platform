@@ -86,7 +86,7 @@ import {
   resolveMediaReferences,
   resolveMediaStoragePath,
 } from "@/lib/media-assets";
-import { normalizePublicHref } from "@/lib/public-link";
+import { PROFILE_LINK, renderableLink } from "@/lib/link-destination";
 import { clubToday, DEFAULT_CLUB_TIME_ZONE } from "@/lib/club-time";
 import {
   compareTryoutsByDate,
@@ -341,7 +341,7 @@ function mapProgram(
   nativeForm: PublicRegistrationForm | undefined,
   email?: unknown,
 ): ProgramContent {
-  const href = normalizePublicHref(row.external_cta_href);
+  const href = renderableLink(row.external_cta_href);
   const label = row.external_cta_label.trim();
   const contact = contactHref(email);
   const signUp = programSignUp({
@@ -544,7 +544,7 @@ export function mapTryout(
   nativeForm: PublicRegistrationForm | undefined,
   today: string,
 ): TryoutContent {
-  const registrationHref = normalizePublicHref(row.registration_href);
+  const registrationHref = renderableLink(row.registration_href);
   const registrationLabel = row.cta_label.trim();
   const fallbackHref = contactHref(email);
   const signUp = tryoutSignUp(
@@ -729,7 +729,7 @@ export async function fetchContactContent(
   );
   const page = (hydratedPages as HydratedContactPage[])[0] ?? null;
   const socialLinks = ((socialResult.data ?? []) as DBSiteSocialLink[])
-    .map((link) => ({ ...link, href: normalizePublicHref(link.href) }))
+    .map((link) => ({ ...link, href: renderableLink(link.href, PROFILE_LINK) }))
     .filter((link) => link.href !== "");
 
   return {
@@ -1352,7 +1352,8 @@ export async function fetchSiteSocialLinks(clubId?: string, client: typeof supab
     console.error("fetchSiteSocialLinks:", error.message);
     return clubId ? [] : normalizeSiteSocialLinks([]);
   }
-  const rows = (data ?? []) as DBSiteSocialLink[];
+  // Public pages render only normalized profile links; a stored value that is not one renders as hidden.
+  const rows = ((data ?? []) as DBSiteSocialLink[]).map((row) => ({ ...row, href: renderableLink(row.href, PROFILE_LINK) }));
   return clubId ? rows : normalizeSiteSocialLinks(rows);
 }
 

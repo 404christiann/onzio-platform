@@ -7,6 +7,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { DBAboutPageContent } from "@/lib/db-types";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { SITE_PAGE_LINK, renderableLink } from "@/lib/link-destination";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -151,7 +152,7 @@ export default function AcademyAboutPage({
           {content.closing_text}
         </p>
         <Link
-          href={content.closing_cta_href}
+          href={renderableLink(content.closing_cta_href, SITE_PAGE_LINK)}
           className="inline-block font-body text-sm font-bold tracking-widest uppercase px-8 py-4 rounded-full transition-colors duration-300"
           style={{ backgroundColor: "var(--color-black)", color: "#ffffff" }}
         >

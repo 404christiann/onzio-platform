@@ -5,6 +5,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { DBShopPurchaseDetails } from "@/lib/db-types";
 import { normalizeShopPurchaseDetails } from "@/lib/shop-purchase-details";
+import { externalLinkProps, renderableLink } from "@/lib/link-destination";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -104,11 +105,10 @@ export default function ShopPurchaseDetailsSection({
             <p className="font-body text-sm text-white">{content.cta_text}</p>
           </div>
           {/* No saved store link means no buy button, never a dead or borrowed one. */}
-          {content.cta_link.trim() && content.cta_label.trim() ? (
+          {renderableLink(content.cta_link) && content.cta_label.trim() ? (
             <a
-              href={content.cta_link}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={renderableLink(content.cta_link)}
+              {...externalLinkProps(content.cta_link)}
               className="font-display flex items-center justify-center px-8 py-3.5 font-bold uppercase tracking-widest transition-all duration-200 sm:inline-flex"
               style={{
                 backgroundColor: "var(--color-red)",

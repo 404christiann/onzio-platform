@@ -17,6 +17,7 @@ import { adminImageRules } from "@/components/admin/ui/adminImageFiles";
 import LeagueLogoUpload from "@/components/admin/schedule/LeagueLogoUpload";
 import MatchSummaryFields from "@/components/admin/schedule/MatchSummaryFields";
 import { MAX_MATCH_SCORE, parseDateInput, formatDateInput, uploadPhoto, logoUploadErrorMessage, deleteUnusedMatchImageUrls, type FormState } from "./schedule-model";
+import { LINK_DESTINATION_HINT } from "@/lib/link-destination";
 
 export function MatchForm({
   form,
@@ -427,11 +428,10 @@ export function MatchForm({
               />
             </Field>
 
-            <Field id="match-sponsor-link" label="Sponsor website" optional>
+            <Field id="match-sponsor-link" label="Sponsor website" optional help={LINK_DESTINATION_HINT}>
               <input
                 id="match-sponsor-link"
-                type="url"
-                placeholder="https://..."
+                type="text"
                 value={form.sponsor_link ?? ""}
                 onChange={(e) => set("sponsor_link", e.target.value)}
                 className={cn(ADMIN_INPUT_CLASS, "min-h-11")}

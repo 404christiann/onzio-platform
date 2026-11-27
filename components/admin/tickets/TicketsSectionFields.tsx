@@ -6,11 +6,12 @@ import { kit, EditorGroup } from "@/components/admin/cinematic-editor/CinematicE
 import { ValidationMessage, useStableKeys } from "@/components/admin/ui/editor-kit";
 import { AddButton, IMAGE_NOTE, IMAGE_TYPES, ImageSlot, ReorderTools, ShowRow, TextField } from "@/components/admin/ticket-pages/editor-parts";
 import styles from "@/components/admin/ticket-pages/ticket-editors.module.css";
-import { isTicketPurchaseUrl, type TicketArtworkSlot, type TicketVisibilityKey, type TicketsContent, type TicketsPageContent } from "@/lib/tickets-content";
+import { type TicketArtworkSlot, type TicketVisibilityKey, type TicketsContent, type TicketsPageContent } from "@/lib/tickets-content";
 import { moveItem } from "@/lib/cinematic-robinson-editor";
 import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { TICKETS_TARGETS, benefitDetailTarget, benefitTitleTarget, perkLabelTarget } from "./tickets-edit-targets";
 import { ticketsSectionFlag, ticketsSectionShown, ticketsSectionTitle, type TicketsSectionId } from "./tickets-sections";
+import { linkDestinationHint, linkDestinationProblem } from "@/lib/link-destination";
 
 export type TicketsFieldsApi = {
   draft: TicketsContent;
@@ -68,7 +69,7 @@ export function TicketsSectionFields({ api, id }: { api: TicketsFieldsApi; id: T
     <ImageSlot key={slot} label={label} description={description} previewUrl={page.artwork[slot].url} alt={draft.artwork[slot].alt} hasImage={!!draft.artwork[slot].assetId}
       disabled={locked} uploading={uploading === slot} {...extra} onUpload={file => upload(slot, file)} onRemove={() => removeImage(slot)}
       onAlt={alt => update(v => { v.artwork[slot].alt = alt; })} />;
-  const urlInvalid = !!draft.purchaseUrl && !isTicketPurchaseUrl(draft.purchaseUrl);
+  const urlProblem = linkDestinationProblem(draft.purchaseUrl);
   let body: ReactNode = null;
   switch (id) {
     case "page": body = <>
@@ -78,9 +79,9 @@ export function TicketsSectionFields({ api, id }: { api: TicketsFieldsApi; id: T
       <div className={styles.two}>{text("Page heading", "title", TICKETS_TARGETS.pageTitle)}{text("Subtitle", "subtitle", TICKETS_TARGETS.pageSubtitle)}</div>
       <div className={styles.two}>
         <div className={styles.fieldWithLimit}>
-          <TextField label="External ticket purchase URL" value={draft.purchaseUrl} max={2000} disabled={locked} invalid={urlInvalid} target={TICKETS_TARGETS.pagePurchaseUrl} hint="Use the club’s full HTTPS purchase link. Leave empty to keep Buy Tickets inactive."
+          <TextField label="External ticket purchase URL" value={draft.purchaseUrl} max={2000} disabled={locked} invalid={!!urlProblem} target={TICKETS_TARGETS.pagePurchaseUrl} hint={linkDestinationHint({ extra: "Leave empty to keep Buy Tickets inactive." })}
             onChange={value => update(v => { v.purchaseUrl = value; })} />
-          {urlInvalid && <ValidationMessage id={urlId} live="polite">Use a full HTTPS ticket purchase link, for example https://tickets.example.com/match.</ValidationMessage>}
+          {urlProblem && <ValidationMessage id={urlId} live="polite">{urlProblem}</ValidationMessage>}
         </div>
         {text("Message until a purchase link is available", "missingPurchaseLabel", TICKETS_TARGETS.pageMissingPurchaseLabel)}
       </div>

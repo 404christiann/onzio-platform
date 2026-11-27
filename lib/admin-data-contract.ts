@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isAllowedPublicHref } from "@/lib/public-link";
+import { PROFILE_LINK, isSafeStoredUrl, linkDestinationError, normalizeLinkDestination, type LinkDestinationOptions } from "@/lib/link-destination";
 import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
 import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
 import { matchSummarySchema } from "@/lib/match-summary";
@@ -90,17 +90,6 @@ const row = z
     for (const [key, fieldValue] of Object.entries(value)) {
       if (
         typeof fieldValue === "string" &&
-        /(?:url|href|link)$/.test(key) &&
-        !isAllowedPublicHref(fieldValue)
-      ) {
-        context.addIssue({
-          code: "custom",
-          path: [key],
-          message: "URL fields require http, https, mailto, or a local path",
-        });
-      }
-      if (
-        typeof fieldValue === "string" &&
         /color/i.test(key) &&
         !/^#[0-9a-f]{6}$/i.test(fieldValue)
       ) {
@@ -127,6 +116,47 @@ const row = z
     }
   });
 
+/**
+ * Admin-editable link destinations written through this route, by table. The
+ * route validates them here and stores `normalizeAdminLinkFields`'s output, so
+ * the database only ever holds normalized links (onzio_private.normalize_link_destination
+ * re-checks them).
+ */
+export const ADMIN_LINK_FIELDS: Partial<Record<string, Record<string, LinkDestinationOptions & { blankIsNull?: true }>>> = {
+  site_social_links: { href: PROFILE_LINK },
+  // Nullable columns: blank means "no link" and is stored as NULL, as the editors send it
+  // (site_sponsor_logos_website_url_shape refuses '').
+  site_sponsor_logos: { website_url: { blankIsNull: true } },
+  matches: { sponsor_link: { blankIsNull: true } },
+  programs: { external_cta_href: {} },
+  tryouts: { registration_href: {} },
+};
+
+const linkField = (table: string, column: string, maximum: number) => {
+  const options = ADMIN_LINK_FIELDS[table]?.[column] ?? {};
+  return z.string().refine(
+    (value) => { const normalized = normalizeLinkDestination(value, options); return normalized !== null && normalized.length <= maximum; },
+    { message: linkDestinationError(options) },
+  );
+};
+
+/** The payload with every admin link column replaced by its normalized form. Run after validation. */
+export function normalizeAdminLinkFields<T extends Record<string, unknown> | Record<string, unknown>[] | undefined>(table: string, payload: T): T {
+  const fields = ADMIN_LINK_FIELDS[table];
+  if (!fields || !payload) return payload;
+  const normalize = (row: Record<string, unknown>) => {
+    const next = { ...row };
+    for (const [column, options] of Object.entries(fields)) {
+      const value = next[column];
+      if (typeof value !== "string") continue;
+      const normalized = normalizeLinkDestination(value, options) ?? value;
+      next[column] = normalized === "" && options.blankIsNull ? null : normalized;
+    }
+    return next;
+  };
+  return (Array.isArray(payload) ? payload.map(normalize) : normalize(payload)) as T;
+}
+
 const uuid = z
   .string()
   .regex(
@@ -134,13 +164,6 @@ const uuid = z
   );
 const nullableUuid = uuid.nullable();
 const optionalText = (maximum: number) => z.string().max(maximum).optional();
-const externalHref = z
-  .string()
-  .max(2_048)
-  .refine(isAllowedPublicHref, {
-    message: "URL fields require http, https, mailto, or a local path",
-  })
-  .optional();
 
 const programMutation = z
   .object({
@@ -161,7 +184,7 @@ const programMutation = z
     hero_media_asset_id: nullableUuid.optional(),
     detail_media_asset_id: nullableUuid.optional(),
     external_cta_label: optionalText(40),
-    external_cta_href: externalHref,
+    external_cta_href: linkField("programs", "external_cta_href", 2_048).optional(),
     registration_form_id: nullableUuid.optional(),
     // Registration band copy. Ceilings mirror the CHECK constraints added in
     // 20260808020000_dcfc_program_media_registration_content.sql exactly, so a
@@ -225,8 +248,8 @@ const contactProfileMutation = z
   .strict();
 
 // ADMIN-RE-14. `href` had no limit in Zod or the database (the break-ui gap):
-// 2,048 now, on every write, Branding's included. The URL rule still comes from
-// the generic row check above. The id is the platform ("instagram"), kept as
+// 2,048 now, on every write, Branding's included. The link rule is the shared
+// profile-link rule (https only). The id is the platform ("instagram"), kept as
 // text because the table's key is (club_id, id).
 const siteSocialLinkMutation = z
   .object({
@@ -237,13 +260,7 @@ const siteSocialLinkMutation = z
       .regex(/^[a-z][a-z0-9_-]*$/)
       .optional(),
     label: optionalText(40),
-    href: z
-      .string()
-      .max(YOUR_CLUB_LIMITS.socialHref)
-      .refine(isAllowedPublicHref, {
-        message: "URL fields require http, https, mailto, or a local path",
-      })
-      .optional(),
+    href: linkField("site_social_links", "href", YOUR_CLUB_LIMITS.socialHref).optional(),
     icon: optionalText(200),
     sort_order: z.number().int().min(0).max(100).optional(),
     updated_at: z.string().max(40).optional(),
@@ -291,7 +308,7 @@ const tryoutMutation = z
     location: optionalText(160),
     cost_text: optionalText(120),
     cta_label: optionalText(40),
-    registration_href: externalHref,
+    registration_href: linkField("tryouts", "registration_href", 2_048).optional(),
     registration_form_id: nullableUuid.optional(),
     closed_message: optionalText(320),
     sort_order: z.number().int().optional(),
@@ -374,7 +391,7 @@ export const matchesMutation = z
     sponsor_name: nullableString,
     sponsor_logo_url: nullableString,
     sponsor_logo_asset_id: nullableUuid.optional(),
-    sponsor_link: nullableString,
+    sponsor_link: linkField("matches", "sponsor_link", 2_048).nullable().optional(),
     home: z.boolean().optional(),
     venue: limitedFilledText(MATCH_TEXT_LIMITS.venue).optional(),
     address: limitedNullableText(MATCH_TEXT_LIMITS.address),
@@ -416,11 +433,7 @@ const sponsorName = z
     message: `Sponsor names stop at ${SPONSOR_NAME_LIMIT} characters`,
   })
   .refine((value) => value.trim() !== "", { message: "Give this sponsor a name" });
-const sponsorWebsite = z
-  .string()
-  .max(SPONSOR_WEBSITE_LIMIT)
-  .regex(/^https?:\/\/\S+$/i, { message: "Their website must be an http or https address" })
-  .nullable();
+const sponsorWebsite = linkField("site_sponsor_logos", "website_url", SPONSOR_WEBSITE_LIMIT).nullable();
 const siteSponsorLogoMutation = z
   .object({
     id: uuid.optional(),
@@ -539,6 +552,18 @@ export const adminDataRequestSchema = z
         message: `${request.table} is read-only`,
       });
       return;
+    }
+    // Every *_url, *_href and *_link column (images and media included) refuses script, data and
+    // protocol-relative (`//host`) values. Link destinations get the stricter shared rule below.
+    if (request.payload && ["insert", "update", "upsert"].includes(request.operation)) {
+      const linkColumns = ADMIN_LINK_FIELDS[request.table] ?? {};
+      for (const [index, item] of (Array.isArray(request.payload) ? request.payload : [request.payload]).entries()) {
+        for (const [key, value] of Object.entries(item)) {
+          if (typeof value === "string" && /(?:url|href|link)$/.test(key) && !(key in linkColumns) && !isSafeStoredUrl(value)) {
+            context.addIssue({ code: "custom", path: ["payload", ...(Array.isArray(request.payload) ? [index] : []), key], message: "URL fields require http, https, mailto, or a local path" });
+          }
+        }
+      }
     }
     // A match replay is stored only as the canonical YouTube embed link the
     // Schedule editor produces; the database CHECK mirrors this.

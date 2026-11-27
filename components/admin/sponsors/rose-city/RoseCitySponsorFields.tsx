@@ -10,6 +10,7 @@ import { editTargetProps } from "@/lib/admin-edit-targets";
 import { sponsorTarget } from "./sponsors-edit-targets";
 import { PLACE_CAP, PLACE_NOUN, inPlace, type Place } from "./rose-city-sponsors-model";
 import styles from "./RoseCitySponsorsEditor.module.css";
+import { LINK_DESTINATION_HINT } from "@/lib/link-destination";
 
 export type SponsorFieldsApi = {
   drafts: readonly SponsorDraft[];
@@ -121,7 +122,6 @@ function SponsorRow({ api, draft, index, count, place, onReplace }: {
             id={`${id}-site`}
             className={styles.input}
             type="text"
-            inputMode="url"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
@@ -133,7 +133,7 @@ function SponsorRow({ api, draft, index, count, place, onReplace }: {
             disabled={api.locked}
             onChange={(event) => api.setWebsite(draft.key, event.target.value)}
           />
-          <p id={`${id}-site-hint`} className={styles.hint}>An address without https:// gets it added.</p>
+          <p id={`${id}-site-hint`} className={styles.hint}>{LINK_DESTINATION_HINT}</p>
           {error && <p id={`${id}-site-error`} className={styles.error}>{error}</p>}
         </div>
       </div>

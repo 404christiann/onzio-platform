@@ -38,6 +38,7 @@ import { shopSaveRequestSchemaFor, type ShopPhoto, type ShopSection, type ShopSn
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
+import { LINK_DESTINATION_HINT } from "@/lib/link-destination";
 
 const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };
 const CARD_ICON_LABELS: Record<ShopCardIcon, string> = { "": "No icon", video: "Video camera", jersey: "Jersey", "shipping-box": "Shipping box", "no-access": "No returns" };
@@ -426,7 +427,7 @@ export default function ShopPageEditor() {
                   <TextField label="Footer label" value={draft.purchase.cta_eyebrow} onChange={(value) => updatePurchase("cta_eyebrow", value)} />
                   <TextAreaField label="Footer text" value={draft.purchase.cta_text} onChange={(value) => updatePurchase("cta_text", value)} />
                   <TextField label="Button text" value={draft.purchase.cta_label} onChange={(value) => updatePurchase("cta_label", value)} />
-                  <TextField label="Button link" type="url" value={draft.purchase.cta_link} onChange={(value) => updatePurchase("cta_link", value)} />
+                  <TextField label="Button link" value={draft.purchase.cta_link} help={LINK_DESTINATION_HINT} onChange={(value) => updatePurchase("cta_link", value)} />
                 </div>}
                 </fieldset>
                 {saveError && <p role="alert" className="mt-3 text-sm text-destructive">{saveError}</p>}

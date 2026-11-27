@@ -6,6 +6,7 @@ import { buildClickEvent } from "@/lib/telemetry/beacon";
 import { shouldRecordClick } from "@/lib/telemetry/click-policy";
 import { clubHasTelemetry } from "@/lib/telemetry/entitlement";
 import { ingestSecret, signPayload } from "@/lib/telemetry/ingest";
+import { renderableLink } from "@/lib/link-destination";
 
 // TELEMETRY-02: sponsor click redirect, GET /r/<sponsorId>. Middleware rewrites the public path to
 // /_clubs/<slug>/r/<id> after verified tenant resolution and sets x-onzio-club-id. The club comes only
@@ -19,16 +20,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function notFound(): Response {
   return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
-}
-
-function httpUrl(value: unknown): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
-  } catch {
-    return null;
-  }
 }
 
 function requestHost(headers: Headers): string | null {
@@ -84,7 +75,7 @@ export async function GET(
     .eq("id", sponsor.toLowerCase())
     .maybeSingle();
   if (error) return notFound();
-  const destination = httpUrl(data?.website_url);
+  const destination = renderableLink(data?.website_url) || null;
   if (!destination) return notFound();
 
   try {

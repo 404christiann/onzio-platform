@@ -4,6 +4,7 @@ import { matchReplayEmbedUrl } from "@/lib/youtube-embed";
 import {
   MAX_MATCH_SCORE, matchTooLong, normalizeScore, formatShortDate, hasResult, type FormState, type Match,
 } from "@/components/admin/schedule/schedule-model";
+import { linkDestinationProblem, normalizedLink } from "@/lib/link-destination";
 
 /**
  * Pure rules for the Rose City Schedule editor. The validation and the write payloads are the ones the classic
@@ -70,14 +71,9 @@ export function validateMatchForm(form: FormState): string | null {
   if (form.sponsor_logo_url && !form.sponsor_name?.trim()) {
     return "Sponsor name is required when a sponsor logo is uploaded.";
   }
-  if (form.sponsor_link?.trim()) {
-    try {
-      const sponsorUrl = new URL(form.sponsor_link);
-      if (!['http:', 'https:'].includes(sponsorUrl.protocol)) throw new Error();
-    } catch {
-      return "Sponsor website link must be a valid http or https address.";
-    }
-  }
+  const sponsorLinkProblem = linkDestinationProblem(form.sponsor_link ?? "");
+  if (sponsorLinkProblem) return sponsorLinkProblem;
+
   if (matchReplayEmbedUrl(form.replay_video_url ?? "") === null) {
     return "The stream or replay video must be a YouTube video link, like https://youtu.be/…";
   }
@@ -104,7 +100,7 @@ export function buildMatchWrite(form: FormState) {
     competition: form.competition?.trim() || null,
     sponsor_name: form.sponsor_name?.trim() || null,
     sponsor_logo_url: form.sponsor_logo_url?.trim() || null,
-    sponsor_link: form.sponsor_link?.trim() || null,
+    sponsor_link: normalizedLink(form.sponsor_link ?? "") || null,
     replay_video_url: matchReplayEmbedUrl(form.replay_video_url ?? "") || null,
   };
 }

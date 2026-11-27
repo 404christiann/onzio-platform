@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
 import type { DBAboutPageContent, DBSiteSponsorLogo } from "@/lib/db-types";
+import { SITE_PAGE_LINK, renderableLink } from "@/lib/link-destination";
 
 export default function ClubhouseAboutPage({
   content,
@@ -78,8 +79,8 @@ export default function ClubhouseAboutPage({
 
       <section data-about-editor-section="closing" className="clubhouse-about-cta">
         <p>{content.closing_text}</p>
-        {content.closing_cta_label && content.closing_cta_href && (
-          <Link href={content.closing_cta_href}>{content.closing_cta_label}</Link>
+        {content.closing_cta_label && renderableLink(content.closing_cta_href, SITE_PAGE_LINK) && (
+          <Link href={renderableLink(content.closing_cta_href, SITE_PAGE_LINK)}>{content.closing_cta_label}</Link>
         )}
       </section>
     </div>

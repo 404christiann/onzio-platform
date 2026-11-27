@@ -6,7 +6,7 @@ import { EditorGroup, kit } from "@/components/admin/cinematic-editor/CinematicE
 import { StringListField, TableEditor } from "@/components/admin/ui/editor-kit";
 import { MAX_SEASON_BENEFITS, MAX_SEASON_HIGHLIGHTS, MAX_SEASON_INCLUDES, MAX_SEASON_PRICE_ROWS, type SeasonMembershipContent } from "@/lib/cinematic-ticket-pages-content";
 import { addListItem, moveListItem, removeListItem } from "@/lib/cinematic-ticket-pages-editor";
-import { AddButton, ICON_HINT, IMAGE_NOTE, IMAGE_TYPES, ImageSlot, ReorderTools, ShowRow, TextField } from "./editor-parts";
+import { AddButton, ICON_HINT, IMAGE_NOTE, IMAGE_TYPES, ImageSlot, LinkTextField, ReorderTools, ShowRow, TextField } from "./editor-parts";
 import TicketPageEditor, { type TicketPageFieldsApi } from "./TicketPageEditor";
 import { SEASON_SPEC, ticketPageSectionShown, type SeasonSectionId } from "./ticket-page-sections";
 import {
@@ -15,7 +15,6 @@ import {
 } from "./ticket-page-edit-targets";
 import styles from "./ticket-editors.module.css";
 
-const LINK_HINT = "Starts with https://, mailto: or / for a page on this site. Leave empty until the link is ready: the button then shows but does nothing.";
 const SWITCH_COPY: Partial<Record<SeasonSectionId, string>> = {
   button: "Hides both Buy buttons on the page: the one under the price table and the one in the closing call to action.",
 };
@@ -106,7 +105,7 @@ export function fields(api: Api, id: string): ReactNode {
     </>; break;
     case "button": body = <div className={styles.two}>
       <TextField label="Button text" value={button.label} max={60} disabled={locked} target={SEASON_TARGETS.buttonLabel} onChange={label => set("button", { label })} />
-      <TextField label="Button link" value={button.href} max={2000} disabled={locked} hint={LINK_HINT} target={SEASON_TARGETS.buttonHref} onChange={href => set("button", { href })} />
+      <LinkTextField label="Button link" value={button.href} max={2000} disabled={locked} hintExtra="Leave empty until the link is ready: the button then shows but does nothing." target={SEASON_TARGETS.buttonHref} onChange={href => set("button", { href })} />
     </div>; break;
     case "benefits": body = <>
       <TextField label="Heading" value={benefits.heading} max={120} disabled={locked} target={SEASON_TARGETS.benefitsHeading} onChange={value => set("benefits", { heading: value })} />

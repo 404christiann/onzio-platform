@@ -296,11 +296,11 @@ describe("strict validation and field ownership", () => {
     expect((await savePage(unchanged)).program).toMatchObject({ slug: program.slug, status: "active", sort_order: 0, body: "Copy only" });
   });
 
-  const accepted = ["", "/", "/programs", "/programs?group=u12#register", "https://registration.example.test/form", "http://registration.example.test/form", "mailto:join@example.test",
-    "/path with-space", "/\\evil.test", "/path\ncontrol"];
+  const accepted = ["", "/", "/programs", "/programs?group=u12#register", "https://registration.example.test/form", "mailto:join@example.test"];
   const deniedBySql = ["//evil.test", "//", "javascript:alert(1)", "data:text/html,a", "tel:123", "ftp://example.test/file", "relative/path", "https://", "mailto:",
-    " https://example.test", "https://exa mple.test", "mailto:join @example.test"];
-  const deniedByTable = ["HTTPS://EXAMPLE.TEST", "MAILTO:join@example.test", `/${"x".repeat(2048)}`];
+    " https://example.test", "https://exa mple.test", "mailto:join @example.test",
+    "http://registration.example.test/form", "/path with-space", "/\\evil.test", "/path\ncontrol", "HTTPS://EXAMPLE.TEST", "MAILTO:join@example.test"];
+  const deniedByTable = [`/${"x".repeat(2048)}`];
   it.each(accepted)("accepts href %j", async external_cta_href => {
     expect((await savePage(pageRequest(empty, { external_cta_href }))).program.external_cta_href).toBe(external_cta_href);
   });

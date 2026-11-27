@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { linkDestinationSchema } from "@/lib/link-destination";
 import { PROGRAM_MEDIA_LIMITS } from "@/lib/program-content";
 
 const uuid = z.string().uuid();
@@ -23,7 +24,7 @@ export const programPageSaveRequestSchema = z.object({
     hero_media_asset_id: nullableUuid,
     detail_media_asset_id: nullableUuid,
     external_cta_label: z.string().max(40),
-    external_cta_href: z.string().max(2048),
+    external_cta_href: linkDestinationSchema({ max: 2048 }),
     registration_form_id: nullableUuid,
     registration_enabled: z.boolean(),
     registration_eyebrow: z.string().max(80),

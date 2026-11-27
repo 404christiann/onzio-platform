@@ -166,10 +166,10 @@ describe("Tryouts content independent of display", () => {
     for (const value of [null, 0, false, {}, [], "x".repeat(321)]) await denied(await request({ page: { ...page, [field]: value } }));
     expect((await save(await request({ page: { ...page, [field]: "x".repeat(320) } }))).page[field]).toHaveLength(320);
   });
-  it.each(["", "/noncatalog-registration", "/register?group=first#form", "http://registration.example.test/form", "https://registration.example.test/form", "mailto:join@example.test"])("accepts established public href %s", async registration_href => {
+  it.each(["", "/noncatalog-registration", "/register?group=first#form", "https://registration.example.test/form", "mailto:join@example.test"])("accepts established public href %s", async registration_href => {
     const baseline = await load(); expect((await save(await request({ events: [...rows(baseline.events), { ...event, registration_href, sort_order: baseline.events.length }] }))).events.at(-1).registration_href).toBe(registration_href);
   });
-  it.each(["//evil.test", "/\\evil.test", "javascript:alert(1)", "data:text/html,a", "tel:123", "https://", "mailto:invalid", " https://example.test", "/path with-space", "/path\ncontrol"])("denies unsafe SQL href %s", async registration_href => {
+  it.each(["//evil.test", "/\\evil.test", "javascript:alert(1)", "data:text/html,a", "tel:123", "https://", "mailto:invalid", " https://example.test", "/path with-space", "/path\ncontrol", "http://registration.example.test/form"])("denies unsafe SQL href %s", async registration_href => {
     const baseline = await load(); await denied(await request({ events: [...rows(baseline.events), { ...event, registration_href, sort_order: baseline.events.length }] }));
   });
   it("retains SQL row coercion and exact revision string comparison", async () => {

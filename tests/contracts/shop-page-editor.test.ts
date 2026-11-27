@@ -77,8 +77,11 @@ describe("Shop page save scope", () => {
     expect(shopSaveRequestSchema.safeParse(toShopSaveRequest(current, draft, operationId)).success).toBe(true);
     draft.changedVariants = [];
     draft.purchaseChanged = true;
-    draft.purchase.cta_link = "/shop";
+    draft.purchase.cta_link = "javascript:alert(1)";
     expect(shopSaveRequestSchema.safeParse(toShopSaveRequest(current, draft, operationId)).success).toBe(false);
+    // The shared link rule (lib/link-destination.ts) accepts a page on the site for the purchase button too.
+    draft.purchase.cta_link = "/shop";
+    expect(shopSaveRequestSchema.safeParse(toShopSaveRequest(current, draft, operationId)).success).toBe(true);
     draft.purchase.cta_link = "https://example.com/checkout";
     expect(shopSaveRequestSchema.safeParse(toShopSaveRequest(current, draft, operationId)).success).toBe(true);
   });

@@ -147,7 +147,7 @@ describe("Shop content independent of current display", () => {
         : { bullet_points: kind === "bullet type" ? [false] : kind === "bullet length" ? ["x".repeat(81)] : Array(9).fill("valid") };
       changed = { ...body, variants: { third: { ...product(photo), section: { ...section, ...invalid } } } };
     }
-    if (kind === "purchase link") changed = { ...body, purchase: { ...purchase, cta_link: "/shop" } };
+    if (kind === "purchase link") changed = { ...body, purchase: { ...purchase, cta_link: "//example.test/store" } };
     if (kind === "purchase extra") changed = { ...body, purchase: { ...purchase, forged: "x" } };
     if (kind === "empty") changed = { ...body, variants: {}, purchase: undefined };
     await denied(changed, "INVALID_SHOP_PAYLOAD");

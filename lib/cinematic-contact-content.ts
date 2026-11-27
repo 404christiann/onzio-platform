@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizedLink, refineLinkDestination } from "@/lib/link-destination";
 
 export const CONTACT_ACTIONS = ["media", "tryouts", "tickets", "information", "partnerships"] as const;
 export type ContactAction = (typeof CONTACT_ACTIONS)[number];
@@ -9,20 +10,6 @@ export const CONTACT_ROUTES: Record<Exclude<ContactAction, "information">, strin
   tickets: "/tickets",
   partnerships: "/community/partnership",
 };
-
-export function isSafeContactInformationHref(value: string): boolean {
-  if (value === "") return true;
-  if (value.trim() !== value) return false;
-  if (/[\s\\]/.test(value)) return false;
-  if (/^\/(?!\/)[-A-Za-z0-9_/?#=&%.]+$/.test(value)) return true;
-  if (/^mailto:[^@\s?]+@[^@\s?]+\.[^@\s?]+$/.test(value)) return true;
-  if (value.length > 2000) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && url.hostname.includes(".")
-      && !/^(?:localhost|127\.|0\.)|\.localhost$/i.test(url.hostname);
-  } catch { return false; }
-}
 
 const draftRow = z.object({ prompt: z.string().max(120), action: z.string().max(60) }).strict();
 export const cinematicContactDraftSchema = z.object({
@@ -37,8 +24,8 @@ export const cinematicContactContentSchema = cinematicContactDraftSchema.superRe
     if (!value.rows[id].prompt.trim()) context.addIssue({ code: "custom", path: ["rows", id, "prompt"], message: "Enter row text." });
     if (!value.rows[id].action.trim()) context.addIssue({ code: "custom", path: ["rows", id, "action"], message: "Enter button text." });
   }
-  if (!isSafeContactInformationHref(value.informationHref)) context.addIssue({ code: "custom", path: ["informationHref"], message: "Use an HTTPS URL, site path, or email address." });
-});
+  refineLinkDestination(context, ["informationHref"], value.informationHref, { max: 2000 });
+}).transform(value => ({ ...value, informationHref: normalizedLink(value.informationHref) }));
 export type CinematicContactContent = z.infer<typeof cinematicContactContentSchema>;
 
 export const cinematicContactSaveSchema = z.object({

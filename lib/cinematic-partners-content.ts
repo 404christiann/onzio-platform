@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isSafeContactInformationHref } from "@/lib/cinematic-contact-content";
+import { normalizedLink, refineLinkDestination } from "@/lib/link-destination";
 
 export const PARTNER_PAGES = ["partners", "opportunities"] as const;
 export type PartnerPage = (typeof PARTNER_PAGES)[number];
@@ -26,16 +26,17 @@ export const cinematicPartnersContentSchema = cinematicPartnersDraftSchema.super
   for (const page of PARTNER_PAGES) {
     if (!value.pages[page].title.trim()) context.addIssue({ code: "custom", path: ["pages", page, "title"], message: "Enter a heading." });
   }
-  if (!isSafeContactInformationHref(value.pages.opportunities.ctaHref)) {
-    context.addIssue({ code: "custom", path: ["pages", "opportunities", "ctaHref"], message: "Use an HTTPS URL, site path, or email address." });
-  }
+  refineLinkDestination(context, ["pages", "opportunities", "ctaHref"], value.pages.opportunities.ctaHref, { max: 2000 });
   const seen = new Set<string>();
   value.partners.forEach((row, index) => {
     if (!row.name.trim()) context.addIssue({ code: "custom", path: ["partners", index, "name"], message: "Enter the partner's name." });
     if (seen.has(row.id)) context.addIssue({ code: "custom", path: ["partners", index, "id"], message: "Duplicate partner." });
     seen.add(row.id);
   });
-});
+}).transform(value => ({
+  ...value,
+  pages: { ...value.pages, opportunities: { ...value.pages.opportunities, ctaHref: normalizedLink(value.pages.opportunities.ctaHref) } },
+}));
 export type CinematicPartnersContent = z.infer<typeof cinematicPartnersContentSchema>;
 export type CinematicPartner = CinematicPartnersContent["partners"][number];
 

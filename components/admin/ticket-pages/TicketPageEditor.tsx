@@ -150,7 +150,7 @@ export default function TicketPageEditor<K extends TicketPageKey>({ spec, title,
   async function save(): Promise<boolean> {
     if (!draft || !snapshot || busy || uploading) return false;
     const parsed = saveSchema.safeParse(buildTicketPageSaveInput({ pending, operationId: crypto.randomUUID(), snapshot, draft, retiredMediaAssetIds: unusedTicketPageUploads(uploads, draft) }));
-    if (!parsed.success) { setSaveFailed(true); setValidation("Review the fields before saving. Links must start with https://, mailto: or / (a page on this site)."); return false; }
+    if (!parsed.success) { setSaveFailed(true); setValidation("Review the highlighted fields before saving."); return false; }
     const request = parsed.data as TicketPageSaveRequest<K>, generation = epoch.current;
     setPending(request); setBusy(true); setFailed(false); setSaveFailed(false); setValidation(""); setMessage(""); setStatus(`Saving ${title}…`);
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, uploads })); } catch {}

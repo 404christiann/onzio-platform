@@ -1,5 +1,5 @@
 import type { DBShopCarouselPhoto, DBShopKitPhoto, DBShopKitSection, DBShopPurchaseDetails, ShopKitVariant } from "@/lib/db-types";
-import { normalizeKitBuyLink } from "./contract";
+import { normalizedLink } from "@/lib/link-destination";
 import { EMPTY_CINEMATIC_SHOP_CONTENT, shopContentOnly, withShopDefaults, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import type { ShopPhoto, ShopSaveRequest, ShopSection, ShopSnapshot, ShopVariant } from "./contract";
 
@@ -84,7 +84,7 @@ export function toShopSaveRequest(snapshot: ShopSnapshot, draft: ShopPageDraft, 
       section: {
         ...kit.section,
         bullet_points: kit.section.bullet_points.map((point) => point.trim()).filter(Boolean),
-        cta_link: normalizeKitBuyLink(kit.section.cta_link),
+        cta_link: normalizedLink(kit.section.cta_link),
       },
       photos: kit.photos.map((photo, order) => ({ rowId: photo.rowId, assetId: photo.assetId, order })),
     };

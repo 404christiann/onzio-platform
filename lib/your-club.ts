@@ -1,6 +1,6 @@
 import { isValidPublicEmail, isValidPublicPhone } from "@/lib/contact-admin";
 import type { SiteSocialPlatform } from "@/lib/db-types";
-import { normalizePublicHref } from "@/lib/public-link";
+import { PROFILE_LINK, isLinkDestination } from "@/lib/link-destination";
 
 // ADMIN-RE-14: the rules behind "Your club" (design: cd-your-club; decision
 // 0006; group 3 decisions 10 and 11). Pure, so the page, its tests and the
@@ -104,7 +104,7 @@ function socialError(label: string, value: string): string | null {
   if (href.length > YOUR_CLUB_LIMITS.socialHref) {
     return `That ${label} address is too long (2,048 characters at most).`;
   }
-  if (!/^https?:\/\//i.test(href) || normalizePublicHref(href) === "") {
+  if (!/^https?:\/\//i.test(href) || !isLinkDestination(href, PROFILE_LINK)) {
     return `Use a web address, like ${SOCIAL_PLATFORMS.find((platform) => platform.label === label)?.placeholder ?? "instagram.com/yourclub"}.`;
   }
   return null;

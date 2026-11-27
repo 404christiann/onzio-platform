@@ -11,6 +11,7 @@ import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import { draftParagraphs, overlongParagraph, type NewsSectionId } from "./news-page";
 import { newsTarget, type NewsField } from "./news-edit-targets";
 import styles from "./NewsEditor.module.css";
+import { linkDestinationHint } from "@/lib/link-destination";
 
 export type NewsFieldsApi = {
   /** The article's id (a saved article's uuid, `new-N` for an unsaved one): the row every control's edit target is keyed by. */
@@ -102,7 +103,7 @@ export function NewsArticleFields({ api, id }: { api: NewsFieldsApi; id: NewsSec
     </div>
     <div className={styles.row}>
       {text("actionLabel", "Button label (optional)", NEWS_LIMITS.actionLabel, "Shown under the article, like “Partner with us”.")}
-      {text("actionHref", "Button link", NEWS_LIMITS.actionHref, "A page on this site, like /community/partnership, or a full https:// link. Leave both blank for no button.", "url")}
+      {text("actionHref", "Button link", NEWS_LIMITS.actionHref, linkDestinationHint({ extra: "Leave both blank for no button." }))}
     </div>
   </div>;
 }

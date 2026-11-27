@@ -122,7 +122,7 @@ export default function TicketsEditor() {
   async function save(): Promise<boolean> {
     if (!draft || !snapshot || busy || uploading) return false;
     const parsed = ticketsSaveSchema.safeParse(buildTicketsSaveInput({ pending, operationId: crypto.randomUUID(), snapshot, draft, retired }));
-    if (!parsed.success) { setSaveFailed(true); setValidation("Review the fields before saving. The purchase link must be a full HTTPS URL."); return false; }
+    if (!parsed.success) { setSaveFailed(true); setValidation("Review the highlighted fields before saving."); return false; }
     const request = parsed.data, generation = epoch.current;
     setPending(request); setBusy(true); setFailed(false); setSaveFailed(false); setValidation(""); setMessage(""); setStatus(`Saving ${PAGE}…`);
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, retired })); } catch {}

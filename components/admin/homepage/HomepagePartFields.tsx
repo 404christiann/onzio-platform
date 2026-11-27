@@ -3,8 +3,7 @@
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { EditorActionButton, EditorGroup, EditorReorderButtons, kit } from "@/components/admin/cinematic-editor/CinematicEditorKit";
-import { ValidationMessage } from "@/components/admin/ui/editor-kit";
-import { isSafeCinematicDestination, type CinematicArtworkSlot } from "@/lib/cinematic-homepage-content";
+import type { CinematicArtworkSlot } from "@/lib/cinematic-homepage-content";
 import { HOMEPAGE_HERO_EYEBROW_MAX } from "@/lib/homepage-editor/contract";
 import type { HomepageDraft, HomepagePhoto } from "@/lib/homepage-editor/model";
 import { siteRouteOptionsWithFallback } from "@/lib/site-routes";
@@ -103,15 +102,6 @@ function VideoFields({ e }: { e: HomepagePartEditor }) {
   </div>;
 }
 
-/** The https-only check the save contract applies, shown before Save rather than after it. */
-function FormsWarnings({ e }: { e: HomepagePartEditor }) {
-  const destinations = e.draft.revamp?.navigation.destinations;
-  if (!destinations) return null;
-  const bad = (["tryouts", "mediaCredentials", "nationalAnthem"] as const).filter(key => destinations[key] && !isSafeCinematicDestination(destinations[key]));
-  if (!bad.length) return null;
-  return <ValidationMessage live="polite">Use a full HTTPS address (it starts with https://) for each form link. Saving is blocked until they are fixed or cleared.</ValidationMessage>;
-}
-
 export default function HomepagePartFields({ part, e }: { part: PartId; e: HomepagePartEditor }) {
   if (part === "hero") return <HeroFields e={e} />;
   if (part === "photos") return <PhotosFields e={e} />;
@@ -123,7 +113,6 @@ export default function HomepagePartFields({ part, e }: { part: PartId; e: Homep
     sponsors: "revamp.sponsors", menu: "revamp.navigation", forms: "revamp.navigation",
   } as const)[part];
   return <>
-    {part === "forms" && <FormsWarnings e={e} />}
     <CinematicHomepageFields piece={piece} part={part === "menu" ? "menu" : part === "forms" ? "forms" : undefined} content={revamp} disabled={e.disabled} change={e.setRevamp} replaceArtwork={e.replaceArtwork} retryArtwork={e.retryArtwork} />
   </>;
 }

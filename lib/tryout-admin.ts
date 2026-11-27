@@ -1,9 +1,9 @@
 import type { DBTryout, DBTryoutsPageContent } from "@/lib/db-types";
-import { normalizePublicHref } from "@/lib/public-link";
 import {
   resolveTryoutsPageContent,
   TRYOUTS_PAGE_LIMITS,
 } from "@/lib/tryouts-page-content";
+import { linkDestinationProblem, normalizedLink } from "@/lib/link-destination";
 
 export type TryoutStatus = "upcoming" | "open" | "closed";
 
@@ -172,9 +172,8 @@ export function validateTryoutDraft(
   if (href.length > 2_048) {
     errors.registrationHref =
       "Registration destination must be 2048 characters or fewer.";
-  } else if (href && !normalizePublicHref(href)) {
-    errors.registrationHref =
-      "Use an HTTPS, HTTP, mailto, or single-slash local destination.";
+  } else if (linkDestinationProblem(href)) {
+    errors.registrationHref = linkDestinationProblem(href);
   }
   if (href && !label) {
     errors.ctaLabel = "Add a CTA label or remove the registration destination.";
@@ -201,7 +200,7 @@ export function buildTryoutMutationPayload(
     location: draft.location.trim(),
     cost_text: draft.costText.trim(),
     cta_label: draft.ctaLabel.trim(),
-    registration_href: draft.registrationHref.trim(),
+    registration_href: normalizedLink(draft.registrationHref.trim()),
     registration_form_id: draft.registrationFormId,
     closed_message: draft.closedMessage.trim(),
     sort_order: draft.sortOrder,
