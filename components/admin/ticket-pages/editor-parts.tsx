@@ -12,7 +12,7 @@ import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import { mediaHint } from "@/lib/media-rules";
 import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import styles from "./ticket-editors.module.css";
-import { LINK_DESTINATION_HINT, linkDestinationProblem } from "@/lib/link-destination";
+import { linkDestinationHint, linkDestinationProblem } from "@/lib/link-destination";
 
 /** The artwork on these pages uploads to the homepage-artwork bucket, so every slot takes a graphic. */
 export const IMAGE_RULES = adminImageRules("graphic");
@@ -49,8 +49,8 @@ export function TextField({ label, value, max, disabled, multiline, hint, invali
 }
 
 /** A link destination field: the shared hint, and the shared error while the value is not a link. */
-export function LinkTextField(props: Omit<Parameters<typeof TextField>[0], "hint" | "error">) {
-  return <TextField {...props} hint={LINK_DESTINATION_HINT} error={linkDestinationProblem(props.value)} />;
+export function LinkTextField({ hintExtra, ...props }: Omit<Parameters<typeof TextField>[0], "hint" | "error"> & { hintExtra?: string }) {
+  return <TextField {...props} hint={linkDestinationHint({ extra: hintExtra })} error={linkDestinationProblem(props.value)} />;
 }
 
 /** The "Show on the page" switch that opens a section's fields. `copy` says exactly what it hides. */

@@ -104,8 +104,11 @@ export function renderableLink(value: unknown, options?: LinkDestinationOptions)
   return normalizeLinkDestination(value, options) ?? "";
 }
 
-export function linkDestinationHint(options: LinkDestinationOptions = {}): string {
-  return isProfileOnly(options) ? PROFILE_LINK_HINT : LINK_DESTINATION_HINT;
+/** The shared hint, plus an optional line of its own for one field (what blank does, a fallback). */
+export function linkDestinationHint(options: LinkDestinationOptions & { extra?: string } = {}): string {
+  const hint = isProfileOnly(options) ? PROFILE_LINK_HINT : LINK_DESTINATION_HINT;
+  const extra = options.extra?.trim();
+  return extra ? `${hint} ${extra}` : hint;
 }
 
 export function linkDestinationError(options: LinkDestinationOptions = {}): string {

@@ -195,6 +195,14 @@ describe("copy", () => {
     expect(linkDestinationHint(PROFILE_LINK)).toBe(PROFILE_LINK_HINT);
     expect(PROFILE_LINK_HINT).toBe("A full link to your profile.");
   });
+
+  it("adds an optional per-field line after the shared hint", () => {
+    expect(linkDestinationHint({ extra: "Leave blank to keep the button inactive." }))
+      .toBe("A link (like a Google Form), a page on your site starting with /, or an email address. Leave blank to keep the button inactive.");
+    expect(linkDestinationHint({ ...PROFILE_LINK, extra: "Leave a link empty to hide its icon." }))
+      .toBe("A full link to your profile. Leave a link empty to hide its icon.");
+    expect(linkDestinationHint({ extra: "  " })).toBe(LINK_DESTINATION_HINT);
+  });
 });
 
 describe("linkDestinationSchema", () => {

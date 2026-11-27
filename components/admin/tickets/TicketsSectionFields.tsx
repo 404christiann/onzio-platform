@@ -11,7 +11,7 @@ import { moveItem } from "@/lib/cinematic-robinson-editor";
 import type { EditTargetId } from "@/lib/admin-edit-targets";
 import { TICKETS_TARGETS, benefitDetailTarget, benefitTitleTarget, perkLabelTarget } from "./tickets-edit-targets";
 import { ticketsSectionFlag, ticketsSectionShown, ticketsSectionTitle, type TicketsSectionId } from "./tickets-sections";
-import { LINK_DESTINATION_HINT, linkDestinationProblem } from "@/lib/link-destination";
+import { linkDestinationHint, linkDestinationProblem } from "@/lib/link-destination";
 
 export type TicketsFieldsApi = {
   draft: TicketsContent;
@@ -79,7 +79,7 @@ export function TicketsSectionFields({ api, id }: { api: TicketsFieldsApi; id: T
       <div className={styles.two}>{text("Page heading", "title", TICKETS_TARGETS.pageTitle)}{text("Subtitle", "subtitle", TICKETS_TARGETS.pageSubtitle)}</div>
       <div className={styles.two}>
         <div className={styles.fieldWithLimit}>
-          <TextField label="External ticket purchase URL" value={draft.purchaseUrl} max={2000} disabled={locked} invalid={!!urlProblem} target={TICKETS_TARGETS.pagePurchaseUrl} hint={LINK_DESTINATION_HINT}
+          <TextField label="External ticket purchase URL" value={draft.purchaseUrl} max={2000} disabled={locked} invalid={!!urlProblem} target={TICKETS_TARGETS.pagePurchaseUrl} hint={linkDestinationHint({ extra: "Leave empty to keep Buy Tickets inactive." })}
             onChange={value => update(v => { v.purchaseUrl = value; })} />
           {urlProblem && <ValidationMessage id={urlId} live="polite">{urlProblem}</ValidationMessage>}
         </div>

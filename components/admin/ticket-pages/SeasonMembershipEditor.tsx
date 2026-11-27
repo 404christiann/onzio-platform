@@ -105,7 +105,7 @@ export function fields(api: Api, id: string): ReactNode {
     </>; break;
     case "button": body = <div className={styles.two}>
       <TextField label="Button text" value={button.label} max={60} disabled={locked} target={SEASON_TARGETS.buttonLabel} onChange={label => set("button", { label })} />
-      <LinkTextField label="Button link" value={button.href} max={2000} disabled={locked} target={SEASON_TARGETS.buttonHref} onChange={href => set("button", { href })} />
+      <LinkTextField label="Button link" value={button.href} max={2000} disabled={locked} hintExtra="Leave empty until the link is ready: the button then shows but does nothing." target={SEASON_TARGETS.buttonHref} onChange={href => set("button", { href })} />
     </div>; break;
     case "benefits": body = <>
       <TextField label="Heading" value={benefits.heading} max={120} disabled={locked} target={SEASON_TARGETS.benefitsHeading} onChange={value => set("benefits", { heading: value })} />

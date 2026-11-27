@@ -245,3 +245,13 @@ describe("TicketPageEditor and the public pages", () => {
     for (const file of ["CinematicSeasonMembership", "CinematicKnowBeforeYouGo", "CinematicTicketPageParts"]) expect(read(`components/cinematic/${file}.tsx`), file).not.toMatch(/edit-target|editTarget/);
   });
 });
+
+describe("ticket page link fields keep their own line after the shared link hint", () => {
+  const SHARED = "A link (like a Google Form), a page on your site starting with /, or an email address.";
+  const text = (html: string) => html.replace(/&#x27;/g, "'");
+  it("Season Membership button, KBYG live stream and donor button", () => {
+    expect(text(sMarkup("button"))).toContain(`${SHARED} Leave empty until the link is ready: the button then shows but does nothing.`);
+    expect(text(kMarkup("match"))).toContain(`${SHARED} Leave empty to send fans to the club's YouTube channel from Branding.`);
+    expect(text(kMarkup("donor"))).toContain(`${SHARED} Leave empty until it is ready: the button then shows but does nothing.`);
+  });
+});

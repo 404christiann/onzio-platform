@@ -40,7 +40,7 @@ export function fields(api: Api, id: string): ReactNode {
       <TextField label="Competition line" value={match.competition} max={120} disabled={locked} hint="Used when the Schedule match has no competition." target={KBYG_TARGETS.matchCompetition} onChange={competition => set("match", { competition })} />
       <div className={styles.two}>
         <TextField label="Watch line" value={match.watchLabel} max={120} disabled={locked} target={KBYG_TARGETS.matchWatchLabel} onChange={watchLabel => set("match", { watchLabel })} />
-        <LinkTextField label="Game-day live stream link" value={match.watchHref} max={2000} disabled={locked} target={KBYG_TARGETS.matchWatchHref} onChange={watchHref => set("match", { watchHref })} />
+        <LinkTextField label="Game-day live stream link" value={match.watchHref} max={2000} disabled={locked} hintExtra="Leave empty to send fans to the club's YouTube channel from Branding." target={KBYG_TARGETS.matchWatchHref} onChange={watchHref => set("match", { watchHref })} />
       </div>
       {picture("youtube", "YouTube logo", `${IMAGE_TYPES}. Shown after the watch line.`, KBYG_TARGETS.matchYoutubeImageAlt, "Until the logo is added, this description shows as text after the watch line.")}
     </>; break;
@@ -73,7 +73,7 @@ export function fields(api: Api, id: string): ReactNode {
       <TextField label="About the donor" value={donor.body} max={4000} multiline disabled={locked} target={KBYG_TARGETS.donorBody} onChange={body => set("donor", { body })} />
       <div className={styles.two}>
         <TextField label="Button text" value={donor.buttonLabel} max={60} disabled={locked} target={KBYG_TARGETS.donorButtonLabel} onChange={buttonLabel => set("donor", { buttonLabel })} />
-        <LinkTextField label="Button link" value={donor.buttonHref} max={2000} disabled={locked} target={KBYG_TARGETS.donorButtonHref} onChange={buttonHref => set("donor", { buttonHref })} />
+        <LinkTextField label="Button link" value={donor.buttonHref} max={2000} disabled={locked} hintExtra="Leave empty until it is ready: the button then shows but does nothing." target={KBYG_TARGETS.donorButtonHref} onChange={buttonHref => set("donor", { buttonHref })} />
       </div>
     </>; break;
   }

@@ -157,6 +157,7 @@ describe("RC-ADMIN-4a Contact editor: dialog fields", () => {
     const html = render("information");
     expect(html).toContain("Information destination");
     expect(html).toContain("mailto:office@example.com");
+    expect(html).toContain("A link (like a Google Form), a page on your site starting with /, or an email address. Leave blank to keep the button inactive.");
     expect(html).not.toContain("opens <code>");
   });
   it("shows a field's message and marks it invalid only when one exists", () => {
