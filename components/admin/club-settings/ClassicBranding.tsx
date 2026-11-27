@@ -26,6 +26,7 @@ import type { SiteSocialPlatform } from "@/lib/db-types";
 import { ClubSettingsFrame } from "./ClubSettingsFrame";
 import { validateChangedSocialLink, brandingDirty, brandingStages, confirmBrandingStage, advanceBrandingSave, rejectBrandingSave, brandingPrewriteRejectionMessage, type BrandingDraft, type BrandingSaveProgress } from "./branding-draft";
 import styles from "./ClubSettings.module.css";
+import { PROFILE_LINK_HINT } from "@/lib/link-destination";
 
 const where = ["Website navigation", "Website footer", "Next match card", "Admin login and menu", "Players without a photo", "Browser tab icon"];
 const errorText = (error: unknown) => error instanceof Error ? error.message : "The change could not be completed.";
@@ -334,7 +335,7 @@ export function ClassicBranding() {
             <div className={styles.links}>
               {draft.links.map((link) => <div key={link.id} className={styles.field}>
                 <label htmlFor={`social-${link.id}`} className={ADMIN_LABEL_CLASS}>{link.label}</label>
-                <input id={`social-${link.id}`} type="url" inputMode="url" autoComplete="off" maxLength={2048} value={link.href} placeholder="https://"
+                <input id={`social-${link.id}`} type="text" inputMode="url" autoComplete="off" maxLength={2048} value={link.href} placeholder="https://"
                   className={ADMIN_INPUT_CLASS} aria-describedby="social-hint"
                   onChange={(event) => {
                     event.target.setCustomValidity("");
@@ -344,7 +345,7 @@ export function ClassicBranding() {
                   }} />
               </div>)}
             </div>
-            <p id="social-hint" className={styles.hint}>Leave a link empty to hide its icon.</p>
+            <p id="social-hint" className={styles.hint}>{PROFILE_LINK_HINT} Leave a link empty to hide its icon.</p>
             <span className={styles.previewLabel}>Footer preview</span>
             <div className={styles.preview}><ScaledPagePreview><ClubBrandingProvider key={draft.logoPath} initialBranding={{ logoPath: draft.logoPath, inverseLogoPath: inversePath, footerTagline: resolveFooterTagline(draft.tagline) }}><Footer overrides={preview} /></ClubBrandingProvider></ScaledPagePreview></div>
           </section>

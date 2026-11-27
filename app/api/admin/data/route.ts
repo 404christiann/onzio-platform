@@ -3,6 +3,7 @@ import {
   ADMIN_SELECT_MEDIA_REFERENCES,
   ADMIN_TABLE_FEATURES,
   adminDataRequestSchema,
+  normalizeAdminLinkFields,
   SINGLETON_TABLES,
   type AdminDataRequest,
 } from "@/lib/admin-data-contract";
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
   const onzio = supabase.schema("onzio");
   const table = onzio.from(input.table) as any;
   let query: any;
-  const payload = addTenantToPayload(input, club.id);
+  const payload = normalizeAdminLinkFields(input.table, addTenantToPayload(input, club.id));
 
   if (
     input.table === "about_page_content" &&

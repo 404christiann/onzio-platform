@@ -25,6 +25,7 @@ import RoseCityScheduleEditor from "@/components/admin/schedule/rose-city/RoseCi
 import { MatchForm } from "@/components/admin/schedule/ScheduleMatchForm";
 import { ScheduleMatchList, ScheduleListSkeleton } from "@/components/admin/schedule/ScheduleMatchList";
 import { emptyForm, matchTooLong, normalizeScore, deleteUnusedMatchImageUrls, monthGroupKey, hasResult, formatShortDate, MAX_MATCH_SCORE, type Match, type FormState, type ResultFilter } from "@/components/admin/schedule/schedule-model";
+import { linkDestinationProblem, normalizedLink } from "@/lib/link-destination";
 
 export default function SchedulePage() {
   const club = useClubContext();
@@ -164,14 +165,8 @@ function ClassicSchedulePage() {
     if (form.sponsor_logo_url && !form.sponsor_name?.trim()) {
       return "Sponsor name is required when a sponsor logo is uploaded.";
     }
-    if (form.sponsor_link?.trim()) {
-      try {
-        const sponsorUrl = new URL(form.sponsor_link);
-        if (!['http:', 'https:'].includes(sponsorUrl.protocol)) throw new Error();
-      } catch {
-        return "Sponsor website link must be a valid http or https address.";
-      }
-    }
+    const sponsorLinkProblem = linkDestinationProblem(form.sponsor_link ?? "");
+    if (sponsorLinkProblem) return sponsorLinkProblem;
     if (matchReplayEmbedUrl(form.replay_video_url ?? "") === null) {
       return "The stream or replay video must be a YouTube video link, like https://youtu.be/…";
     }
@@ -198,7 +193,7 @@ function ClassicSchedulePage() {
       competition: addForm.competition?.trim() || null,
       sponsor_name: addForm.sponsor_name?.trim() || null,
       sponsor_logo_url: addForm.sponsor_logo_url?.trim() || null,
-      sponsor_link: addForm.sponsor_link?.trim() || null,
+      sponsor_link: addForm.sponsor_link ? normalizedLink(addForm.sponsor_link) || null : null,
       replay_video_url: matchReplayEmbedUrl(addForm.replay_video_url ?? "") || null,
     }]);
     if (e) { setError(e.message); setSaving(false); return false; }
@@ -292,7 +287,7 @@ function ClassicSchedulePage() {
       competition: editForm.competition?.trim() || null,
       sponsor_name: editForm.sponsor_name?.trim() || null,
       sponsor_logo_url: editForm.sponsor_logo_url?.trim() || null,
-      sponsor_link: editForm.sponsor_link?.trim() || null,
+      sponsor_link: editForm.sponsor_link ? normalizedLink(editForm.sponsor_link) || null : null,
       replay_video_url: matchReplayEmbedUrl(editForm.replay_video_url ?? "") || null,
     }).eq("id", editingId);
     if (e) { setError(e.message); setSaving(false); return false; }

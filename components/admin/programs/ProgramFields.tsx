@@ -16,6 +16,7 @@ import type { ProgramDraft, ProgramValidationErrors } from "@/lib/program-admin"
 import { PROGRAM_EDITOR_TABS, type ProgramEditorTab } from "./program-editor-types";
 import type { ProgramsEditor } from "./useProgramsEditor";
 import { FormField as LegacyFormField, ClassicFormField, fieldError } from "./ProgramFormField";
+import { LINK_DESTINATION_HINT } from "@/lib/link-destination";
 
 export function ProgramFields({ editor, classic = false, section, disabled = false }: { editor: ProgramsEditor; classic?: boolean; section?: ProgramEditorTab; disabled?: boolean }) {
   const FormField = classic ? ClassicFormField : LegacyFormField;
@@ -281,7 +282,8 @@ export function ProgramFields({ editor, classic = false, section, disabled = fal
                       <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
                     </FormField>
                     <FormField label="Button link" error={fieldError(errors, "externalCtaHref")}>
-                      <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} placeholder="https://… or /contact" />
+                      <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} />
+                      <p className="mt-1 text-xs text-muted-foreground">{LINK_DESTINATION_HINT}</p>
                     </FormField>
                   </div>
                 </AdminPanel>

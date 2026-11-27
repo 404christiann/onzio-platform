@@ -14,6 +14,7 @@ import { fetchSchedule } from "@/lib/queries";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
 import { clubKickoffInstant, clubToday } from "@/lib/club-time";
+import { externalLinkProps, renderableLink } from "@/lib/link-destination";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -106,7 +107,7 @@ export default function NextMatchCard() {
 
   const sponsorLogo = nextFixture?.sponsorLogoUrl?.trim() || null;
   const sponsorName = nextFixture?.sponsorName?.trim() || "Match sponsor";
-  const sponsorLink = nextFixture?.sponsorLink?.trim() || null;
+  const sponsorLink = renderableLink(nextFixture?.sponsorLink) || null;
   const cityState = nextFixture
     ? [nextFixture.city?.trim(), nextFixture.state?.trim()].filter(Boolean).join(", ")
     : "";
@@ -224,8 +225,7 @@ export default function NextMatchCard() {
                 {sponsorLink ? (
                   <a
                     href={sponsorLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    {...externalLinkProps(sponsorLink)}
                     aria-label={`Visit ${sponsorName}`}
                     className="transition-opacity hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
                     style={{ outlineColor: "var(--color-red)" }}

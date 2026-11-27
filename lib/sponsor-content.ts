@@ -1,5 +1,6 @@
 import type { DBSiteSponsorLogo, SponsorLogoPlacement } from "@/lib/db-types";
 import { onzioMediaStoragePathFromPublicUrl } from "@/lib/media-url";
+import { LINK_DESTINATION_ERROR, normalizeLinkDestination } from "@/lib/link-destination";
 
 export const MAX_CAROUSEL_SPONSORS = 10;
 export const MAX_FOOTER_SPONSORS = 6;
@@ -188,29 +189,14 @@ export function sponsorDraftFromRow(row: DBSiteSponsorLogo): SponsorDraft {
 export type SponsorWebsite = { ok: true; value: string | null } | { ok: false; message: string };
 
 /**
- * "Their website" as it is saved: blank is none; an address without
- * http(s):// gets https://. Spaces, other schemes and addresses without a dot
- * are refused with a plain message.
+ * "Their website" as it is saved: blank is none; anything else goes through the
+ * shared link rule (an address without https:// gets it, http:// becomes https://).
  */
 export function normalizeSponsorWebsite(input: string): SponsorWebsite {
-  const text = input.trim();
-  if (text === "") return { ok: true, value: null };
-  const value = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `https://${text}`;
-  if (!/^https?:\/\/[^\s]+$/i.test(value)) {
-    return { ok: false, message: "Use a web address like theirshop.com." };
-  }
-  let host = "";
-  try {
-    host = new URL(value).hostname;
-  } catch {
-    return { ok: false, message: "Use a web address like theirshop.com." };
-  }
-  if (!host.includes(".") || host.startsWith(".") || host.endsWith(".")) {
-    return { ok: false, message: "Use a web address like theirshop.com." };
-  }
-  if (value.length > SPONSOR_WEBSITE_LIMIT) {
-    return { ok: false, message: "That address is too long." };
-  }
+  const value = normalizeLinkDestination(input);
+  if (value === "") return { ok: true, value: null };
+  if (value === null) return { ok: false, message: LINK_DESTINATION_ERROR };
+  if (value.length > SPONSOR_WEBSITE_LIMIT) return { ok: false, message: "That address is too long." };
   return { ok: true, value };
 }
 

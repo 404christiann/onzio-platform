@@ -4,6 +4,7 @@ import { useId } from "react";
 import { EditorField } from "@/components/admin/cinematic-editor/CinematicEditorKit";
 import { ValidationMessage } from "@/components/admin/ui/editor-kit";
 import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
+import { LINK_DESTINATION_HINT } from "@/lib/link-destination";
 import { CONTACT_ROUTES, type CinematicContactContent, type ContactAction } from "@/lib/cinematic-contact-content";
 import styles from "./ContactEditor.module.css";
 import { CONTACT_TARGETS, contactRowTarget } from "./contact-edit-targets";
@@ -43,7 +44,7 @@ export function ContactSectionFields({ api, id }: { api: ContactFieldsApi; id: C
     <Field label="Button text" value={row.action} max={60} locked={locked} error={errors[`rows.${action}.action`]} target={contactRowTarget(action, "action")} onChange={value => update(v => { v.rows[action].action = value; })} />
     {action === "information"
       ? <Field label="Information destination" value={draft.informationHref} max={2000} locked={locked} error={errors.informationHref} target={contactRowTarget("information", "destination")}
-          hint="A full HTTPS URL, a site path beginning with /, or a mailto: email address. Leave blank to keep the button inactive." onChange={value => update(v => { v.informationHref = value; })} />
+          hint={LINK_DESTINATION_HINT} onChange={value => update(v => { v.informationHref = value; })} />
       : <p className={styles.route}>The {contactSectionTitle(id)} button opens <code>{CONTACT_ROUTES[action]}</code>. That page is managed on its own editor, so its destination is not changed here.</p>}
   </div>;
 }

@@ -3,7 +3,6 @@ import type {
   DBProgramMedia,
   DBProgramsPageContent,
 } from "@/lib/db-types";
-import { normalizePublicHref } from "@/lib/public-link";
 import {
   normalizeProgramMedia,
   PROGRAM_MEDIA_LIMITS,
@@ -12,6 +11,7 @@ import {
 } from "@/lib/program-content";
 import { PROGRAMS_PAGE_LIMITS } from "@/lib/programs-page-content";
 import type { ProgramContent } from "@/lib/queries";
+import { linkDestinationProblem, normalizedLink, renderableLink } from "@/lib/link-destination";
 
 /** One row of a program's ordered gallery, as edited in /admin/programs. */
 export type ProgramMediaDraft = {
@@ -305,9 +305,8 @@ export function validateProgramDraft(
   }
   if (ctaHref.length > 2_048) {
     errors.externalCtaHref = "CTA destination must be 2048 characters or fewer.";
-  } else if (ctaHref && !normalizePublicHref(ctaHref)) {
-    errors.externalCtaHref =
-      "Use an HTTPS, HTTP, mailto, or single-slash local destination.";
+  } else if (linkDestinationProblem(ctaHref)) {
+    errors.externalCtaHref = linkDestinationProblem(ctaHref);
   }
 
   return errors;
@@ -330,7 +329,7 @@ export function buildProgramMutationPayload(
     hero_media_asset_id: draft.heroMediaAssetId,
     detail_media_asset_id: draft.detailMediaAssetId,
     external_cta_label: draft.externalCtaLabel.trim(),
-    external_cta_href: draft.externalCtaHref.trim(),
+    external_cta_href: normalizedLink(draft.externalCtaHref.trim()),
     registration_form_id: draft.registrationFormId,
     registration_enabled: draft.registrationEnabled,
     // Empty is preserved deliberately: it means "use the academy@1 template
@@ -363,7 +362,7 @@ export function programDraftToContent(
   gallery: readonly ProgramMediaDraft[] = [],
 ): ProgramContent {
   const payload = buildProgramMutationPayload(draft) as Record<string, unknown>;
-  const href = normalizePublicHref(String(payload.external_cta_href ?? ""));
+  const href = renderableLink(payload.external_cta_href);
   const label = String(payload.external_cta_label ?? "");
   return {
     id: draft.id ?? "draft-program",

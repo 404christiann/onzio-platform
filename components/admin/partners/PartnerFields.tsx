@@ -12,6 +12,7 @@ import { editTargetProps } from "@/lib/admin-edit-targets";
 import { GRAPHIC_UPLOAD_ACCEPT, GRAPHIC_UPLOAD_MAX_SIZE_LABEL, GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import { partnerPageTarget, partnerTarget } from "./partners-edit-targets";
 import { PAGE_ROUTES, TONES, TONE_SHORT, parseDialogId, partnerName, type PartnersDialogId } from "./partners-sections";
+import { LINK_DESTINATION_HINT } from "@/lib/link-destination";
 
 export type PartnersFieldsApi = {
   draft: CinematicPartnersContent;
@@ -47,7 +48,7 @@ function PageFields({ api, page }: { api: PartnersFieldsApi; page: PartnerPage }
     {page === "partners"
       ? <p className={styles.note}>The button opens the Partnership Opportunities page ({PARTNERSHIP_ROUTE}).</p>
       : <ListField label="Button link" value={draft.pages.opportunities.ctaHref} max={2000} disabled={locked} error={errors["pages.opportunities.ctaHref"]} target={partnerPageTarget("opportunities", "ctaHref")}
-          hint="A full HTTPS link, a mailto: email address, or a site page starting with /. The bottom bar stays hidden until a link is saved."
+          hint={LINK_DESTINATION_HINT}
           onChange={value => update(content => { content.pages.opportunities.ctaHref = value; })} />}
   </div>;
 }

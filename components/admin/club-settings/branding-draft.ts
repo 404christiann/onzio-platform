@@ -1,5 +1,6 @@
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
 import { DEFAULT_SITE_SOCIAL_LINKS, canonicalizeSocialRows, normalizeSiteSocialLinks, socialLinkLabel } from "@/lib/social-links";
+import { PROFILE_LINK, PROFILE_LINK_ERROR, normalizeLinkDestination, normalizedLink } from "@/lib/link-destination";
 
 export type BrandingDraft = {
   logoPath: string;
@@ -30,7 +31,7 @@ function socialValue(draft: BrandingDraft) {
 /** The rows a social save writes: configured platforms only, always under the standard ids. */
 export function socialStagePayload(draft: BrandingDraft, now: string): DBSiteSocialLink[] {
   return standardLinks(draft).filter((link) => draft.configured.includes(link.id)).map((link) => ({
-    id: link.id, label: socialLinkLabel(link.id), href: link.href.trim(), icon: link.icon,
+    id: link.id, label: socialLinkLabel(link.id), href: normalizedLink(link.href.trim(), PROFILE_LINK), icon: link.icon,
     sort_order: DEFAULT_SITE_SOCIAL_LINKS.findIndex((fallback) => fallback.id === link.id),
     updated_at: now,
   }));
@@ -39,11 +40,8 @@ export function socialStagePayload(draft: BrandingDraft, now: string): DBSiteSoc
 export function validateChangedSocialLink(href: string, savedHref: string): string | undefined {
   const value = href.trim();
   if (!value || value === savedHref.trim()) return undefined;
-  try {
-    const url = new URL(value);
-    if (/^https:\/\//i.test(value) && url.protocol === "https:" && value.length <= 2048) return undefined;
-  } catch {}
-  return "Use a complete link starting with https://.";
+  const normalized = normalizeLinkDestination(value, PROFILE_LINK);
+  return normalized !== null && normalized.length <= 2048 ? undefined : PROFILE_LINK_ERROR;
 }
 
 export function brandingDirty(draft: BrandingDraft, saved: BrandingDraft, tagline: boolean) {

@@ -8,11 +8,12 @@ import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { fetchSchedule } from "@/lib/queries";
-import { isTicketPurchaseUrl, type TicketsContent } from "@/lib/tickets-content";
+import { type TicketsContent } from "@/lib/tickets-content";
 import { stadiumCropViewBox, type StadiumArtwork, type StadiumPageContent } from "@/lib/stadium-content";
 import { useCinematicContent } from "./CinematicContent";
 import { cinematicMatchDate, cinematicMatchTime, nextHomeFixture } from "./next-home-fixture";
 import "./stadium.css";
+import { renderableLink } from "@/lib/link-destination";
 
 export type StadiumTicketing = Pick<TicketsContent, "purchaseUrl" | "missingPurchaseLabel">;
 const EMPTY_TICKETING: StadiumTicketing = { purchaseUrl: "", missingPurchaseLabel: "Ticket link coming soon" };
@@ -60,8 +61,8 @@ export default function CinematicStadium({ content, ticketing = EMPTY_TICKETING 
         </div><p className="robinson-venue">{fixture.venue}<br />{[fixture.city, fixture.state].filter(Boolean).join(", ")}</p></>
           : <div className="robinson-match-pending">{branding.clubLogoUrl && <NativeImage src={branding.clubLogoUrl} alt={club.name + " crest"} />}
             <p role="status">{match.loading ? "Loading next home match…" : shared?.match.emptyMessage || "The next home match will be announced soon."}</p></div>}
-        {ticketing.purchaseUrl && isTicketPurchaseUrl(ticketing.purchaseUrl)
-          ? <a className="robinson-buy" href={ticketing.purchaseUrl}>{shared?.match.buttonLabel || "Buy tickets"}</a>
+        {renderableLink(ticketing.purchaseUrl)
+          ? <a className="robinson-buy" href={renderableLink(ticketing.purchaseUrl)}>{shared?.match.buttonLabel || "Buy tickets"}</a>
           : <><button className="robinson-buy" disabled aria-describedby="robinson-purchase-note">{shared?.match.buttonLabel || "Buy tickets"}</button><p id="robinson-purchase-note" className="robinson-purchase-note">{ticketing.missingPurchaseLabel}</p></>}
         {art(partner, "robinson-chick")}
       </article>}

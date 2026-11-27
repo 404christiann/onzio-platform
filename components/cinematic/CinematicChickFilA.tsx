@@ -8,11 +8,12 @@ import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { fetchSchedule } from "@/lib/queries";
-import { isTicketPurchaseUrl, type TicketsPageContent } from "@/lib/tickets-content";
+import { type TicketsPageContent } from "@/lib/tickets-content";
 import type { ChickFilAArtwork, ChickFilAPageContent } from "@/lib/chick-fil-a-content";
 import { useCinematicContent } from "./CinematicContent";
 import { cinematicMatchDate, cinematicMatchTime, nextHomeFixture } from "./next-home-fixture";
 import "./chick-fil-a.css";
+import { renderableLink } from "@/lib/link-destination";
 
 export default function CinematicChickFilA({ content, purchase }: {
   content: ChickFilAPageContent;
@@ -48,7 +49,7 @@ export default function CinematicChickFilA({ content, purchase }: {
       <article className="food-match"><h2 id="food-match-title">{shared?.match.heading || "Next home match"}</h2>
         {fixture ? <><p className="food-match-date">{cinematicMatchDate(fixture.date)}</p><div className="food-teams">{branding.clubLogoUrl && <NativeImage src={branding.clubLogoUrl} alt={`${club.name} crest`} />}<strong>{cinematicMatchTime(fixture.time)}</strong><OpponentCrest name={fixture.opponent} logoUrl={fixture.opponentLogoUrl} size={96} /></div><p className="food-venue">{fixture.venue}<br />{[fixture.city, fixture.state].filter(Boolean).join(", ")}</p></> :
           <div className="food-match-pending">{branding.clubLogoUrl && <NativeImage src={branding.clubLogoUrl} alt={`${club.name} crest`} />}<p role="status">{loading ? "Loading next home match…" : shared?.match.emptyMessage || "The next home match will be announced soon."}</p></div>}
-        {purchase.purchaseUrl && isTicketPurchaseUrl(purchase.purchaseUrl) ? <a className="food-buy" href={purchase.purchaseUrl}>{shared?.match.buttonLabel || "Buy tickets"}</a> : <><button className="food-buy" disabled aria-describedby={purchaseNoteId}>{shared?.match.buttonLabel || "Buy tickets"}</button><p id={purchaseNoteId} className="food-purchase-note">{purchase.missingPurchaseLabel}</p></>}
+        {renderableLink(purchase.purchaseUrl) ? <a className="food-buy" href={renderableLink(purchase.purchaseUrl)}>{shared?.match.buttonLabel || "Buy tickets"}</a> : <><button className="food-buy" disabled aria-describedby={purchaseNoteId}>{shared?.match.buttonLabel || "Buy tickets"}</button><p id={purchaseNoteId} className="food-purchase-note">{purchase.missingPurchaseLabel}</p></>}
         {art(partner, "food-chick-logo")}
       </article>
     </section>}

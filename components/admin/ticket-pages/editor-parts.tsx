@@ -12,6 +12,7 @@ import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import { mediaHint } from "@/lib/media-rules";
 import { GRAPHIC_UPLOAD_TYPES_LABEL } from "@/lib/media-upload-types";
 import styles from "./ticket-editors.module.css";
+import { LINK_DESTINATION_HINT, linkDestinationProblem } from "@/lib/link-destination";
 
 /** The artwork on these pages uploads to the homepage-artwork bucket, so every slot takes a graphic. */
 export const IMAGE_RULES = adminImageRules("graphic");
@@ -35,13 +36,21 @@ export function AddButton({ disabled, onClick, children }: { disabled?: boolean;
 }
 
 /** A text field that tells the person when they have reached the limit the page allows. */
-export function TextField({ label, value, max, disabled, multiline, hint, invalid, target, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: ReactNode; invalid?: boolean; target?: EditTargetId; onChange: (value: string) => void }) {
+export function TextField({ label, value, max, disabled, multiline, hint, invalid, error, target, onChange }: { label: string; value: string; max: number; disabled: boolean; multiline?: boolean; hint?: ReactNode; invalid?: boolean; error?: string; target?: EditTargetId; onChange: (value: string) => void }) {
   const limitId = useId();
+  const errorId = useId();
   const atLimit = value.length >= max;
+  const describedBy = [error ? errorId : "", atLimit ? limitId : ""].filter(Boolean).join(" ") || undefined;
   return <div className={styles.fieldWithLimit} {...editTargetProps(target)}>
-    <EditorField label={label} value={value} max={max} disabled={disabled} multiline={multiline} hint={hint} invalid={invalid || atLimit} describedBy={atLimit ? limitId : undefined} onChange={onChange} />
+    <EditorField label={label} value={value} max={max} disabled={disabled} multiline={multiline} hint={hint} invalid={invalid || atLimit || Boolean(error)} describedBy={describedBy} onChange={onChange} />
+    {error && <ValidationMessage id={errorId} live="polite">{error}</ValidationMessage>}
     {atLimit && <ValidationMessage id={limitId} live="polite">{label} is at its limit of {max} characters.</ValidationMessage>}
   </div>;
+}
+
+/** A link destination field: the shared hint, and the shared error while the value is not a link. */
+export function LinkTextField(props: Omit<Parameters<typeof TextField>[0], "hint" | "error">) {
+  return <TextField {...props} hint={LINK_DESTINATION_HINT} error={linkDestinationProblem(props.value)} />;
 }
 
 /** The "Show on the page" switch that opens a section's fields. `copy` says exactly what it hides. */

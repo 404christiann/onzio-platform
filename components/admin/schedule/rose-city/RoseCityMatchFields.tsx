@@ -16,6 +16,7 @@ import { MAX_MATCH_SCORE, deleteUnusedMatchImageUrls, type FormState } from "@/c
 import { matchTarget, type MatchField } from "./match-edit-targets";
 import type { MatchSectionId } from "./rose-city-schedule-model";
 import styles from "./RoseCityScheduleEditor.module.css";
+import { LINK_DESTINATION_HINT } from "@/lib/link-destination";
 
 const input = cn(ADMIN_INPUT_CLASS, "min-h-11");
 
@@ -175,8 +176,8 @@ export function RoseCityMatchFields({ section, matchKey, form, onChange, seasons
           <Field id="match-sponsor-name" label="Sponsor name" optional>
             <input id="match-sponsor-name" {...target("name")} type="text" placeholder="e.g. Tepito Coffee" value={form.sponsor_name ?? ""} onChange={e => set("sponsor_name", e.target.value)} className={input} />
           </Field>
-          <Field id="match-sponsor-link" label="Sponsor website" optional>
-            <input id="match-sponsor-link" {...target("link")} type="url" placeholder="https://..." value={form.sponsor_link ?? ""} onChange={e => set("sponsor_link", e.target.value)} className={input} />
+          <Field id="match-sponsor-link" label="Sponsor website" optional help={LINK_DESTINATION_HINT}>
+            <input id="match-sponsor-link" {...target("link")} type="text" value={form.sponsor_link ?? ""} onChange={e => set("sponsor_link", e.target.value)} className={input} />
           </Field>
         </div>
         <div {...target("logo")}><SponsorLogoUpload

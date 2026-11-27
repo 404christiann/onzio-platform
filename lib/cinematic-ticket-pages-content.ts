@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isSafeContactInformationHref } from "@/lib/cinematic-contact-content";
+import { linkDestinationSchema } from "@/lib/link-destination";
 import type { VisitorPageMedia, VisitorPageSnapshot } from "@/lib/visitor-page-editor";
 
 /**
@@ -29,7 +29,7 @@ const visible = z.boolean();
 /** RC-ADMIN-07: optional show/hide flag (absent = shown; hidden only on an explicit false). */
 const optionalVisible = z.boolean().optional();
 export const isTicketPartShown = (part: { visible?: boolean }): boolean => part.visible !== false;
-const link = z.string().max(2000).refine(isSafeContactInformationHref, "Use an HTTPS address, an email address (mailto:) or a page on this site.");
+const link = linkDestinationSchema({ max: 2000 });
 const itemId = (prefix: string) => z.string().regex(new RegExp(`^${prefix}-[a-z0-9-]{1,50}$`), "Invalid item ID.");
 export const ticketPageImageSchema = z.object({ assetId: z.uuid().nullable(), alt: z.string().max(1000) }).strict();
 const images = z.record(z.string().regex(/^[a-z0-9-]{1,60}$/), ticketPageImageSchema);

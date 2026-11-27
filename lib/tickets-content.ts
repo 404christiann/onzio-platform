@@ -1,21 +1,9 @@
 import { z } from "zod";
+import { linkDestinationSchema } from "@/lib/link-destination";
 export const TICKET_ARTWORK_SLOTS = ["banner", "seat", "card", "raffle", "bus", "map", "partner"] as const;
 export type TicketArtworkSlot = typeof TICKET_ARTWORK_SLOTS[number];
 const heading = z.string().max(120);
 const body = z.string().max(4000);
-export function isTicketPurchaseUrl(value: string): boolean {
-    if (!value)
-        return true;
-    if (value.trim() !== value || /[\s\\]/.test(value))
-        return false;
-    try {
-        const url = new URL(value);
-        return url.protocol === "https:" && !url.username && !url.password && url.hostname.includes(".") && !/^(localhost|127\.|0\.|\[|.*\.localhost$)/i.test(url.hostname);
-    }
-    catch {
-        return false;
-    }
-}
 const art = z.object({ assetId: z.uuid().nullable(), alt: z.string().max(1000) }).strict();
 export const ticketArtworkSchema = z.object(Object.fromEntries(TICKET_ARTWORK_SLOTS.map(slot => [slot, art])) as Record<TicketArtworkSlot, typeof art>).strict();
 /**
@@ -31,7 +19,7 @@ export const ticketsContentSchema = z.object({
     includesHeading: heading, benefits: z.array(z.object({ title: heading, detail: body }).strict()).max(10),
     benefitsNote: body, transitHeading: heading, transitSubtitle: heading,
     directionsHeading: heading, directionsBody: body, parkingHeading: heading, parkingBody: body, parkingNote: body,
-    purchaseUrl: z.string().max(2000).refine(isTicketPurchaseUrl, "Use a full HTTPS ticket purchase link."),
+    purchaseUrl: linkDestinationSchema({ max: 2000 }),
     missingPurchaseLabel: heading, bannerHeightFraction: z.number().min(0.5).max(1), artwork: ticketArtworkSchema,
     perksVisible: z.boolean().optional(), includesVisible: z.boolean().optional(), transitVisible: z.boolean().optional(),
     directionsVisible: z.boolean().optional(), purchaseVisible: z.boolean().optional(),

@@ -1,8 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import CinematicDestination from "@/components/cinematic/CinematicDestination";
 import { getClubContextBySlug } from "@/lib/club-context";
-import { fetchCinematicHomepageContent, isSafeCinematicDestination } from "@/lib/cinematic-homepage-content";
+import { fetchCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { createClient } from "@/lib/supabase-server";
+import { renderableLink } from "@/lib/link-destination";
 
 export default async function MediaCredentialsPage({ params }: { params: Promise<{ slug: string }> }) {
   const club = await getClubContextBySlug((await params).slug);
@@ -10,6 +11,7 @@ export default async function MediaCredentialsPage({ params }: { params: Promise
   const db = (await createClient()).schema("onzio");
   const content = await fetchCinematicHomepageContent(club.id, db);
   const destination = content.navigation.destinations.mediaCredentials;
-  if (isSafeCinematicDestination(destination)) redirect(destination);
+  const href = renderableLink(destination);
+  if (href) redirect(href);
   return <CinematicDestination clubId={club.id} labelId="media-credentials" />;
 }

@@ -33,6 +33,7 @@ import { RoseCityFrame } from "./RoseCityFrame";
 import { CinematicContentProvider, useCinematicContent } from "@/components/cinematic/CinematicContent";
 import classic from "../ClubSettings.module.css";
 import styles from "./RoseCity.module.css";
+import { PROFILE_LINK_HINT } from "@/lib/link-destination";
 
 type SectionId = "logo" | "footer";
 
@@ -373,7 +374,7 @@ export function RoseCityBranding() {
           hint={footerHasOwnLogo ? FOOTER_LOGO_TAGLINE_HINT : draft.tagline.trim() ? TAGLINE_HINT : `${TAGLINE_HINT} Not set: the footer shows Onzio’s standard wording until you add a line.`}
           onChange={(value) => updateDraft({ ...latest.current!, tagline: value })}
         />
-        <p className={classic.hint}>The links behind the social icons in the public website footer. Leave a link empty to hide its icon.</p>
+        <p className={classic.hint}>The links behind the social icons in the public website footer. {PROFILE_LINK_HINT} Leave a link empty to hide its icon.</p>
         {draft.links.map((link) => {
           const id = `social-${link.id}`;
           const message = shown.links[link.id];
@@ -381,7 +382,7 @@ export function RoseCityBranding() {
             <div key={link.id} className={kit.field}>
               <label htmlFor={id}>{link.label}</label>
               <input
-                id={id} type="url" inputMode="url" autoComplete="off" maxLength={2048} value={link.href} placeholder="https://" disabled={locked}
+                id={id} type="text" inputMode="url" autoComplete="off" maxLength={2048} value={link.href} placeholder="https://" disabled={locked}
                 aria-invalid={message ? true : undefined} aria-describedby={message ? `${id}-error` : undefined}
                 onChange={(event) => {
                   const value = latest.current!;

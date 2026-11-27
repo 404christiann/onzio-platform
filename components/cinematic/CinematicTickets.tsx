@@ -7,11 +7,12 @@ import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { fetchSchedule } from "@/lib/queries";
-import { isTicketPurchaseUrl, isTicketSectionShown, type TicketsPageContent, type TicketsArtwork } from "@/lib/tickets-content";
+import { isTicketSectionShown, type TicketsPageContent, type TicketsArtwork } from "@/lib/tickets-content";
 import { pageVisible, type PublicPageVisibility } from "@/lib/public-page-visibility";
 import { useCinematicContent } from "./CinematicContent";
 import { cinematicMatchDate, cinematicMatchTime, nextHomeFixture } from "./next-home-fixture";
 import "./tickets.css";
+import { renderableLink } from "@/lib/link-destination";
 /**
  * `pageVisibility` is the club's "Visible to visitors" map, passed by the public page only: the transit section follows the Foothill
  * Transit page (and its own transitVisible flag). The editor previews leave it out, so the Transit card stays editable.
@@ -50,7 +51,7 @@ export default function CinematicTickets({ content, pageVisibility }: {
  <section className="tickets-match-includes" aria-label="Next home match and ticket benefits">
  <article className="tickets-match"><h2>{shared?.match.heading || "Next home match"}</h2>
  {fixture ? <><p className="tickets-match-date">{cinematicMatchDate(fixture.date)}</p><div className="tickets-teams">{branding.clubLogoUrl && <NativeImage src={branding.clubLogoUrl} alt={club.name + " crest"}/>}<strong>{cinematicMatchTime(fixture.time)}</strong><OpponentCrest name={fixture.opponent} logoUrl={fixture.opponentLogoUrl} size={96}/></div><p className="tickets-venue">{fixture.venue}<br />{[fixture.city, fixture.state].filter(Boolean).join(", ")}</p></> : <div className="match-pending">{branding.clubLogoUrl && <NativeImage src={branding.clubLogoUrl} alt={club.name + " crest"}/>}<p role="status">{match.loading ? "Loading next home match…" : shared?.match.emptyMessage || "The next home match will be announced soon."}</p></div>}
- {isTicketSectionShown(content, "purchaseVisible") && (content.purchaseUrl && isTicketPurchaseUrl(content.purchaseUrl) ? <a className="tickets-buy" href={content.purchaseUrl}>{shared?.match.buttonLabel || "Buy tickets"}</a> : <><button className="tickets-buy" disabled aria-describedby="purchase-note">{shared?.match.buttonLabel || "Buy tickets"}</button><p id="purchase-note" className="purchase-note">{content.missingPurchaseLabel}</p></>)}
+ {isTicketSectionShown(content, "purchaseVisible") && (renderableLink(content.purchaseUrl) ? <a className="tickets-buy" href={renderableLink(content.purchaseUrl)}>{shared?.match.buttonLabel || "Buy tickets"}</a> : <><button className="tickets-buy" disabled aria-describedby="purchase-note">{shared?.match.buttonLabel || "Buy tickets"}</button><p id="purchase-note" className="purchase-note">{content.missingPurchaseLabel}</p></>)}
  {art(partner, "tickets-chick")}
  </article>
  {isTicketSectionShown(content, "includesVisible") && <div className="tickets-includes"><h2>{content.includesHeading}</h2>{content.benefits.map((benefit, index) => <div key={index}><h3>{benefit.title}</h3><p>{benefit.detail}</p></div>)}{content.benefitsNote && <p className="tickets-footnote"><i aria-hidden="true"/><em>{content.benefitsNote}</em></p>}</div>}

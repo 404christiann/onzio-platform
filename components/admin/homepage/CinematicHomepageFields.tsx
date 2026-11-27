@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { CINEMATIC_NAV_ITEMS, cinematicArtwork, isHomepageSectionShown, type CinematicArtworkSlot, type CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import type { PieceId } from "@/lib/homepage-editor/model";
@@ -10,12 +10,24 @@ import { EditorActionButton, EditorGroup, EditorReorderButtons, EditorRemoveButt
 import { editTargetProps, type EditTargetId } from "@/lib/admin-edit-targets";
 import { mediaAccept, mediaHint } from "@/lib/media-rules";
 import { ARTWORK_TARGETS, HOMEPAGE_TARGETS, priceRowTarget } from "./homepage-edit-targets";
+import { ValidationMessage } from "@/components/admin/ui/editor-kit";
+import { LINK_DESTINATION_HINT, linkDestinationProblem } from "@/lib/link-destination";
 
 /** One labelled text field. The wrapping label keeps the field's accessible name equal to its visible label. */
 function TextField({ label, value, maximum, disabled, multiline, target, onChange }: { label: string; value: string; maximum: number; disabled: boolean; multiline: boolean; target?: EditTargetId; onChange: (value: string) => void }) {
   return <label className={kit.field} {...editTargetProps(target)}><span className={kit.fieldLabel}>{label}</span>{multiline
     ? <textarea value={value} maxLength={maximum} disabled={disabled} onChange={event => onChange(event.target.value)} />
     : <input value={value} maxLength={maximum} disabled={disabled} onChange={event => onChange(event.target.value)} />}</label>;
+}
+
+/** A link destination field: the shared hint, and the shared error while the value is not a link. */
+function LinkField({ label, value, maximum, disabled, onChange }: { label: string; value: string; maximum: number; disabled: boolean; onChange: (value: string) => void }) {
+  const hintId = useId(), errorId = useId();
+  const problem = linkDestinationProblem(value);
+  return <label className={kit.field}><span className={kit.fieldLabel}>{label}</span>
+    <input value={value} maxLength={maximum} disabled={disabled} aria-invalid={problem ? true : undefined} aria-describedby={problem ? `${hintId} ${errorId}` : hintId} onChange={event => onChange(event.target.value)} />
+    <span id={hintId} className={kit.hint}>{LINK_DESTINATION_HINT}</span>
+    {problem && <ValidationMessage id={errorId} live="polite">{problem}</ValidationMessage>}</label>;
 }
 
 /**
@@ -70,7 +82,7 @@ export default function CinematicHomepageFields({ piece, part, content, disabled
   const visibilitySwitch = (label: string, shown: boolean, edit: (draft: CinematicHomepageContent, visible: boolean) => void) =>
     <EditorSwitch checked={shown} label={label} disabled={disabled} offBadge="Hidden" onChange={visible => update(draft => edit(draft, visible))} />;
   const menuBody = <>{art("headerPartner", { legend: "Header sponsor logo", help: "Optional. Appears in the top header next to the menu. Remove it to show nothing there. Replacing the image clears its description. Describing it as “Foothill Transit” shows the club’s Foothill Transit mark here instead, hidden whenever the Foothill Transit page is hidden.", removeLabel: "Remove header sponsor logo" })}{art("footerLogo", { legend: "Footer logo", help: "Optional. When set, this logo appears alone in the footer instead of the club crest and name.", removeLabel: "Remove footer logo" })}<p className={kit.hint}>Rename the tabs and menu links. The footer uses the same names.</p>{CINEMATIC_NAV_ITEMS.flatMap(item => [item, ...("children" in item ? item.children ?? [] : [])]).map(item => <div key={item.id}>{text(item.label, content.navigation.labels[item.id] ?? item.label, 60, (draft, value) => { if (value.trim()) draft.navigation.labels[item.id] = value.trim(); else delete draft.navigation.labels[item.id]; })}</div>)}</>;
-  const formsBody = <EditorGroup legend="External forms"><p className={kit.hint}>Tryouts, Media credentials, and National anthem request open these forms. Leave a destination blank to show the page placeholder.</p>{text("Tryouts form URL", content.navigation.destinations.tryouts, 2000, (draft, value) => { draft.navigation.destinations.tryouts = value; })}{text("Media credentials form URL", content.navigation.destinations.mediaCredentials, 2000, (draft, value) => { draft.navigation.destinations.mediaCredentials = value; })}{text("National anthem request form URL", content.navigation.destinations.nationalAnthem, 2000, (draft, value) => { draft.navigation.destinations.nationalAnthem = value; })}</EditorGroup>;
+  const formsBody = <EditorGroup legend="External forms"><p className={kit.hint}>Tryouts, Media credentials, and National anthem request open these forms. Leave a destination blank to show the page placeholder.</p><LinkField label="Tryouts form URL" value={content.navigation.destinations.tryouts} maximum={2000} disabled={disabled} onChange={next => update(draft => { draft.navigation.destinations.tryouts = next; })} /><LinkField label="Media credentials form URL" value={content.navigation.destinations.mediaCredentials} maximum={2000} disabled={disabled} onChange={next => update(draft => { draft.navigation.destinations.mediaCredentials = next; })} /><LinkField label="National anthem request form URL" value={content.navigation.destinations.nationalAnthem} maximum={2000} disabled={disabled} onChange={next => update(draft => { draft.navigation.destinations.nationalAnthem = next; })} /></EditorGroup>;
   if (piece === "revamp.sponsors") return <div className={kit.stack}>{text("Heading", content.sponsors.heading, 120, (draft, value) => { draft.sponsors.heading = value; }, false, HOMEPAGE_TARGETS.sponsorsHeading)}<p className={kit.hint}>Partner logos are managed in Branding.</p></div>;
   if (piece === "revamp.raffle") return <div className={kit.stack}>{visibilitySwitch("Show raffle photo on homepage", isHomepageSectionShown(content.raffle), (draft, visible) => { draft.raffle.visible = visible; })}{art("raffle")}</div>;
   if (piece === "revamp.ticket") return <div className={kit.stack}>{visibilitySwitch("Show ticket and map on homepage", content.ticket.visible, (draft, visible) => { draft.ticket.visible = visible; })}{art("ticket")}</div>;
